@@ -1,0 +1,11 @@
+/* Saat light mode */
+.v-theme--light .custom-bg-select {
+  border: none;
+  background-color: white;
+}
+
+/* Saat dark mode, biarkan default Vuetify */
+.v-theme--dark .custom-bg-select {
+  border: none;
+  background-color: rgb(var(--v-theme-surface));
+}
