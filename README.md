@@ -33,6 +33,12 @@ See [Vite Configuration Reference](https://vitejs.dev/config/).
 npm install
 ```
 
+### Fix error dev
+
+```sh
+npm audit fix --force
+```
+
 ### Compile and Hot-Reload for Development
 
 ```sh
