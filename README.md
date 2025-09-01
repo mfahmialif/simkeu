@@ -1,5 +1,16 @@
 # vue
 
+## How to Clone This Repository
+
+To get started, clone the `mfahmialif/simkeu` repository:
+
+```sh
+git clone https://github.com/mfahmialif/simkeu.git
+cd simkeu
+```
+
+Continue with the project setup below.
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
