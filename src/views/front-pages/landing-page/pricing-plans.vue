@@ -61,28 +61,17 @@ const pricingPlans = [
     <div class="pricing-plans d-flex flex-column gap-12">
       <!-- 👉 Headers  -->
       <div class="headers d-flex justify-center flex-column align-center">
-        <Component
-          :is="frontPageVectorImg"
-          class="front-page-vector"
-        />
+        <Component :is="frontPageVectorImg" class="front-page-vector" />
 
         <div class="d-flex gap-x-3 mb-6">
-          <img
-            :src="sectionTitleIcon"
-            alt="section title icon"
-            height="24"
-            width="25"
-          >
+          <img :src="sectionTitleIcon" alt="section title icon" height="24" width="25">
           <div class="text-body-1 text-high-emphasis font-weight-medium">
             PRICING PLANS
           </div>
         </div>
 
         <div class="mb-2 text-center">
-          <span
-            class="text-h4 d-inline-block font-weight-bold"
-            style="line-height: 2rem;"
-          >
+          <span class="text-h4 d-inline-block font-weight-bold" style="line-height: 2rem;">
             Tailored pricing plans
           </span> <span class="text-h5 d-inline-block">designed for you</span>
         </div>
@@ -94,26 +83,13 @@ const pricingPlans = [
       </div>
 
       <div class="w-75 mx-auto">
-        <VSlider
-          id="pricing-plan-slider"
-          model-value="458+"
-          max="1249"
-          color="primary"
-          thumb-label="always"
-          class="mt-1"
-        />
+        <VSlider id="pricing-plan-slider" model-value="458+" max="1249" color="primary" thumb-label="always"
+          class="mt-1" />
       </div>
 
       <VRow>
-        <VCol
-          v-for="(plan, index) in pricingPlans"
-          :key="index"
-        >
-          <VCard
-            flat
-            border
-            :style="plan.current ? 'border:2px solid rgb(var(--v-theme-primary))' : ''"
-          >
+        <VCol v-for="(plan, index) in pricingPlans" :key="index">
+          <VCard flat border :style="plan.current ? 'border:2px solid rgb(var(--v-theme-primary))' : ''">
             <VCardText class="pa-lg-8 text-no-wrap">
               <div class="d-flex flex-column gap-y-8">
                 <div class="d-flex flex-column  gap-y-3">
@@ -123,10 +99,7 @@ const pricingPlans = [
 
                   <div class="d-flex align-center gap-x-3">
                     <div class="d-flex">
-                      <h5
-                        class="text-h5"
-                        style="margin-block-start: 0.35rem;"
-                      >
+                      <h5 class="text-h5" style="margin-block-start: 0.35rem;">
                         $
                       </h5>
                       <div class="plan-price-text">
@@ -148,15 +121,9 @@ const pricingPlans = [
 
                 <div class="d-flex flex-column">
                   <VList class="card-list">
-                    <VListItem
-                      v-for="(item, i) in plan.features"
-                      :key="i"
-                    >
+                    <VListItem v-for="(item, i) in plan.features" :key="i">
                       <template #prepend>
-                        <Component
-                          :is="ListArrowIcon"
-                          class="me-3"
-                        />
+                        <Component :is="ListArrowIcon" class="me-3" />
                       </template>
                       <h5 class="text-h5">
                         {{ item }}
@@ -176,22 +143,13 @@ const pricingPlans = [
                       </div>
                     </div>
 
-                    <VChip
-                      variant="tonal"
-                      color="primary"
-                      size="small"
-                      class="font-weight-medium"
-                    >
+                    <VChip variant="tonal" color="primary" size="small" class="font-weight-medium">
                       {{ plan.respondTime }}
                     </VChip>
                   </div>
                 </div>
 
-                <VBtn
-                  block
-                  :variant="plan.current ? 'elevated' : 'outlined'"
-                  :to="{ name: 'front-pages-payment' }"
-                >
+                <VBtn block :variant="plan.current ? 'elevated' : 'outlined'" :to="{ name: 'front-pages-payment' }">
                   Get Started
                 </VBtn>
               </div>

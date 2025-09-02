@@ -1,13 +1,11 @@
 <script setup>
-import { useMouse } from '@vueuse/core'
-import { useTheme } from 'vuetify'
 import { useGenerateImageVariant } from '@/@core/composable/useGenerateImageVariant'
 import darkBg from '@images/front-pages/backgrounds/hero-bg-dark.png'
 import lightBg from '@images/front-pages/backgrounds/hero-bg.png'
-import heroDashboardImgDark from '@images/front-pages/landing-page/hero-dashboard-dark.png'
-import heroDashboardImgLight from '@images/front-pages/landing-page/hero-dashboard-light.png'
-import heroElementsImgDark from '@images/front-pages/landing-page/hero-elements-dark.png'
-import heroElementsImgLight from '@images/front-pages/landing-page/hero-elements-light.png'
+import { default as heroDashboardImgDark, default as heroDashboardImgLight } from '@images/front-pages/landing-page/2a.png'
+import { default as heroElementsImgDark, default as heroElementsImgLight } from '@images/front-pages/landing-page/3a.png'
+import { useMouse } from '@vueuse/core'
+import { useTheme } from 'vuetify'
 
 const theme = useTheme()
 const isDark = ref(theme.name)
@@ -27,74 +25,50 @@ const translateMouse = computed(() => speed => {
   if (typeof window !== 'undefined') {
     const positionX = computed(() => (window.innerWidth - x.value * speed) / 100)
     const positionY = computed(() => Math.max((window.innerHeight - y.value * speed) / 100, -40))
-    
-    return { transform: `translate(${ positionX.value }px,${ positionY.value }px` }
+
+    return { transform: `translate(${positionX.value}px,${positionY.value}px` }
   }
 })
 </script>
 
 <template>
-  <section
-    id="home"
-    :style="{ 'background-color': 'rgb(var(--v-theme-surface))' }"
-  >
-    <div
-      id="landingHero"
-      class="landing-hero"
-      :style="{ backgroundImage: `url(${heroBgUrl})` }"
-    >
+  <section id="home" :style="{ 'background-color': 'rgb(var(--v-theme-surface))' }">
+    <div id="landingHero" class="landing-hero" :style="{ backgroundImage: `url(${heroBgUrl})` }">
       <VContainer>
         <div class="text-center pt-6 pb-16">
           <div class="mb-4 landing-page-title">
             <div>
-              All in one sass application
+              SIMKEU
             </div>
-            for your business
+            (Sistem Keuangan) UII Dalwa
           </div>
           <div class="text-body-1 font-weight-medium text-high-emphasis pb-8">
             <p class="mb-0">
-              No coding required to make customization
+              Aplikasi sistem keuangan digunakan untuk mengatur keuangan mahasiswa, dosen dll yang ada di Universitas
+              Islam Internasional Darullughah Wadda'wah.
             </p>
             <p class="mb-0">
-              The live customer has everything your marketing needs
+              Aplikasi ini juga berfungsi untuk memantau alur transaksi
+              keuangan dengan akurat dan efisien.
             </p>
           </div>
-          <VBtn
-            :to="{ name: 'front-pages-landing-page', hash: `#pricing-plan` }"
-            size="large"
-            :active="false"
-          >
-            Get Early Access
+          <VBtn :to="{ name: 'pages-authentication-login-v2', hash: `#login` }" size="large" :active="false">
+            Login
           </VBtn>
         </div>
 
         <div class="position-relative hero-animation-img">
           <div class="hero-dashboard-img text-center">
-            <RouterLink
-              to="/"
-              target="_blank"
-            >
-              <img
-                :src="heroDashboardImg"
-                data-allow-mismatch
-                class="mx-auto cursor-pointer"
-                :style="translateMouse(3)"
-              >
+            <RouterLink to="/" target="_blank">
+              <img :src="heroDashboardImg" data-allow-mismatch class="mx-auto cursor-pointer"
+                :style="translateMouse(3)">
             </RouterLink>
           </div>
 
           <div class="hero-elements-img">
-            <RouterLink
-              to="/"
-              target="_blank"
-            >
-              <img
-                class="cursor-pointer"
-                data-allow-mismatch
-                :src="heroElementsImg"
-                :style="translateMouse(5)"
-                target="_blank"
-              >
+            <RouterLink to="/" target="_blank">
+              <img class="cursor-pointer" data-allow-mismatch :src="heroElementsImg" :style="translateMouse(5)"
+                target="_blank">
             </RouterLink>
           </div>
         </div>

@@ -1,179 +1,30 @@
 <script setup>
-import appleImg from '@images/front-pages/landing-page/apple-icon.png'
-import googlePlayImg from '@images/front-pages/landing-page/google-play-icon.png'
-import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
-import { themeConfig } from '@themeConfig'
+import { VNodeRenderer } from '@layouts/components/VNodeRenderer';
+import { themeConfig } from '@themeConfig';
 
-const menus = [
-  {
-    name: 'Pricing',
-    to: { name: 'front-pages-pricing' },
-  },
-  {
-    name: 'Payment',
-    to: { name: 'front-pages-payment' },
-    isNew: true,
-  },
-  {
-    name: 'Maintenance',
-    to: { name: 'pages-misc-under-maintenance' },
-  },
-  {
-    name: 'Comming Soon',
-    to: { name: 'pages-misc-coming-soon' },
-  },
-]
+
 </script>
 
 <template>
   <div class="footer">
-    <VSheet
-      class="footer-top pt-8 pb-4"
-      theme="dark"
-    >
+    <!-- Bagian atas full width -->
+    <VSheet class="footer-top pt-8 pb-4" theme="dark">
       <VContainer>
-        <VRow>
-          <!-- 👉 Footer  -->
-          <VCol
-            cols="12"
-            md="5"
-          >
+        <VRow justify="center">
+          <VCol cols="2" md="8" class="d-flex flex-column align-center text-center">
             <div class="footer-form">
-              <div class="d-flex gap-2 py-1 mb-6">
+              <div class="d-flex align-center justify-center py-1 mb-3">
                 <VNodeRenderer :nodes="themeConfig.app.logo" />
-                <h1 class="footer-title">
+                <h1 class="footer-title ml-2">
                   {{ themeConfig.app.title }}
                 </h1>
               </div>
-              <div class="text-body-1 footer-text mb-6">
-                Most Powerful & Comprehensive <span class="text-high-emphasis">🤩</span> SIMKEU.
+              <div class="text-body-1 footer-text mb-3">
+                SIMKEU is the best way to manage your finances and accounting.
               </div>
-              <VForm class="subscribe-form d-flex align-center gap-4">
-                <VTextField
-                  label="Subscribe to newsletter"
-                  placeholder="john@email.com"
-                  theme="dark"
-                  density="compact"
-                  class="footer-text"
-                />
-                <VBtn size="large">
-                  Subscribe
-                </VBtn>
-              </VForm>
-            </div>
-          </VCol>
-
-          <!-- 👉 Pages -->
-          <VCol
-            md="2"
-            sm="4"
-            xs="6"
-          >
-            <div class="footer-links">
-              <div class="footer-heading mb-6">
-                Pages
-              </div>
-              <ul style="list-style: none;">
-                <li
-                  v-for="(item, index) in menus"
-                  :key="index"
-                  class="mb-4"
-                >
-                  <RouterLink
-                    class="text-body-1 footer-text text-no-wrap"
-                    :to="item.to"
-                  >
-                    <div class="d-flex align-center">
-                      <div>
-                        {{ item.name }}
-                      </div>
-                      <template v-if="item.isNew">
-                        <VChip
-                          color="primary"
-                          variant="elevated"
-                          size="small"
-                          class="ms-2"
-                        >
-                          New
-                        </VChip>
-                      </template>
-                    </div>
-                  </RouterLink>
-                </li>
-              </ul>
-            </div>
-          </VCol>
-
-          <!-- 👉 Products  -->
-          <VCol
-            md="2"
-            sm="4"
-            xs="6"
-          >
-            <div class="footer-links">
-              <div class="footer-heading mb-6">
-                Products
-              </div>
-              <ul>
-                <li
-                  v-for="(item, index) in ['Page Builder', 'Admin Dashboards', 'UI Kits', 'Illustrations']"
-                  :key="index"
-                  class="mb-4 text-body-1"
-                  style="list-style: none;"
-                >
-                  <RouterLink
-                    to=""
-                    class="footer-text text-no-wrap"
-                  >
-                    {{ item }}
-                  </RouterLink>
-                </li>
-              </ul>
-            </div>
-          </VCol>
-
-          <!-- 👉 Download App -->
-          <VCol
-            cols="12"
-            md="3"
-            sm="4"
-          >
-            <div>
-              <div class="footer-heading mb-6">
-                Download our app
-              </div>
-              <div>
-                <VBtn
-                  v-for="(item, index) in [
-                    { image: appleImg, store: 'App Store' },
-                    { image: googlePlayImg, store: 'Google Play' },
-                  ]"
-                  :key="index"
-                  color="#211B2C"
-                  height="56"
-                  size="large"
-                  class="mb-4 d-block"
-                >
-                  <template #default>
-                    <div class="d-flex gap-x-6 footer-logo-buttons align-center">
-                      <div>
-                        <VImg
-                          :src="item.image"
-                          height="34"
-                          width="34"
-                        />
-                      </div>
-                      <div class="d-flex flex-column align-start">
-                        <div class="text-body-2 footer-text">
-                          Download on the
-                        </div>
-                        <div class="text-body-1 font-weight-medium footer-heading">
-                          {{ item.store }}
-                        </div>
-                      </div>
-                    </div>
-                  </template>
-                </VBtn>
+              <div class="text-body-1 footer-text mb-3">
+                Start working with SIMKEU that can provide everything you need
+                to generate awareness, drive traffic, connect.
               </div>
             </div>
           </VCol>
@@ -181,50 +32,19 @@ const menus = [
       </VContainer>
     </VSheet>
 
+    <!-- Garis bawah -->
     <div class="footer-line w-100">
       <VContainer>
-        <div class="d-flex justify-space-between flex-wrap gap-y-4">
-          <span class="d-flex align-center text-body-2 footer-heading font-weight-regular">
-            &copy;
-
-            {{ new Date().getFullYear() }},
-            Made with <span><VIcon
-              icon="ri-heart-fill"
-              color="#FF4D49"
-            /></span> by <a
-              href="https://pixinvent.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="ms-1 footer-heading font-weight-regular"
-              style="color: rgba(255, 255, 255, var(--v-high-emphasis-opacity));"
-            >Pixinvent</a>
-          </span>
-          <div class="d-flex gap-x-1">
-            <template
-              v-for="(item, index) in [
-                { title: 'github', icon: 'bxl-github', href: 'https://github.com/pixinvent' },
-                { title: 'facebook', icon: 'bxl-facebook', href: 'https://www.facebook.com/pixinvents/' },
-                { title: 'twitter', icon: 'bxl-twitter', href: 'https://twitter.com/pixinvents' },
-                { title: 'instagram', icon: 'bxl-linkedin', href: 'https://www.linkedin.com/company/pixinvent' },
-              ]"
-              :key="index"
-            >
-              <IconBtn
-                :href="item.href"
-                size="x-small"
-                target="_blank"
-                color="#fff"
-                rel="noopener noreferrer"
-              >
-                <VIcon
-                  :icon="item.icon"
-                  size="16"
-                  color="white"
-                />
-              </IconBtn>
-            </template>
-          </div>
-        </div>
+        <VRow justify="center">
+          <VCol cols="12" md="8" class="d-flex justify-center text-center">
+            <span class="d-flex align-center text-body-2 footer-heading font-weight-regular">
+              &copy; Tim IT Universitas Islam Internasional Darullughah Wadda'wah
+              {{ new Date().getFullYear() }},
+              Made with
+              <VIcon icon="ri-heart-fill" color="#FF4D49" class="ml-1" />
+            </span>
+          </VCol>
+        </VRow>
       </VContainer>
     </div>
   </div>
