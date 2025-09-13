@@ -1,6 +1,5 @@
 <script setup>
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
-import navImg from '@images/front-pages/misc/nav-img.png'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
 import { useWindowScroll } from '@vueuse/core'
@@ -156,7 +155,7 @@ const isPageActive = computed(() => menuItems.some(item => item.navItems.some(li
             :class="[props.activeId?.toLocaleLowerCase().replace('-', ' ') === item.toLocaleLowerCase() ? 'active-link' : 'text-high-emphasis']">
             {{ item }}
           </RouterLink>
-          <div class="text-high-emphasis font-weight-medium cursor-pointer"
+          <!--<div class="text-high-emphasis font-weight-medium cursor-pointer"
             :class="isPageActive ? 'active-link' : 'text-high-emphasis'">
             <div :class="isMenuOpen ? 'mb-6' : ''" @click="isMenuOpen = !isMenuOpen">
               Pages
@@ -180,10 +179,11 @@ const isPageActive = computed(() => menuItems.some(item => item.navItems.some(li
                 </li>
               </ul>
             </div>
-          </div>
-          <RouterLink to="/" target="_blank" class="text-body-1 font-weight-medium nav-link px-0">
+          </div>-->
+
+          <!-- <RouterLink to="/" target="_blank" class="text-body-1 font-weight-medium nav-link px-0">
             Admin
-          </RouterLink>
+          </RouterLink>-->
         </div>
       </div>
       <!-- Navigation drawer close icon -->
@@ -225,7 +225,7 @@ const isPageActive = computed(() => menuItems.some(item => item.navItems.some(li
           </RouterLink>
 
           <!-- Pages Menu -->
-          <span class="font-weight-medium cursor-pointer nav-link"
+          <!-- <span class="font-weight-medium cursor-pointer nav-link"
             :class="isPageActive ? 'active-link' : 'text-high-emphasis'">
             Pages
             <VIcon icon="ri-arrow-down-s-line" size="20" class="ms-2" />
@@ -264,11 +264,14 @@ const isPageActive = computed(() => menuItems.some(item => item.navItems.some(li
                 </VCardText>
               </VCard>
             </VMenu>
-          </span>
 
-          <RouterLink to="/" target="_blank" class="nav-link font-weight-medium">
+          </span>-->
+
+
+          <!-- <RouterLink to="/" target="_blank" class="nav-link font-weight-medium">
             Admin
           </RouterLink>
+        -->
         </div>
       </div>
 
