@@ -12,6 +12,10 @@ export const redirects = [
     path: "/",
     name: "index",
     component: () => import("@/pages/front-pages/landing-page/index.vue"),
+    meta: {
+      public: true, // Kalau route ini boleh diakses tanpa login
+      layout: "default", // Atau "blank" jika ingin layout kosong
+    },
   },
   {
     path: "/logout",

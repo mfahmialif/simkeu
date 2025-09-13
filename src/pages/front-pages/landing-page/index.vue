@@ -11,12 +11,6 @@ import { useConfigStore } from '@core/stores/config'
 const store = useConfigStore()
 
 store.skin = 'default'
-definePage({
-  meta: {
-    layout: 'blank',
-    public: true,
-  },
-})
 
 const activeSectionId = ref()
 const refHome = ref()
@@ -49,13 +43,8 @@ useIntersectionObserver([
       <Features ref="refFeatures" />
     </div>
 
-
-
     <!-- 👉 Our Team -->
-
     <OurTeam ref="refTeam" />
-
-
 
     <!-- 👉 FAQ Section -->
     <div :style="{ 'background-color': 'rgb(var(--v-theme-surface))' }">
