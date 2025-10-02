@@ -1,5 +1,5 @@
 <script setup>
-import FormUser from '@/components/admin/user/FormUser.vue';
+import FormJenisPembayaran from '@/components/admin/pemasukan/mahasiswa/master/jenis-pembayaran/FormJenisPembayaran.vue';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -8,17 +8,18 @@ const route = useRoute()
 
 const id = route.params.id
 
-const user = ref({})
+const data = ref({})
 const isLoading = ref(false)
 
-const fetchUser = async () => {
+const fetchData = async () => {
   try {
     isLoading.value = true
 
-    const response = await $api('/admin/users/' + id, {
+    const response = await $api('/admin/pemasukan/mahasiswa/jenis-pembayaran/' + id, {
       method: "GET",
     })
-    user.value = response;
+    console.log(response)
+    data.value = response;
   } catch (err) {
     console.log(err);
     if (err.status === 404) {
@@ -43,25 +44,21 @@ const menuList = [
     title: 'Lihat Data',
     value: 'lihat-data',
     icon: 'ri-eye-line',
-    clickHandler: () => router.push('/admin/user'),
+    clickHandler: () => router.push('/admin/pemasukan/mahasiswa/master/jenis-pembayaran'),
   },
 ]
 
 onMounted(() => {
-  document.title = 'Users Edit - SIMKEU'
-  console.log('edit user id', id);
-  fetchUser()
+  document.title = 'Jenis Pembayaran Edit - SIMKEU'
+  fetchData()
 })
 
 </script>
 
 <template>
-  <VAlert type="info" class="mb-3">
-    Kosongkan <strong>password</strong> jika tidak ingin merubahnya!
-  </VAlert>
   <VRow>
     <VCol cols="12">
-      <VCard title="Edit Data User">
+      <VCard title="Edit Data Jenis Pembayaran">
         <template #append>
           <MoreBtnAction :menu-list="menuList" />
         </template>
@@ -70,7 +67,8 @@ onMounted(() => {
           <div v-if="isLoading" class="text-center">
             <VProgressLinear indeterminate />
           </div>
-          <FormUser v-else typeForm="edit" :dataForm="user" :url="'/admin/users/' + id" :is-role-visible="true" />
+          <FormJenisPembayaran v-else typeForm="edit" :dataForm="data"
+            :url="'/admin/pemasukan/mahasiswa/jenis-pembayaran/' + id" :is-role-visible="true" />
         </VCardText>
       </VCard>
     </VCol>

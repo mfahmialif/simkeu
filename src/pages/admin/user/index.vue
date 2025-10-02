@@ -178,7 +178,7 @@ watch(selectedRole, () => {
       <VCardText class="d-flex flex-wrap gap-4">
         <div class="d-flex align-center w-100 w-sm-auto">
           <!-- 👉 Search  -->
-          <VTextField v-model="search" placeholder="Search Product" style="inline-size: 200px;" density="compact"
+          <VTextField v-model="search" placeholder="Search Data" style="inline-size: 200px;" density="compact"
             class="me-3" />
         </div>
 
@@ -223,7 +223,7 @@ watch(selectedRole, () => {
         <template #item.username="{ item }">
           <div class="d-flex align-center">
             <VAvatar size="32" :color="item.avatar ? '' : 'primary'">
-              <VImg v-if="item.avatar" :src="item.avatar" />
+              <VImg v-if="item.avatar" :src="item.avatar_url" />
               <span v-else>{{ item.username[0] }}</span>
             </VAvatar>
             <div class="d-flex flex-column ms-3">

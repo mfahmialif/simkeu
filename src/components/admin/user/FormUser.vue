@@ -16,7 +16,7 @@ const props = defineProps({
     type: String,
     required: false,
   },
-  isRoleVisible : {
+  isRoleVisible: {
     type: Boolean,
     required: false,
   }
@@ -198,14 +198,14 @@ const onSubmit = async () => {
       <VCol cols="12">
         <VTextField v-model="password" :rules="passwordRules" :type="isPasswordVisible ? 'text' : 'password'"
           :append-inner-icon="isPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'" label="Password" autocomplete="on"
-          type="password" placeholder="············" @click:append-inner="isPasswordVisible = !isPasswordVisible" />
+          placeholder="············" @click:append-inner="isPasswordVisible = !isPasswordVisible" />
       </VCol>
 
       <VCol cols="12">
         <VTextField v-model="passwordConfirmation" :rules="[confirmedValidator(passwordConfirmation, password)]"
           :type="isConfirmPasswordVisible ? 'text' : 'password'"
           :append-inner-icon="isConfirmPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
-          label="Password Confirmation" autocomplete="on" type="password" placeholder="············"
+          label="Password Confirmation" autocomplete="on" placeholder="············"
           @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible" />
       </VCol>
 

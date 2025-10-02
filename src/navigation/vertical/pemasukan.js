@@ -9,11 +9,11 @@ export default [
         children: [
           {
             title: "Data Mahasiswa",
-            to: "admin-pemasukan-master-data-mahasiswa",
+            to: "admin-pemasukan-mahasiswa-master-data-mahasiswa",
           },
           {
             title: "Jenis Pembayaran",
-            to: "apps-ecommerce-product-list",
+            to: "admin-pemasukan-mahasiswa-master-jenis-pembayaran",
           },
           {
             title: "Tagihan",

@@ -1,36 +1,4 @@
 <script setup>
-const widgetData = ref([
-  {
-    title: "In-Store Sales",
-    value: "$5,345",
-    icon: "ri-home-6-line",
-    desc: "5k orders",
-    change: 5.7,
-  },
-  {
-    title: "Website Sales",
-    value: "$74,347",
-    icon: "ri-computer-line",
-    desc: "21k orders",
-    change: 12.4,
-  },
-  {
-    title: "Discount",
-    value: "$14,235",
-    icon: "ri-gift-line",
-    desc: "6k orders",
-  },
-  {
-    title: "Affiliate",
-    value: "$8,345",
-    icon: "ri-money-dollar-circle-line",
-    desc: "150 orders",
-    change: -3.5,
-  },
-]);
-
-const selectedRole = ref();
-const role = ref([]);
 
 const page = ref(1)
 const itemsPerPage = ref(5)
@@ -44,7 +12,7 @@ const initialLoading = ref(true)
 
 const fetchUsers = async () => {
   try {
-    const { data } = await $api('/admin/users', {
+    const { data } = await $api('/admin/pemasukan/mahasiswa/jenis-pembayaran', {
       method: "GET",
       body: {
         page: page.value,
@@ -52,7 +20,6 @@ const fetchUsers = async () => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         search: search.value,
-        ...(selectedRole.value && { role_id: selectedRole.value }),
       },
     })
 
@@ -74,23 +41,6 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   fetchUsers()
 }
 
-const fetchRole = async () => {
-  try {
-    const { data } = await $api('/admin/role', {
-      method: "GET",
-    })
-
-    role.value = data.data.map(role => {
-      return {
-        title: role.name,
-        value: role.id,
-      }
-    })
-  } catch (err) {
-    console.error(err)
-  }
-}
-
 const isDialogDeleteVisible = ref(false)
 const deleteData = ref({})
 
@@ -104,7 +54,7 @@ const showDialogDelete = (id, name) => {
 
 const deleteDataSubmit = async (id) => {
   try {
-    const response = await $api("/users/" + id, {
+    const response = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran/" + id, {
       method: 'DELETE',
     });
 
@@ -137,8 +87,7 @@ const deleteDataSubmit = async (id) => {
 }
 
 onMounted(() => {
-  document.title = 'Users - SIMKEU'
-  fetchRole()
+  document.title = 'Jenis Pembayaran - SIMKEU'
 })
 
 watch(selectedRows, (newValue) => {
@@ -147,29 +96,15 @@ watch(selectedRows, (newValue) => {
   })
 }, { deep: true })
 
-watch(selectedRole, () => {
-  console.log('value from wathc', selectedRole.value);
-  fetchUsers()
-})
-
 </script>
 
 <template>
 
   <div>
 
-    <VRow class="mb-2">
-      <!-- 👉 Select Role -->
-      <VCol cols="12" sm="12">
-        <VSelect v-model="selectedRole" label="Select Role" placeholder="Select Role" :items="role" clearable
-          clear-icon="ri-close-line" class="custom-bg-select" />
-      </VCol>
-
-    </VRow>
-
     <VCard>
       <VCardItem class="pb-4">
-        <VCardTitle>Users</VCardTitle>
+        <VCardTitle>Jenis Pembayaran</VCardTitle>
       </VCardItem>
 
 
@@ -178,7 +113,7 @@ watch(selectedRole, () => {
       <VCardText class="d-flex flex-wrap gap-4">
         <div class="d-flex align-center w-100 w-sm-auto">
           <!-- 👉 Search  -->
-          <VTextField v-model="search" placeholder="Search Product" style="inline-size: 200px;" density="compact"
+          <VTextField v-model="search" placeholder="Search Data" style="inline-size: 200px;" density="compact"
             class="me-3" />
         </div>
 
@@ -190,7 +125,8 @@ watch(selectedRole, () => {
             Export
           </VBtn>
 
-          <VBtn color="primary" prepend-icon="ri-add-line" @click="$router.push('/admin/user/add')">
+          <VBtn color="primary" prepend-icon="ri-add-line"
+            @click="$router.push('/admin/pemasukan/mahasiswa/master/jenis-pembayaran/add')">
             Add Data
           </VBtn>
         </div>
@@ -199,11 +135,13 @@ watch(selectedRole, () => {
       <!-- 👉 Datatable  -->
       <VDataTableServer :headers="[
         { title: 'No', key: 'id' },
-        { title: 'Username', key: 'username' },
-        { title: 'Email', key: 'email' },
+        { title: 'Nama', key: 'nama' },
+        { title: 'Nomer Rekening', key: 'nomer_rekening' },
+        { title: 'Kategori', key: 'kategori' },
+        { title: 'Keterangan', key: 'keterangan' },
         { title: 'Actions', key: 'actions', sortable: false },
-      ]" v-model:model-value="selectedRows" v-model:items-per-page="itemsPerPage" v-model:page="page" show-select
-        :items="dataTable" :items-length="totalItems" :loading="loading" :search="search" item-value="name"
+      ]" v-model:model-value="selectedRows" v-model:items-per-page="itemsPerPage" v-model:page="page"
+        :items="dataTable" :items-length="totalItems" :loading="loading" :search="search" item-value="id"
         @update:options="loadItems">
         <template v-if="initialLoading" #loading>
           <div class="text-center pa-4">
@@ -220,19 +158,6 @@ watch(selectedRole, () => {
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
 
-        <template #item.username="{ item }">
-          <div class="d-flex align-center">
-            <VAvatar size="32" :color="item.avatar ? '' : 'primary'">
-              <VImg v-if="item.avatar" :src="item.avatar" />
-              <span v-else>{{ item.username[0] }}</span>
-            </VAvatar>
-            <div class="d-flex flex-column ms-3">
-              <span class="font-weight-medium">{{ item.username }}</span>
-              <small>{{ item.post }}</small>
-            </div>
-          </div>
-        </template>
-
         <!-- Actions -->
         <template #item.actions="{ item }">
           <IconBtn size="small">
@@ -240,13 +165,13 @@ watch(selectedRole, () => {
 
             <VMenu activator="parent">
               <VList>
-                <VListItem value="download" prepend-icon="ri-edit-box-line"
-                  @click="$router.push(`/admin/user/edit/${item.id}`)">
+                <VListItem value="edit" prepend-icon="ri-edit-box-line"
+                  @click="$router.push(`/admin/pemasukan/mahasiswa/master/jenis-pembayaran/edit/${item.id}`)">
                   Edit
                 </VListItem>
 
                 <VListItem value="delete" prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.username)">
+                  @click="showDialogDelete(item.id, item.nama)">
                   Delete
                 </VListItem>
 

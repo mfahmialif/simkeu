@@ -359,6 +359,7 @@ declare module 'vue' {
     DropZone: typeof import('./src/@core/components/DropZone.vue')['default']
     EnableOneTimePasswordDialog: typeof import('./src/components/dialogs/EnableOneTimePasswordDialog.vue')['default']
     ErrorHeader: typeof import('./src/components/ErrorHeader.vue')['default']
+    FormJenisPembayaran: typeof import('./src/components/admin/pemasukan/mahasiswa/master/jenis-pembayaran/FormJenisPembayaran.vue')['default']
     FormProfile: typeof import('./src/components/admin/profile/FormProfile.vue')['default']
     FormUser: typeof import('./src/components/admin/user/FormUser.vue')['default']
     I18n: typeof import('./src/@core/components/I18n.vue')['default']
