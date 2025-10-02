@@ -104,7 +104,7 @@ const showDialogDelete = (id, name) => {
 
 const deleteDataSubmit = async (id) => {
   try {
-    const response = await $api("/admin/users/" + id, {
+    const response = await $api("/users/" + id, {
       method: 'DELETE',
     });
 

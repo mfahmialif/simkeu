@@ -52,7 +52,7 @@ const translateMouse = computed(() => speed => {
               keuangan dengan akurat dan efisien.
             </p>
           </div>
-          <VBtn :to="{ name: 'pages-authentication-login-v2', hash: `#login` }" size="large" :active="false">
+          <VBtn :to="{ name: 'login' }" size="large" :active="false">
             Login
           </VBtn>
         </div>

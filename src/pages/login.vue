@@ -1,26 +1,20 @@
 <script setup>
-import authV2LoginIllustrationBorderedDark from '@images/pages/auth-v2-login-illustration-bordered-dark.png'
-import authV2LoginIllustrationBorderedLight from '@images/pages/auth-v2-login-illustration-bordered-light.png'
-import authV2LoginIllustrationDark from '@images/pages/auth-v2-login-illustration-dark.png'
-import authV2LoginIllustrationLight from '@images/pages/auth-v2-login-illustration-light.png'
+import { useGenerateImageVariant } from '@/@core/composable/useGenerateImageVariant'
 import authV2LoginMaskDark from '@images/pages/auth-v2-login-mask-dark.png'
 import authV2LoginMaskLight from '@images/pages/auth-v2-login-mask-light.png'
+import authV2LoginIllustrationBorderedDark from '@images/pages/login/auth-v2-login-illustration-bordered-dark1.png'
+import authV2LoginIllustrationBorderedLight from '@images/pages/login/auth-v2-login-illustration-bordered-light1.png'
+import authV2LoginIllustrationDark from '@images/pages/login/auth-v2-login-illustration-dark1.png'
+import authV2LoginIllustrationLight from '@images/pages/login/auth-v2-login-illustration-light1.png'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
-import { VForm } from 'vuetify/components/VForm'
-
-const authThemeImg = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
-const authThemeMask = useGenerateImageVariant(authV2LoginMaskLight, authV2LoginMaskDark)
 
 definePage({
   meta: {
     layout: 'blank',
-    unauthenticatedOnly: true,
+    public: true,
   },
 })
-
-const isPasswordVisible = ref(false)
-const isDisabled = ref(false)
 
 const route = useRoute()
 const router = useRouter()
@@ -34,12 +28,16 @@ const errors = ref({
 const refVForm = ref()
 
 const credentials = ref({
-  username: 'admin',
-  password: 'admin',
+  username: '',
+  password: '',
 })
 
-const rememberMe = ref(false)
+const isPasswordVisible = ref(false)
+const isDisabled = ref(false)
 
+const authV2LoginMask = useGenerateImageVariant(authV2LoginMaskLight, authV2LoginMaskDark)
+
+const authV2LoginIllustration = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
 const login = async () => {
   try {
     isDisabled.value = true
@@ -53,7 +51,6 @@ const login = async () => {
 
     const { token, user, abilities } = res
 
-    console.log(res);
     const userAbilityRules = abilities.map(str => {
       const [action, subject] = str.split(':')
       return { action, subject }
@@ -65,9 +62,9 @@ const login = async () => {
     useCookie('accessToken').value = token
 
     showSnackbar({
-          text: 'Login successful',
-          color: 'success',
-        });
+      text: 'Login successful',
+      color: 'success',
+    });
     // Redirect to `to` query if exist or redirect to index route
 
     // ❗ nextTick is required to wait for DOM updates and later redirect
@@ -99,7 +96,7 @@ const onSubmit = () => {
 
 <template>
   <RouterLink to="/">
-    <div class="auth-logo app-logo">
+    <div class="app-logo auth-logo">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
       <h1 class="app-logo-title">
         {{ themeConfig.app.title }}
@@ -110,20 +107,20 @@ const onSubmit = () => {
   <VRow no-gutters class="auth-wrapper">
     <VCol md="8" class="d-none d-md-flex align-center justify-center position-relative">
       <div class="d-flex align-center justify-center pa-10">
-        <img :src="authThemeImg" class="auth-illustration w-100" alt="auth-illustration">
+        <img :src="authV2LoginIllustration" class="auth-illustration w-100" alt="auth-illustration">
       </div>
-      <VImg :src="authThemeMask" class="d-none d-md-flex auth-footer-mask" alt="auth-mask" />
+      <VImg :src="authV2LoginMask" class="d-none d-md-flex auth-footer-mask" alt="auth-mask" />
     </VCol>
-
     <VCol cols="12" md="4" class="auth-card-v2 d-flex align-center justify-center"
       style="background-color: rgb(var(--v-theme-surface));">
       <VCard flat :max-width="500" class="mt-12 mt-sm-0 pa-5 pa-lg-7">
         <VCardText>
           <h4 class="text-h4 mb-1">
-            Welcome to <span class="text-capitalize">{{ themeConfig.app.application }}!</span> 👋🏻
+            Welcome to <span class="text-capitalize">{{ themeConfig.app.title }}! 👋🏻</span>
           </h4>
+
           <p class="mb-0">
-            Please sign-in to your account and start the adventure {{ isDisabled }}
+            Please sign-in to your account and start the adventure.
           </p>
         </VCardText>
 
@@ -132,36 +129,22 @@ const onSubmit = () => {
             <VRow>
               <!-- username -->
               <VCol cols="12">
-                <VTextField v-model="credentials.username" label="Username" placeholder="admin" type="username"
-                  autofocus :rules="[requiredValidator]" :error-messages="errors.username" />
+                <VTextField v-model="credentials.username" autofocus label="Username" type="text"
+                  placeholder="type here..." :rules="[requiredValidator]" :error-messages="errors.username" />
               </VCol>
 
               <!-- password -->
               <VCol cols="12">
                 <VTextField v-model="credentials.password" label="Password" placeholder="············"
                   :rules="[requiredValidator]" :type="isPasswordVisible ? 'text' : 'password'" autocomplete="password"
-                  :error-messages="errors.password"
                   :append-inner-icon="isPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
                   @click:append-inner="isPasswordVisible = !isPasswordVisible" />
-
-                <div class="d-flex align-center flex-wrap justify-space-between my-6 gap-x-2">
-                  <VCheckbox v-model="rememberMe" label="Remember me" />
-                </div>
-
-                <VBtn block type="submit" :disabled="isDisabled">
+                <!-- login button -->
+                <VBtn block type="submit" :disabled="isDisabled" class="mt-5">
                   {{ isDisabled ? 'Please wait...' : 'Login' }}
                 </VBtn>
               </VCol>
 
-              <!-- create account -->
-              <VCol cols="12" class="text-body-1 text-center">
-                <span class="d-inline-block">
-                  New on our platform?
-                </span>
-                <RouterLink class="text-primary ms-1 d-inline-block text-body-1" :to="{ name: 'register' }">
-                  Create an account
-                </RouterLink>
-              </VCol>
             </VRow>
           </VForm>
         </VCardText>

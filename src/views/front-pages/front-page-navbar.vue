@@ -280,16 +280,14 @@ const isPageActive = computed(() => menuItems.some(item => item.navItems.some(li
       <div class="d-flex gap-x-4 align-center">
         <NavbarThemeSwitcher class="me-0 me-sm-2" />
 
-        <VBtn :to="{ name: 'pages-authentication-login-v2', hash: '#login' }" v-if="$vuetify.display.lgAndUp"
-          prepend-icon="ri-login-box-line" variant="elevated" color="primary" href=" #" target="_blank"
+        <VBtn :to="{ name: 'login' }" v-if="$vuetify.display.lgAndUp"
+          prepend-icon="ri-login-box-line" variant="elevated" color="primary"
           rel="noopener noreferrer">
           Login
         </VBtn>
 
-
-
-        <VBtn :to="{ name: 'pages-authentication-login-v2', hash: '#login' }" v-else icon rounded variant="elevated"
-          color="primary" target="_blank" rel="noopener noreferrer">
+        <VBtn :to="{ name: 'login' }" v-else icon rounded variant="elevated"
+          color="primary" rel="noopener noreferrer">
           <VIcon icon="ri-login-box-line" />
         </VBtn>
       </div>

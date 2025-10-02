@@ -16,15 +16,81 @@ definePage({
   },
 })
 
-const form = ref({
-  email: '',
+const route = useRoute()
+const router = useRouter()
+const ability = useAbility()
+
+const errors = ref({
+  username: undefined,
+  password: undefined,
+})
+
+const refVForm = ref()
+
+const credentials = ref({
+  username: '',
   password: '',
-  remember: false,
 })
 
 const isPasswordVisible = ref(false)
 const authV2LoginMask = useGenerateImageVariant(authV2LoginMaskLight, authV2LoginMaskDark)
+
 const authV2LoginIllustration = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
+const login = async () => {
+  try {
+    isDisabled.value = true
+    const res = await $api('/auth/login', {
+      method: 'POST',
+      body: {
+        username: credentials.value.username,
+        password: credentials.value.password,
+      },
+    })
+
+    const { token, user, abilities } = res
+
+    console.log(res);
+    const userAbilityRules = abilities.map(str => {
+      const [action, subject] = str.split(':')
+      return { action, subject }
+    })
+
+    useCookie('userAbilityRules').value = userAbilityRules
+    ability.update(userAbilityRules)
+    useCookie('userData').value = user
+    useCookie('accessToken').value = token
+
+    showSnackbar({
+      text: 'Login successful',
+      color: 'success',
+    });
+    // Redirect to `to` query if exist or redirect to index route
+
+    // ❗ nextTick is required to wait for DOM updates and later redirect
+    await nextTick(() => {
+      router.replace(route.query.to ? String(route.query.to) : '/home')
+    })
+  }
+  catch (err) {
+    const message = Array.isArray(err.data.message)
+      ? err.data.message.join('; ')
+      : err.data.message;
+    showSnackbar({
+      text: message,
+      color: 'error',
+    });
+  }
+  finally {
+    isDisabled.value = false
+  }
+}
+
+const onSubmit = () => {
+  refVForm.value?.validate().then(({ valid: isValid }) => {
+    if (isValid)
+      login()
+  })
+}
 </script>
 
 <template>
@@ -53,27 +119,28 @@ const authV2LoginIllustration = useGenerateImageVariant(authV2LoginIllustrationL
           </h4>
 
           <p class="mb-0">
-            Silahkan login menggunakan akun yang telah didaftarkan oleh admin.
+            Please sign-in to your account and start the adventure.
           </p>
         </VCardText>
 
         <VCardText>
-          <VForm @submit.prevent="() => { }">
+          <VForm ref="refVForm" @submit.prevent="onSubmit">
             <VRow>
-              <!-- email -->
+              <!-- username -->
               <VCol cols="12">
-                <VTextField v-model="form.email" autofocus label="Email" type="email" placeholder="johndoe@email.com" />
+                <VTextField v-model="credentials.username" autofocus label="Username" type="text"
+                  placeholder="type here..." :rules="[requiredValidator]" :error-messages="errors.username" />
               </VCol>
 
               <!-- password -->
               <VCol cols="12">
-                <VTextField v-model="form.password" label="Password" placeholder="············"
-                  :type="isPasswordVisible ? 'text' : 'password'" autocomplete="password"
+                <VTextField v-model="credentials.password" label="Password" placeholder="············"
+                  :rules="[requiredValidator]" :type="isPasswordVisible ? 'text' : 'password'" autocomplete="password"
                   :append-inner-icon="isPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
                   @click:append-inner="isPasswordVisible = !isPasswordVisible" />
                 <!-- login button -->
-                <VBtn block type="submit" style="margin-top: 30px;">
-                  Login
+                <VBtn block type="submit" :disabled="isDisabled" class="mt-5">
+                  {{ isDisabled ? 'Please wait...' : 'Login' }}
                 </VBtn>
               </VCol>
 

@@ -49,7 +49,7 @@ const selectedRole = ref();
 const role = ref([]);
 const fetchRole = async () => {
   try {
-    const { data } = await $api('/role', {
+    const { data } = await $api('/admin/role', {
       method: "GET",
     })
 

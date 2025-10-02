@@ -15,11 +15,12 @@ const fetchUser = async () => {
   try {
     isLoading.value = true
 
-    const response = await $api('/users/' + id, {
+    const response = await $api('/admin/users/' + id, {
       method: "GET",
     })
     user.value = response;
   } catch (err) {
+    console.log(err);
     if (err.status === 404) {
       router.replace("/not-found");
     }
