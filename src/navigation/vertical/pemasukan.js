@@ -17,7 +17,7 @@ export default [
           },
           {
             title: "Tagihan",
-            to: "apps-ecommerce-product-list",
+            to: "admin-pemasukan-mahasiswa-master-tagihan",
           },
         ],
       },
