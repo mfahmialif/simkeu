@@ -2,7 +2,7 @@ export default [
   { heading: "PENGELUARAN" },
   {
     title: "Pengeluaran",
-    icon: { icon: "ri-store-2-line" },
+    icon: { icon: "ri-arrow-down-line" },
     children: [
       {
         title: "Jenis Saldo",

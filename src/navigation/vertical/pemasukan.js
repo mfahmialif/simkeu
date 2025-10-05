@@ -2,7 +2,7 @@ export default [
   { heading: "PEMASUKAN" },
   {
     title: "Mahasiswa",
-    icon: { icon: "ri-store-2-line" },
+    icon: { icon: "ri-user-3-line" },
     children: [
       {
         title: "Master",
@@ -77,13 +77,13 @@ export default [
       },
       {
         title: "Laporan",
-        to: "apps-ecommerce-product-list",
+        to: "admin-pemasukan-mahasiswa-laporan",
       },
     ],
   },
   {
     title: "Pemasukan",
-    icon: { icon: "ri-store-2-line" },
+    icon: { icon: "ri-money-dollar-circle-line" },
     children: [
       {
         title: "Jenis Saldo",

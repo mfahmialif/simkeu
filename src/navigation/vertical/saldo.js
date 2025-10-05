@@ -2,7 +2,7 @@ export default [
   { heading: "SIMKEU APPS" },
   {
     title: "Saldo",
-    icon: { icon: "ri-store-2-line" },
+    icon: { icon: "ri-wallet-line" },
     children: [
       {
         title: "Kategori",

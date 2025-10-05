@@ -1,18 +1,17 @@
 <script setup>
-
-const page = ref(1)
-const itemsPerPage = ref(5)
-const sortBy = ref({ key: 'id', order: 'desc' })
+const page = ref(1);
+const itemsPerPage = ref(5);
+const sortBy = ref({ key: "id", order: "desc" });
 const search = ref("");
-const selectedRows = ref([])
-const dataTable = ref([])
-const totalItems = ref(0)
-const loading = ref(true)
-const initialLoading = ref(true)
+const selectedRows = ref([]);
+const dataTable = ref([]);
+const totalItems = ref(0);
+const loading = ref(true);
+const initialLoading = ref(true);
 
-const fetchUsers = async () => {
+const fetchData = async () => {
   try {
-    const { data } = await $api('/admin/pemasukan/mahasiswa/jenis-pembayaran', {
+    const { data } = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
       method: "GET",
       body: {
         page: page.value,
@@ -21,128 +20,155 @@ const fetchUsers = async () => {
         sort_order: sortBy.value.order,
         search: search.value,
       },
-    })
+    });
 
-    dataTable.value = data.data
-    totalItems.value = data.total
+    dataTable.value = data.data;
+    totalItems.value = data.total;
   } catch (err) {
-    console.error(err)
+    console.error(err);
   } finally {
-    loading.value = false
-    if (initialLoading.value) initialLoading.value = false
+    loading.value = false;
+    if (initialLoading.value) initialLoading.value = false;
   }
-}
+};
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  loading.value = true
-  page.value = p
-  itemsPerPage.value = ipp
-  if (sb.length) sortBy.value = sb[0]
-  fetchUsers()
-}
+  loading.value = true;
+  page.value = p;
+  itemsPerPage.value = ipp;
+  if (sb.length) sortBy.value = sb[0];
+  fetchData();
+};
 
-const isDialogDeleteVisible = ref(false)
-const deleteData = ref({})
+const isDialogDeleteVisible = ref(false);
+const deleteData = ref({});
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id: id,
-    name: name
-  }
-  isDialogDeleteVisible.value = true
-}
+    name: name,
+  };
+  isDialogDeleteVisible.value = true;
+};
 
 const deleteDataSubmit = async (id) => {
   try {
-    const response = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran/" + id, {
-      method: 'DELETE',
-    });
+    const response = await $api(
+      "/admin/pemasukan/mahasiswa/jenis-pembayaran/" + id,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
-        color: 'success',
+        color: "success",
       });
 
-      fetchUsers()
+      fetchData();
     } else {
       showSnackbar({
         text: response.message,
-        color: 'error',
+        color: "error",
       });
     }
-
   } catch (err) {
     const message = Array.isArray(err.data?.message)
-      ? err.data.message.join('; ')
-      : err.data?.message || 'Terjadi kesalahan.';
+      ? err.data.message.join("; ")
+      : err.data?.message || "Terjadi kesalahan.";
 
     showSnackbar({
       text: message,
-      color: 'error',
+      color: "error",
     });
   } finally {
-    isDialogDeleteVisible.value = false
+    isDialogDeleteVisible.value = false;
   }
-}
+};
 
 onMounted(() => {
-  document.title = 'Jenis Pembayaran - SIMKEU'
-})
+  document.title = "Jenis Pembayaran - SIMKEU";
+});
 
-watch(selectedRows, (newValue) => {
-  newValue.forEach((row, index) => {
-    console.log(`${index + 1}.`, row)
-  })
-}, { deep: true })
-
+watch(
+  selectedRows,
+  (newValue) => {
+    newValue.forEach((row, index) => {
+      console.log(`${index + 1}.`, row);
+    });
+  },
+  { deep: true }
+);
 </script>
 
 <template>
-
   <div>
-
     <VCard>
       <VCardItem class="pb-4">
         <VCardTitle>Jenis Pembayaran</VCardTitle>
       </VCardItem>
-
 
       <VDivider />
 
       <VCardText class="d-flex flex-wrap gap-4">
         <div class="d-flex align-center w-100 w-sm-auto">
           <!-- 👉 Search  -->
-          <VTextField v-model="search" placeholder="Search Data" style="inline-size: 200px;" density="compact"
-            class="me-3" />
+          <VTextField
+            v-model="search"
+            placeholder="Search Data"
+            style="inline-size: 200px"
+            density="compact"
+            class="me-3"
+          />
         </div>
 
         <VSpacer />
 
         <div class="d-flex gap-x-4 align-center">
           <!-- 👉 Export button -->
-          <VBtn variant="outlined" color="secondary" prepend-icon="ri-upload-2-line">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            prepend-icon="ri-upload-2-line"
+          >
             Export
           </VBtn>
 
-          <VBtn color="primary" prepend-icon="ri-add-line"
-            @click="$router.push('/admin/pemasukan/mahasiswa/master/jenis-pembayaran/add')">
+          <VBtn
+            color="primary"
+            prepend-icon="ri-add-line"
+            @click="
+              $router.push(
+                '/admin/pemasukan/mahasiswa/master/jenis-pembayaran/add'
+              )
+            "
+          >
             Add Data
           </VBtn>
         </div>
       </VCardText>
 
       <!-- 👉 Datatable  -->
-      <VDataTableServer :headers="[
-        { title: 'No', key: 'id' },
-        { title: 'Nama', key: 'nama' },
-        { title: 'Nomer Rekening', key: 'nomer_rekening' },
-        { title: 'Kategori', key: 'kategori' },
-        { title: 'Keterangan', key: 'keterangan' },
-        { title: 'Actions', key: 'actions', sortable: false },
-      ]" v-model:model-value="selectedRows" v-model:items-per-page="itemsPerPage" v-model:page="page"
-        :items="dataTable" :items-length="totalItems" :loading="loading" :search="search" item-value="id"
-        @update:options="loadItems">
+      <VDataTableServer
+        :headers="[
+          { title: 'No', key: 'id' },
+          { title: 'Nama', key: 'nama' },
+          { title: 'Nomer Rekening', key: 'nomer_rekening' },
+          { title: 'Kategori', key: 'kategori' },
+          { title: 'Keterangan', key: 'keterangan' },
+          { title: 'Actions', key: 'actions', sortable: false },
+        ]"
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
+        :items="dataTable"
+        :items-length="totalItems"
+        :loading="loading"
+        :search="search"
+        item-value="id"
+        @update:options="loadItems"
+      >
         <template v-if="initialLoading" #loading>
           <div class="text-center pa-4">
             <VProgressCircular indeterminate color="primary" class="mb-2" />
@@ -165,16 +191,25 @@ watch(selectedRows, (newValue) => {
 
             <VMenu activator="parent">
               <VList>
-                <VListItem value="edit" prepend-icon="ri-edit-box-line"
-                  @click="$router.push(`/admin/pemasukan/mahasiswa/master/jenis-pembayaran/edit/${item.id}`)">
+                <VListItem
+                  value="edit"
+                  prepend-icon="ri-edit-box-line"
+                  @click="
+                    $router.push(
+                      `/admin/pemasukan/mahasiswa/master/jenis-pembayaran/edit/${item.id}`
+                    )
+                  "
+                >
                   Edit
                 </VListItem>
 
-                <VListItem value="delete" prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.nama)">
+                <VListItem
+                  value="delete"
+                  prepend-icon="ri-delete-bin-line"
+                  @click="showDialogDelete(item.id, item.nama)"
+                >
                   Delete
                 </VListItem>
-
               </VList>
             </VMenu>
           </IconBtn>
@@ -185,18 +220,26 @@ watch(selectedRows, (newValue) => {
     <VDialog v-model="isDialogDeleteVisible" width="500">
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
-        <DialogCloseBtn variant="text" size="default" @click="isDialogDeleteVisible = false" />
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="isDialogDeleteVisible = false"
+        />
 
         <VCardText class="d-flex align-center">
           <VIcon icon="ri-alert-line" size="32" class="me-2" />
           <span>
-            Anda yakin ingin menghapus data pengguna ini? Penghapusan data pengguna tidak dapat
-            dibatalkan.
+            Anda yakin ingin menghapus data pengguna ini? Penghapusan data
+            pengguna tidak dapat dibatalkan.
           </span>
         </VCardText>
 
         <VCardText class="d-flex justify-end flex-wrap gap-4">
-          <VBtn variant="outlined" color="secondary" @click="isDialogDeleteVisible = false">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isDialogDeleteVisible = false"
+          >
             Batal
           </VBtn>
           <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
