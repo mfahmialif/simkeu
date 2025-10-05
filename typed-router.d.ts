@@ -28,6 +28,7 @@ declare module 'vue-router/auto-routes' {
     'admin-dashboard-dashboard-overview-table': RouteRecordInfo<'admin-dashboard-dashboard-overview-table', '/admin/dashboard/DashboardOverviewTable', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-shipment-statistics': RouteRecordInfo<'admin-dashboard-dashboard-shipment-statistics', '/admin/dashboard/DashboardShipmentStatistics', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-vehicle-overview': RouteRecordInfo<'admin-dashboard-dashboard-vehicle-overview', '/admin/dashboard/DashboardVehicleOverview', Record<never, never>, Record<never, never>>,
+    'admin-pemasukan-mahasiswa-cek-tagihan': RouteRecordInfo<'admin-pemasukan-mahasiswa-cek-tagihan', '/admin/pemasukan/mahasiswa/cek-tagihan', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-master-data-mahasiswa': RouteRecordInfo<'admin-pemasukan-mahasiswa-master-data-mahasiswa', '/admin/pemasukan/mahasiswa/master/data-mahasiswa', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-master-jenis-pembayaran': RouteRecordInfo<'admin-pemasukan-mahasiswa-master-jenis-pembayaran', '/admin/pemasukan/mahasiswa/master/jenis-pembayaran', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-master-jenis-pembayaran-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-master-jenis-pembayaran-add', '/admin/pemasukan/mahasiswa/master/jenis-pembayaran/add', Record<never, never>, Record<never, never>>,

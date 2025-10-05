@@ -1,5 +1,5 @@
 <script setup>
-import FormJenisPembayaran from '@/components/admin/pemasukan/mahasiswa/master/jenis-pembayaran/FormJenisPembayaran.vue';
+import FormTagihan from '@/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -15,7 +15,7 @@ const fetchData = async () => {
   try {
     isLoading.value = true
 
-    const response = await $api('/admin/pemasukan/mahasiswa/jenis-pembayaran/' + id, {
+    const response = await $api('/admin/pemasukan/mahasiswa/tagihan/' + id, {
       method: "GET",
     })
     console.log(response)
@@ -44,12 +44,12 @@ const menuList = [
     title: 'Lihat Data',
     value: 'lihat-data',
     icon: 'ri-eye-line',
-    clickHandler: () => router.push('/admin/pemasukan/mahasiswa/master/jenis-pembayaran'),
+    clickHandler: () => router.push('/admin/pemasukan/mahasiswa/master/tagihan'),
   },
 ]
 
 onMounted(() => {
-  document.title = 'Jenis Pembayaran Edit - SIMKEU'
+  document.title = 'Tagihan Edit - SIMKEU'
   fetchData()
 })
 
@@ -58,7 +58,7 @@ onMounted(() => {
 <template>
   <VRow>
     <VCol cols="12">
-      <VCard title="Edit Data Jenis Pembayaran">
+      <VCard title="Edit Data Tagihan">
         <template #append>
           <MoreBtnAction :menu-list="menuList" />
         </template>
@@ -67,8 +67,8 @@ onMounted(() => {
           <div v-if="isLoading" class="text-center">
             <VProgressLinear indeterminate />
           </div>
-          <FormJenisPembayaran v-else typeForm="edit" :dataForm="data"
-            :url="'/admin/pemasukan/mahasiswa/jenis-pembayaran/' + id" :is-role-visible="true" />
+          <FormTagihan v-else typeForm="edit" :dataForm="data"
+            :url="'/admin/pemasukan/mahasiswa/tagihan/' + id" :is-role-visible="true" />
         </VCardText>
       </VCard>
     </VCol>

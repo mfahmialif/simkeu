@@ -23,7 +23,7 @@ export default [
       },
       {
         title: "Cek Tagihan",
-        to: "apps-ecommerce-product-list",
+        to: "admin-pemasukan-mahasiswa-cek-tagihan",
       },
       {
         title: "Pembayaran",

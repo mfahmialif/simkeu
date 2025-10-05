@@ -40,18 +40,13 @@ const selectedThAngkatan = ref();
 const thAngkatan = ref([]);
 const selectedProdi = ref();
 const prodi = ref([]);
+const selectedFormSchadule = ref();
+const formSchadule = ref([]);
 
-const username = ref('')
-const name = ref('')
-const email = ref('')
-const password = ref()
-const passwordConfirmation = ref()
-const isPasswordVisible = ref(false)
-const isConfirmPasswordVisible = ref(false)
-const avatar = ref(null)
+const nama = ref('')
+const jumlah = ref('')
+
 const disabled = ref(false)
-const previewUrl = ref('/images/avatars/avatar-1.png')
-
 
 const passwordRules = ref([requiredValidator, passwordValidator]);
 
@@ -120,33 +115,42 @@ const fetchProdi = async () => {
     console.error(err)
   }
 }
+const fetchFormSchadule = async () => {
+  try {
+    const { data } = await $api('/admin/form-schadule', {
+      method: "GET",
+      body: {
+        limit: 0,
+      }
+    })
+
+    formSchadule.value = data.data.map(formSchadule => {
+      return {
+        title: formSchadule.nama,
+        value: formSchadule.id,
+      }
+    })
+  } catch (err) {
+    console.error(err)
+  }
+}
 
 onMounted(() => {
   fetchThAkademik()
   fetchThAngkatan()
   fetchProdi()
+  fetchFormSchadule()
 
   if (props.typeForm === 'edit') {
-    username.value = props.dataForm.username
-    name.value = props.dataForm.name
-    email.value = props.dataForm.email
-    selectedRole.value = props.dataForm.role_id
-    selectedJenisKelamin.value = props.dataForm.jenis_kelamin
-    previewUrl.value = import.meta.env.VITE_BASE_URL + "/avatar/" + props.dataForm.avatar
-
-    passwordRules.value = []
+    selectedThAkademik.value = props.dataForm.th_akademik_id
+    selectedThAngkatan.value = props.dataForm.th_angkatan_id
+    selectedFormSchadule.value = props.dataForm.form_schadule_id
+    selectedProdi.value = props.dataForm.prodi_id
+    nama.value = props.dataForm.nama
+    jumlah.value = props.dataForm.jumlah
   }
 })
 
-watch(avatar, (newFile) => {
-  console.log(avatar, newFile);
-  if (newFile instanceof File) {
-    previewUrl.value = URL.createObjectURL(newFile)
-  } else {
-    console.log('else');
-    previewUrl.value = null
-  }
-})
 
 const onSubmit = async () => {
   const valid = await refForm.value.validate()
@@ -157,20 +161,15 @@ const onSubmit = async () => {
   disabled.value = true
 
   const formData = new FormData()
-  formData.append('username', username.value)
-  formData.append('name', name.value)
-  formData.append('email', email.value)
-  if (typeof password.value !== 'undefined') {
-    formData.append('password', password.value)
-    formData.append('password_confirmation', passwordConfirmation.value)
-  }
-  formData.append('role_id', selectedRole.value)
-  formData.append('jenis_kelamin', selectedJenisKelamin.value)
-  formData.append('_method', method)
+  formData.append('th_akademik_id', selectedThAkademik.value)
+  formData.append('th_angkatan_id', selectedThAngkatan.value)
+  formData.append('prodi_id', selectedProdi.value)
+  formData.append('form_schadule_id', selectedFormSchadule.value)
+  formData.append('kelas_id', 6)
+  formData.append('nama', nama.value)
+  formData.append('jumlah', jumlah.value)
 
-  if (avatar.value instanceof File) {
-    formData.append('avatar', avatar.value)
-  }
+  formData.append('_method', method)
 
   try {
     const response = await $api(props.url, {
@@ -187,7 +186,7 @@ const onSubmit = async () => {
         color: 'success',
       })
 
-      router.push('/admin/user')
+      router.push('/admin/pemasukan/mahasiswa/master/tagihan')
     } else {
       showSnackbar({
         text: response.message,
@@ -215,12 +214,28 @@ const onSubmit = async () => {
     <VRow>
       <VCol cols="12">
         <VSelect v-model="selectedThAkademik" label="Select Th Akademik" placeholder="Select Th Akademik"
-          :items="thAkademik" :rules="[requiredValidator]" clearable clear-icon="ri-close-line" />
+          :items="thAkademik" :rules="[requiredValidator]" clear-icon="ri-close-line" />
+      </VCol>
+      <VCol cols="12">
+        <VSelect v-model="selectedThAngkatan" label="Select Th Angkatan" placeholder="Select Th Angkatan"
+          :items="thAngkatan" :rules="[requiredValidator]" clear-icon="ri-close-line" />
+      </VCol>
+      <VCol cols="12">
+        <VSelect v-model="selectedProdi" label="Select Prodi" placeholder="Select Prodi"
+          :items="prodi" :rules="[requiredValidator]" clear-icon="ri-close-line" />
+      </VCol>
+      <VCol cols="12">
+        <VSelect v-model="selectedFormSchadule" label="Select Formulir" placeholder="Select Formulir"
+          :items="formSchadule" :rules="[requiredValidator]" clear-icon="ri-close-line" />
       </VCol>
 
       <VCol cols="12">
-        <VTextField v-model="username" :rules="[requiredValidator, noSpaceValidator]" label="Username"
-          placeholder="fulanah123" />
+        <VTextField v-model="nama" :rules="[requiredValidator, noSpaceValidator]" label="Nama"
+          placeholder="KRS ...." />
+      </VCol>
+      <VCol cols="12">
+        <VTextField v-model="jumlah" :rules="[requiredValidator, noSpaceValidator]" label="Jumlah"
+          placeholder="10000..." type="number"/>
       </VCol>
 
 

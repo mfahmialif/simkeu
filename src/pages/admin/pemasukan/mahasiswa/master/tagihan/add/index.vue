@@ -18,7 +18,7 @@ const menuList = [
     title: 'Lihat Data',
     value: 'lihat-data',
     icon: 'ri-eye-line',
-    clickHandler: () => router.push('/admin/pemasukan/master/jenis-pembayaran'),
+    clickHandler: () => router.push('/admin/pemasukan/master/tagihan'),
   },
 ]
 
@@ -39,7 +39,7 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <FormTagihan typeForm="add" :url="'/admin/pemasukan/mahasiswa/jenis-pembayaran'" />
+          <FormTagihan typeForm="add" :url="'/admin/pemasukan/mahasiswa/tagihan'" />
         </VCardText>
       </VCard>
     </VCol>
