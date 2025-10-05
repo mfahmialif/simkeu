@@ -1,49 +1,44 @@
 <script setup>
 const chartColors = {
-  line: {
-    series1: '#FFB400',
-    series2: '#666CFF',
-  },
+  bar: '#666CFF',   // primary untuk penerimaan (Rp)
+  line: '#22C55E',   // success untuk realisasi (%)
 }
 
 const headingColor = 'rgba(var(--v-theme-on-background), var(--v-high-emphasis-opacity))'
 const labelColor = 'rgba(var(--v-theme-on-background), var(--v-disabled-opacity))'
 const borderColor = 'rgba(var(--v-border-color), var(--v-border-opacity))'
 
-const series = [
-  {
-    name: 'Jumlah Siswa',
-    type: 'column',
-    data: [
-      120,
-      130,
-      125,
-      140,
-      135,
-      150,
-      145,
-      155,
-      160,
-      158,
-    ],
-  },
-  {
-    name: 'Siswa Lulus',
-    type: 'line',
-    data: [
-      110,
-      115,
-      120,
-      130,
-      128,
-      140,
-      138,
-      145,
-      150,
-      149,
-    ],
-  },
+// ====== DATA KEUANGAN (contoh harian 1–10 Jan) ======
+const categories = [
+  '1 Jan', '2 Jan', '3 Jan', '4 Jan', '5 Jan', '6 Jan', '7 Jan', '8 Jan', '9 Jan', '10 Jan',
 ]
+
+// Penerimaan harian (Rp)
+const penerimaan = [
+  120_000_000,
+  130_000_000,
+  125_000_000,
+  140_000_000,
+  135_000_000,
+  150_000_000,
+  145_000_000,
+  155_000_000,
+  160_000_000,
+  158_000_000,
+]
+
+// Realisasi (%) terhadap target harian
+const realisasi = [82, 86, 90, 92, 88, 95, 93, 97, 100, 98]
+
+// Series: kolom = Rp, garis = %
+const series = [
+  { name: 'Penerimaan (Rp)', type: 'column', data: penerimaan },
+  { name: 'Realisasi (%)', type: 'line', data: realisasi },
+]
+
+// Formatter Rupiah & Persen
+const fmtIDR = v => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v)
+const fmtPct = v => `${v}%`
 
 const shipmentConfig = {
   chart: {
@@ -56,54 +51,33 @@ const shipmentConfig = {
   markers: {
     size: 5,
     colors: '#fff',
-    strokeColors: chartColors.line.series2,
+    strokeColors: chartColors.line,
     hover: { size: 6 },
     borderRadius: 4,
   },
   stroke: {
     curve: 'smooth',
-    width: [
-      0,
-      3,
-    ],
+    width: [0, 3],
     lineCap: 'round',
   },
   legend: {
     show: true,
     position: 'bottom',
-    markers: {
-      width: 8,
-      height: 8,
-      offsetX: -3,
-    },
+    markers: { width: 8, height: 8, offsetX: -3 },
     height: 40,
-    itemMargin: {
-      horizontal: 10,
-      vertical: 0,
-    },
+    itemMargin: { horizontal: 10, vertical: 0 },
     fontSize: '15px',
     fontFamily: 'Inter',
     fontWeight: 400,
-    labels: {
-      colors: headingColor,
-      useSeriesColors: !1,
-    },
+    labels: { colors: headingColor, useSeriesColors: !1 },
     offsetY: 10,
   },
   grid: {
     strokeDashArray: 8,
     borderColor,
   },
-  colors: [
-    chartColors.line.series1,
-    chartColors.line.series2,
-  ],
-  fill: {
-    opacity: [
-      1,
-      1,
-    ],
-  },
+  colors: [chartColors.bar, chartColors.line],
+  fill: { opacity: [1, 1] },
   plotOptions: {
     bar: {
       columnWidth: '30%',
@@ -113,46 +87,46 @@ const shipmentConfig = {
   },
   dataLabels: { enabled: false },
   xaxis: {
-    tickAmount: 10,
-    categories: [
-      '1 Jan',
-      '2 Jan',
-      '3 Jan',
-      '4 Jan',
-      '5 Jan',
-      '6 Jan',
-      '7 Jan',
-      '8 Jan',
-      '9 Jan',
-      '10 Jan',
-    ],
+    tickAmount: categories.length,
+    categories,
     labels: {
-      style: {
-        colors: labelColor,
-        fontSize: '13px',
-        fontFamily: 'Inter',
-        fontWeight: 400,
-      },
+      style: { colors: labelColor, fontSize: '13px', fontFamily: 'Inter', fontWeight: 400 },
     },
     axisBorder: { show: false },
     axisTicks: { show: false },
   },
-  yaxis: {
-    tickAmount: 4,
-    min: 0,
-    max: 50,
-    labels: {
-      style: {
-        colors: labelColor,
-        fontSize: '13px',
-        fontFamily: 'Inter',
-        fontWeight: 400,
+
+  // ====== 2 Sumbu-Y: kiri Rupiah, kanan Persen ======
+  yaxis: [
+    {
+      seriesName: 'Penerimaan (Rp)',
+      labels: {
+        style: { colors: labelColor, fontSize: '13px', fontFamily: 'Inter', fontWeight: 400 },
+        formatter: val => fmtIDR(val),
       },
-      formatter(val) {
-        return `${ val }%`
+      tooltip: { enabled: true },
+    },
+    {
+      opposite: true,
+      seriesName: 'Realisasi (%)',
+      min: 0,
+      max: 100,
+      tickAmount: 4,
+      labels: {
+        style: { colors: labelColor, fontSize: '13px', fontFamily: 'Inter', fontWeight: 400 },
+        formatter: val => fmtPct(val),
       },
     },
+  ],
+
+  tooltip: {
+    shared: true,
+    intersect: false,
+    y: {
+      formatter: (val, { seriesIndex }) => (seriesIndex === 0 ? fmtIDR(val) : fmtPct(val)),
+    },
   },
+
   responsive: [
     {
       breakpoint: 1400,
@@ -160,10 +134,7 @@ const shipmentConfig = {
         chart: { height: 320 },
         xaxis: { labels: { style: { fontSize: '10px' } } },
         legend: {
-          itemMargin: {
-            vertical: 0,
-            horizontal: 10,
-          },
+          itemMargin: { vertical: 0, horizontal: 10 },
           fontSize: '13px',
           offsetY: 12,
         },
@@ -171,58 +142,27 @@ const shipmentConfig = {
     },
     {
       breakpoint: 1025,
-      options: {
-        chart: { height: 415 },
-        plotOptions: { bar: { columnWidth: '50%' } },
-      },
+      options: { chart: { height: 415 }, plotOptions: { bar: { columnWidth: '50%' } } },
     },
-    {
-      breakpoint: 982,
-      options: { plotOptions: { bar: { columnWidth: '30%' } } },
-    },
-    {
-      breakpoint: 480,
-      options: {
-        chart: { height: 250 },
-        legend: { offsetY: 7 },
-      },
-    },
+    { breakpoint: 982, options: { plotOptions: { bar: { columnWidth: '30%' } } } },
+    { breakpoint: 480, options: { chart: { height: 250 }, legend: { offsetY: 7 } } },
   ],
 }
 </script>
 
 <template>
   <VCard>
-    <VCardItem
-      title="Statistik Siswa Madrasah Aliyah"
-      subtitle="Grafik perkembangan jumlah & kelulusan siswa"
-    >
+    <VCardItem title="Statistik Keuangan" subtitle="Penerimaan harian & tingkat realisasi terhadap target">
       <template #append>
-        <VBtnGroup
-          density="compact"
-          variant="outlined"
-          divided
-        >
-          <VBtn color="primary">
-            January
-          </VBtn>
-
-          <VBtn
-            icon="ri-arrow-down-s-line"
-            color="primary"
-          />
+        <VBtnGroup density="compact" variant="outlined" divided>
+          <VBtn color="primary">Januari</VBtn>
+          <VBtn icon="ri-arrow-down-s-line" color="primary" />
         </VBtnGroup>
       </template>
     </VCardItem>
 
     <VCardText>
-      <VueApexCharts
-        id="shipment-statistics"
-        type="line"
-        height="320"
-        :options="shipmentConfig"
-        :series="series"
-      />
+      <VueApexCharts id="finance-statistics" type="line" height="320" :options="shipmentConfig" :series="series" />
     </VCardText>
   </VCard>
 </template>
@@ -234,7 +174,7 @@ const shipmentConfig = {
   border-inline-end-color: rgba(var(--v-theme-primary), 0.5);
 }
 
-#shipment-statistics {
+#finance-statistics {
   .apexcharts-legend-text {
     font-size: 15px !important;
     line-height: 22px;

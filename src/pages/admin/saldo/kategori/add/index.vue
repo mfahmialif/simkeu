@@ -1,5 +1,5 @@
 <script setup>
-import FormTagihan from '@/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue';
+import FormKategori from '@/components/admin/saldo/kategori/FormKategori.vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter()
@@ -18,12 +18,12 @@ const menuList = [
     title: 'Lihat Data',
     value: 'lihat-data',
     icon: 'ri-eye-line',
-    clickHandler: () => router.push('/admin/pemasukan/master/jenis-pembayaran'),
+    clickHandler: () => router.push('/admin/saldo/kategori'),
   },
 ]
 
 onMounted(() => {
-  document.title = 'Tagihan Add - SIMKEU'
+  document.title = 'Kategori Saldo Add - SIMKEU'
 })
 
 onMounted(() => {
@@ -33,13 +33,13 @@ onMounted(() => {
 <template>
   <VRow>
     <VCol cols="12">
-      <VCard title="Tambah Data Tagihan">
+      <VCard title="Tambah Data Kategori Saldo">
         <template #append>
           <MoreBtnAction :menu-list="menuList" />
         </template>
 
         <VCardText>
-          <FormTagihan typeForm="add" :url="'/admin/pemasukan/mahasiswa/jenis-pembayaran'" />
+          <FormKategori typeForm="add" :url="'/admin/saldo/kategori'" />
         </VCardText>
       </VCard>
     </VCol>

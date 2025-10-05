@@ -3,32 +3,32 @@ const logisticData = ref([
   {
     icon: 'ri-car-line',
     color: 'primary',
-    title: 'Data Siswa',
-    value: 42,
+    title: 'Saldo',
+    value: 5000000,
     change: 18.2,
     isHover: false,
   },
   {
     icon: 'ri-alert-line',
     color: 'warning',
-    title: 'Data Guru',
-    value: 8,
+    title: 'Pemasukan',
+    value: 1000000,
     change: -8.7,
     isHover: false,
   },
   {
     icon: 'ri-route-line',
     color: 'error',
-    title: 'Data Kelas',
-    value: 27,
+    title: 'Pengeluaran',
+    value: 5000000,
     change: 4.3,
     isHover: false,
   },
   {
     icon: 'ri-time-line',
     color: 'info',
-    title: 'Data Mata Pelajaran',
-    value: 13,
+    title: 'Transaksi',
+    value: 100,
     change: -2.5,
     isHover: false,
   },
@@ -37,31 +37,15 @@ const logisticData = ref([
 
 <template>
   <VRow>
-    <VCol
-      v-for="(data, index) in logisticData"
-      :key="index"
-      cols="12"
-      md="3"
-      sm="6"
-    >
+    <VCol v-for="(data, index) in logisticData" :key="index" cols="12" md="3" sm="6">
       <div>
-        <VCard
-          class="logistics-card-statistics cursor-pointer"
+        <VCard class="logistics-card-statistics cursor-pointer"
           :style="data.isHover ? `border-block-end-color: rgb(var(--v-theme-${data.color}))` : `border-block-end-color: rgba(var(--v-theme-${data.color}),0.38)`"
-          @mouseenter="data.isHover = true"
-          @mouseleave="data.isHover = false"
-        >
+          @mouseenter="data.isHover = true" @mouseleave="data.isHover = false">
           <VCardText>
             <div class="d-flex align-center gap-x-4 mb-2">
-              <VAvatar
-                variant="tonal"
-                :color="data.color"
-                rounded="lg"
-              >
-                <VIcon
-                  :icon="data.icon"
-                  size="24"
-                />
+              <VAvatar variant="tonal" :color="data.color" rounded="lg">
+                <VIcon :icon="data.icon" size="24" />
               </VAvatar>
               <h4 class="text-h4">
                 {{ data.value }}

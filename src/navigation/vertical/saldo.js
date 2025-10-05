@@ -5,12 +5,8 @@ export default [
     icon: { icon: "ri-store-2-line" },
     children: [
       {
-        title: "Jenis Saldo",
-        to: "apps-ecommerce-product-list",
-      },
-      {
-        title: "Saldo",
-        to: "apps-ecommerce-product-list",
+        title: "Kategori",
+        to: "admin-saldo-kategori",
       },
     ],
   },
