@@ -57,23 +57,23 @@ export default [
       },
       {
         title: "UAS Susulan",
-        to: "apps-ecommerce-product-list",
+        to: "admin-pemasukan-mahasiswa-uas-susulan",
       },
       {
         title: "Piutang",
-        to: "apps-ecommerce-product-list",
+        to: "admin-pemasukan-mahasiswa-piutang",
       },
       {
         title: "Setoran",
-        to: "apps-ecommerce-product-list",
+        to: "admin-pemasukan-mahasiswa-setoran",
       },
       {
         title: "Catatan Deposit",
-        to: "apps-ecommerce-product-list",
+        to: "admin-pemasukan-mahasiswa-catatan-deposit",
       },
       {
         title: "Pemasukan Pengeluaran",
-        to: "apps-ecommerce-product-list",
+        to: "admin-pemasukan-mahasiswa-pemasukan-pengeluaran",
       },
       {
         title: "Laporan",

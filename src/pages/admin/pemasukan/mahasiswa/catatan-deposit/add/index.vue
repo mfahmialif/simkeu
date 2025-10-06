@@ -1,5 +1,5 @@
 <script setup>
-import FormUser from "@/components/admin/user/FormUser.vue";
+import FormDeposit from "@/components/admin/deposit/FormDeposit.vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -18,12 +18,13 @@ const menuList = [
     title: "Lihat Data",
     value: "lihat-data",
     icon: "ri-eye-line",
-    clickHandler: () => router.push("/admin/user"),
+    clickHandler: () =>
+      router.push("/admin/pemasukan/mahasiswa/catatan-deposit"),
   },
 ];
 
 onMounted(() => {
-  document.title = "Users Add - SIMKEU";
+  document.title = "Catatan Deposit Add - SIMKEU";
 });
 
 onMounted(() => {});
@@ -32,15 +33,15 @@ onMounted(() => {});
 <template>
   <VRow>
     <VCol cols="12">
-      <VCard title="Tambah Data User">
+      <VCard title="Tambah Catatan Deposit">
         <template #append>
           <MoreBtnAction :menu-list="menuList" />
         </template>
 
         <VCardText>
-          <FormUser
+          <FormDeposit
             typeForm="add"
-            :url="'/admin/users'"
+            :url="'/admin/pemasukan/mahasiswa/catatan-deposit'"
             :isRoleVisible="true"
           />
         </VCardText>

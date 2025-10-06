@@ -1,5 +1,5 @@
 <script setup>
-import FormUser from "@/components/admin/user/FormUser.vue";
+import FormUas from "@/components/admin/uas/FormUas.vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -18,12 +18,12 @@ const menuList = [
     title: "Lihat Data",
     value: "lihat-data",
     icon: "ri-eye-line",
-    clickHandler: () => router.push("/admin/user"),
+    clickHandler: () => router.push("/admin/pemasukan/mahasiswa/uas-susulan"),
   },
 ];
 
 onMounted(() => {
-  document.title = "Users Add - SIMKEU";
+  document.title = "UAS Susulan Add - SIMKEU";
 });
 
 onMounted(() => {});
@@ -32,15 +32,14 @@ onMounted(() => {});
 <template>
   <VRow>
     <VCol cols="12">
-      <VCard title="Tambah Data User">
+      <VCard title="Tambah Data UAS Susulan">
         <template #append>
           <MoreBtnAction :menu-list="menuList" />
         </template>
-
         <VCardText>
-          <FormUser
+          <FormUas
             typeForm="add"
-            :url="'/admin/users'"
+            :url="'/admin/pemasukan/mahasiswa/uas-susulan'"
             :isRoleVisible="true"
           />
         </VCardText>
