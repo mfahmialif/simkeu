@@ -34,11 +34,11 @@ export default [
           },
           {
             title: "IDN",
-            to: "apps-ecommerce-product-list",
+            to: "admin-pemasukan-mahasiswa-pembayaran-idn",
           },
           {
             title: "Tambahan",
-            to: "apps-ecommerce-product-list",
+            to: "admin-pemasukan-mahasiswa-pembayaran-tambahan",
           },
         ],
       },
@@ -47,11 +47,11 @@ export default [
         children: [
           {
             title: "Dispensasi",
-            to: "apps-ecommerce-product-list",
+            to: "admin-pemasukan-mahasiswa-dispensasi",
           },
           {
             title: "Tagihan",
-            to: "apps-ecommerce-product-list",
+            to: "admin-pemasukan-mahasiswa-dispensasi-tagihan",
           },
         ],
       },
