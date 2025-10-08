@@ -30,7 +30,7 @@ export default [
         children: [
           {
             title: "Mahasiswa",
-            to: "apps-ecommerce-product-list",
+            to: "admin-pemasukan-mahasiswa-pembayaran-mahasiswa",
           },
           {
             title: "IDN",

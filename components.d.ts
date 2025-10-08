@@ -366,7 +366,7 @@ declare module 'vue' {
     FormPembayaranTagihan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/FormPembayaranTagihan.vue')['default']
     FormProfile: typeof import('./src/components/admin/profile/FormProfile.vue')['default']
     FormSetoran: typeof import('./src/components/admin/setoran/FormSetoran.vue')['default']
-    FormTagihan: typeof import('./src/components/admin/pemasukan/mahasiswa/dispensasi/FormTagihan.vue')['default']
+    FormTagihan: typeof import('./src/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue')['default']
     FormUas: typeof import('./src/components/admin/uas/FormUas.vue')['default']
     FormUser: typeof import('./src/components/admin/user/FormUser.vue')['default']
     I18n: typeof import('./src/@core/components/I18n.vue')['default']
@@ -392,6 +392,7 @@ declare module 'vue' {
     UserProfileHeader: typeof import('./src/components/admin/profile/UserProfileHeader.vue')['default']
     UserUpgradePlanDialog: typeof import('./src/components/dialogs/UserUpgradePlanDialog.vue')['default']
     VueApexCharts: typeof import('vue3-apexcharts')['default']
+    WidgetPembayaranMahasiswa: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/WidgetPembayaranMahasiswa.vue')['default']
     WidgetUser: typeof import('./src/components/admin/user/WidgetUser.vue')['default']
   }
 }

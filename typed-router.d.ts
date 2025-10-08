@@ -48,6 +48,8 @@ declare module 'vue-router/auto-routes' {
     'admin-pemasukan-mahasiswa-master-tagihan-edit-id': RouteRecordInfo<'admin-pemasukan-mahasiswa-master-tagihan-edit-id', '/admin/pemasukan/mahasiswa/master/tagihan/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-pemasukan-mahasiswa-pemasukan-pengeluaran': RouteRecordInfo<'admin-pemasukan-mahasiswa-pemasukan-pengeluaran', '/admin/pemasukan/mahasiswa/pemasukan-pengeluaran', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-pembayaran-idn': RouteRecordInfo<'admin-pemasukan-mahasiswa-pembayaran-idn', '/admin/pemasukan/mahasiswa/pembayaran/idn', Record<never, never>, Record<never, never>>,
+    'admin-pemasukan-mahasiswa-pembayaran-mahasiswa': RouteRecordInfo<'admin-pemasukan-mahasiswa-pembayaran-mahasiswa', '/admin/pemasukan/mahasiswa/pembayaran/mahasiswa', Record<never, never>, Record<never, never>>,
+    'admin-pemasukan-mahasiswa-pembayaran-mahasiswa-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-pembayaran-mahasiswa-add', '/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-pembayaran-tambahan': RouteRecordInfo<'admin-pemasukan-mahasiswa-pembayaran-tambahan', '/admin/pemasukan/mahasiswa/pembayaran/tambahan', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-pembayaran-tambahan-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-pembayaran-tambahan-add', '/admin/pemasukan/mahasiswa/pembayaran/tambahan/add', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-piutang': RouteRecordInfo<'admin-pemasukan-mahasiswa-piutang', '/admin/pemasukan/mahasiswa/piutang', Record<never, never>, Record<never, never>>,
