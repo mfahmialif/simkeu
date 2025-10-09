@@ -13,13 +13,13 @@ const emptyMahasiswa = {
   nama: "",
   prodi: "",
   jenisKelamin: "",
+  jkId:"",
   angkatan: "",
   kelas: "",
   semester: "",
   deposit: 0,
   dipakai: 0,
   tagihan: [],
-  jenisPembayaran: {}
 };
 
 const mahasiswa = ref(emptyMahasiswa);
@@ -97,6 +97,7 @@ const searching = async () => {
       mahasiswa.value.nama = "";
       mahasiswa.value.prodi = "";
       mahasiswa.value.jenisKelamin = "";
+      mahasiswa.value.jkId = "";
       mahasiswa.value.angkatan = "";
       mahasiswa.value.kelas = "";
       mahasiswa.value.semester = "";
@@ -107,6 +108,7 @@ const searching = async () => {
     mahasiswa.value.nama = res.nama;
     mahasiswa.value.prodi = res.prodi?.nama;
     mahasiswa.value.jenisKelamin = res.jk?.nama;
+    mahasiswa.value.jkId = res.jk?.id;
     mahasiswa.value.angkatan = res.th_akademik?.kode;
     mahasiswa.value.kelas = res.kelas?.nama;
     mahasiswa.value.semester = res.semester;

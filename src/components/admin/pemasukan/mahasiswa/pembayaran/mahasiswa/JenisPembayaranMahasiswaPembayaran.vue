@@ -1,26 +1,4 @@
 <script setup>
-import Combobox from '@/pages/forms/combobox.vue';
-import { watch } from 'vue';
-
-const props = defineProps({
-  mahasiswa: {
-    type: Object,
-    required: true,
-    default: () => ({
-      nim: "",
-      nama: "",
-      prodi: "",
-      jenisKelamin: "",
-      angkatan: "",
-      kelas: "",
-      semester: "",
-      deposit: 0,
-      dipakai: 0,
-      tagihan: [],
-      jenisPembayaran: {}
-    }),
-  },
-});
 
 const jenisPembayaran = ref([]);
 const selectedJenisPembayaran = ref();
@@ -33,13 +11,13 @@ const fetchJenisPembayaran = async () => {
     const res = await $api(`/admin/pemasukan/mahasiswa/jenis-pembayaran`, {
       method: "GET",
       body: {
-        limit: 0
-      }
+        limit: 0,
+      },
     });
 
     jenisPembayaran.value = res.data.data.map((item) => ({
-      ...item,
       display: `${item.nama} - ${item.kategori}`,
+      value: item.id,
     }));
   } catch (error) {
     showSnackbar({
@@ -51,9 +29,7 @@ const fetchJenisPembayaran = async () => {
   }
 };
 
-watch(selectedJenisPembayaran, () => {
-  props.mahasiswa.jenisPembayaran = selectedJenisPembayaran.value;
-}, { deep: true });
+defineExpose({selectedJenisPembayaran});
 
 onMounted(() => {
   fetchJenisPembayaran();
@@ -61,7 +37,6 @@ onMounted(() => {
 </script>
 
 <template>
-
   <VCard class="mt-4" title="Metode Pembayaran">
     <VCardText>
       <VRow>

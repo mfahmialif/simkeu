@@ -1,4 +1,5 @@
 <script setup>
+
 const thAkademik = ref([]);
 const selectedThAkademik = ref();
 const loadingThAkademik = ref(false);
@@ -30,7 +31,7 @@ const fetchThAkademik = async () => {
   }
 };
 
-defineExpose({selectedThAkademik});
+defineExpose({ selectedThAkademik, tanggal });
 
 onMounted(() => {
   fetchThAkademik();

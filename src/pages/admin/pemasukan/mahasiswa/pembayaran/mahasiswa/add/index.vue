@@ -7,21 +7,23 @@ import TagihanPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/p
 
 const submitData = () => {
   console.log(mahasiswaRef.value?.mahasiswa);
+  console.log(akademikRef.value.tanggal);
+  console.log(jenisPembayaranRef.value);
 };
 
 const tagihanRef = ref(null);
-
 function onRefreshTagihan(nim) {
-  tagihanRef.value?.fetchTagihan(nim); // ⬅️ panggil fungsi child 2
+  tagihanRef.value?.fetchTagihan(nim); 
+
+const mahasiswaRef = ref(null);
+
+const depositRef = ref(null);
+function onRefreshDeposit() {
+  depositRef.value?.fetchDeposit();
 }
 
 const akademikRef = ref(null);
-const mahasiswaRef = ref(null);
-const depositRef = ref(null);
-
-function onRefreshDeposit(){
-  depositRef.value?.fetchDeposit();
-}
+const jenisPembayaranRef = ref(null);
 
 onMounted(() => {
   document.title = "Tambah Data Pembayaran Mahasiswa - SIMKEU";
@@ -53,15 +55,25 @@ onMounted(() => {
       <VCol md="8">
         <AkademikPembayaranMahasiswa ref="akademikRef" />
 
-        <MahasiswaPembayaranMahasiswa @refreshTagihan="onRefreshTagihan" ref="mahasiswaRef" @refreshDeposit="onRefreshDeposit" />
+        <MahasiswaPembayaranMahasiswa
+          ref="mahasiswaRef"
+          @refreshTagihan="onRefreshTagihan"
+          @refreshDeposit="onRefreshDeposit"
+        />
 
-        <TagihanPembayaranMahasiswa :mahasiswa="mahasiswaRef?.mahasiswa" ref="tagihanRef" />
+        <TagihanPembayaranMahasiswa
+          ref="tagihanRef"
+          :mahasiswa="mahasiswaRef?.mahasiswa"
+        />
 
-        <JenisPembayaranMahasiswaPembayaran :mahasiswa="mahasiswaRef?.mahasiswa" />
+        <JenisPembayaranMahasiswaPembayaran ref="jenisPembayaranRef" />
       </VCol>
 
       <VCol md="4" cols="12">
-        <DepositPembayaranMahasiswa :mahasiswa="mahasiswaRef?.mahasiswa" ref="depositRef" />
+        <DepositPembayaranMahasiswa
+          ref="depositRef"
+          :mahasiswa="mahasiswaRef?.mahasiswa"
+        />
 
         <VBtn color="primary" @click="submitData" class="w-100 mt-3">
           Simpan Pembayaran

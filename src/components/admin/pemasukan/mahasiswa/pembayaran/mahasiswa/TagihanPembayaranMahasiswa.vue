@@ -6,19 +6,7 @@ const props = defineProps({
   mahasiswa: {
     type: Object,
     required: true,
-    default: () => ({
-      nim: "",
-      nama: "",
-      prodi: "",
-      jenisKelamin: "",
-      angkatan: "",
-      kelas: "",
-      semester: "",
-      deposit: 0,
-      dipakai: 0,
-      tagihan: [],
-      jenisPembayaran: {}
-    }),
+    default: () => ({}),
   },
 });
 

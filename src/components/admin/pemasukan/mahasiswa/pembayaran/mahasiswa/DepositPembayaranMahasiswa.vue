@@ -1,23 +1,11 @@
 <script setup>
-import { showSnackbar } from '@/composables/snackbar';
+import { showSnackbar } from "@/composables/snackbar";
 
 const props = defineProps({
   mahasiswa: {
     type: Object,
     required: true,
-    default: () => ({
-      nim: "",
-      nama: "",
-      prodi: "",
-      jenisKelamin: "",
-      angkatan: "",
-      kelas: "",
-      semester: "",
-      deposit: 0,
-      dipakai: 0,
-      tagihan: [],
-      jenisPembayaran: {}
-    }),
+    default: () => ({}),
   },
 });
 
@@ -168,13 +156,7 @@ function onHapus() {
           </VRow>
         </VCol>
         <VCol cols="12" class="mt-3 mt-md-0 d-flex gap-2">
-          <VBtn
-            color="primary"
-            class="mr-2"
-            @click="onPakai"
-          >
-            Dipakai
-          </VBtn>
+          <VBtn color="primary" class="mr-2" @click="onPakai"> Dipakai </VBtn>
 
           <VBtn color="error" variant="elevated" icon @click="onHapus">
             <VIcon icon="ri-delete-bin-line" />
