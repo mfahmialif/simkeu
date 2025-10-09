@@ -5,15 +5,105 @@ import JenisPembayaranMahasiswaPembayaran from "@/components/admin/pemasukan/mah
 import MahasiswaPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/MahasiswaPembayaranMahasiswa.vue";
 import TagihanPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/TagihanPembayaranMahasiswa.vue";
 
-const submitData = () => {
-  console.log(mahasiswaRef.value?.mahasiswa);
-  console.log(akademikRef.value.tanggal);
-  console.log(jenisPembayaranRef.value);
+const disabled = ref(false);
+
+const submitData = async () => {
+  const formData = buildPembayaranFormData();
+
+  if (!formData) {
+    return;
+  }
+
+  try {
+    const response = await $api('/admin/pemasukan/mahasiswa/pembayaran', {
+      method: "POST",
+      body: formData,
+      onResponseError({ response }) {
+        console.error(response);
+      },
+    });
+
+    console.log(response);
+    if (response.status === true) {
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      });
+
+      $router.push("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa");
+    } else {
+      showSnackbar({
+        text: response.message,
+        color: "error",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    // const message = Array.isArray(err.data.message)
+    //   ? err.data.message.join("; ")
+    //   : err.data.message;
+    // showSnackbar({
+    //   text: message,
+    //   color: "error",
+    // });
+  } finally {
+    disabled.value = false;
+  }
 };
+
+function buildPembayaranFormData() {
+  const mahasiswa = mahasiswaRef.value?.mahasiswa;
+  const thAkademik = akademikRef.value?.selectedThAkademik ?? null;
+  const tanggal = akademikRef.value?.tanggal ?? null;
+  const jenisPembayaran =
+    jenisPembayaranRef.value?.selectedJenisPembayaran ?? null;
+
+  if (thAkademik === null || tanggal === null || jenisPembayaran === null) {
+    showSnackbar({
+      text: "Harap memilih tahun akademik, tanggal, dan jenis pembayaran",
+      color: "error",
+    });
+    return false;
+  }
+
+  // Opsional: validasi minimal
+  if (!unref(mahasiswaRef.value.mahasiswa.tagihan)?.length) {
+    showSnackbar({ text: "List tagihan kosong", color: "error" });
+    return false;
+  }
+
+  const m = mahasiswa ?? {};
+  const rows = unref(m.tagihan) ?? []; // tagihan adalah Ref<Array>
+
+  const fd = new FormData();
+
+  // Wajib
+  fd.append("tanggal", tanggal);
+  fd.append("tahun_akademik", thAkademik?.value ?? "");
+  fd.append("nim", m.nim ?? "");
+  fd.append("jenis_pembayaran", jenisPembayaran?.value ?? "");
+  fd.append("jk_id", m.jkId ?? "");
+
+  // Nullable
+  if (m.semester != null) fd.append("semester", m.semester);
+  if (m.dipakai != null) fd.append("dipakai_deposit_mhs", m.dipakai); // total deposit yang dipakai
+  if (m.kamarId != null) fd.append("kamar_id", m.kamarId);
+
+  // Array list_tagihan_*
+  rows.forEach((r) => {
+    fd.append("list_tagihan_id[]", r.id ?? "");
+    fd.append("list_tagihan[]", r.display ?? r.nama ?? r.judul ?? ""); // nama tagihan
+    fd.append("list_dibayar[]", r.dibayar ?? 0);
+    fd.append("list_deposit[]", r.deposit ?? 0);
+  });
+
+  return fd;
+}
 
 const tagihanRef = ref(null);
 function onRefreshTagihan(nim) {
-  tagihanRef.value?.fetchTagihan(nim); 
+  tagihanRef.value?.fetchTagihan(nim);
+}
 
 const mahasiswaRef = ref(null);
 
@@ -47,7 +137,7 @@ onMounted(() => {
           "
           >Batalkan</VBtn
         >
-        <VBtn color="primary" @click="submitData">Simpan Pembayaran</VBtn>
+        <VBtn color="primary" @click="submitData" :disabled>Simpan Pembayaran</VBtn>
       </div>
     </div>
 
@@ -75,7 +165,7 @@ onMounted(() => {
           :mahasiswa="mahasiswaRef?.mahasiswa"
         />
 
-        <VBtn color="primary" @click="submitData" class="w-100 mt-3">
+        <VBtn color="primary" @click="submitData" :disabled class="w-100 mt-3">
           Simpan Pembayaran
         </VBtn>
       </VCol>
