@@ -368,6 +368,7 @@
     "showSnackbar": true,
     "snackbar": true,
     "snackbarData": true,
-    "checkRole": true
+    "checkRole": true,
+    "formatRupiah": true
   }
 }
