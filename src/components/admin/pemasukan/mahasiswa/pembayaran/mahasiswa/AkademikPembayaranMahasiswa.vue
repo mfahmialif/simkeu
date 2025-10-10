@@ -1,4 +1,15 @@
 <script setup>
+const props = defineProps({
+  typeForm: {
+    type: String,
+    required: false,
+    default: null,
+  },
+  dataForm: {
+    type: Object,
+    required: false,
+  },
+});
 
 const thAkademik = ref([]);
 const selectedThAkademik = ref();
@@ -11,9 +22,7 @@ const fetchThAkademik = async () => {
     loadingThAkademik.value = true;
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
-      body: {
-        aktif: "Y",
-      },
+      body: props.typeForm !== "edit" ? { aktif: "y" } : {},
     });
 
     thAkademik.value = data.data.map((thAkademik) => {
@@ -37,6 +46,19 @@ onMounted(() => {
   fetchThAkademik();
   tanggal.value = new Date().toISOString().split("T")[0];
 });
+
+watch(
+  () => props.dataForm,
+  (newVal) => {
+    if (props.typeForm === "edit" && newVal) {
+      const date = new Date(newVal.tanggal).toISOString().slice(0, 10);
+      tanggal.value = date;
+      selectedThAkademik.value = thAkademik.value.find(
+        (item) => item.value === newVal.th_akademik_id
+      );
+    }
+  },
+);
 </script>
 
 <template>

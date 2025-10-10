@@ -84,8 +84,11 @@ const searching = async () => {
     emit("refreshTagihan", mahasiswa.value.nim);
     emit("refreshDeposit");
 
-    const res = await $api(`/admin/mahasiswa/nim/${mahasiswa.value.nim}`, {
+    const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
+      body: {
+        nim: mahasiswa.value.nim
+      }
     });
 
     if (res.length < 1) {

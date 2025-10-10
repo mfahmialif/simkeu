@@ -1,11 +1,34 @@
 <script setup>
 
-const props = defineProps({
-  widgetData: {
-    type: Array,
-    default: () => [],
+const widgetData = ref([
+  {
+    title: "In-Store Sales",
+    value: "$5,345",
+    icon: "ri-home-6-line",
+    desc: "5k orders",
+    change: 5.7,
   },
-});
+  {
+    title: "Website Sales",
+    value: "$74,347",
+    icon: "ri-computer-line",
+    desc: "21k orders",
+    change: 12.4,
+  },
+  {
+    title: "Discount",
+    value: "$14,235",
+    icon: "ri-gift-line",
+    desc: "6k orders",
+  },
+  {
+    title: "Affiliate",
+    value: "$8,345",
+    icon: "ri-money-dollar-circle-line",
+    desc: "150 orders",
+    change: -3.5,
+  },
+]);
 </script>
 
 <template>
@@ -15,16 +38,20 @@ const props = defineProps({
       <VRow>
         <template v-for="(data, index) in widgetData" :key="index">
           <VCol cols="12" sm="6" md="3" class="px-6">
-            <div class="d-flex justify-space-between" :class="$vuetify.display.xs
-              ? index !== widgetData.length - 1
-                ? 'border-b pb-4'
-                : ''
-              : $vuetify.display.sm
-                ? index < widgetData.length / 2
-                  ? 'border-b pb-4'
+            <div
+              class="d-flex justify-space-between"
+              :class="
+                $vuetify.display.xs
+                  ? index !== widgetData.length - 1
+                    ? 'border-b pb-4'
+                    : ''
+                  : $vuetify.display.sm
+                  ? index < widgetData.length / 2
+                    ? 'border-b pb-4'
+                    : ''
                   : ''
-                : ''
-              ">
+              "
+            >
               <div class="d-flex flex-column gap-y-1">
                 <p class="text-capitalize mb-0">
                   {{ data.title }}
@@ -39,7 +66,11 @@ const props = defineProps({
                     {{ data.desc }}
                   </div>
 
-                  <VChip v-if="data.change" size="small" :color="data.change > 0 ? 'success' : 'error'">
+                  <VChip
+                    v-if="data.change"
+                    size="small"
+                    :color="data.change > 0 ? 'success' : 'error'"
+                  >
                     {{ prefixWithPlus(data.change) }}%
                   </VChip>
                 </div>
@@ -50,13 +81,18 @@ const props = defineProps({
               </VAvatar>
             </div>
           </VCol>
-          <VDivider v-if="
-            $vuetify.display.mdAndUp
-              ? index !== widgetData.length - 1
-              : $vuetify.display.smAndUp
+          <VDivider
+            v-if="
+              $vuetify.display.mdAndUp
+                ? index !== widgetData.length - 1
+                : $vuetify.display.smAndUp
                 ? index % 2 === 0
                 : false
-          " vertical inset length="92" />
+            "
+            vertical
+            inset
+            length="92"
+          />
         </template>
       </VRow>
     </VCardText>

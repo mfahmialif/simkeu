@@ -50,14 +50,14 @@ async function onSimpan() {
         jumlah: form.value.simpan,
       },
     });
+    
+    props.mahasiswa.deposit = Number(res.data.jumlah);
+    form.value.simpan = 0;
 
     showSnackbar({
       text: "Deposit berhasil disimpan.",
       color: "success",
     });
-
-    props.mahasiswa.deposit += Number(form.value.simpan || 0);
-    form.value.simpan = 0;
   } catch (error) {
     showSnackbar({
       text: error,

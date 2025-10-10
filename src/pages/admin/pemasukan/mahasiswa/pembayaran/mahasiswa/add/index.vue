@@ -5,6 +5,8 @@ import JenisPembayaranMahasiswaPembayaran from "@/components/admin/pemasukan/mah
 import MahasiswaPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/MahasiswaPembayaranMahasiswa.vue";
 import TagihanPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/TagihanPembayaranMahasiswa.vue";
 
+const router = useRouter();
+
 const disabled = ref(false);
 
 const submitData = async () => {
@@ -15,6 +17,8 @@ const submitData = async () => {
   }
 
   try {
+
+    disabled.value = true;
     const response = await $api('/admin/pemasukan/mahasiswa/pembayaran', {
       method: "POST",
       body: formData,
@@ -30,7 +34,7 @@ const submitData = async () => {
         color: "success",
       });
 
-      $router.push("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa");
+      router.push("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa");
     } else {
       showSnackbar({
         text: response.message,

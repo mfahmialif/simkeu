@@ -1,35 +1,6 @@
 <script setup>
-import WidgetPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/WidgetPembayaranMahasiswa.vue";
+import WidgetPembayaranMahasiswa from '@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/WidgetPembayaranMahasiswa.vue';
 
-const widgetData = ref([
-  {
-    title: "In-Store Sales",
-    value: "$5,345",
-    icon: "ri-home-6-line",
-    desc: "5k orders",
-    change: 5.7,
-  },
-  {
-    title: "Website Sales",
-    value: "$74,347",
-    icon: "ri-computer-line",
-    desc: "21k orders",
-    change: 12.4,
-  },
-  {
-    title: "Discount",
-    value: "$14,235",
-    icon: "ri-gift-line",
-    desc: "6k orders",
-  },
-  {
-    title: "Affiliate",
-    value: "$8,345",
-    icon: "ri-money-dollar-circle-line",
-    desc: "150 orders",
-    change: -3.5,
-  },
-]);
 
 const selectedThAkademik = ref();
 const thAkademik = ref([]);
@@ -73,17 +44,32 @@ const fetchData = async () => {
   }
 };
 
-const fetchDetailData = () => {
-  dataTable.value.forEach((item, index) => {
-    $api(`/admin/mahasiswa/nim/${item.nim}`, { method: "GET" })
-      .then((res) => {
-        dataTable.value[index].mahasiswa = res;
-      })
-      .catch((err) => {
-        console.error(`Error NIM ${item.nim}:`, err);
-        dataTable.value[index].mahasiswa = "Error";
-      });
+const fetchDetailData = async () => {
+  const nimList = dataTable.value.map((item) => item.nim);
+  const res = await $api("/admin/mahasiswa/nim", {
+    method: "GET",
+    body: {
+      nim: JSON.stringify(nimList),
+      whereIn: true,
+    },
   });
+  dataTable.value = dataTable.value.map((item) => {
+    const mhs = res.find((m) => m.nim === item.nim);
+    return {
+      ...item,
+      mahasiswa: mhs ? mhs : null, // tambahkan objek mahasiswa (atau null kalau tidak ditemukan)
+    };
+  });
+  // dataTable.value.forEach((item, index) => {
+  //   $api(`/admin/mahasiswa/nim/${item.nim}`, { method: "GET" })
+  //     .then((res) => {
+  //       dataTable.value[index].mahasiswa = res;
+  //     })
+  //     .catch((err) => {
+  //       console.error(`Error NIM ${item.nim}:`, err);
+  //       dataTable.value[index].mahasiswa = "Error";
+  //     });
+  // });
 };
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
@@ -113,6 +99,7 @@ const fetchThAkademik = async () => {
 
 const isDialogDeleteVisible = ref(false);
 const deleteData = ref({});
+const disabledDelete = ref(false);
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
@@ -124,7 +111,8 @@ const showDialogDelete = (id, name) => {
 
 const deleteDataSubmit = async (id) => {
   try {
-    const response = await $api("/admin/users/" + id, {
+    disabledDelete.value = true;
+    const response = await $api("/admin/pemasukan/mahasiswa/pembayaran/" + id, {
       method: "DELETE",
     });
 
@@ -142,16 +130,13 @@ const deleteDataSubmit = async (id) => {
       });
     }
   } catch (err) {
-    const message = Array.isArray(err.data?.message)
-      ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
-
     showSnackbar({
-      text: message,
+      text: err,
       color: "error",
     });
   } finally {
     isDialogDeleteVisible.value = false;
+    disabledDelete.value = false;
   }
 };
 
@@ -178,7 +163,7 @@ watch(selectedThAkademik, () => {
 
 <template>
   <div>
-    <WidgetPembayaranMahasiswa :widgetData="widgetData" />
+    <!-- <WidgetPembayaranMahasiswa /> -->
 
     <VRow class="mb-2">
       <!-- 👉 Select ThAkademik -->
@@ -245,6 +230,7 @@ watch(selectedThAkademik, () => {
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Pembayaran', key: 'keuangan_tagihan_nama' },
+          { title: 'Jumlah', key: 'jumlah' },
           { title: 'Tahun', key: 'th_akademik_kode' },
           { title: 'Tanggal', key: 'tanggal' },
           { title: 'Actions', key: 'actions', sortable: false },
@@ -328,7 +314,7 @@ watch(selectedThAkademik, () => {
                 <VListItem
                   value="download"
                   prepend-icon="ri-edit-box-line"
-                  @click="$router.push(`/admin/user/edit/${item.id}`)"
+                  @click="$router.push(`/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/edit/${item.id}`)"
                 >
                   Edit
                 </VListItem>
@@ -336,7 +322,12 @@ watch(selectedThAkademik, () => {
                 <VListItem
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.username)"
+                  @click="
+                    showDialogDelete(
+                      item.id,
+                      `${item.keuangan_tagihan_nama}`
+                    )
+                  "
                 >
                   Delete
                 </VListItem>
@@ -372,9 +363,9 @@ watch(selectedThAkademik, () => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
+          <VBtn color="error" :disabled="disabledDelete" @click="deleteDataSubmit(deleteData.id)">
             <VIcon icon="ri-delete-bin-line" class="me-1" />
-            Hapus
+            Delete
           </VBtn>
         </VCardText>
       </VCard>

@@ -1,4 +1,15 @@
 <script setup>
+const props = defineProps({
+  typeForm: {
+    type: String,
+    required: false,
+    default: null,
+  },
+  dataForm: {
+    type: Object,
+    required: false,
+  },
+});
 
 const jenisPembayaran = ref([]);
 const selectedJenisPembayaran = ref();
@@ -29,11 +40,21 @@ const fetchJenisPembayaran = async () => {
   }
 };
 
-defineExpose({selectedJenisPembayaran});
+defineExpose({ selectedJenisPembayaran });
 
 onMounted(() => {
   fetchJenisPembayaran();
 });
+
+watch(
+  () => props.dataForm,
+  (newVal) => {
+    if (props.typeForm === "edit" && newVal) {
+      console.log(newVal);
+      selectedJenisPembayaran.value = newVal.jenis_pembayaran_detail.jenis_pembayaran_id;
+    }
+  }
+);
 </script>
 
 <template>
