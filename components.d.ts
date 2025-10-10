@@ -374,6 +374,7 @@ declare module 'vue' {
     FormUser: typeof import('./src/components/admin/user/FormUser.vue')['default']
     I18n: typeof import('./src/@core/components/I18n.vue')['default']
     JenisPembayaranMahasiswaPembayaran: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/JenisPembayaranMahasiswaPembayaran.vue')['default']
+    LaporanHarian: typeof import('./src/components/admin/pemasukan/mahasiswa/laporan/LaporanHarian.vue')['default']
     MahasiswaPembayaranMahasiswa: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/MahasiswaPembayaranMahasiswa.vue')['default']
     MoreBtn: typeof import('./src/@core/components/MoreBtn.vue')['default']
     MoreBtnAction: typeof import('./src/@core/components/MoreBtnAction.vue')['default']

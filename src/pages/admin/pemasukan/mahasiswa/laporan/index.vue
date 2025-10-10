@@ -2,10 +2,10 @@
 onMounted(() => {
   document.title = "Laporan - SIMKEU";
 });
+import LaporanHarian from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanHarian.vue";
 import { ref } from "vue";
 import { VCol } from "vuetify/components";
 
-const tanggal = ref("");
 const kategori = ref("");
 const jenisKelamin = ref("");
 const prodi = ref("");
@@ -39,53 +39,8 @@ const kategoriList = ["Kehadiran", "Lembur", "Cuti", "Sakit"];
 <template>
   <div>
     <VCardTitle>Laporan Pembayaran Mahasiswa</VCardTitle>
-    <VCard class="mt-4">
-      <VCardItem class="pb-4">
-        <VCardTitle>Harian</VCardTitle>
-      </VCardItem>
-
-      <VDivider />
-
-      <VRow class="pa-4">
-        <!-- Input Tanggal -->
-        <VCol cols="12" md="12">
-          <VTextField
-            v-model="tanggal"
-            label="Tanggal"
-            type="date"
-            variant="outlined"
-          />
-        </VCol>
-
-        <!-- Combobox Kategori -->
-        <!-- <VCol cols="12" md="12">
-          <VCombobox
-            v-model="kategori"
-            :items="kategoriList"
-            label="Kategori"
-            variant="outlined"
-          />
-        </VCol> -->
-        <VCol cols="12" md="6">
-          <VBtn block color="success">
-            Download Excel
-            <VIcon end icon="ri-arrow-down-circle-line" />
-          </VBtn>
-        </VCol>
-        <VCol cols="12" md="6">
-          <VBtn block color="success">
-            Download Totalan
-            <VIcon end icon="ri-arrow-down-circle-line" />
-          </VBtn>
-        </VCol>
-        <VCol cols="12" md="12">
-          <VBtn block color="primary">
-            Download PDF
-            <VIcon end icon="ri-arrow-down-circle-line" />
-          </VBtn>
-        </VCol>
-      </VRow>
-    </VCard>
+  
+    <LaporanHarian  />
     <VCard class="mt-4">
       <VCardItem class="pb-4">
         <VCardTitle>Bulanan</VCardTitle>

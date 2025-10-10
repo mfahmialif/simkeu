@@ -151,7 +151,7 @@ const kwitansi = async (id) => {
       }
     );
 
-    downloadFileExport(blob);
+    openFileExport(blob);
   } catch (err) {
     console.info(err);
     showSnackbar({
