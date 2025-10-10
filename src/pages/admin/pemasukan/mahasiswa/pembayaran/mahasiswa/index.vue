@@ -1,7 +1,4 @@
 <script setup>
-import WidgetPembayaranMahasiswa from '@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/WidgetPembayaranMahasiswa.vue';
-
-
 const selectedThAkademik = ref();
 const thAkademik = ref([]);
 
@@ -137,6 +134,30 @@ const deleteDataSubmit = async (id) => {
   } finally {
     isDialogDeleteVisible.value = false;
     disabledDelete.value = false;
+  }
+};
+
+const kwitansi = async (id) => {
+  try {
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    });
+    const blob = await $api(
+      "/admin/pemasukan/mahasiswa/pembayaran/kwitansi/" + id+"/view",
+      {
+        method: "GET",
+        headers: { Accept: "application/pdf" },
+      }
+    );
+
+    downloadFileExport(blob);
+  } catch (err) {
+    console.info(err);
+    showSnackbar({
+      text: err,
+      color: "error",
+    });
   }
 };
 
@@ -313,8 +334,19 @@ watch(selectedThAkademik, () => {
               <VList>
                 <VListItem
                   value="download"
+                  prepend-icon="ri-download-cloud-2-line"
+                  @click="kwitansi(item.id)"
+                >
+                  Kwitansi
+                </VListItem>
+                <VListItem
+                  value="download"
                   prepend-icon="ri-edit-box-line"
-                  @click="$router.push(`/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/edit/${item.id}`)"
+                  @click="
+                    $router.push(
+                      `/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/edit/${item.id}`
+                    )
+                  "
                 >
                   Edit
                 </VListItem>
@@ -323,10 +355,7 @@ watch(selectedThAkademik, () => {
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
                   @click="
-                    showDialogDelete(
-                      item.id,
-                      `${item.keuangan_tagihan_nama}`
-                    )
+                    showDialogDelete(item.id, `${item.keuangan_tagihan_nama}`)
                   "
                 >
                   Delete
@@ -363,7 +392,11 @@ watch(selectedThAkademik, () => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" :disabled="disabledDelete" @click="deleteDataSubmit(deleteData.id)">
+          <VBtn
+            color="error"
+            :disabled="disabledDelete"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
             <VIcon icon="ri-delete-bin-line" class="me-1" />
             Delete
           </VBtn>

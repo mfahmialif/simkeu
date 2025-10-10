@@ -369,6 +369,10 @@
     "snackbar": true,
     "snackbarData": true,
     "checkRole": true,
-    "formatRupiah": true
+    "formatRupiah": true,
+    "downloadFileExport": true,
+    "openFile": true,
+    "openFileExport": true,
+    "openPdfInNewTabWithName": true
   }
 }
