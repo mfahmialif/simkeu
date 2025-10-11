@@ -26,7 +26,7 @@ const props = defineProps({
   },
 });
 
-const tanggal = ref("");
+const tahun = ref("");
 
 const selectedProdi = ref(null);
 const selectedTahunAkademik = ref(null);
@@ -36,20 +36,12 @@ const downloadExcel = async () => {
   download(
     "excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Harian.xlsx"
-  );
-};
-
-const downloadExcelTotalan = async () => {
-  download(
-    "excelTotalan",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Harian Totalan.xlsx"
+    "Laporan Tahunan.xlsx"
   );
 };
 
 const downloadPdf = async () => {
-  download("pdf", "application/pdf", "Laporan Harian.pdf");
+  download("pdf", "application/pdf", "Laporan Tahunan.pdf");
 };
 
 const isLoading = ref(false);
@@ -60,15 +52,15 @@ const download = async (type, accept, filename) => {
       text: "Loading...",
       color: "info",
     });
-    const response = await $api("/admin/pemasukan/mahasiswa/laporan/harian", {
+    const response = await $api("/admin/pemasukan/mahasiswa/laporan/tahunan", {
       method: "GET",
       headers: {
         Accept: accept,
       },
       body: {
-        tanggal: tanggal.value,
+        tahun: tahun.value,
         action: type,
-        kategori: "Harian",
+        kategori: "Tahunan",
         ...(selectedProdi.value && { prodi: selectedProdi.value.value }),
         ...(selectedTahunAkademik.value && {
           tahun_akademik: selectedTahunAkademik.value.value,
@@ -95,27 +87,28 @@ const download = async (type, accept, filename) => {
 };
 
 onMounted(() => {
-  // date now
-  tanggal.value = new Date().toISOString().split("T")[0];
+  // month now
+  tahun.value = new Date().getFullYear();
 });
 </script>
 
 <template>
   <VCard class="mt-4">
     <VCardItem class="pb-4">
-      <VCardTitle>Harian</VCardTitle>
+      <VCardTitle>Tahunan</VCardTitle>
     </VCardItem>
 
     <VDivider />
 
     <VRow class="pa-4">
-      <!-- Input Tanggal -->
+      <!-- Input Tahun -->
       <VCol cols="12" md="12">
-        <AppDateTimePicker
-          v-model="tanggal"
-          label="Tanggal"
-          placeholder="Select date"
-          :config="{ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }"
+        <VTextField
+          v-model="tahun"
+          label="Tahun"
+          type="number"
+          min="1999"
+          variant="outlined"
         />
       </VCol>
 
@@ -126,6 +119,7 @@ onMounted(() => {
           :items="props.prodi"
           label="Prodi"
           variant="outlined"
+          clearable
           :loading="props.isLoadingProdi"
         />
       </VCol>
@@ -136,6 +130,7 @@ onMounted(() => {
           :items="props.tahunAkademik"
           label="Tahun Akademik"
           variant="outlined"
+          clearable
           :loading="props.isLoadingTahunAkademik"
         />
       </VCol>
@@ -146,18 +141,13 @@ onMounted(() => {
           :items="props.jenisPembayaran"
           label="Jenis Pembayaran"
           variant="outlined"
+          clearable
           :loading="props.isLoadingJenisPembayaran"
         />
       </VCol>
-      <VCol cols="12" md="6">
+      <VCol cols="12" md="12">
         <VBtn block color="success" @click="downloadExcel" :loading="isLoading">
           Download Excel
-          <VIcon end icon="ri-arrow-down-circle-line" />
-        </VBtn>
-      </VCol>
-      <VCol cols="12" md="6">
-        <VBtn block color="success" @click="downloadExcelTotalan" :loading="isLoading">
-          Download Totalan
           <VIcon end icon="ri-arrow-down-circle-line" />
         </VBtn>
       </VCol>

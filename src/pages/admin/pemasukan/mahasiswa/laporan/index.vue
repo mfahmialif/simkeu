@@ -1,160 +1,141 @@
 <script setup>
-onMounted(() => {
-  document.title = "Laporan - SIMKEU";
-});
+import LaporanBulanan from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanBulanan.vue";
 import LaporanHarian from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanHarian.vue";
+import LaporanRekap from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanRekap.vue";
+import LaporanTahunan from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanTahunan.vue";
 import { ref } from "vue";
 import { VCol } from "vuetify/components";
 
-const kategori = ref("");
-const jenisKelamin = ref("");
-const prodi = ref("");
-const tahunAkademik = ref("");
-const tahunRekap = ref("");
-const tahunRkp = ref("");
-const tahunan = ref("");
-const bulan = ref("");
-const bulanan = ref("");
+const prodi = ref([]);
+const tahunAkademik = ref([]);
+const jenisPembayaran = ref([]);
 
-const tahunList = ["2020/2021", "2021/2022", "2022/2023", "2023/2024"];
-const bulanList = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
-const kelaminList = ["Laki-laki", "Perempuan"];
-const prodiList = ["TI", "SI", "BD", "DKV", "MI"];
-const kategoriList = ["Kehadiran", "Lembur", "Cuti", "Sakit"];
+const isLoadingProdi = ref(false);
+const isLoadingTahunAkademik = ref(false);
+const isLoadingJenisPembayaran = ref(false);
+
+const fetchProdi = async () => {
+  try {
+    isLoadingProdi.value = true;
+    const { data } = await $api("/admin/prodi", {
+      method: "GET",
+      body: {
+        limit: 0,
+      },
+    });
+
+    prodi.value = data.data.map((prodi) => {
+      return {
+        title: `${prodi.nama}`,
+        value: prodi.id,
+      };
+    });
+  } catch (err) {
+    showSnackbar({
+      text: err.message,
+      color: "error",
+    });
+  } finally {
+    isLoadingProdi.value = false;
+  }
+};
+
+const fetchTahunAkademik = async () => {
+  try {
+    isLoadingTahunAkademik.value = true;
+    const { data } = await $api("/admin/th-akademik", {
+      method: "GET",
+      body: {
+        limit: 0,
+      },
+    });
+
+    tahunAkademik.value = data.data.map((tahunAkademik) => {
+      return {
+        title: `${tahunAkademik.nama} - ${tahunAkademik.semester}`,
+        value: tahunAkademik.id,
+      };
+    });
+  } catch (err) {
+    showSnackbar({
+      text: err.message,
+      color: "error",
+    });
+  } finally {
+    isLoadingTahunAkademik.value = false;
+  }
+};
+
+const fetchJenisPembayaran = async () => {
+  try {
+    isLoadingJenisPembayaran.value = true;
+    const { data } = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
+      method: "GET",
+      body: {
+        limit: 0,
+      },
+    });
+
+    jenisPembayaran.value = data.data.map((jenisPembayaran) => {
+      return {
+        title: `${jenisPembayaran.nama} - ${jenisPembayaran.kategori}`,
+        value: jenisPembayaran.id,
+      };
+    });
+  } catch (err) {
+    console.log(err);
+    showSnackbar({
+      text: err.message,
+      color: "error",
+    });
+  } finally {
+    isLoadingJenisPembayaran.value = false;
+  }
+};
+
+onMounted(() => {
+  // title
+  document.title = "Laporan Pembayaran Mahasiswa";
+
+  fetchProdi();
+  fetchTahunAkademik();
+  fetchJenisPembayaran();
+});
 </script>
 
 <template>
   <div>
     <VCardTitle>Laporan Pembayaran Mahasiswa</VCardTitle>
-  
-    <LaporanHarian  />
-    <VCard class="mt-4">
-      <VCardItem class="pb-4">
-        <VCardTitle>Bulanan</VCardTitle>
-      </VCardItem>
 
-      <VDivider />
+    <LaporanHarian
+      :prodi="prodi"
+      :tahunAkademik="tahunAkademik"
+      :jenisPembayaran="jenisPembayaran"
+      :isLoadingProdi="isLoadingProdi"
+      :isLoadingTahunAkademik="isLoadingTahunAkademik"
+      :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
+    />
 
-      <VRow class="pa-4">
-        <!-- Input Tanggal -->
-        <!-- Combobox Kategori -->
-        <VCol cols="12" md="12">
-          <VCombobox
-            v-model="bulanan"
-            :items="bulanList"
-            label="Bulanan"
-            variant="outlined"
-          />
-        </VCol>
-        <!-- <VCol cols="12" md="12">
-          <VCombobox
-            v-model="kategori"
-            :items="kategoriList"
-            label="Pilih Kategori"
-            variant="outlined"
-          />
-        </VCol> -->
-        <VCol cols="12" md="12">
-          <VBtn block color="success">
-            Download Excel
-            <VIcon end icon="ri-arrow-down-circle-line" />
-          </VBtn>
-        </VCol>
-        <VCol cols="12" md="12">
-          <VBtn block color="primary">
-            Download PDF
-            <VIcon end icon="ri-arrow-down-circle-line" />
-          </VBtn>
-        </VCol>
-      </VRow>
-    </VCard>
-    <VCard class="mt-4">
-      <VCardItem class="pb-4">
-        <VCardTitle>Tahunan</VCardTitle>
-      </VCardItem>
+    <LaporanBulanan
+      :prodi="prodi"
+      :tahunAkademik="tahunAkademik"
+      :jenisPembayaran="jenisPembayaran"
+      :isLoadingProdi="isLoadingProdi"
+      :isLoadingTahunAkademik="isLoadingTahunAkademik"
+      :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
+    />
 
-      <VDivider />
+    <LaporanTahunan
+      :prodi="prodi"
+      :tahunAkademik="tahunAkademik"
+      :jenisPembayaran="jenisPembayaran"
+      :isLoadingProdi="isLoadingProdi"
+      :isLoadingTahunAkademik="isLoadingTahunAkademik"
+      :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
+    />
 
-      <VRow class="pa-4">
-        <!-- Input Tanggal -->
-        <!-- Combobox Kategori -->
-        <VCol cols="12" md="12">
-          <VCombobox
-            v-model="tahunan"
-            :items="tahunList"
-            label="Pilih Tahun"
-            variant="outlined"
-          />
-        </VCol>
-        <!-- <VCol cols="12" md="12">
-          <VCombobox
-            v-model="kategori"
-            :items="kategoriList"
-            label="Pilih Kategori"
-            variant="outlined"
-          />
-        </VCol> -->
-        <VCol cols="12" md="12">
-          <VBtn block color="success">
-            Download Excel
-            <VIcon end icon="ri-arrow-down-circle-line" />
-          </VBtn>
-        </VCol>
-        <VCol cols="12" md="12">
-          <VBtn block color="primary">
-            Download PDF
-            <VIcon end icon="ri-arrow-down-circle-line" />
-          </VBtn>
-        </VCol>
-      </VRow>
-    </VCard>
-    <VCard class="mt-4">
-      <VCardItem class="pb-4">
-        <VCardTitle>Rekap</VCardTitle>
-      </VCardItem>
+    <LaporanRekap />
 
-      <VDivider />
-
-      <VRow class="pa-4">
-        <!-- Input Tanggal -->
-        <!-- Combobox Kategori -->
-        <VCol cols="12" md="12">
-          <VCombobox
-            v-model="tahunRkp"
-            :items="tahunList"
-            label="Tahun Rekap"
-            variant="outlined"
-          />
-        </VCol>
-        <VCol cols="12" md="12">
-          <VCombobox
-            v-model="bulan"
-            :items="bulanList"
-            label="Bulan"
-            variant="outlined"
-          />
-        </VCol>
-        <VCol cols="12" md="12">
-          <VBtn block color="success">
-            Download Excel
-            <VIcon end icon="ri-arrow-down-circle-line" />
-          </VBtn>
-        </VCol>
-      </VRow>
-    </VCard>
     <VCard class="mt-4">
       <VCardItem class="pb-4">
         <VCardTitle>Rekap Khusus Tahun</VCardTitle>
@@ -192,24 +173,24 @@ const kategoriList = ["Kehadiran", "Lembur", "Cuti", "Sakit"];
         <!-- Combobox Kategori -->
         <VCol cols="12" md="12">
           <VCombobox
-            v-model="tahunAkademik"
-            :items="tahunList"
+            v-model="selectedTahunAkademik"
+            :items="tahunAkademik"
             label="Tahun Akademik"
             variant="outlined"
           />
         </VCol>
         <VCol cols="12" md="12">
           <VCombobox
-            v-model="prodi"
-            :items="prodiList"
+            v-model="selectedProdi"
+            :items="prodi"
             label="Prodi"
             variant="outlined"
           />
         </VCol>
         <VCol cols="12" md="12">
           <VCombobox
-            v-model="jenisKelamin"
-            :items="kelaminList"
+            v-model="selectedJenisKelamin"
+            :items="jenisKelamin"
             label="Jenis Kelamin"
             variant="outlined"
           />

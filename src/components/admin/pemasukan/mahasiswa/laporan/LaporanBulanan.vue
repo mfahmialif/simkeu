@@ -1,4 +1,7 @@
 <script setup>
+import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js'
+import 'flatpickr/dist/plugins/monthSelect/style.css'
+
 const props = defineProps({
   prodi: {
     type: Array,
@@ -26,7 +29,7 @@ const props = defineProps({
   },
 });
 
-const tanggal = ref("");
+const bulan = ref("");
 
 const selectedProdi = ref(null);
 const selectedTahunAkademik = ref(null);
@@ -36,20 +39,12 @@ const downloadExcel = async () => {
   download(
     "excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Harian.xlsx"
-  );
-};
-
-const downloadExcelTotalan = async () => {
-  download(
-    "excelTotalan",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Harian Totalan.xlsx"
+    "Laporan Bulanan.xlsx"
   );
 };
 
 const downloadPdf = async () => {
-  download("pdf", "application/pdf", "Laporan Harian.pdf");
+  download("pdf", "application/pdf", "Laporan Bulanan.pdf");
 };
 
 const isLoading = ref(false);
@@ -60,15 +55,15 @@ const download = async (type, accept, filename) => {
       text: "Loading...",
       color: "info",
     });
-    const response = await $api("/admin/pemasukan/mahasiswa/laporan/harian", {
+    const response = await $api("/admin/pemasukan/mahasiswa/laporan/bulanan", {
       method: "GET",
       headers: {
         Accept: accept,
       },
       body: {
-        tanggal: tanggal.value,
+        bulan: formatBulan(bulan.value),
         action: type,
-        kategori: "Harian",
+        kategori: "Bulanan",
         ...(selectedProdi.value && { prodi: selectedProdi.value.value }),
         ...(selectedTahunAkademik.value && {
           tahun_akademik: selectedTahunAkademik.value.value,
@@ -94,28 +89,43 @@ const download = async (type, accept, filename) => {
   }
 };
 
+const formatBulan = (val) => {
+  const [year, month] = val.split("-");
+  return `${month}-${year}`;
+};
+
 onMounted(() => {
-  // date now
-  tanggal.value = new Date().toISOString().split("T")[0];
+  // month now
+  bulan.value = new Date().toISOString().slice(0, 7);
 });
 </script>
 
 <template>
   <VCard class="mt-4">
     <VCardItem class="pb-4">
-      <VCardTitle>Harian</VCardTitle>
+      <VCardTitle>Bulanan</VCardTitle>
     </VCardItem>
 
     <VDivider />
 
     <VRow class="pa-4">
-      <!-- Input Tanggal -->
+      <!-- Input Bulan -->
       <VCol cols="12" md="12">
         <AppDateTimePicker
-          v-model="tanggal"
-          label="Tanggal"
-          placeholder="Select date"
-          :config="{ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }"
+          v-model="bulan"
+          label="Bulan"
+          placeholder="Pilih bulan"
+          :config="{
+            plugins: [
+              new monthSelectPlugin({
+                shorthand: true, // Jan, Feb, dst.
+                dateFormat: 'Y-m',
+                altFormat: 'F Y',
+                theme: 'dark', // Sesuaikan dengan tema kamu
+              }),
+            ],
+            altInput: true,
+          }"
         />
       </VCol>
 
@@ -126,6 +136,7 @@ onMounted(() => {
           :items="props.prodi"
           label="Prodi"
           variant="outlined"
+          clearable
           :loading="props.isLoadingProdi"
         />
       </VCol>
@@ -136,6 +147,7 @@ onMounted(() => {
           :items="props.tahunAkademik"
           label="Tahun Akademik"
           variant="outlined"
+          clearable
           :loading="props.isLoadingTahunAkademik"
         />
       </VCol>
@@ -146,18 +158,13 @@ onMounted(() => {
           :items="props.jenisPembayaran"
           label="Jenis Pembayaran"
           variant="outlined"
+          clearable
           :loading="props.isLoadingJenisPembayaran"
         />
       </VCol>
-      <VCol cols="12" md="6">
+      <VCol cols="12" md="12">
         <VBtn block color="success" @click="downloadExcel" :loading="isLoading">
           Download Excel
-          <VIcon end icon="ri-arrow-down-circle-line" />
-        </VBtn>
-      </VCol>
-      <VCol cols="12" md="6">
-        <VBtn block color="success" @click="downloadExcelTotalan" :loading="isLoading">
-          Download Totalan
           <VIcon end icon="ri-arrow-down-circle-line" />
         </VBtn>
       </VCol>
