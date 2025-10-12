@@ -1,12 +1,5 @@
 <script setup>
 const tahun = ref("");
-const bulan = ref([
-  { value: "JANUARI;FEBRUARI;MARET-1", title: "Januari - Maret" },
-  { value: "APRIL;MEI;JUNI-4", title: "April - Juni" },
-  { value: "JULI;AGUSTUS;SEPTEMBER-7", title: "Juli - September" },
-  { value: "OKTOBER;NOVEMBER;DESEMBER-10", title: "Oktober - Desember" },
-]);
-const selectedBulan = ref(null);
 
 const downloadExcel = async () => {
   download(
@@ -14,6 +7,7 @@ const downloadExcel = async () => {
     "Laporan Rekap.xlsx"
   );
 };
+
 
 const isLoading = ref(false);
 
@@ -24,14 +18,13 @@ const download = async (accept, filename) => {
       text: "Loading...",
       color: "info",
     });
-    const response = await $api("/admin/pemasukan/mahasiswa/laporan/rekap", {
+    const response = await $api("/admin/pemasukan/mahasiswa/laporan/rekap-tahunan", {
       method: "GET",
       headers: {
         Accept: accept,
       },
       body: {
         tahun_rekap: tahun.value,
-        bulan_rekap: selectedBulan.value.value,
       },
     });
 
@@ -51,7 +44,6 @@ const download = async (accept, filename) => {
 };
 
 onMounted(() => {
-  // date now
   tahun.value = new Date().getFullYear();
 });
 </script>
@@ -73,15 +65,6 @@ onMounted(() => {
           min="1999"
           max="2099"
           type="number"
-          variant="outlined"
-        />
-      </VCol>
-      <!-- Combobox Bulan -->
-      <VCol cols="12" md="12">
-        <VCombobox
-          v-model="selectedBulan"
-          :items="bulan"
-          label="Bulan"
           variant="outlined"
         />
       </VCol>
