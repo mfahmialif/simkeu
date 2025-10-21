@@ -1,5 +1,5 @@
 <script setup>
-import FormTagihan from "@/components/admin/pemasukan/mahasiswa/dispensasi/FormTagihan.vue";
+import FormDispensasiTagihan from "@/components/admin/pemasukan/mahasiswa/DispensasiTagihan/FormDispensasiTagihan.vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -27,7 +27,7 @@ onMounted(() => {
   document.title = "Catatan Dispensasi Tagihan Add - SIMKEU";
 });
 
-onMounted(() => {});
+onMounted(() => { });
 </script>
 
 <template>
@@ -39,11 +39,8 @@ onMounted(() => {});
         </template>
 
         <VCardText>
-          <FormTagihan
-            typeForm="add"
-            :url="'/admin/pemasukan/mahasiswa/dispensasi-tagihan'"
-            :isRoleVisible="true"
-          />
+          <FormDispensasiTagihan typeForm="add" :url="'/admin/pemasukan/mahasiswa/dispensasi-tagihan'"
+            :isRoleVisible="true" />
         </VCardText>
       </VCard>
     </VCol>

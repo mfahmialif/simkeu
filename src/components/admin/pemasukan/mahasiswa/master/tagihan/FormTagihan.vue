@@ -221,8 +221,8 @@ const onSubmit = async () => {
           :items="thAngkatan" :rules="[requiredValidator]" clear-icon="ri-close-line" />
       </VCol>
       <VCol cols="12">
-        <VSelect v-model="selectedProdi" label="Select Prodi" placeholder="Select Prodi"
-          :items="prodi" :rules="[requiredValidator]" clear-icon="ri-close-line" />
+        <VSelect v-model="selectedProdi" label="Select Prodi" placeholder="Select Prodi" :items="prodi"
+          :rules="[requiredValidator]" clear-icon="ri-close-line" />
       </VCol>
       <VCol cols="12">
         <VSelect v-model="selectedFormSchadule" label="Select Formulir" placeholder="Select Formulir"
@@ -230,15 +230,12 @@ const onSubmit = async () => {
       </VCol>
 
       <VCol cols="12">
-        <VTextField v-model="nama" :rules="[requiredValidator, noSpaceValidator]" label="Nama"
-          placeholder="KRS ...." />
+        <VTextField v-model="nama" :rules="[requiredValidator, noSpaceValidator]" label="Nama" placeholder="KRS ...." />
       </VCol>
       <VCol cols="12">
         <VTextField v-model="jumlah" :rules="[requiredValidator, noSpaceValidator]" label="Jumlah"
-          placeholder="10000..." type="number"/>
+          placeholder="10000..." type="number" />
       </VCol>
-
-
       <VCol cols="12" class="d-flex gap-4">
         <VBtn type="submit" :disabled @click="refForm?.validate()">
           Submit

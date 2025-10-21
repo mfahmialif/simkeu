@@ -1,5 +1,5 @@
 <script setup>
-import FormDeposit from "@/components/admin/deposit/FormDeposit.vue";
+import FormDispensasi from "@/components/admin/pemasukan/mahasiswa/dispensasi/FormDispensasi.vue";
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -18,7 +18,9 @@ const fetchUser = async () => {
     const response = await $api("/admin/pemasukan/mahasiswa/dispensasi/" + id, {
       method: "GET",
     });
-    user.value = response;
+    user.value = response.data;
+    console.log(user.value);
+
   } catch (err) {
     console.log(err);
     if (err.status === 404) {
@@ -57,7 +59,7 @@ onMounted(() => {
 <template>
   <VRow>
     <VCol cols="12">
-      <VCard title="Edit Data Disposisi Tagihan">
+      <VCard title="Edit Data Catatan Disposisi">
         <template #append>
           <MoreBtnAction :menu-list="menuList" />
         </template>
@@ -66,13 +68,8 @@ onMounted(() => {
           <div v-if="isLoading" class="text-center">
             <VProgressLinear indeterminate />
           </div>
-          <FormDeposit
-            v-else
-            typeForm="edit"
-            :dataForm="user"
-            :url="'/admin/pemasukan/mahasiswa/dispensasi-tagihan/' + id"
-            :is-role-visible="true"
-          />
+          <FormDispensasi v-else typeForm="edit" :dataForm="user" :url="'/admin/pemasukan/mahasiswa/dispensasi/' + id"
+            :is-role-visible="true" />
         </VCardText>
       </VCard>
     </VCol>

@@ -76,9 +76,7 @@ const kategoriList = ["Kehadiran", "Lembur", "Cuti", "Sakit"];
       <VCardItem class="pb-4">
         <VCardTitle>Saldo</VCardTitle>
       </VCardItem>
-
       <VDivider />
-
       <VRow class="pa-4">
         <!-- Input Tanggal -->
         <VCol cols="12" md="12">

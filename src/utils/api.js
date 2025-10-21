@@ -21,26 +21,48 @@ export const $api = async (url, options = {}) => {
 
   // --- BLOK LOGIKA BARU YANG MENGGABUNGKAN SEMUANYA ---
 
-  if (method === "GET" && options.body && typeof options.body === "object") {
-    // 1. LOGIKA ASLI ANDA UNTUK GET REQUEST (TETAP DIPERTAHANKAN)
-    const query = new URLSearchParams(options.body).toString();
-    finalUrl += `?${query}`;
-    // Body tidak ditambahkan ke fetchOptions untuk GET
+  // if (method === "GET" && options.body && typeof options.body === "object") {
+  //   // 1. LOGIKA ASLI ANDA UNTUK GET REQUEST (TETAP DIPERTAHANKAN)
+  //   const query = new URLSearchParams(options.body).toString();
+  //   finalUrl += `?${query}`;
+  //   // Body tidak ditambahkan ke fetchOptions untuk GET
+  // } else if (options.body) {
+  //   // 2. LOGIKA UNTUK METHOD LAIN (POST, PUT, PATCH, DLL)
+  //   if (options.body instanceof FormData) {
+  //     // Jika body adalah FormData, langsung teruskan tanpa mengubah header
+  //     fetchOptions.body = options.body;
+  //   } else if (typeof options.body === "object") {
+  //     // Jika body adalah objek JSON biasa, stringify dan set header
+  //     headers["Content-Type"] = "application/json";
+  //     fetchOptions.body = JSON.stringify(options.body);
+  //   } else {
+  //     // Untuk tipe body lain (misalnya string)
+  //     fetchOptions.body = options.body;
+  //   }
+  // }
+  // --- AKHIR BLOK LOGIKA BARU ---
+
+  // kode saya
+  // --- Tambahkan dukungan params untuk GET ---
+  if (method === "GET") {
+    // Bisa menggunakan options.params atau options.body
+    const queryObject = options.params || options.body;
+
+    if (queryObject && typeof queryObject === "object") {
+      const query = new URLSearchParams(queryObject).toString();
+      finalUrl += `?${query}`;
+    }
   } else if (options.body) {
-    // 2. LOGIKA UNTUK METHOD LAIN (POST, PUT, PATCH, DLL)
+    // Untuk POST, PUT, PATCH, DELETE, dll
     if (options.body instanceof FormData) {
-      // Jika body adalah FormData, langsung teruskan tanpa mengubah header
       fetchOptions.body = options.body;
     } else if (typeof options.body === "object") {
-      // Jika body adalah objek JSON biasa, stringify dan set header
       headers["Content-Type"] = "application/json";
       fetchOptions.body = JSON.stringify(options.body);
     } else {
-      // Untuk tipe body lain (misalnya string)
       fetchOptions.body = options.body;
     }
   }
-  // --- AKHIR BLOK LOGIKA BARU ---
 
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
