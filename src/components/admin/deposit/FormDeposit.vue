@@ -22,66 +22,147 @@ const props = defineProps({
   },
 });
 
-const passwordValidator = (value) => {
-  if (value.length < 6) return "Password must be at least 6 characters";
-  return true;
-};
-
-const noSpaceValidator = (value) => {
-  if (/\s/.test(value))
-    return "Username cannot contain spaces, example: fulanah123";
-  return true;
-};
-
 const refForm = ref(null);
 
-const nim = ref("");
-const prodi = ref("");
-const angkatan = ref("");
-const kelas = ref("");
-const semester = ref("");
-const jumlah = ref("");
-const keterangan = ref("");
-const name = ref("");
-const disabled = ref(false);
+const emptyMahasiswa = {
+  nim: "",
+  nama: "",
+  prodi: "",
+  jenisKelamin: "",
+  jkId: "",
+  angkatan: "",
+  kelas: "",
+  semester: "",
+  deposit: 0,
+  dipakai: 0,
+  tagihan: [],
+};
 
-const selectedJenisKelamin = ref();
-const jenisKelamin = ref([]);
-const jk = ref("");
-const fetchJenisKelamin = async () => {
+const mahasiswaList = ref([]);
+
+const search = ref("");
+const searchNim = ref("");
+const selectedMahasiswa = ref("");
+
+const loadingDataMahasiswa = ref(false);
+const loadingSearch = ref(false);
+
+watch(selectedMahasiswa, (newVal) => {
+  if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
+    // mahasiswa.value.nim = newVal.nim;
+    searchNim.value = newVal.nim;
+    searching();
+  } else if (typeof newVal === "string") {
+    // mahasiswa.value.nim = newVal;
+    searchNim.value = newVal;
+  } else if (!newVal) {
+    // mahasiswa.value.nim = "";
+    searchNim.value = "";
+  }
+});
+
+let typingTimeout = null;
+const mahasiswa = ref(emptyMahasiswa);
+const jumlah = ref(0);
+const keterangan = ref("");
+const disabledDeposit = ref(true);
+const disabled = ref(false);
+const disabledSearch = ref(false);
+const refJumlah = ref(null);
+
+watch(search, (newVal) => {
+  clearTimeout(typingTimeout);
+
+  if (!newVal.trim()) {
+    mahasiswaList.value = [];
+    loadingSearch.value = false;
+    return;
+  }
+
+  typingTimeout = setTimeout(async () => {
+    try {
+      loadingSearch.value = true;
+      const res = await $api(`/admin/mahasiswa/search/${newVal}`, {
+        method: "GET",
+      });
+      // ubah hasil API jadi format { nim, nama, display: "nama - nim" }
+      mahasiswaList.value = res.map((m) => ({
+        ...m,
+        display: `${m.nim} - ${m.nama}`,
+      }));
+    } catch (err) {
+      showSnackbar({
+        text: "Gagal mendapatkan list mahasiswa",
+        color: "error",
+      });
+      mahasiswaList.value = [];
+    } finally {
+      loadingSearch.value = false;
+    }
+  }, 1000); // <-- debounce 2 detik
+});
+
+const searching = async () => {
+  if (!searchNim.value) {
+    showSnackbar({
+      text: "NIM harus diisi",
+      color: "error",
+    });
+    return;
+  }
+
   try {
-    const response = await $api("/helper/get-enum-values", {
+    loadingDataMahasiswa.value = true;
+    disabledDeposit.value = true;
+
+    const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
       body: {
-        table: "users",
-        column: "jenis_kelamin",
-        "delete_column[]": ["*"],
+        nim: searchNim.value,
       },
     });
 
-    jenisKelamin.value = response.map((jenisKelamin) => {
-      return {
-        title: jenisKelamin,
-        value: jenisKelamin,
-      };
+    if (res.length < 1) {
+      showSnackbar({
+        text: "Data mahasiswa tidak ditemukan",
+        color: "error",
+      });
+      return;
+    }
+
+    mahasiswa.value.nim = res.nim;
+    mahasiswa.value.nama = res.nama;
+    mahasiswa.value.prodi = res.prodi?.nama;
+    mahasiswa.value.jenisKelamin = res.jk?.nama;
+    mahasiswa.value.jkId = res.jk?.id;
+    mahasiswa.value.angkatan = res.th_akademik?.kode;
+    mahasiswa.value.kelas = res.kelas?.nama;
+    mahasiswa.value.semester = res.semester;
+
+    disabledDeposit.value = false;
+    await nextTick();
+    refJumlah.value.focus();
+  } catch (error) {
+    disabledDeposit.value = true;
+    showSnackbar({
+      text: error,
+      color: "error",
     });
-  } catch (err) {
-    console.error(err);
+  } finally {
+    loadingDataMahasiswa.value = false;
   }
 };
 
 onMounted(() => {
-  // fetchJenisKelamin();
   if (props.typeForm === "edit") {
-    nim.value = props.dataForm.nim;
-    name.value = props.dataForm.name;
-    angkatan.value = props.dataForm.angkatan;
-    prodi.value = props.dataForm.prodi;
-    kelas.value = props.dataForm.kelas;
-    semester.value = props.dataForm.semester;
-    jumlah.value = props.dataForm.jumlah;
-    keterangan.value = props.dataForm.keterangan;
-    jk.value = props.dataForm.jk;
+    disabledSearch.value = true;
+    selectedMahasiswa.value = props.dataForm.nim;
+    searchNim.value = props.dataForm.nim;
+    if (selectedMahasiswa.value) {
+      searching();
+      jumlah.value = props.dataForm.jumlah;
+      keterangan.value = props.dataForm.keterangan;
+    }
   }
 });
 
@@ -94,15 +175,9 @@ const onSubmit = async () => {
   disabled.value = true;
 
   const formData = new FormData();
-  formData.append("nim", nim.value);
-  formData.append("name", name.value);
-  formData.append("prodi", prodi.value);
-  formData.append("angkatan", angkatan.value);
-  formData.append("kelas", kelas.value);
-  formData.append("semester", semester.value);
+  formData.append("nim", mahasiswa.value.nim);
   formData.append("jumlah", jumlah.value);
   formData.append("keterangan", keterangan.value);
-  formData.append("jenis_kelamin", jk.value);
   formData.append("_method", method);
 
   try {
@@ -145,82 +220,119 @@ const onSubmit = async () => {
   <VForm ref="refForm" @submit.prevent="onSubmit">
     <VRow>
       <VCol cols="12">
-        <div class="d-flex align-items-center">
-          <VTextField
-            v-model="nim"
-            :rules="[requiredValidator, noSpaceValidator]"
-            label="Nim"
-            placeholder="fulanah123"
-          />
-          <VBtn type="submit" :disabled class="ms-2" height="45px">
-            <VIcon icon="ri-search-line"></VIcon>
-          </VBtn>
-        </div>
+        <VCombobox
+          v-model="selectedMahasiswa"
+          v-model:search="search"
+          :items="mahasiswaList"
+          item-title="display"
+          item-value="nim"
+          label="Searching"
+          autocomplete="off"
+          placeholder="NIM / Nama mahasiswa"
+          clearable
+          :loading="loadingSearch"
+          :disabled="disabledSearch"
+        >
+          <template #append-inner>
+            <VProgressCircular
+              v-if="loadingSearch"
+              indeterminate
+              size="16"
+              width="2"
+            />
+          </template>
+
+          <!-- Append -->
+          <template #append>
+            <VBtn
+              :size="$vuetify.display.smAndDown ? 'small' : 'large'"
+              :icon="$vuetify.display.smAndDown"
+              @click="searching"
+            >
+              <VIcon icon="ri-search-line" />
+              <span v-if="$vuetify.display.mdAndUp" class="ms-3">Search</span>
+            </VBtn>
+          </template>
+        </VCombobox>
       </VCol>
       <VCol cols="12">
         <VTextField
-          v-model="name"
+          v-model="mahasiswa.nim"
           :rules="[requiredValidator]"
+          disabled="true"
+          label="NIM"
+          placeholder="2020xxxx"
+          :loading="loadingDataMahasiswa"
+        />
+      </VCol>
+      <VCol cols="12">
+        <VTextField
+          v-model="mahasiswa.nama"
           disabled="true"
           label="Nama"
           placeholder="Fulan Fulanah"
+          :loading="loadingDataMahasiswa"
         />
       </VCol>
       <VCol cols="12">
         <VTextField
-          v-model="prodi"
-          :rules="[requiredValidator]"
+          v-model="mahasiswa.prodi"
           disabled="true"
           label="Program Studi"
+          :loading="loadingDataMahasiswa"
         />
       </VCol>
       <VCol cols="12">
         <VTextField
-          v-model="jk"
-          :rules="[requiredValidator]"
+          v-model="mahasiswa.jenisKelamin"
           disabled="true"
           label="Jenis Kelamin"
+          :loading="loadingDataMahasiswa"
         />
       </VCol>
       <VCol cols="12">
         <VTextField
-          v-model="angkatan"
-          :rules="[requiredValidator]"
+          v-model="mahasiswa.angkatan"
           disabled="true"
           label="Angkatan"
+          :loading="loadingDataMahasiswa"
         />
       </VCol>
       <VCol cols="12">
         <VTextField
-          v-model="kelas"
-          :rules="[requiredValidator]"
+          v-model="mahasiswa.kelas"
           disabled="true"
           isabled
           label="Kelas"
+          :loading="loadingDataMahasiswa"
         />
       </VCol>
       <VCol cols="12">
         <VTextField
-          v-model="semester"
-          :rules="[requiredValidator]"
+          v-model="mahasiswa.semester"
           disabled="true"
           label="Semester"
+          :loading="loadingDataMahasiswa"
         />
       </VCol>
       <VCol cols="12">
         <VTextField
+          ref="refJumlah"
           v-model="jumlah"
           :rules="[requiredValidator]"
-          disabled="true"
           label="Jumlah"
+          type="number"
+          min="0"
+          :hint="formatRupiah(jumlah)"
+          persistent-hint
+          :disabled="disabledDeposit"
         />
       </VCol>
       <VCol cols="12">
-        <VTextField
+        <VTextarea
           v-model="keterangan"
-          :rules="[requiredValidator]"
-          disabled="true"
           label="keterangan"
+          :disabled="disabledDeposit"
         />
       </VCol>
       <VCol cols="12" class="d-flex gap-4">

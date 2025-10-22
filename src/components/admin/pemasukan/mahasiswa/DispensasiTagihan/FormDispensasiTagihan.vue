@@ -76,7 +76,7 @@ onMounted(async () => {
         tahun.value = props.dataForm.th_akademik_id;
         keterangan.value = props.dataForm.keterangan;
         jenisDispensasi.value = props.dataForm.jenis;
-        jenisTagihan.value = props.dataForm.tagihan_id;
+        jenisTagihan.value = props.dataForm.jenis_tagihan_id;
         batas.value = props.dataForm.batas;
         jumlah.value = props.dataForm.jumlah;
     }
@@ -98,9 +98,9 @@ const onSubmit = async () => {
     formData.append("batas", batas.value);
     formData.append("jenis", jenisDispensasi.value);
     if (props.typeForm === 'edit') {
-        formData.append("tagihan_id", jenisTagihan.value);
+        formData.append("jenis_tagihan_id", jenisTagihan.value);
     } else {
-        formData.append("tagihan_id", jenisTagihan.value.value);
+        formData.append("jenis_tagihan_id", jenisTagihan.value.value);
     }
     formData.append("th_akademik_id", tahun.value);
     formData.append("keterangan", keterangan.value);

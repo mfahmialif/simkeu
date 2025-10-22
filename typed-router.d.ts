@@ -30,7 +30,7 @@ declare module 'vue-router/auto-routes' {
     'admin-dashboard-dashboard-vehicle-overview': RouteRecordInfo<'admin-dashboard-dashboard-vehicle-overview', '/admin/dashboard/DashboardVehicleOverview', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-catatan-deposit': RouteRecordInfo<'admin-pemasukan-mahasiswa-catatan-deposit', '/admin/pemasukan/mahasiswa/catatan-deposit', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-catatan-deposit-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-catatan-deposit-add', '/admin/pemasukan/mahasiswa/catatan-deposit/add', Record<never, never>, Record<never, never>>,
-    'admin-pemasukan-mahasiswa-catatan-deposit-edit': RouteRecordInfo<'admin-pemasukan-mahasiswa-catatan-deposit-edit', '/admin/pemasukan/mahasiswa/catatan-deposit/edit', Record<never, never>, Record<never, never>>,
+    'admin-pemasukan-mahasiswa-catatan-deposit-edit-id': RouteRecordInfo<'admin-pemasukan-mahasiswa-catatan-deposit-edit-id', '/admin/pemasukan/mahasiswa/catatan-deposit/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-pemasukan-mahasiswa-cek-tagihan': RouteRecordInfo<'admin-pemasukan-mahasiswa-cek-tagihan', '/admin/pemasukan/mahasiswa/cek-tagihan', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-dispensasi': RouteRecordInfo<'admin-pemasukan-mahasiswa-dispensasi', '/admin/pemasukan/mahasiswa/dispensasi', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-dispensasi-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-dispensasi-add', '/admin/pemasukan/mahasiswa/dispensasi/add', Record<never, never>, Record<never, never>>,

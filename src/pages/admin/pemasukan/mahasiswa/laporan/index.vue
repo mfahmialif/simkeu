@@ -6,7 +6,6 @@ import LaporanRekap from "@/components/admin/pemasukan/mahasiswa/laporan/Laporan
 import LaporanRekapTahun from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanRekapTahun.vue";
 import LaporanTahunan from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanTahunan.vue";
 import { ref } from "vue";
-import { VCol } from "vuetify/components";
 
 const prodi = ref([]);
 const tahunAkademik = ref([]);
@@ -122,14 +121,9 @@ onMounted(() => {
   <div>
     <VCardTitle>Laporan Pembayaran Mahasiswa</VCardTitle>
 
-    <LaporanHarian
-      :prodi="prodi"
-      :tahunAkademik="tahunAkademik"
-      :jenisPembayaran="jenisPembayaran"
-      :isLoadingProdi="isLoadingProdi"
-      :isLoadingTahunAkademik="isLoadingTahunAkademik"
-      :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
-    />
+    <LaporanHarian :prodi="prodi" :tahunAkademik="tahunAkademik" :jenisPembayaran="jenisPembayaran"
+      :isLoadingProdi="isLoadingProdi" :isLoadingTahunAkademik="isLoadingTahunAkademik"
+      :isLoadingJenisPembayaran="isLoadingJenisPembayaran" />
 
     <LaporanBulanan
       :prodi="prodi"

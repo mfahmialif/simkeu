@@ -96,7 +96,7 @@ const formatBulan = (val) => {
 
 onMounted(() => {
   // month now
-  bulan.value = new Date().toISOString().slice(0, 7);
+  // bulan.value = new Date().toISOString().slice(0, 7);
 });
 </script>
 
@@ -116,6 +116,7 @@ onMounted(() => {
           label="Bulan"
           placeholder="Pilih bulan"
           :config="{
+            disableMobile: true,
             plugins: [
               new monthSelectPlugin({
                 shorthand: true, // Jan, Feb, dst.

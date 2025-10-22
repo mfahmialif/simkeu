@@ -4,6 +4,7 @@ const emit = defineEmits(["refreshTagihan"]);
 const mahasiswaList = ref([]);
 
 const search = ref("");
+const searchNim = ref("");
 const selectedMahasiswa = ref("");
 const loadingDataMahasiswa = ref(false);
 const loadingSearch = ref(false);
@@ -60,17 +61,17 @@ watch(search, (newVal) => {
 
 watch(selectedMahasiswa, (newVal) => {
   if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
-    mahasiswa.value.nim = newVal.nim;
+    searchNim.value = newVal.nim;
     searching();
   } else if (typeof newVal === "string") {
-    mahasiswa.value.nim = newVal;
+    searchNim.value = newVal;
   } else if (!newVal) {
-    mahasiswa.value.nim = "";
+    searchNim.value = "";
   }
 });
 
 const searching = async () => {
-  if (!mahasiswa.value.nim) {
+  if (!searchNim.value) {
     showSnackbar({
       text: "NIM harus diisi",
       color: "error",
@@ -80,14 +81,11 @@ const searching = async () => {
 
   try {
     loadingDataMahasiswa.value = true;
-    // fetchTagihan();
-    emit("refreshTagihan", mahasiswa.value.nim);
-    emit("refreshDeposit");
 
     const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
       body: {
-        nim: mahasiswa.value.nim
+        nim: searchNim.value
       }
     });
 
@@ -96,14 +94,6 @@ const searching = async () => {
         text: "Data mahasiswa tidak ditemukan",
         color: "error",
       });
-      mahasiswa.value.nim = "";
-      mahasiswa.value.nama = "";
-      mahasiswa.value.prodi = "";
-      mahasiswa.value.jenisKelamin = "";
-      mahasiswa.value.jkId = "";
-      mahasiswa.value.angkatan = "";
-      mahasiswa.value.kelas = "";
-      mahasiswa.value.semester = "";
       return;
     }
 
@@ -115,6 +105,9 @@ const searching = async () => {
     mahasiswa.value.angkatan = res.th_akademik?.kode;
     mahasiswa.value.kelas = res.kelas?.nama;
     mahasiswa.value.semester = res.semester;
+
+    emit("refreshTagihan", mahasiswa.value.nim);
+    emit("refreshDeposit");
     
   } catch (error) {
     showSnackbar({

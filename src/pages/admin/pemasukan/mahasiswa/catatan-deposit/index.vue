@@ -1,6 +1,5 @@
 <script setup>
 const selectedRole = ref();
-const role = ref([]);
 
 const page = ref(1);
 const itemsPerPage = ref(5);
@@ -9,11 +8,12 @@ const search = ref("");
 const selectedRows = ref([]);
 const dataTable = ref([]);
 const totalItems = ref(0);
-const loading = ref(true);
+const loading = ref(false);
 const initialLoading = ref(true);
 
-const fetchUsers = async () => {
+const fetchData = async () => {
   try {
+    loading.value = true;
     const { data } = await $api("/admin/pemasukan/mahasiswa/catatan-deposit", {
       method: "GET",
       body: {
@@ -28,6 +28,8 @@ const fetchUsers = async () => {
 
     dataTable.value = data.data;
     totalItems.value = data.total;
+
+    fetchDetailData();
   } catch (err) {
     console.error(err);
   } finally {
@@ -41,25 +43,8 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   page.value = p;
   itemsPerPage.value = ipp;
   if (sb.length) sortBy.value = sb[0];
-  fetchUsers();
+  fetchData();
 };
-
-// const fetchRole = async () => {
-//   try {
-//     const { data } = await $api("/admin/role", {
-//       method: "GET",
-//     });
-
-//     role.value = data.data.map((role) => {
-//       return {
-//         title: role.name,
-//         value: role.id,
-//       };
-//     });
-//   } catch (err) {
-//     console.error(err);
-//   }
-// };
 
 const isDialogDeleteVisible = ref(false);
 const deleteData = ref({});
@@ -87,7 +72,7 @@ const deleteDataSubmit = async (id) => {
         color: "success",
       });
 
-      fetchUsers();
+      fetchData();
     } else {
       showSnackbar({
         text: response.message,
@@ -108,10 +93,27 @@ const deleteDataSubmit = async (id) => {
   }
 };
 
+const fetchDetailData = async () => {
+  const nimList = dataTable.value.map((item) => item.nim);
+  const res = await $api("/admin/mahasiswa/nim", {
+    method: "GET",
+    body: {
+      nim: JSON.stringify(nimList),
+      whereIn: true,
+    },
+  });
+  dataTable.value = dataTable.value.map((item) => {
+    const mhs = res.find((m) => m.nim === item.nim);
+    return {
+      ...item,
+      mahasiswa: mhs ? mhs : null, // tambahkan objek mahasiswa (atau null kalau tidak ditemukan)
+    };
+  });
+};
+
 onMounted(() => {
   document.title = "Catatan Deposit - SIMKEU";
-  //   fetchRole();
-  fetchUsers();
+  fetchData();
 });
 
 watch(
@@ -126,7 +128,7 @@ watch(
 
 watch(selectedRole, () => {
   console.log("value from wathc", selectedRole.value);
-  fetchUsers();
+  fetchData();
 });
 </script>
 
@@ -134,7 +136,7 @@ watch(selectedRole, () => {
   <div>
     <VCard>
       <VCardItem class="pb-4">
-        <VCardTitle>Deposit</VCardTitle>
+        <VCardTitle>Catatan Deposit</VCardTitle>
       </VCardItem>
 
       <VDivider />
@@ -180,10 +182,6 @@ watch(selectedRole, () => {
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Nim', key: 'nim' },
-          { title: 'Nama', key: 'nama' },
-          { title: 'L/P', key: 'jenis_kelamin' },
-          { title: 'Prodi', key: 'prodi' },
-          { title: 'Kelas', key: 'kelas' },
           { title: 'jumlah', key: 'jumlah' },
           { title: 'keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
@@ -202,17 +200,45 @@ watch(selectedRole, () => {
         <template v-if="initialLoading" #loading>
           <div class="text-center pa-4">
             <VProgressCircular indeterminate color="primary" class="mb-2" />
-            <div>Memuat data pengguna...</div>
+            <div>Memuat data...</div>
           </div>
         </template>
 
         <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data pengguna.</div>
+          <div class="text-center pa-4">Tidak ada data.</div>
         </template>
 
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
+
+        <template #item.nim="{ item }">
+          <div style="margin: 15px 0">
+            <VChip color="primary" size="x-small" label>
+              {{ item.nim }}
+            </VChip>
+            <div>
+              <template v-if="item.mahasiswa">
+                {{ item.mahasiswa.nama }} - {{ item.mahasiswa.prodi?.alias }} -
+                {{ item.mahasiswa.jk?.kode }}
+              </template>
+              <template v-else>
+                <VProgressCircular
+                  indeterminate
+                  color="primary"
+                  size="16"
+                  width="2"
+                  style="vertical-align: middle"
+                ></VProgressCircular>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template #item.jumlah="{ item }">
+          {{ formatRupiah(item.jumlah) }}
+        </template>
+
         <!-- Actions -->
         <template #item.actions="{ item }">
           <IconBtn size="small">
@@ -235,7 +261,7 @@ watch(selectedRole, () => {
                 <VListItem
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.username)"
+                  @click="showDialogDelete(item.id, item.nim)"
                 >
                   Delete
                 </VListItem>
@@ -258,8 +284,8 @@ watch(selectedRole, () => {
         <VCardText class="d-flex align-center">
           <VIcon icon="ri-alert-line" size="32" class="me-2" />
           <span>
-            Anda yakin ingin menghapus data pengguna ini? Penghapusan data
-            pengguna tidak dapat dibatalkan.
+            Anda yakin ingin menghapus data ini? Penghapusan data
+            tidak dapat dibatalkan.
           </span>
         </VCardText>
 

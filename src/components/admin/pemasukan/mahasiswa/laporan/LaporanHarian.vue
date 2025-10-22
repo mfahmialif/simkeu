@@ -115,7 +115,11 @@ onMounted(() => {
           v-model="tanggal"
           label="Tanggal"
           placeholder="Select date"
-          :config="{ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }"
+          :config="{
+            altInput: true,
+            altFormat: 'F j, Y',
+            dateFormat: 'Y-m-d',
+          }"
         />
       </VCol>
 
@@ -156,7 +160,12 @@ onMounted(() => {
         </VBtn>
       </VCol>
       <VCol cols="12" md="6">
-        <VBtn block color="success" @click="downloadExcelTotalan" :loading="isLoading">
+        <VBtn
+          block
+          color="success"
+          @click="downloadExcelTotalan"
+          :loading="isLoading"
+        >
           Download Totalan
           <VIcon end icon="ri-arrow-down-circle-line" />
         </VBtn>

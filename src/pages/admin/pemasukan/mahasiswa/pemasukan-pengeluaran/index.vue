@@ -1,45 +1,30 @@
 <script setup>
+
+const isLoading = ref(false);
+const data = ref();
+
+const fetchPemasukan = async () => {
+  isLoading.value = true;
+  try {
+    const response = await $api("/admin/pemasukan/mahasiswa/pemasukan-pengeluaran");
+    data.value = response.data.semua;
+  } catch (error) {
+    console.log(error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 onMounted(() => {
   document.title = "Pemasukan-Pengeluaran - SIMKEU";
+  fetchPemasukan();
 });
-import { ref } from "vue";
-import { VCol } from "vuetify/components";
-
-const tanggal = ref("");
-const kategori = ref("");
-const jenisKelamin = ref("");
-const prodi = ref("");
-const tahunAkademik = ref("");
-const tahunRekap = ref("");
-const tahunRkp = ref("");
-const tahunan = ref("");
-const bulan = ref("");
-const bulanan = ref("");
-
-const tahunList = ["2020/2021", "2021/2022", "2022/2023", "2023/2024"];
-const bulanList = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
-const kelaminList = ["Laki-laki", "Perempuan"];
-const prodiList = ["TI", "SI", "BD", "DKV", "MI"];
-const kategoriList = ["Kehadiran", "Lembur", "Cuti", "Sakit"];
 </script>
 
 <template>
   <div>
     <VCardTitle>Pemasukan Dan Pengeluaran Mahasiswa</VCardTitle>
-    <VCard class="mt-4">
+    <VCard class="mt-4" :loading="isLoading">
       <VCardItem class="pb-4">
         <VCardTitle>Pemasukan</VCardTitle>
       </VCardItem>
@@ -49,14 +34,15 @@ const kategoriList = ["Kehadiran", "Lembur", "Cuti", "Sakit"];
       <VRow class="pa-4">
         <!-- Input Tanggal -->
         <VCol cols="12" md="12">
-          <p class="text-h5 text-no-wrap">
-            Pemasukan &nbsp;&nbsp;: Rp 200.000.0000
+          <p class="text-h5 text-no-wrap" v-if="!isLoading">
+            Pemasukan &nbsp;&nbsp;: {{ formatRupiah(data?.pemasukan) }}
           </p>
+          <VProgressCircular v-else indeterminate color="primary" size="24" />
         </VCol>
         <!-- Combobox Kategori -->
       </VRow>
     </VCard>
-    <VCard class="mt-4">
+    <VCard class="mt-4" :loading="isLoading">
       <VCardItem class="pb-4">
         <VCardTitle>Pengeluaran</VCardTitle>
       </VCardItem>
@@ -65,14 +51,17 @@ const kategoriList = ["Kehadiran", "Lembur", "Cuti", "Sakit"];
 
       <VRow class="pa-4">
         <VCol cols="12" md="12">
-          <h2 class="text-h5 text-no-wrap">Pengeluaran : Rp 200.000.0000</h2>
-          <p class="text-h5 text-no-wrap">
-            Pending &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: Rp 0
+          <h2 class="text-h5 text-no-wrap" v-if="!isLoading">
+            Pengeluaran : {{ formatRupiah(data?.pengeluaran) }}
+          </h2>
+          <VProgressCircular v-else indeterminate color="primary" size="24" />
+          <p class="text-h5 text-no-wrap" v-if="!isLoading">
+            Pending &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {{ formatRupiah(data?.pending) }}
           </p>
         </VCol>
       </VRow>
     </VCard>
-    <VCard class="mt-4">
+    <VCard class="mt-4" :loading="isLoading">
       <VCardItem class="pb-4">
         <VCardTitle>Saldo</VCardTitle>
       </VCardItem>
@@ -80,11 +69,12 @@ const kategoriList = ["Kehadiran", "Lembur", "Cuti", "Sakit"];
       <VRow class="pa-4">
         <!-- Input Tanggal -->
         <VCol cols="12" md="12">
-          <p class="text-h5 text-no-wrap">
+          <p class="text-h5 text-no-wrap" v-if="!isLoading">
             Saldo
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            : Rp 200.000.0000
+            : {{ formatRupiah(data?.saldo) }}
           </p>
+          <VProgressCircular v-else indeterminate color="primary" size="24" />
         </VCol>
         <!-- Combobox Kategori -->
       </VRow>
