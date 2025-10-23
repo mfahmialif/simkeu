@@ -56,7 +56,7 @@ declare module 'vue-router/auto-routes' {
     'admin-pemasukan-mahasiswa-piutang': RouteRecordInfo<'admin-pemasukan-mahasiswa-piutang', '/admin/pemasukan/mahasiswa/piutang', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-setoran': RouteRecordInfo<'admin-pemasukan-mahasiswa-setoran', '/admin/pemasukan/mahasiswa/setoran', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-setoran-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-setoran-add', '/admin/pemasukan/mahasiswa/setoran/add', Record<never, never>, Record<never, never>>,
-    'admin-pemasukan-mahasiswa-setoran-edit': RouteRecordInfo<'admin-pemasukan-mahasiswa-setoran-edit', '/admin/pemasukan/mahasiswa/setoran/edit', Record<never, never>, Record<never, never>>,
+    'admin-pemasukan-mahasiswa-setoran-edit-id': RouteRecordInfo<'admin-pemasukan-mahasiswa-setoran-edit-id', '/admin/pemasukan/mahasiswa/setoran/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-pemasukan-mahasiswa-uas-susulan': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan', '/admin/pemasukan/mahasiswa/uas-susulan', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-uas-susulan-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan-add', '/admin/pemasukan/mahasiswa/uas-susulan/add', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-uas-susulan-edit': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan-edit', '/admin/pemasukan/mahasiswa/uas-susulan/edit', Record<never, never>, Record<never, never>>,

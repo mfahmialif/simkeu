@@ -8,17 +8,17 @@ const route = useRoute();
 
 const id = route.params.id;
 
-const user = ref({});
+const data = ref({});
 const isLoading = ref(false);
 
-const fetchUser = async () => {
+const fetchData = async () => {
   try {
     isLoading.value = true;
 
     const response = await $api("/admin/pemasukan/mahasiswa/setoran/" + id, {
       method: "GET",
     });
-    user.value = response;
+    data.value = response;
   } catch (err) {
     console.log(err);
     if (err.status === 404) {
@@ -48,16 +48,16 @@ const menuList = [
 ];
 
 onMounted(() => {
-  document.title = "Catatan Setoran Edit - SIMKEU";
-  console.log("edit Catatan Setoran id", id);
-  fetchUser();
+  document.title = "Setoran Edit - SIMKEU";
+  console.log("edit Setoran id", id);
+  fetchData();
 });
 </script>
 
 <template>
   <VRow>
     <VCol cols="12">
-      <VCard title="Edit Data Catatan Setoran">
+      <VCard title="Edit Data Setoran">
         <template #append>
           <MoreBtnAction :menu-list="menuList" />
         </template>
@@ -69,7 +69,7 @@ onMounted(() => {
           <FormSetoran
             v-else
             typeForm="edit"
-            :dataForm="setoran"
+            :dataForm="data"
             :url="'/admin/pemasukan/mahasiswa/setoran/' + id"
             :is-role-visible="true"
           />
