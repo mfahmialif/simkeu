@@ -1,5 +1,5 @@
 <script setup>
-import FormUas from "@/components/admin/uas/FormUas.vue";
+import FormUasSusulan from "@/components/admin/uas-susulan/FormUasSusulan.vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -37,10 +37,9 @@ onMounted(() => {});
           <MoreBtnAction :menu-list="menuList" />
         </template>
         <VCardText>
-          <FormUas
+          <FormUasSusulan
             typeForm="add"
-            :url="'/admin/pemasukan/mahasiswa/uas-susulan'"
-            :isRoleVisible="true"
+            :url="'/admin/pemasukan/mahasiswa/uas-susulan/full'"
           />
         </VCardText>
       </VCard>

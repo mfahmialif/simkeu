@@ -59,7 +59,7 @@ declare module 'vue-router/auto-routes' {
     'admin-pemasukan-mahasiswa-setoran-edit-id': RouteRecordInfo<'admin-pemasukan-mahasiswa-setoran-edit-id', '/admin/pemasukan/mahasiswa/setoran/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-pemasukan-mahasiswa-uas-susulan': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan', '/admin/pemasukan/mahasiswa/uas-susulan', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-uas-susulan-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan-add', '/admin/pemasukan/mahasiswa/uas-susulan/add', Record<never, never>, Record<never, never>>,
-    'admin-pemasukan-mahasiswa-uas-susulan-edit': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan-edit', '/admin/pemasukan/mahasiswa/uas-susulan/edit', Record<never, never>, Record<never, never>>,
+    'admin-pemasukan-mahasiswa-uas-susulan-edit-id': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan-edit-id', '/admin/pemasukan/mahasiswa/uas-susulan/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-profile': RouteRecordInfo<'admin-profile', '/admin/profile', Record<never, never>, Record<never, never>>,
     'admin-saldo-kategori': RouteRecordInfo<'admin-saldo-kategori', '/admin/saldo/kategori', Record<never, never>, Record<never, never>>,
     'admin-saldo-kategori-add': RouteRecordInfo<'admin-saldo-kategori-add', '/admin/saldo/kategori/add', Record<never, never>, Record<never, never>>,

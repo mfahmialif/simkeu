@@ -1,5 +1,5 @@
 <script setup>
-import FormDeposit from "@/components/admin/deposit/FormDeposit.vue";
+import FormUasSusulan from "@/components/admin/uas-susulan/FormUasSusulan.vue";
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -8,10 +8,10 @@ const route = useRoute();
 
 const id = route.params.id;
 
-const user = ref({});
+const data = ref({});
 const isLoading = ref(false);
 
-const fetchUser = async () => {
+const fetchData = async () => {
   try {
     isLoading.value = true;
 
@@ -21,7 +21,8 @@ const fetchUser = async () => {
         method: "GET",
       }
     );
-    user.value = response;
+    data.value = response;
+    console.log(response);
   } catch (err) {
     console.log(err);
     if (err.status === 404) {
@@ -53,7 +54,7 @@ const menuList = [
 onMounted(() => {
   document.title = "Cat Edit - SIMKEU";
   console.log("edit UAS Susulan id", id);
-  fetchUser();
+  fetchData();
 });
 </script>
 
@@ -69,12 +70,11 @@ onMounted(() => {
           <div v-if="isLoading" class="text-center">
             <VProgressLinear indeterminate />
           </div>
-          <FormDeposit
+          <FormUasSusulan
             v-else
             typeForm="edit"
-            :dataForm="user"
-            :url="'/admin/pemasukan/mahasiswa/uas-susulan/' + id"
-            :is-role-visible="true"
+            :dataForm="data"
+            :url="'/admin/pemasukan/mahasiswa/uas-susulan/full/' + id"
           />
         </VCardText>
       </VCard>

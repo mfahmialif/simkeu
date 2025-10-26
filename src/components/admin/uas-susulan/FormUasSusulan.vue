@@ -1,5 +1,6 @@
 <script setup>
 import { showSnackbar } from "@/composables/snackbar";
+import { consoleError } from "vuetify/lib/util/console.mjs";
 
 const router = useRouter();
 
@@ -38,7 +39,7 @@ const mahasiswaList = ref([]);
 
 const search = ref("");
 const searchNim = ref("");
-const selectedMahasiswa = ref("");
+const selectedMahasiswa = ref(null);
 
 const loadingDataMahasiswa = ref(false);
 const loadingSearch = ref(false);
@@ -59,12 +60,10 @@ watch(selectedMahasiswa, (newVal) => {
 
 let typingTimeout = null;
 const mahasiswa = ref(emptyMahasiswa);
-const jumlah = ref(0);
 const keterangan = ref("");
-const disabledDeposit = ref(true);
+const disabledSusulan = ref(true);
 const disabled = ref(false);
 const disabledSearch = ref(false);
-const refJumlah = ref(null);
 
 watch(search, (newVal) => {
   clearTimeout(typingTimeout);
@@ -109,7 +108,7 @@ const searching = async () => {
 
   try {
     loadingDataMahasiswa.value = true;
-    disabledDeposit.value = true;
+    disabledSusulan.value = true;
 
     const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
@@ -135,11 +134,9 @@ const searching = async () => {
     mahasiswa.value.kelas = res.kelas?.nama;
     mahasiswa.value.semester = res.semester;
 
-    disabledDeposit.value = false;
-    await nextTick();
-    refJumlah.value.focus();
+    disabledSusulan.value = false;
   } catch (error) {
-    disabledDeposit.value = true;
+    disabledSusulan.value = true;
     showSnackbar({
       text: error,
       color: "error",
@@ -149,14 +146,109 @@ const searching = async () => {
   }
 };
 
-onMounted(() => {
+const selectedThAkademik = ref(null);
+const thAkademik = ref([]);
+const isLoadingThAkademik = ref(false);
+const tanggal = ref("");
+
+const fetchThAkademik = async () => {
+  try {
+    isLoadingThAkademik.value = true;
+    const { data } = await $api("/admin/th-akademik", {
+      method: "GET",
+    });
+
+    thAkademik.value = data.data.map((thAkademik) => {
+      return {
+        title: `${thAkademik.nama} - ${thAkademik.semester}`,
+        value: thAkademik.id,
+      };
+    });
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isLoadingThAkademik.value = false;
+  }
+};
+
+const jadwal = ref([]);
+const selectedJadwal = ref([]);
+const isLoadingJadwal = ref(false);
+
+const fetchJadwal = async () => {
+  try {
+    isLoadingJadwal.value = true;
+    const response = await $api(
+      "/admin/pemasukan/mahasiswa/uas-susulan/jadwal-kuliah",
+      {
+        method: "GET",
+        body: {
+          nim: mahasiswa.value.nim,
+          th_akademik_id: selectedThAkademik.value,
+        },
+      }
+    );
+
+    if (!response.status) {
+      showSnackbar({
+        text: response.message,
+        color: "error",
+      });
+      return;
+    }
+
+    const data = response.data;
+
+    const prodi = data.prodi.alias;
+
+    jadwal.value = data.krs_detail.map((krsDetail) => {
+      return {
+        title: `${prodi} - ${krsDetail.jadwal_kuliah.kurikulum_matakuliah.matakuliah.nama} - ${krsDetail.jadwal_kuliah.kelompok.kode}`,
+        value: krsDetail.jadwal_kuliah_id,
+      };
+    });
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isLoadingJadwal.value = false;
+  }
+};
+
+watch(selectedJadwal, (newValue) => {
+console.log(newValue);
+});
+
+watch(
+  [selectedThAkademik, mahasiswa],
+  async ([th, mhs]) => {
+    if (th && mhs.nim) {
+      await fetchJadwal();
+
+      if (props.typeForm === "edit") {
+        selectedJadwal.value = props.dataForm.uas_susulan_mk.map((item) => item.jadwal_kuliah_id);
+      }
+    } else {
+      // showSnackbar({
+      //   text: "NIM dan Th Akademik harus diisi",
+      //   color: "error",
+      // });
+    }
+  },
+  { deep: true }
+);
+
+onMounted(async () => {
+  tanggal.value = new Date().toISOString().split("T")[0];
+  await fetchThAkademik();
+
   if (props.typeForm === "edit") {
     disabledSearch.value = true;
     selectedMahasiswa.value = props.dataForm.nim;
+    tanggal.value = props.dataForm.tanggal;
+    selectedThAkademik.value = props.dataForm.th_akademik_id;
     searchNim.value = props.dataForm.nim;
     if (selectedMahasiswa.value) {
-      searching();
-      jumlah.value = props.dataForm.jumlah;
+      await searching();
       keterangan.value = props.dataForm.keterangan;
     }
   }
@@ -172,8 +264,12 @@ const onSubmit = async () => {
 
   const formData = new FormData();
   formData.append("nim", mahasiswa.value.nim);
-  formData.append("jumlah", jumlah.value);
+  formData.append("tanggal", tanggal.value);
+  formData.append("th_akademik_id", selectedThAkademik.value);
   formData.append("keterangan", keterangan.value);
+  selectedJadwal.value.forEach((jadwal) => {
+    formData.append("jadwal_kuliah_id[]", jadwal);
+  });
   formData.append("_method", method);
 
   try {
@@ -191,7 +287,7 @@ const onSubmit = async () => {
         color: "success",
       });
 
-      router.push("/admin/pemasukan/mahasiswa/catatan-deposit");
+      router.push("/admin/pemasukan/mahasiswa/uas-susulan");
     } else {
       showSnackbar({
         text: response.message,
@@ -215,6 +311,32 @@ const onSubmit = async () => {
 <template>
   <VForm ref="refForm" @submit.prevent="onSubmit">
     <VRow>
+      <!-- Input Tanggal -->
+      <VCol cols="12" md="12">
+        <AppDateTimePicker
+          v-model="tanggal"
+          label="Tanggal"
+          placeholder="Select date"
+          :config="{
+            altInput: true,
+            altFormat: 'F j, Y',
+            dateFormat: 'Y-m-d',
+          }"
+        />
+      </VCol>
+      <VCol cols="12" sm="12">
+        <VSelect
+          v-model="selectedThAkademik"
+          label="Select Th Akademik"
+          placeholder="Select Th Akademik"
+          :items="thAkademik"
+          clear-icon="ri-close-line"
+          class="custom-bg-select"
+          :loading="isLoadingThAkademik"
+          :disabled="true"
+        />
+      </VCol>
+
       <VCol cols="12">
         <VCombobox
           v-model="selectedMahasiswa"
@@ -255,7 +377,7 @@ const onSubmit = async () => {
         <VTextField
           v-model="mahasiswa.nim"
           :rules="[requiredValidator]"
-          disabled="true"
+          :disabled="true"
           label="NIM"
           placeholder="2020xxxx"
           :loading="loadingDataMahasiswa"
@@ -264,7 +386,7 @@ const onSubmit = async () => {
       <VCol cols="12">
         <VTextField
           v-model="mahasiswa.nama"
-          disabled="true"
+          :disabled="true"
           label="Nama"
           placeholder="Fulan Fulanah"
           :loading="loadingDataMahasiswa"
@@ -273,7 +395,7 @@ const onSubmit = async () => {
       <VCol cols="12">
         <VTextField
           v-model="mahasiswa.prodi"
-          disabled="true"
+          :disabled="true"
           label="Program Studi"
           :loading="loadingDataMahasiswa"
         />
@@ -281,7 +403,7 @@ const onSubmit = async () => {
       <VCol cols="12">
         <VTextField
           v-model="mahasiswa.jenisKelamin"
-          disabled="true"
+          :disabled="true"
           label="Jenis Kelamin"
           :loading="loadingDataMahasiswa"
         />
@@ -289,7 +411,7 @@ const onSubmit = async () => {
       <VCol cols="12">
         <VTextField
           v-model="mahasiswa.angkatan"
-          disabled="true"
+          :disabled="true"
           label="Angkatan"
           :loading="loadingDataMahasiswa"
         />
@@ -297,7 +419,7 @@ const onSubmit = async () => {
       <VCol cols="12">
         <VTextField
           v-model="mahasiswa.kelas"
-          disabled="true"
+          :disabled="true"
           isabled
           label="Kelas"
           :loading="loadingDataMahasiswa"
@@ -306,29 +428,30 @@ const onSubmit = async () => {
       <VCol cols="12">
         <VTextField
           v-model="mahasiswa.semester"
-          disabled="true"
+          :disabled="true"
           label="Semester"
           :loading="loadingDataMahasiswa"
         />
       </VCol>
-      <VCol cols="12">
-        <VTextField
-          ref="refJumlah"
-          v-model="jumlah"
-          :rules="[requiredValidator]"
-          label="Jumlah"
-          type="number"
-          min="0"
-          :hint="formatRupiah(jumlah)"
-          persistent-hint
-          :disabled="disabledDeposit"
+      <VCol cols="12" sm="12">
+        <VSelect
+          v-model="selectedJadwal"
+          label="Select Jadwal"
+          chips
+          multiple
+          placeholder="Select Jadwal"
+          :items="jadwal"
+          clear-icon="ri-close-line"
+          class="custom-bg-select"
+          :loading="isLoadingJadwal"
+          :disabled="disabledSusulan"
         />
       </VCol>
       <VCol cols="12">
         <VTextarea
           v-model="keterangan"
           label="keterangan"
-          :disabled="disabledDeposit"
+          :disabled="disabledSusulan"
         />
       </VCol>
       <VCol cols="12" class="d-flex gap-4">

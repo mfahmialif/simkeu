@@ -54,7 +54,7 @@ const fetchDetailData = async () => {
     const mhs = res.find((m) => m.nim === item.nim);
     return {
       ...item,
-      mahasiswa: mhs ? mhs : null, // tambahkan objek mahasiswa (atau null kalau tidak ditemukan)
+      mahasiswa: mhs ? mhs : false, // tambahkan objek mahasiswa (atau false kalau tidak ditemukan)
     };
   });
   // dataTable.value.forEach((item, index) => {
@@ -144,7 +144,7 @@ const kwitansi = async (id) => {
       color: "info",
     });
     const blob = await $api(
-      "/admin/pemasukan/mahasiswa/pembayaran/kwitansi/" + id+"/view",
+      "/admin/pemasukan/mahasiswa/pembayaran/kwitansi/" + id + "/view",
       {
         method: "GET",
         headers: { Accept: "application/pdf" },
@@ -294,6 +294,9 @@ watch(selectedThAkademik, () => {
               <template v-if="item.mahasiswa">
                 {{ item.mahasiswa.nama }} - {{ item.mahasiswa.prodi?.alias }} -
                 {{ item.mahasiswa.jk?.kode }}
+              </template>
+              <template v-else-if="item.mahasiswa === false">
+                Data tidak ditemukan di SIAKAD.<br>Silakan hapus atau periksa kembali di SIAKAD.
               </template>
               <template v-else>
                 <VProgressCircular
