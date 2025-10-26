@@ -1,11 +1,16 @@
 <script setup>
+import TagihanPembayaranMahasiswaTambahan from "@/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/TagihanPembayaranMahasiswaTambahan.vue";
 import AkademikPembayaranMahasiswaTambahan from "@/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/AkademikPembayaranMahasiswaTambahan.vue";
 import JenisPembayaranMahasiswaPembayaranTambahan from "@/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/JenisPembayaranMahasiswaPembayaranTambahan.vue";
+import { useRoute } from "vue-router";
+import { useRouter } from "vue-router";
+import PembayaranMahasiswaTambahan from "@/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/PembayaranMahasiswaTambahan.vue";
 import MahasiswaPembayaranMahasiswaTambahan from "@/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/MahasiswaPembayaranMahasiswaTambahan.vue";
-import TagihanPembayaranMahasiswaTambahan from "@/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/TagihanPembayaranMahasiswaTambahan.vue";
-import { consoleError } from "vuetify/lib/util/console.mjs";
 
 const router = useRouter();
+const route = useRoute();
+
+const id = route.params.id;
 
 const disabled = ref(false);
 
@@ -18,15 +23,19 @@ const submitData = async () => {
 
   try {
     disabled.value = true;
-    const response = await $api("/admin/pemasukan/mahasiswa/pembayaran-tambahan", {
-      method: "POST",
-      body: formData,
-      onResponseError({ response }) {
-        console.error(response);
-      },
-    });
+    const response = await $api(
+      "/admin/pemasukan/mahasiswa/pembayaran-tambahan/" + id,
+      {
+        method: "POST",
+        body: formData,
+        onResponseError({ response }) {
+          console.error(response);
+        },
+      }
+    );
 
     console.log(response);
+
     if (response.status === true) {
       showSnackbar({
         text: response.message,
@@ -60,6 +69,7 @@ function buildPembayaranFormData() {
   const tanggal = akademikRef.value?.tanggal ?? null;
   const jenisPembayaran =
     jenisPembayaranRef.value?.selectedJenisPembayaran ?? null;
+  const tagihan = tagihanRef.value?.rows ?? [];
 
   if (jenisPembayaran === null) {
     showSnackbar({
@@ -69,14 +79,8 @@ function buildPembayaranFormData() {
     return false;
   }
 
-  // Opsional: validasi minimal
-  if (!unref(mahasiswaRef.value.mahasiswa.tagihan)?.length) {
-    showSnackbar({ text: "List tagihan kosong", color: "error" });
-    return false;
-  }
-
   const m = mahasiswa ?? {};
-  const rows = unref(m.tagihan) ?? []; // tagihan adalah Ref<Array>
+  const rows = tagihan ?? []; // tagihan adalah Ref<Array>
 
   const fd = new FormData();
 
@@ -91,13 +95,15 @@ function buildPembayaranFormData() {
   fd.append("prodi", m.prodi ?? "");
   fd.append("kelas", m.kelas ?? "");
   fd.append("th_angkatan", m.angkatan ?? "");
-  fd.append("jenis_pembayaran", jenisPembayaran?.value ?? "");
+  fd.append("jenis_pembayaran", jenisPembayaran.value ?? "");
 
   rows.forEach((r) => {
-    fd.append("list_tagihan[]", r.display); // nama tagihan
-    fd.append("list_dibayar[]", r.dibayar ?? 0);
-    fd.append("list_jumlah[]", r.jumlah ?? 0);
+    fd.append("list_tagihan", r.display); // nama tagihan
+    fd.append("list_dibayar", r.dibayar ?? 0);
+    fd.append("list_jumlah", r.jumlah ?? 0);
   });
+
+  fd.append("_method", "PUT");
 
   return fd;
 }
@@ -107,8 +113,30 @@ const mahasiswaRef = ref(null);
 const akademikRef = ref(null);
 const jenisPembayaranRef = ref(null);
 
+const dataForm = ref({});
+
+const fetchDataForm = async () => {
+  try {
+    const { data } = await $api(
+      `/admin/pemasukan/mahasiswa/pembayaran-tambahan/` + id,
+      {
+        method: "GET",
+      }
+    );
+
+    console.log(data);
+    dataForm.value = data;
+  } catch (err) {
+    console.log(err);
+    if (err.status === 404) {
+      router.replace("/not-found");
+    }
+  }
+};
+
 onMounted(() => {
-  document.title = "Tambah Data Pembayaran Mahasiswa - SIMKEU";
+  document.title = "Edit Data Pembayaran Mahasiswa - SIMKEU";
+  fetchDataForm();
 });
 </script>
 
@@ -116,7 +144,7 @@ onMounted(() => {
   <div>
     <div class="d-flex flex-wrap justify-space-between gap-4 mb-6">
       <div class="d-flex flex-column justify-center">
-        <h4 class="text-h4 mb-1">Tambah data pembayaran</h4>
+        <h4 class="text-h4 mb-1">Edit data pembayaran</h4>
         <p class="text-body-1 mb-0">Silahkan mengisi data yang diperlukan</p>
       </div>
 
@@ -129,7 +157,7 @@ onMounted(() => {
           "
           >Batalkan</VBtn
         >
-        <VBtn color="primary" @click="submitData" :disabled
+        <VBtn color="primary" @click="submitData" :disabled="disabled"
           >Simpan Pembayaran</VBtn
         >
       </div>
@@ -137,19 +165,37 @@ onMounted(() => {
 
     <VRow>
       <VCol md="12">
-        <AkademikPembayaranMahasiswaTambahan ref="akademikRef" />
+        <AkademikPembayaranMahasiswaTambahan
+          ref="akademikRef"
+          typeForm="edit"
+          :dataForm="dataForm"
+        />
 
-        <MahasiswaPembayaranMahasiswaTambahan ref="mahasiswaRef" />
+        <MahasiswaPembayaranMahasiswaTambahan
+          ref="mahasiswaRef"
+          typeForm="edit"
+          :dataForm="dataForm"
+        />
 
-        <TagihanPembayaranMahasiswaTambahan
+        <PembayaranMahasiswaTambahan
           ref="tagihanRef"
           :mahasiswa="mahasiswaRef?.mahasiswa"
+          typeForm="edit"
+          :dataForm="dataForm"
         />
 
         <JenisPembayaranMahasiswaPembayaranTambahan
           ref="jenisPembayaranRef"
+          typeForm="edit"
+          :dataForm="dataForm"
         />
-        <VBtn color="primary" @click="submitData" :disabled class="w-100 mt-3">
+
+        <VBtn
+          color="primary"
+          @click="submitData"
+          :disabled="disabled"
+          class="w-100 mt-3"
+        >
           Simpan Pembayaran
         </VBtn>
       </VCol>
