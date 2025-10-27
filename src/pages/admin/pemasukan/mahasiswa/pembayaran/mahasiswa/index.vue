@@ -1,4 +1,6 @@
 <script setup>
+import { formatDate } from "@vueuse/core";
+
 const selectedThAkademik = ref();
 const thAkademik = ref([]);
 
@@ -300,8 +302,9 @@ watch(selectedThAkademik, () => {
           </div>
         </template>
         <template #item.tanggal="{ item }">
-          <div>{{ new Date(item.tanggal).toISOString().split("T")[0] }}</div>
+          <div>{{ formatDate(new Date(item.tanggal), 'YYYY-MM-DD') }}</div>
         </template>
+
         <template #item.username="{ item }">
           <div class="d-flex align-center">
             <VAvatar size="32" :color="item.avatar ? '' : 'primary'">

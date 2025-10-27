@@ -96,7 +96,7 @@ const download = async (type, accept, filename) => {
 
 onMounted(() => {
   // date now
-  tanggal.value = new Date().toISOString().split("T")[0];
+  tanggal.value = fDate(new Date());
 });
 </script>
 

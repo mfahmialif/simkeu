@@ -373,6 +373,7 @@
     "downloadFileExport": true,
     "openFile": true,
     "openFileExport": true,
-    "openPdfInNewTabWithName": true
+    "openPdfInNewTabWithName": true,
+    "fDate": true
   }
 }

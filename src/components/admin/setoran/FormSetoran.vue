@@ -33,7 +33,7 @@ const disabled = ref(false);
 const KategoriList = ["Putra", "Putri"];
 
 onMounted(() => {
-  tanggal.value = new Date().toISOString().split("T")[0];
+  tanggal.value = fDate(new Date());
   
   if (props.typeForm === "edit") {
     tanggal.value = props.dataForm.tanggal;

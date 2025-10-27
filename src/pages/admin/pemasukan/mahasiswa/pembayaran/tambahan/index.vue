@@ -230,7 +230,7 @@ watch(
         </template>
 
         <template #item.tanggal="{ item }">
-          <div>{{ new Date(item.tanggal).toISOString().split("T")[0] }}</div>
+          <div>{{ formatDate(new Date(item.tanggal), 'YYYY-MM-DD') }}</div>
         </template>
 
         <template #item.jumlah="{ item }">

@@ -22,7 +22,7 @@ const refForm = ref(null);
 
 const jumlah = ref(0);
 const keterangan = ref("");
-const tanggal = ref(new Date().toISOString().split("T")[0]);
+const tanggal = ref(fDate(new Date()));
 const disabled = ref(false);
 
 const saldo = ref([]);
