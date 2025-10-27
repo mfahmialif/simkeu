@@ -22,53 +22,21 @@ const props = defineProps({
   },
 });
 
-const passwordValidator = (value) => {
-  if (value.length < 6) return "Password must be at least 6 characters";
-  return true;
-};
-
-const noSpaceValidator = (value) => {
-  if (/\s/.test(value))
-    return "Username cannot contain spaces, example: fulanah123";
-  return true;
-};
-
 const refForm = ref(null);
 
-const tgl = ref("");
+const tanggal = ref("");
 const jumlah = ref("");
 const kategori = ref("");
 const keterangan = ref("");
+
 const disabled = ref(false);
-const KategoriList = ["SPP", "Registrasi", "Donasi", "Lainnya"];
-
-const fetchJenisKelamin = async () => {
-  try {
-    const response = await $api("/helper/get-enum-values", {
-      method: "GET",
-      body: {
-        table: "users",
-        column: "jenis_kelamin",
-        "delete_column[]": ["*"],
-      },
-    });
-
-    jenisKelamin.value = response.map((jenisKelamin) => {
-      return {
-        title: jenisKelamin,
-        value: jenisKelamin,
-      };
-    });
-  } catch (err) {
-    console.error(err);
-  }
-};
+const KategoriList = ["Putra", "Putri"];
 
 onMounted(() => {
-  // fetchJenisKelamin();
+  tanggal.value = new Date().toISOString().split("T")[0];
+  
   if (props.typeForm === "edit") {
-    nim.value = props.dataForm.nim;
-    tgl.value = props.dataForm.tgl;
+    tanggal.value = props.dataForm.tanggal;
     kategori.value = props.dataForm.kategori;
     jumlah.value = props.dataForm.jumlah;
     keterangan.value = props.dataForm.keterangan;
@@ -84,10 +52,9 @@ const onSubmit = async () => {
   disabled.value = true;
 
   const formData = new FormData();
-  formData.append("nim", nim.value);
-  formData.append("tgl", tgl.value);
-  formData.append("kategori", kategori.value);
+  formData.append("tanggal", tanggal.value);
   formData.append("jumlah", jumlah.value);
+  formData.append("kategori", kategori.value);
   formData.append("keterangan", keterangan.value);
   formData.append("_method", method);
 
@@ -132,7 +99,7 @@ const onSubmit = async () => {
     <VRow>
       <VCol cols="12">
         <VTextField
-          v-model="tgl"
+          v-model="tanggal"
           :rules="[requiredValidator]"
           type="date"
           label="Tanggal"
@@ -144,22 +111,21 @@ const onSubmit = async () => {
           :rules="[requiredValidator]"
           label="Jumlah"
           type="number"
+          :hint="formatRupiah(jumlah)"
+          :persistent-hint="true"
         />
       </VCol>
       <VCol cols="12">
-        <VTextField
-          v-model="jk"
+        <VCombobox
+          v-model="kategori"
           :items="KategoriList"
           :rules="[requiredValidator]"
           label="Kategori"
+          autocomplete="off"
         />
       </VCol>
       <VCol cols="12">
-        <VTextarea
-          v-model="jk"
-          :rules="[requiredValidator]"
-          label="Jenis Kelamin"
-        />
+        <VTextarea v-model="keterangan" label="Keterangan" />
       </VCol>
       <VCol cols="12" class="d-flex gap-4">
         <VBtn type="submit" :disabled @click="refForm?.validate()">

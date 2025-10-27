@@ -19,12 +19,12 @@ const menuList = [
     value: "lihat-data",
     icon: "ri-eye-line",
     clickHandler: () =>
-      router.push("/admin/pemasukan/mahasiswa/catatan-deposit"),
+      router.push("/admin/pemasukan/mahasiswa/setoran"),
   },
 ];
 
 onMounted(() => {
-  document.title = "Catatan Deposit Add - SIMKEU";
+  document.title = "Setoran Add - SIMKEU";
 });
 
 onMounted(() => {});
@@ -33,7 +33,7 @@ onMounted(() => {});
 <template>
   <VRow>
     <VCol cols="12">
-      <VCard title="Tambah Catatan Deposit">
+      <VCard title="Tambah Setoran">
         <template #append>
           <MoreBtnAction :menu-list="menuList" />
         </template>
@@ -42,7 +42,6 @@ onMounted(() => {});
           <FormSetoran
             typeForm="add"
             :url="'/admin/pemasukan/mahasiswa/setoran'"
-            :isRoleVisible="true"
           />
         </VCardText>
       </VCard>

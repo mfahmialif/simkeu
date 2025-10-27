@@ -1,5 +1,4 @@
 <script setup>
-const selectedRole = ref();
 const page = ref(1);
 const itemsPerPage = ref(5);
 const sortBy = ref({ key: "id", order: "desc" });
@@ -10,7 +9,7 @@ const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
 
-const fetchUsers = async () => {
+const fetchData = async () => {
   try {
     const { data } = await $api("/admin/pemasukan/mahasiswa/uas-susulan", {
       method: "GET",
@@ -20,12 +19,13 @@ const fetchUsers = async () => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         search: search.value,
-        ...(selectedRole.value && { role_id: selectedRole.value }),
       },
     });
 
     dataTable.value = data.data;
     totalItems.value = data.total;
+
+    fetchDetailData();
   } catch (err) {
     console.error(err);
   } finally {
@@ -34,12 +34,31 @@ const fetchUsers = async () => {
   }
 };
 
+const fetchDetailData = async () => {
+  const nimList = dataTable.value.map((item) => item.nim);
+  const res = await $api("/admin/mahasiswa/nim", {
+    method: "GET",
+    body: {
+      nim: JSON.stringify(nimList),
+      whereIn: true,
+    },
+  });
+  dataTable.value = dataTable.value.map((item) => {
+    const mhs = res.find((m) => m.nim === item.nim);
+    return {
+      ...item,
+      mahasiswa: mhs ? mhs : false, // tambahkan objek mahasiswa (atau null kalau tidak ditemukan)
+    };
+  });
+
+};
+
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   loading.value = true;
   page.value = p;
   itemsPerPage.value = ipp;
   if (sb.length) sortBy.value = sb[0];
-  fetchUsers();
+  fetchData();
 };
 
 const isDialogDeleteVisible = ref(false);
@@ -56,7 +75,7 @@ const showDialogDelete = (id, name) => {
 const deleteDataSubmit = async (id) => {
   try {
     const response = await $api(
-      "/admin/pemasukan/mahasiswa/uas-susulan/" + id,
+      "/admin/pemasukan/mahasiswa/uas-susulan/full/" + id,
       {
         method: "DELETE",
       }
@@ -68,7 +87,7 @@ const deleteDataSubmit = async (id) => {
         color: "success",
       });
 
-      fetchUsers();
+      fetchData();
     } else {
       showSnackbar({
         text: response.message,
@@ -89,9 +108,85 @@ const deleteDataSubmit = async (id) => {
   }
 };
 
+const tanggal = ref("");
+const prodi = ref([]);
+const selectedProdi = ref('*');
+const isLoadingProdi = ref(false);
+const fetchProdi = async () => {
+  try {
+    isLoadingProdi.value = true;
+    const { data } = await $api("/admin/prodi", {
+      method: "GET",
+    });
+
+    prodi.value.push({
+      title: "Semua Prodi",
+      value: "*",
+    });
+
+    prodi.value.push(
+      ...data.data.map((prodi) => {
+        return {
+          title: `${prodi.nama}`,
+          value: prodi.id,
+        };
+      })
+    );
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isLoadingProdi.value = false;
+  }
+};
+
+const isLoadingExcel = ref(false);
+const downloadExcel = async () => {
+  const valid = await refForm.value.validate();
+  if (!valid.valid) return;
+
+  try {
+    isLoadingExcel.value = true;
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    });
+    const response = await $api("/admin/pemasukan/mahasiswa/uas-susulan/excel", {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        tanggal_print: tanggal.value,
+        ...(selectedProdi.value && {
+          prodi_id_print: selectedProdi.value,
+        }),
+      },
+    });
+
+    const namaProdi = selectedProdi.value === "*" ? "Semua Prodi" : prodi.value.find((item) => item.value === selectedProdi.value)?.title;
+    downloadFileExport(response, `Catatan UAS Susulan ${namaProdi}.xlsx`);
+    showSnackbar({
+      text: "Laporan berhasil di download.",
+      color: "success",
+    });
+  } catch (err) {
+    showSnackbar({
+      text: err.message,
+      color: "error",
+    });
+  } finally {
+    isLoadingExcel.value = false;
+  }
+};
+
+const refForm = ref(null);
+
 onMounted(() => {
   document.title = "Catatan UAS Susulan - SIMKEU";
-  fetchUsers();
+  tanggal.value = new Date().toISOString().split("T")[0];
+  fetchData();
+  fetchProdi();
 });
 
 watch(
@@ -103,15 +198,60 @@ watch(
   },
   { deep: true }
 );
-
-// watch(selectedRole, () => {
-//   console.log("value from wathc", selectedRole.value);
-//   fetchUsers();
-// });
 </script>
 
 <template>
   <div>
+    <VCard class="mb-4">
+      <VCardItem class="pb-4">
+        <VCardTitle>Print</VCardTitle>
+      </VCardItem>
+      <VDivider />
+      <VCardText class="">
+        <VForm ref="refForm" @submit.prevent="downloadExcel">
+          <VRow class="mb-2">
+            <!-- Input Tanggal -->
+            <VCol cols="12" md="12">
+              <AppDateTimePicker
+                v-model="tanggal"
+                label="Tanggal"
+                placeholder="Select date"
+                :rules="[requiredValidator]"
+                :config="{
+                  altInput: true,
+                  altFormat: 'F j, Y',
+                  dateFormat: 'Y-m-d',
+                }"
+              />
+            </VCol>
+
+            <!-- 👉 Select Prodi -->
+            <VCol cols="12" sm="12">
+              <VSelect
+                v-model="selectedProdi"
+                label="Select Prodi"
+                placeholder="Select Prodi"
+                :items="prodi"
+                clearable
+                clear-icon="ri-close-line"
+                class="custom-bg-select"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+          </VRow>
+          <VSpacer />
+          <VBtn
+            color="primary"
+            prepend-icon="ri-printer-fill"
+            @click="downloadExcel"
+            :loading="isLoadingExcel"
+          >
+            Cetak
+          </VBtn>
+        </VForm>
+      </VCardText>
+    </VCard>
+
     <VCard>
       <VCardItem class="pb-4">
         <VCardTitle>UAS Susulan</VCardTitle>
@@ -155,12 +295,9 @@ watch(
       <VDataTableServer
         :headers="[
           { title: 'No', key: 'id' },
-          { title: 'Tahun Akademik', key: 'tahun_akademik' },
+          { title: 'Tahun Akademik', key: 'th_akademik_kode' },
           { title: 'Tanggal', key: 'tanggal' },
           { title: 'Nim', key: 'nim' },
-          { title: 'Nama', key: 'nama' },
-          { title: 'L/P', key: 'jenis_kelamin' },
-          { title: 'Prodi', key: 'prodi' },
           { title: 'keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
@@ -189,6 +326,34 @@ watch(
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
+
+        <template #item.nim="{ item }">
+          <div style="margin: 15px 0">
+            <VChip color="primary" size="x-small" label>
+              {{ item.nim }}
+            </VChip>
+            <div>
+              <template v-if="item.mahasiswa">
+                {{ item.mahasiswa.nama }} - {{ item.mahasiswa.prodi?.alias }} -
+                {{ item.mahasiswa.jk?.kode }}
+              </template>
+              <template v-else-if="item.mahasiswa === false">
+                Data tidak ditemukan di SIAKAD.<br />Silakan hapus atau periksa
+                kembali di SIAKAD.
+              </template>
+              <template v-else>
+                <VProgressCircular
+                  indeterminate
+                  color="primary"
+                  size="16"
+                  width="2"
+                  style="vertical-align: middle"
+                ></VProgressCircular>
+              </template>
+            </div>
+          </div>
+        </template>
+
         <!-- Actions -->
         <template #item.actions="{ item }">
           <IconBtn size="small">
@@ -210,7 +375,7 @@ watch(
                 <VListItem
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.username)"
+                  @click="showDialogDelete(item.id, item.nim)"
                 >
                   Delete
                 </VListItem>

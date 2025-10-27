@@ -10,7 +10,7 @@ const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
 
-const fetchUsers = async () => {
+const fetchData = async () => {
   try {
     const { data } = await $api("/admin/pemasukan/mahasiswa/setoran", {
       method: "GET",
@@ -39,25 +39,8 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   page.value = p;
   itemsPerPage.value = ipp;
   if (sb.length) sortBy.value = sb[0];
-  fetchUsers();
+  fetchData();
 };
-
-// const fetchRole = async () => {
-//   try {
-//     const { data } = await $api("/admin/role", {
-//       method: "GET",
-//     });
-
-//     role.value = data.data.map((role) => {
-//       return {
-//         title: role.name,
-//         value: role.id,
-//       };
-//     });
-//   } catch (err) {
-//     console.error(err);
-//   }
-// };
 
 const isDialogDeleteVisible = ref(false);
 const deleteData = ref({});
@@ -72,6 +55,7 @@ const showDialogDelete = (id, name) => {
 
 const deleteDataSubmit = async (id) => {
   try {
+    loading.value = true;
     const response = await $api("/admin/pemasukan/mahasiswa/setoran/" + id, {
       method: "DELETE",
     });
@@ -82,7 +66,7 @@ const deleteDataSubmit = async (id) => {
         color: "success",
       });
 
-      fetchUsers();
+      fetchData();
     } else {
       showSnackbar({
         text: response.message,
@@ -100,13 +84,67 @@ const deleteDataSubmit = async (id) => {
     });
   } finally {
     isDialogDeleteVisible.value = false;
+    loading.value = false;
+  }
+};
+
+const isDialogValidasiVisible = ref(false);
+const validasiData = ref({});
+
+const showDialogValidasi = (id, name) => {
+  validasiData.value = {
+    id: id,
+    name: name,
+  };
+  isDialogValidasiVisible.value = true;
+};
+
+const validasiDataSubmit = async (id, status) => {
+  try {
+    loading.value = true;
+    const formData = new FormData();
+    formData.append("status", status);
+    formData.append("_method", "PUT");
+
+    const response = await $api(
+      "/admin/pemasukan/mahasiswa/setoran/" + id + "/validasi",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (response.status === true) {
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      });
+
+      fetchData();
+    } else {
+      showSnackbar({
+        text: response.message,
+        color: "error",
+      });
+    }
+  } catch (err) {
+    const message = Array.isArray(err.data?.message)
+      ? err.data.message.join("; ")
+      : err.data?.message || "Terjadi kesalahan.";
+
+    showSnackbar({
+      text: message,
+      color: "error",
+    });
+  } finally {
+    isDialogValidasiVisible.value = false;
+    loading.value = false;
   }
 };
 
 onMounted(() => {
   document.title = "Catatan Setoran - SIMKEU";
-  //   fetchRole();
-  fetchUsers();
+  fetchData();
 });
 
 watch(
@@ -121,7 +159,7 @@ watch(
 
 watch(selectedRole, () => {
   console.log("value from wathc", selectedRole.value);
-  fetchUsers();
+  fetchData();
 });
 </script>
 
@@ -129,7 +167,7 @@ watch(selectedRole, () => {
   <div>
     <VCard>
       <VCardItem class="pb-4">
-        <VCardTitle>Deposit</VCardTitle>
+        <VCardTitle>Setoran</VCardTitle>
       </VCardItem>
 
       <VDivider />
@@ -206,6 +244,19 @@ watch(selectedRole, () => {
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
+
+        <template #item.status="{ item }">
+          <VChip color="success" v-if="item.status === 'Disetujui'">
+            {{ item.status }}
+          </VChip>
+          <VChip color="error" v-else-if="item.status === 'Ditolak'">
+            {{ item.status }}
+          </VChip>
+          <VChip color="warning" v-else>
+            {{ item.status }}
+          </VChip>
+        </template>
+
         <!-- Actions -->
         <template #item.actions="{ item }">
           <IconBtn size="small">
@@ -224,11 +275,18 @@ watch(selectedRole, () => {
                 >
                   Edit
                 </VListItem>
+                <VListItem
+                  value="validasi"
+                  prepend-icon="ri-check-line"
+                  @click="showDialogValidasi(item.id, item.tanggal)"
+                >
+                  Validasi
+                </VListItem>
 
                 <VListItem
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.username)"
+                  @click="showDialogDelete(item.id, item.tanggal)"
                 >
                   Delete
                 </VListItem>
@@ -267,6 +325,46 @@ watch(selectedRole, () => {
           <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
             <VIcon icon="ri-delete-bin-line" class="me-1" />
             Hapus
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <VDialog v-model="isDialogValidasiVisible" width="500">
+      <!-- Dialog Content -->
+      <VCard :title="'Validasi Data: ' + validasiData.name">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="isDialogValidasiVisible = false"
+        />
+
+        <VCardText class="d-flex align-center">
+          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <span> Anda yakin ingin memvalidasi data setoran ini? </span>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end flex-wrap gap-4">
+          <VBtn
+            color="warning"
+            @click="validasiDataSubmit(validasiData.id, 'Belum Divalidasi')"
+          >
+            <VIcon icon="ri-close-line" class="me-1" />
+            Belum Divalidasi
+          </VBtn>
+          <VBtn
+            color="error"
+            @click="validasiDataSubmit(validasiData.id, 'Ditolak')"
+          >
+            <VIcon icon="ri-close-line" class="me-1" />
+            Ditolak
+          </VBtn>
+          <VBtn
+            color="success"
+            @click="validasiDataSubmit(validasiData.id, 'Disetujui')"
+          >
+            <VIcon icon="ri-check-line" class="me-1" />
+            Disetujui
           </VBtn>
         </VCardText>
       </VCard>

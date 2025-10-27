@@ -1,7 +1,4 @@
 <script setup>
-const selectedRole = ref();
-const role = ref([]);
-
 const page = ref(1);
 const itemsPerPage = ref(5);
 const sortBy = ref({ key: "id", order: "desc" });
@@ -14,7 +11,7 @@ const initialLoading = ref(true);
 
 const fetchUsers = async () => {
   try {
-    const { data } = await $api("/admin/pemasukan/mahasiswa/pembayaran/idn", {
+    const response = await $api("/admin/pemasukan/mahasiswa/pembayaran-idn", {
       method: "GET",
       body: {
         page: page.value,
@@ -22,18 +19,49 @@ const fetchUsers = async () => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         search: search.value,
-        ...(selectedRole.value && { role_id: selectedRole.value }),
       },
     });
+    const data = response.data;
 
     dataTable.value = data.data;
     totalItems.value = data.total;
+
+    fetchDetailData();
   } catch (err) {
     console.error(err);
   } finally {
     loading.value = false;
     if (initialLoading.value) initialLoading.value = false;
   }
+};
+
+
+const fetchDetailData = async () => {
+  const nimList = dataTable.value.map((item) => item.bill_key);
+  const res = await $api("/admin/mahasiswa/nim", {
+    method: "GET",
+    body: {
+      nim: JSON.stringify(nimList),
+      whereIn: true,
+    },
+  });
+  dataTable.value = dataTable.value.map((item) => {
+    const mhs = res.find((m) => m.nim === item.bill_key);
+    return {
+      ...item,
+      mahasiswa: mhs ? mhs : false, // tambahkan objek mahasiswa (atau false kalau tidak ditemukan)
+    };
+  });
+  // dataTable.value.forEach((item, index) => {
+  //   $api(`/admin/mahasiswa/nim/${item.nim}`, { method: "GET" })
+  //     .then((res) => {
+  //       dataTable.value[index].mahasiswa = res;
+  //     })
+  //     .catch((err) => {
+  //       console.error(`Error NIM ${item.nim}:`, err);
+  //       dataTable.value[index].mahasiswa = "Error";
+  //     });
+  // });
 };
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
@@ -44,53 +72,8 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   fetchUsers();
 };
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
-
-const showDialogDelete = (id, name) => {
-  deleteData.value = {
-    id: id,
-    name: name,
-  };
-  isDialogDeleteVisible.value = true;
-};
-
-const deleteDataSubmit = async (id) => {
-  try {
-    const response = await $api("/admin/pemasukan/mahasiswa/dispensasi/" + id, {
-      method: "DELETE",
-    });
-
-    if (response.status === true) {
-      showSnackbar({
-        text: response.message,
-        color: "success",
-      });
-
-      fetchUsers();
-    } else {
-      showSnackbar({
-        text: response.message,
-        color: "error",
-      });
-    }
-  } catch (err) {
-    const message = Array.isArray(err.data?.message)
-      ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
-
-    showSnackbar({
-      text: message,
-      color: "error",
-    });
-  } finally {
-    isDialogDeleteVisible.value = false;
-  }
-};
-
 onMounted(() => {
   document.title = "Catatan Pembayaran IDN - SIMKEU";
-  //   fetchRole();
   fetchUsers();
 });
 
@@ -104,10 +87,6 @@ watch(
   { deep: true }
 );
 
-watch(selectedRole, () => {
-  console.log("value from wathc", selectedRole.value);
-  fetchUsers();
-});
 </script>
 
 <template>
@@ -138,16 +117,10 @@ watch(selectedRole, () => {
       <VDataTableServer
         :headers="[
           { title: 'No', key: 'id' },
-          { title: 'Nomor', key: 'nomor' },
-          { title: 'Tanggal', key: 'tanggal' },
-          { title: 'Nomor', key: 'nomor' },
-          { title: 'Nim', key: 'nim' },
-          { title: 'Nama', key: 'nama' },
-          { title: 'L/P', key: 'jenis_kelamin' },
-          { title: 'Prodi', key: 'prodi' },
-          { title: 'kelas', key: 'kelas' },
-          { title: 'pembayaran', key: 'pembayaran' },
-          { title: 'jumlah', key: 'jumlah' },
+          { title: 'Pembayaran', key: 'keuangan_tagihan_nama' },
+          { title: 'Jumlah', key: 'total_bill_amount' },
+          { title: 'Tahun', key: 'th_akademik_kode' },
+          { title: 'Tanggal', key: 'paid_date' },
         ]"
         v-model:model-value="selectedRows"
         v-model:items-per-page="itemsPerPage"
@@ -174,6 +147,41 @@ watch(selectedRole, () => {
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
+
+          <template #item.keuangan_tagihan_nama="{ item }">
+          <div style="margin: 15px 0">
+            <VChip color="primary" size="x-small" label>
+              {{ item.bill_id }}
+            </VChip>
+            <div>
+              <b>{{ item.keuangan_tagihan_nama }}</b>
+            </div>
+            <div>
+              {{ item.bill_key }} -
+              <template v-if="item.mahasiswa">
+                {{ item.mahasiswa.nama }} - {{ item.mahasiswa.prodi?.alias }} -
+                {{ item.mahasiswa.jk?.kode }}
+              </template>
+              <template v-else-if="item.mahasiswa === false">
+                Data tidak ditemukan di SIAKAD.<br>Silakan hapus atau periksa kembali di SIAKAD.
+              </template>
+              <template v-else>
+                <VProgressCircular
+                  indeterminate
+                  color="primary"
+                  size="16"
+                  width="2"
+                  style="vertical-align: middle"
+                ></VProgressCircular>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <template #item.tanggal="{ item }">
+          <div>{{ new Date(item.tanggal).toISOString().split("T")[0] }}</div>
+        </template>
+
         <!-- Actions -->
         <!-- <template #item.actions="{ item }">
           <IconBtn size="small">

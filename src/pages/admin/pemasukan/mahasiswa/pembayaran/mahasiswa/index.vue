@@ -54,7 +54,7 @@ const fetchDetailData = async () => {
     const mhs = res.find((m) => m.nim === item.nim);
     return {
       ...item,
-      mahasiswa: mhs ? mhs : null, // tambahkan objek mahasiswa (atau null kalau tidak ditemukan)
+      mahasiswa: mhs ? mhs : false, // tambahkan objek mahasiswa (atau false kalau tidak ditemukan)
     };
   });
 };
@@ -252,6 +252,9 @@ watch(selectedThAkademik, () => {
               <template v-if="item.mahasiswa">
                 {{ item.mahasiswa.nama }} - {{ item.mahasiswa.prodi?.alias }} -
                 {{ item.mahasiswa.jk?.kode }}
+              </template>
+              <template v-else-if="item.mahasiswa === false">
+                Data tidak ditemukan di SIAKAD.<br>Silakan hapus atau periksa kembali di SIAKAD.
               </template>
               <template v-else>
                 <VProgressCircular indeterminate color="primary" size="16" width="2" style="vertical-align: middle">
