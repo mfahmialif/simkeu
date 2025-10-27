@@ -36,7 +36,7 @@ const fetchDispensasi = async () => {
     const dispensasiList = response.data.data ?? response;
 
     dataTable.value = dispensasiList;
-    totalItems.value = dispensasiList.total ?? 0;
+    totalItems.value = response.data.total ?? 0;
 
     fetchMahasiswa();
   } catch (err) {
@@ -66,7 +66,7 @@ const fetchMahasiswa = async () => {
       return {
         ...item,
         nama_mahasiswa: mahasiswa ? mahasiswa.nama : "N/A",
-        jenis_kelamin: mahasiswa ? mahasiswa.jk.nama : "N/A",
+        jenis_kelamin: mahasiswa ? mahasiswa.jk.kode : "N/A",
         prodi: mahasiswa ? mahasiswa.prodi.nama : "N/A",
       };
     });
@@ -182,11 +182,13 @@ onMounted(() => {
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tahun Akademik', key: 'th_akademik' },
-          { title: 'Nim-Nama Mahasiswa', key: 'nim' },
+          { title: 'Nim', key: 'nim' },
+          { title: 'L/P', key: 'jenis_kelamin' },
           { title: 'Prodi', key: 'prodi' },
           { title: 'keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
+        v-model:model-value="selectedRows"
         v-model:items-per-page="itemsPerPage"
         v-model:page="page"
         :items="dataTable"

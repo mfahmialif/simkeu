@@ -42,19 +42,24 @@ const fetchJenisPembayaran = async () => {
 
 defineExpose({ selectedJenisPembayaran });
 
-onMounted(() => {
-  fetchJenisPembayaran();
+onMounted(async () => {
+  await fetchJenisPembayaran();
+  if (props.typeForm === 'edit') {
+    selectedJenisPembayaran.value = jenisPembayaran.value.find(
+      (item) => item.value === props.dataForm.jenis_pembayaran
+    );
+  }
 });
 
-watch(
-  () => props.dataForm,
-  (newVal) => {
-    if (props.typeForm === "edit" && newVal) {
-      console.log(newVal);
-      selectedJenisPembayaran.value = newVal.jenis_pembayaran;
-    }
-  }
-);
+// watch(
+//   () => props.dataForm,
+//   (newVal) => {
+//     if (props.typeForm === "edit" && newVal) {
+//       console.log(newVal);
+//       selectedJenisPembayaran.value = newVal.jenis_pembayaran;
+//     }
+//   }
+// );
 </script>
 
 <template>

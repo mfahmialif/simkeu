@@ -34,8 +34,6 @@ const submitData = async () => {
       }
     );
 
-    console.log(response);
-
     if (response.status === true) {
       showSnackbar({
         text: response.message,
@@ -51,13 +49,13 @@ const submitData = async () => {
     }
   } catch (err) {
     console.log(err);
-    // const message = Array.isArray(err.data.message)
-    //   ? err.data.message.join("; ")
-    //   : err.data.message;
-    // showSnackbar({
-    //   text: message,
-    //   color: "error",
-    // });
+    const message = Array.isArray(err.data.message)
+      ? err.data.message.join("; ")
+      : err.data.message;
+    showSnackbar({
+      text: message,
+      color: "error",
+    });
   } finally {
     disabled.value = false;
   }

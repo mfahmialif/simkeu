@@ -215,6 +215,9 @@ watch(
             <VChip color="primary" size="x-small" label>
               {{ item.nota ?? item.nomor }}
             </VChip>
+            <VChip color="success" size="x-small" label>
+              {{ item.jenis_pembayaran }}
+            </VChip>
             <div>
               <b>{{ item.tagihan }}</b>
             </div>

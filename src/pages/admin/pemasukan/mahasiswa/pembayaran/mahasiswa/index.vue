@@ -179,8 +179,15 @@ watch(selectedThAkademik, () => {
     <VRow class="mb-2">
       <!-- 👉 Select ThAkademik -->
       <VCol cols="12" sm="12">
-        <VSelect v-model="selectedThAkademik" label="Select Th Akademik" placeholder="Select Th Akademik"
-          :items="thAkademik" clearable clear-icon="ri-close-line" class="custom-bg-select" />
+        <VSelect
+          v-model="selectedThAkademik"
+          label="Select Th Akademik"
+          placeholder="Select Th Akademik"
+          :items="thAkademik"
+          clearable
+          clear-icon="ri-close-line"
+          class="custom-bg-select"
+        />
       </VCol>
     </VRow>
 
@@ -194,39 +201,61 @@ watch(selectedThAkademik, () => {
       <VCardText class="d-flex flex-wrap gap-4">
         <div class="d-flex align-center w-100 w-sm-auto">
           <!-- 👉 Search  -->
-          <VTextField v-model="search" placeholder="Search Data" style="inline-size: 200px" density="compact"
-            class="me-3" />
+          <VTextField
+            v-model="search"
+            placeholder="Search Data"
+            style="inline-size: 200px"
+            density="compact"
+            class="me-3"
+          />
         </div>
 
         <VSpacer />
 
         <div class="d-flex gap-x-4 align-center">
           <!-- 👉 Export button -->
-          <VBtn variant="outlined" color="secondary" prepend-icon="ri-upload-2-line">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            prepend-icon="ri-upload-2-line"
+          >
             Export
           </VBtn>
 
-          <VBtn color="primary" prepend-icon="ri-add-line" @click="
-            $router.push(
-              '/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add'
-            )
-            ">
+          <VBtn
+            color="primary"
+            prepend-icon="ri-add-line"
+            @click="
+              $router.push(
+                '/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add'
+              )
+            "
+          >
             Add Data
           </VBtn>
         </div>
       </VCardText>
 
       <!-- 👉 Datatable  -->
-      <VDataTableServer :headers="[
-        { title: 'No', key: 'id' },
-        { title: 'Pembayaran', key: 'keuangan_tagihan_nama' },
-        { title: 'Jumlah', key: 'jumlah' },
-        { title: 'Tahun', key: 'th_akademik_kode' },
-        { title: 'Tanggal', key: 'tanggal' },
-        { title: 'Actions', key: 'actions', sortable: false },
-      ]" v-model:model-value="selectedRows" v-model:items-per-page="itemsPerPage" v-model:page="page"
-        :items="dataTable" :items-length="totalItems" :loading="loading" :search="search" item-value="name"
-        @update:options="loadItems">
+      <VDataTableServer
+        :headers="[
+          { title: 'No', key: 'id' },
+          { title: 'Pembayaran', key: 'keuangan_tagihan_nama' },
+          { title: 'Jumlah', key: 'jumlah' },
+          { title: 'Tahun', key: 'th_akademik_kode' },
+          { title: 'Tanggal', key: 'tanggal' },
+          { title: 'Actions', key: 'actions', sortable: false },
+        ]"
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
+        :items="dataTable"
+        :items-length="totalItems"
+        :loading="loading"
+        :search="search"
+        item-value="name"
+        @update:options="loadItems"
+      >
         <template v-if="initialLoading" #loading>
           <div class="text-center pa-4">
             <VProgressCircular indeterminate color="primary" class="mb-2" />
@@ -254,10 +283,17 @@ watch(selectedThAkademik, () => {
                 {{ item.mahasiswa.jk?.kode }}
               </template>
               <template v-else-if="item.mahasiswa === false">
-                Data tidak ditemukan di SIAKAD.<br>Silakan hapus atau periksa kembali di SIAKAD.
+                Data tidak ditemukan di SIAKAD.<br />Silakan hapus atau periksa
+                kembali di SIAKAD.
               </template>
               <template v-else>
-                <VProgressCircular indeterminate color="primary" size="16" width="2" style="vertical-align: middle">
+                <VProgressCircular
+                  indeterminate
+                  color="primary"
+                  size="16"
+                  width="2"
+                  style="vertical-align: middle"
+                >
                 </VProgressCircular>
               </template>
             </div>
@@ -284,19 +320,31 @@ watch(selectedThAkademik, () => {
             <VIcon icon="ri-more-2-fill" />
             <VMenu activator="parent">
               <VList>
-                <VListItem value="download" prepend-icon="ri-download-cloud-2-line" @click="kwitansi(item.id)">
+                <VListItem
+                  value="download"
+                  prepend-icon="ri-download-cloud-2-line"
+                  @click="kwitansi(item.id)"
+                >
                   Kwitansi
                 </VListItem>
-                <VListItem value="download" prepend-icon="ri-edit-box-line" @click="
-                  $router.push(
-                    `/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/edit/${item.id}`
-                  )
-                  ">
+                <VListItem
+                  value="download"
+                  prepend-icon="ri-edit-box-line"
+                  @click="
+                    $router.push(
+                      `/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/edit/${item.id}`
+                    )
+                  "
+                >
                   Edit
                 </VListItem>
-                <VListItem value="delete" prepend-icon="ri-delete-bin-line" @click="
-                  showDialogDelete(item.id, `${item.keuangan_tagihan_nama}`)
-                  ">
+                <VListItem
+                  value="delete"
+                  prepend-icon="ri-delete-bin-line"
+                  @click="
+                    showDialogDelete(item.id, `${item.keuangan_tagihan_nama}`)
+                  "
+                >
                   Delete
                 </VListItem>
               </VList>
@@ -308,7 +356,11 @@ watch(selectedThAkademik, () => {
     <VDialog v-model="isDialogDeleteVisible" width="500">
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
-        <DialogCloseBtn variant="text" size="default" @click="isDialogDeleteVisible = false" />
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="isDialogDeleteVisible = false"
+        />
 
         <VCardText class="d-flex align-center">
           <VIcon icon="ri-alert-line" size="32" class="me-2" />
@@ -319,10 +371,18 @@ watch(selectedThAkademik, () => {
         </VCardText>
 
         <VCardText class="d-flex justify-end flex-wrap gap-4">
-          <VBtn variant="outlined" color="secondary" @click="isDialogDeleteVisible = false">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isDialogDeleteVisible = false"
+          >
             Batal
           </VBtn>
-          <VBtn color="error" :disabled="disabledDelete" @click="deleteDataSubmit(deleteData.id)">
+          <VBtn
+            color="error"
+            :disabled="disabledDelete"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
             <VIcon icon="ri-delete-bin-line" class="me-1" />
             Delete
           </VBtn>

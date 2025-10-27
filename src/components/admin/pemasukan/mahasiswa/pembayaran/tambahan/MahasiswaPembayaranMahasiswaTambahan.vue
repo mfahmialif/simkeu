@@ -28,8 +28,8 @@ const emptyMahasiswa = {
 const mahasiswa = ref(emptyMahasiswa);
 
 const jenisKelaminList = [
-  { value: "Laki-laki", text: "Laki-laki" },
-  { value: "Perempuan", text: "Perempuan" },
+  { value: "L", text: "Laki-laki" },
+  { value: "P", text: "Perempuan" },
 ];
 
 const kelasList = [
