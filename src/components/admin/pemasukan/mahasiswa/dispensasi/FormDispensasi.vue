@@ -1,9 +1,7 @@
 <script setup>
 import { showSnackbar } from "@/composables/snackbar";
-import { watch } from "vue";
 
 const router = useRouter();
-
 const props = defineProps({
   typeForm: {
     type: String,
@@ -23,6 +21,20 @@ const props = defineProps({
   },
 });
 
+const emptyMahasiswa = {
+  nim: "",
+  nama: "",
+  prodi: "",
+  jenisKelamin: "",
+  jkId: "",
+  angkatan: "",
+  kelas: "",
+  semester: "",
+  deposit: 0,
+  dipakai: 0,
+  tagihan: [],
+};
+
 const passwordValidator = (value) => {
   if (value.length < 6) return "Password must be at least 6 characters";
   return true;
@@ -35,42 +47,73 @@ const noSpaceValidator = (value) => {
 };
 
 const refForm = ref(null);
-
-const nim = ref("");
-const prodi = ref("");
 const tahun = ref("");
 const tahunList = ref([]);
-const kelas = ref("");
-const semester = ref("");
 const keterangan = ref("");
-const name = ref("");
-const angkatan = ref("");
 const disabled = ref(false);
-const jk = ref("");
-const array = ref([]);
 const loading = ref(false);
 const isSelecting = ref(false);
-const showList = computed(() => nim.value && !selected.value && array.value.length > 0)
-const selected = ref(false);
+const mahasiswaList = ref([]);
+const search = ref("");
+const searchNim = ref("");
+const selectedMahasiswa = ref("");
+const loadingDataMahasiswa = ref(false);
+const loadingSearch = ref(false);
 
+const mahasiswa = ref(emptyMahasiswa);
 onMounted(async () => {
-  // fetchJenisKelamin();
   await fetchAllTahun();
-  if (props.typeForm === "edit") {
-    console.log("dataForm", props.dataForm.th_akademik_id);
-    array.value = []
-    await nimMahasiswa(props.dataForm.nim);
-    name.value = array.value[0].nama;
-    prodi.value = array.value[0].prodi;
-    jk.value = array.value[0].jk;
-    angkatan.value = array.value[0].angkatan;
-    kelas.value = array.value[0].kelas;
-    semester.value = array.value[0].semester;
-    nim.value = props.dataForm.nim;
-    tahun.value = props.dataForm.th_akademik_id;
-    keterangan.value = props.dataForm.keterangan;
-  }
+
+
 });
+const Mahasiswanim = async (nim) => {
+  loadingDataMahasiswa.value = true;
+  console.log(nim);
+
+  try {
+    const response = await $api("/admin/mahasiswa/nim", {
+      method: "GET",
+      params: {
+        nim: nim
+      }
+    });
+
+    const data = response.data ? response.data : response;
+
+    mahasiswa.value.prodi = data.prodi?.nama;
+    mahasiswa.value.nama = data.nama;
+    mahasiswa.value.jenisKelamin = data.jk?.nama;
+    mahasiswa.value.angkatan = data.th_akademik?.kode?.slice(0, -1) ?? "-";
+    mahasiswa.value.kelas = data.kelas?.nama;
+    mahasiswa.value.semester = data.semester;
+
+    console.log("mahasiswa", mahasiswa.value.nim);
+  } catch (err) {
+    console.error(err);
+    mahasiswa.value = emptyMahasiswa;
+  } finally {
+    loadingDataMahasiswa.value = false;
+  }
+};
+
+watch(
+  () => props.dataForm,
+  async (newVal) => {
+    if (props.typeForm === "edit" && newVal) {
+      mahasiswa.value.nim = newVal.nim;
+      await Mahasiswanim(newVal.nim);
+      mahasiswa.value.nama = mahasiswa.value.nama;
+      mahasiswa.value.prodi = mahasiswa.value.prodi;
+      mahasiswa.value.jenisKelamin = mahasiswa.value.jenisKelamin;
+      mahasiswa.value.angkatan = mahasiswa.value.angkatan.slice(0, -1);
+      mahasiswa.value.kelas = mahasiswa.value.kelas;
+      mahasiswa.value.semester = mahasiswa.value.semester;
+      tahun.value = newVal.th_akademik_id;
+      keterangan.value = newVal.keterangan;
+    }
+  },
+  { immediate: true } // langsung jalan kalau dataForm sudah dikirim dari parent
+);
 
 const onSubmit = async () => {
   const valid = await refForm.value.validate();
@@ -82,7 +125,7 @@ const onSubmit = async () => {
   console.log('tahun', tahun.value);
 
   const formData = new FormData();
-  formData.append("nim", nim.value);
+  formData.append("nim", mahasiswa.value.nim);
   formData.append("th_akademik_id", tahun.value);
   formData.append("keterangan", keterangan.value);
   formData.append("_method", method);
@@ -122,56 +165,96 @@ const onSubmit = async () => {
   }
 };
 
-const nimMahasiswa = async (nim) => {
-  console.log("search", nim);
-  if (nim == "" || nim == null) {
+let typingTimeout = null;
+
+watch(search, (newVal) => {
+  clearTimeout(typingTimeout);
+
+  if (!newVal.trim()) {
+    mahasiswaList.value = [];
+    loadingSearch.value = false;
     return;
-  } else {
-    console.log("nim", nim);
-    loading.value = true;  // mulai loading
-    try {
-      const mahasiswa = await $api(`/admin/mahasiswa/nim`, {
-        method: "GET",
-        params: { nim: nim },
-      });
-
-      array.value = mahasiswa
-        ? [{
-          id: mahasiswa.id,
-          nim: mahasiswa.nim,
-          nama: mahasiswa.nama,
-          prodi: mahasiswa.prodi?.alias || "",
-          jk: mahasiswa.jk?.nama || "",
-          angkatan: mahasiswa.th_akademik?.kode.slice(0, -1) || "",
-          kelas: mahasiswa.kelas?.nama || "",
-          semester: mahasiswa.semester || "",
-        }]
-        : [];
-
-    } catch (err) {
-      console.error(err);
-    } finally {
-      loading.value = false;  // selesai loading
-    }
-
   }
 
-};
-
-watch(nim, async (newNim) => {
-  await nimMahasiswa(newNim);
+  typingTimeout = setTimeout(async () => {
+    try {
+      loadingSearch.value = true;
+      const res = await $api(`/admin/mahasiswa/search/${newVal}`, {
+        method: "GET",
+      });
+      // ubah hasil API jadi format { nim, nama, display: "nama - nim" }
+      mahasiswaList.value = res.map((m) => ({
+        ...m,
+        display: `${m.nim} - ${m.nama}`,
+      }));
+    } catch (err) {
+      showSnackbar({
+        text: "Gagal mendapatkan list mahasiswa",
+        color: "error",
+      });
+      mahasiswaList.value = [];
+    } finally {
+      loadingSearch.value = false;
+    }
+  }, 1000); // <-- debounce 2 detik
 });
 
-const selectItem = (item) => {
-  name.value = item.nama;
-  nim.value = item.nim;
-  prodi.value = item.prodi;
-  jk.value = item.jk;
-  angkatan.value = item.angkatan;
-  kelas.value = item.kelas;
-  semester.value = item.semester;
-  array.value = []
-}
+watch(selectedMahasiswa, (newVal) => {
+  if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
+    searchNim.value = newVal.nim;
+    searching();
+  } else if (typeof newVal === "string") {
+    searchNim.value = newVal;
+  } else if (!newVal) {
+    searchNim.value = "";
+  }
+});
+
+const searching = async () => {
+  if (!searchNim.value) {
+    showSnackbar({
+      text: "NIM harus diisi",
+      color: "error",
+    });
+    return;
+  }
+
+  try {
+    loadingDataMahasiswa.value = true;
+
+    const res = await $api(`/admin/mahasiswa/nim`, {
+      method: "GET",
+      body: {
+        nim: searchNim.value
+      }
+    });
+
+    if (res.length < 1) {
+      showSnackbar({
+        text: "Data mahasiswa tidak ditemukan",
+        color: "error",
+      });
+      return;
+    }
+
+    mahasiswa.value.nim = res.nim;
+    mahasiswa.value.nama = res.nama;
+    mahasiswa.value.prodi = res.prodi?.nama;
+    mahasiswa.value.jenisKelamin = res.jk?.nama;
+    mahasiswa.value.jkId = res.jk?.id;
+    mahasiswa.value.angkatan = res.th_akademik?.kode.slice(0, -1) ?? "-";
+    mahasiswa.value.kelas = res.kelas?.nama;
+    mahasiswa.value.semester = res.semester;
+
+  } catch (error) {
+    showSnackbar({
+      text: error,
+      color: "error",
+    });
+  } finally {
+    loadingDataMahasiswa.value = false;
+  }
+};
 
 const fetchAllTahun = async (search) => {
   loading.value = true;
@@ -199,24 +282,6 @@ const fetchAllTahun = async (search) => {
   }
 };
 
-
-// const onSearch = async () => {
-//   selected.value = false // reset status terpilih
-//   if (!nim.value) {
-//     array.value = []
-//     return
-//   }
-//   console.log('Searching for:', nim.value);
-//   // await nimMahasiswa(search);
-
-// };
-
-const selectTahun = (value) => {
-  isSelecting.value = true
-  console.log("Selected tahun ID:", value);
-  tahun.value = value;
-};
-
 </script>
 <style scoped>
 .autocomplete-list {
@@ -239,50 +304,56 @@ const selectTahun = (value) => {
           :rules="[requiredValidator]" clear-icon="ri-close-line" />
       </VCol>
       <VCol cols="12">
-        <div class="d-flex align-items-center">
-          <VTextField v-model="nim" :rules="[requiredValidator, noSpaceValidator]" label="Nim"
-            placeholder="fulanah123" />
-          <!-- <VBtn type="submit" @click="nimMahasiswa(nim)" :disabled class="ms-2" height="45px">
-            <VIcon icon="ri-search-line"></VIcon>
-          </VBtn> -->
-        </div>
-        <Vcol cols="10">
-          <VList class="autocomplete-list" elevation="4" v-if="showList">
-            <VListItem v-if="loading">
-              <VListItemTitle>
-                <VProgressCircular indeterminate size="20" width="2" class="me-2" />
-                Sedang mencari...
-              </VListItemTitle>
-            </VListItem>
-            <VListItem v-for="item in array" :key="item.id" @click="selectItem(item)" v-else>
-              <VListItemTitle>{{ item.nim }}</VListItemTitle>
-              <VListItemSubtitle>{{ item.nama }}</VListItemSubtitle>
-            </VListItem>
-          </VList>
-        </Vcol>
-
-      </VCol>
-      <VCol cols="12">
-        <VTextField v-model="name" :rules="[requiredValidator]" :disabled="true" label="Nama"
-          placeholder="Fulan Fulanah" />
+        <VCombobox v-model="selectedMahasiswa" v-model:search="search" :items="mahasiswaList" item-title="display"
+          item-value="nim" label="NIM" clearable :loading="loadingSearch">
+          <template #append-inner>
+            <VProgressCircular v-if="loadingSearch" indeterminate size="16" width="2" />
+          </template>
+          <!-- Append -->
+          <template #append>
+            <VBtn :size="$vuetify.display.smAndDown ? 'small' : 'large'" :icon="$vuetify.display.smAndDown"
+              @click="searching">
+              <VIcon icon="ri-search-line" />
+              <span v-if="$vuetify.display.mdAndUp" class="ms-3">Search</span>
+            </VBtn>
+          </template>
+        </VCombobox>
       </VCol>
       <VCol cols="12" md="6">
-        <VTextField v-model="prodi" :rules="[requiredValidator]" :disabled="true" label="Program Studi" />
+        <VTextField v-model="mahasiswa.nim" label="NIM" placeholder="NIM" readonly :loading="loadingDataMahasiswa">
+        </VTextField>
       </VCol>
       <VCol cols="12" md="6">
-        <VTextField v-model="jk" :rules="[requiredValidator]" :disabled="true" label="Jenis Kelamin" />
+        <VTextField v-model="mahasiswa.nama" label="Nama" placeholder="Nama" readonly :loading="loadingDataMahasiswa">
+        </VTextField>
+      </VCol>
+      <VCol cols="12" md="6">
+        <VTextField v-model="mahasiswa.prodi" label="Prodi" placeholder="Prodi" readonly
+          :loading="loadingDataMahasiswa">
+        </VTextField>
+      </VCol>
+      <VCol cols="12" md="6">
+        <VTextField v-model="mahasiswa.jenisKelamin" label="Jenis Kelamin" placeholder="Jenis Kelamin" readonly
+          :loading="loadingDataMahasiswa">
+        </VTextField>
       </VCol>
       <VCol cols="12" md="4">
-        <VTextField v-model="angkatan" :rules="[requiredValidator]" :disabled="true" label="Angkatan" />
+        <VTextField v-model="mahasiswa.angkatan" label="Angkatan" placeholder="Angkatan" readonly
+          :loading="loadingDataMahasiswa">
+        </VTextField>
       </VCol>
       <VCol cols="12" md="4">
-        <VTextField v-model="kelas" :rules="[requiredValidator]" :disabled="true" isabled label="Kelas" />
+        <VTextField v-model="mahasiswa.kelas" label="Kelas" placeholder="Kelas" readonly
+          :loading="loadingDataMahasiswa">
+        </VTextField>
       </VCol>
       <VCol cols="12" md="4">
-        <VTextField v-model="semester" :rules="[requiredValidator]" :disabled="true" label="Semester" />
+        <VTextField v-model="mahasiswa.semester" label="Semester" placeholder="Semester" readonly
+          :loading="loadingDataMahasiswa">
+        </VTextField>
       </VCol>
       <VCol cols="12">
-        <VTextField v-model="keterangan" :rules="[requiredValidator]" label="keterangan" />
+        <VTextarea label="Keterangan" v-model="keterangan" placeholder="Placeholder Text" />
       </VCol>
       <VCol cols="12" class="d-flex gap-4">
         <VBtn type="submit" :disabled @click="refForm?.validate()">

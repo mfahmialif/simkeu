@@ -1,5 +1,4 @@
 <script setup>
-
 const selectedRole = ref();
 const role = ref([]);
 
@@ -15,73 +14,65 @@ const initialLoading = ref(true);
 let isFetching = ref(false);
 
 const fetchDispensasiTagihan = async () => {
-  console.log(" Mulai fetchDispensasi");
   if (isFetching.value) {
     return;
   }
-
   isFetching.value = true;
-
   try {
-    const response = await $api("/admin/pemasukan/mahasiswa/dispensasi-tagihan", {
-      method: "GET",
-      params: {
-        page: page.value,
-        limit: itemsPerPage.value,
-        sort_key: sortBy.value?.key,
-        sort_order: sortBy.value?.order,
-        search: search.value,
-        ...(selectedRole.value && { role_id: selectedRole.value }),
-      },
-    });
+    loading.value = true;
 
-    const dispensasiTagihanList = response.data ?? response;
-    console.log("Dispensasi data:", dispensasiTagihanList);
-
-    const mergedData = await Promise.all(
-      (dispensasiTagihanList.data || []).map(async (item) => {
-        try {
-          loading.value = true;
-          const mahasiswa = await $api(`/admin/mahasiswa/nim`, {
-            method: "GET",
-            params: { nim: item.nim },
-          });
-
-
-
-
-          const mhsData = mahasiswa.data ?? mahasiswa;
-
-          return {
-            ...item,
-            nama_mahasiswa: mhsData?.nama ?? "-",
-            jenis_kelamin: mhsData?.jk?.nama ?? "-", // dari field "jk"
-            prodi: mhsData?.prodi?.nama ?? "-",
-            kelas: mhsData?.kelas?.nama ?? "-",
-            angkatan: mhsData?.th_akademik?.nama ?? "-",
-          };
-        } catch (err) {
-          console.warn(`Gagal ambil data mahasiswa ${item.nim}`, err);
-          return {
-            ...item,
-            nama_mahasiswa: "-",
-            jenis_kelamin: "-",
-            prodi: "-",
-            kelas: "-",
-            angkatan: "-",
-          };
-        }
-      })
+    const response = await $api(
+      "/admin/pemasukan/mahasiswa/dispensasi-tagihan",
+      {
+        method: "GET",
+        params: {
+          page: page.value,
+          limit: itemsPerPage.value,
+          sort_key: sortBy.value?.key,
+          sort_order: sortBy.value?.order,
+          search: search.value,
+          ...(selectedRole.value && { role_id: selectedRole.value }),
+        },
+      }
     );
+    const dispensasiTagihanList = response.data.data ?? response;
 
-    dataTable.value = mergedData;
+    dataTable.value = dispensasiTagihanList;
     totalItems.value = dispensasiTagihanList.total ?? 0;
+
+    fetchMahasiswa();
   } catch (err) {
-    console.error("Gagal fetch dispensasi Tagihan:", err);
+    console.error("Gagal fetch dispensasi:", err);
   } finally {
     isFetching.value = false;
     loading.value = false;
     if (initialLoading.value) initialLoading.value = false;
+  }
+};
+const fetchMahasiswa = async () => {
+  try {
+    const nimList = dataTable.value.map((item) => item.nim);
+    console.log("NIM List:", nimList);
+    const response = await $api("/admin/mahasiswa/nim", {
+      method: "GET",
+      params: {
+        limit: 30,
+        nim: JSON.stringify(nimList),
+        whereIn: true,
+      },
+    });
+    dataTable.value = dataTable.value.map((item) => {
+      const mahasiswa = response.find((mhs) => mhs.nim === item.nim);
+
+      return {
+        ...item,
+        nama_mahasiswa: mahasiswa ? mahasiswa.nama : "N/A",
+        jenis_kelamin: mahasiswa ? mahasiswa.jk.nama : "N/A",
+        prodi: mahasiswa ? mahasiswa.prodi.nama : "N/A",
+      };
+    });
+  } catch (err) {
+    console.error("Gagal fetch mahasiswa:", err);
   }
 };
 
@@ -113,7 +104,7 @@ const deleteDataSubmit = async (id) => {
       }
     );
 
-    if (response.status === 'true') {
+    if (response.status === "true") {
       showSnackbar({
         text: response.message,
         color: "success",
@@ -173,37 +164,58 @@ watch(selectedRole, () => {
       <VCardText class="d-flex flex-wrap gap-4">
         <div class="d-flex align-center w-100 w-sm-auto">
           <!-- 👉 Search  -->
-          <VTextField v-model="search" placeholder="Search Data" style="inline-size: 200px" density="compact"
-            class="me-3" />
+          <VTextField
+            v-model="search"
+            placeholder="Search Data"
+            style="inline-size: 200px"
+            density="compact"
+            class="me-3"
+          />
         </div>
 
         <VSpacer />
 
         <div class="d-flex gap-x-4 align-center">
           <!-- 👉 Export button -->
-          <VBtn variant="outlined" color="secondary" prepend-icon="ri-upload-2-line">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            prepend-icon="ri-upload-2-line"
+          >
             Export
           </VBtn>
 
-          <VBtn color="primary" prepend-icon="ri-add-line" @click="
-            $router.push('/admin/pemasukan/mahasiswa/dispensasi-tagihan/add')
-            ">
+          <VBtn
+            color="primary"
+            prepend-icon="ri-add-line"
+            @click="
+              $router.push('/admin/pemasukan/mahasiswa/dispensasi-tagihan/add')
+            "
+          >
             Add Data
           </VBtn>
         </div>
       </VCardText>
       <!-- 👉 Datatable  -->
-      <VDataTableServer :headers="[
-        { title: 'No', key: 'id' },
-        { title: 'Tahun Akademik', key: 'th_akademik' },
-        { title: 'Nim', key: 'nim' },
-        { title: 'Nama', key: 'nama_mahasiswa' },
-        { title: 'L/P', key: 'jenis_kelamin' },
-        { title: 'Prodi', key: 'prodi' },
-        { title: 'keterangan', key: 'keterangan' },
-        { title: 'Actions', key: 'actions', sortable: false },
-      ]" v-model:items-per-page="itemsPerPage" v-model:page="page" :items="dataTable" :items-length="totalItems"
-        :loading="loading" :search="search" item-value="name" @update:options="loadItems">
+      <VDataTableServer
+        :headers="[
+          { title: 'No', key: 'id' },
+          { title: 'Tahun Akademik', key: 'th_akademik' },
+          { title: 'Nim', key: 'nim' },
+          { title: 'L/P', key: 'jenis_kelamin' },
+          { title: 'Prodi', key: 'prodi' },
+          { title: 'keterangan', key: 'keterangan' },
+          { title: 'Actions', key: 'actions', sortable: false },
+        ]"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
+        :items="dataTable"
+        :items-length="totalItems"
+        :loading="loading"
+        :search="search"
+        item-value="name"
+        @update:options="loadItems"
+      >
         <template v-if="initialLoading" #loading>
           <div class="text-center pa-4">
             <VProgressCircular indeterminate color="primary" class="mb-2" />
@@ -215,10 +227,58 @@ watch(selectedRole, () => {
           <div class="text-center pa-4">Tidak ada data disposisi.</div>
         </template>
         <template #item.nim="{ item }">
-          <VChip color="success" size="x-small" label>
-            {{ item.nim }}
-          </VChip>
-          - <b>{{ item.nama_mahasiswa }}</b>
+          <div>
+            <VChip color="success" size="x-small" label>
+              {{ item.nim }}
+            </VChip>
+            <template v-if="item.nama_mahasiswa">
+              - <b>{{ item.nama_mahasiswa }}</b>
+            </template>
+            <template v-else>
+              <VProgressCircular
+                indeterminate
+                color="primary"
+                size="16"
+                width="2"
+                style="vertical-align: middle"
+              >
+              </VProgressCircular>
+            </template>
+          </div>
+        </template>
+        <template #item.prodi="{ item }">
+          <div>
+            <template v-if="item.prodi">
+              <b>{{ item.prodi }}</b>
+            </template>
+            <template v-else>
+              <VProgressCircular
+                indeterminate
+                color="primary"
+                size="16"
+                width="2"
+                style="vertical-align: middle"
+              >
+              </VProgressCircular>
+            </template>
+          </div>
+        </template>
+        <template #item.jenis_kelamin="{ item }">
+          <div>
+            <template v-if="item.jenis_kelamin">
+              <b>{{ item.jenis_kelamin }}</b>
+            </template>
+            <template v-else>
+              <VProgressCircular
+                indeterminate
+                color="primary"
+                size="16"
+                width="2"
+                style="vertical-align: middle"
+              >
+              </VProgressCircular>
+            </template>
+          </div>
         </template>
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
@@ -230,15 +290,22 @@ watch(selectedRole, () => {
 
             <VMenu activator="parent">
               <VList>
-                <VListItem value="download" prepend-icon="ri-edit-box-line" @click="
-                  $router.push(
-                    `/admin/pemasukan/mahasiswa/dispensasi-tagihan/edit/${item.id}`
-                  )
-                  ">
+                <VListItem
+                  value="download"
+                  prepend-icon="ri-edit-box-line"
+                  @click="
+                    $router.push(
+                      `/admin/pemasukan/mahasiswa/dispensasi-tagihan/edit/${item.id}`
+                    )
+                  "
+                >
                   Edit
                 </VListItem>
-                <VListItem value="delete" prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.username)">
+                <VListItem
+                  value="delete"
+                  prepend-icon="ri-delete-bin-line"
+                  @click="showDialogDelete(item.id, item.username)"
+                >
                   Delete
                 </VListItem>
               </VList>
@@ -251,7 +318,11 @@ watch(selectedRole, () => {
     <VDialog v-model="isDialogDeleteVisible" width="500">
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
-        <DialogCloseBtn variant="text" size="default" @click="isDialogDeleteVisible = false" />
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="isDialogDeleteVisible = false"
+        />
 
         <VCardText class="d-flex align-center">
           <VIcon icon="ri-alert-line" size="32" class="me-2" />
@@ -262,7 +333,11 @@ watch(selectedRole, () => {
         </VCardText>
 
         <VCardText class="d-flex justify-end flex-wrap gap-4">
-          <VBtn variant="outlined" color="secondary" @click="isDialogDeleteVisible = false">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isDialogDeleteVisible = false"
+          >
             Batal
           </VBtn>
           <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">

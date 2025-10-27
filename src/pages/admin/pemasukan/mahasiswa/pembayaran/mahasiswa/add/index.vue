@@ -17,9 +17,8 @@ const submitData = async () => {
   }
 
   try {
-
     disabled.value = true;
-    const response = await $api('/admin/pemasukan/mahasiswa/pembayaran', {
+    const response = await $api("/admin/pemasukan/mahasiswa/pembayaran", {
       method: "POST",
       body: formData,
       onResponseError({ response }) {
@@ -43,13 +42,6 @@ const submitData = async () => {
     }
   } catch (err) {
     console.log(err);
-    // const message = Array.isArray(err.data.message)
-    //   ? err.data.message.join("; ")
-    //   : err.data.message;
-    // showSnackbar({
-    //   text: message,
-    //   color: "error",
-    // });
   } finally {
     disabled.value = false;
   }
@@ -141,7 +133,9 @@ onMounted(() => {
           "
           >Batalkan</VBtn
         >
-        <VBtn color="primary" @click="submitData" :disabled>Simpan Pembayaran</VBtn>
+        <VBtn color="primary" @click="submitData" :disabled
+          >Simpan Pembayaran</VBtn
+        >
       </div>
     </div>
 

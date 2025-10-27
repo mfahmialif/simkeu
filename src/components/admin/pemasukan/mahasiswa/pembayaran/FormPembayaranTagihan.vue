@@ -153,141 +153,64 @@ const onSubmit = async () => {
   <VForm ref="refForm" @submit.prevent="onSubmit">
     <VRow>
       <VCol cols="12">
-        <VTextField
-          v-model="tanggal"
-          :rules="[requiredValidator]"
-          label="Tanggal"
-          type="date"
-        />
+        <VTextField v-model="tanggal" :rules="[requiredValidator]" label="Tanggal" type="date" />
       </VCol>
       <VCol cols="12" md="4">
-        <VTextField
-          v-model="Tahun"
-          :rules="[requiredValidator]"
-          label="Tahun Akademik"
-          type="month"
-          placeholder="YYYY"
-          :formatter="
-            (date) => date.toLocaleString('default', { year: 'numeric' })
-          "
-        />
+        <VTextField v-model="Tahun" :rules="[requiredValidator]" label="Tahun Akademik" type="month" placeholder="YYYY"
+          :formatter="(date) => date.toLocaleString('default', { year: 'numeric' })
+            " />
       </VCol>
       <VCol cols="12" md="4">
-        <VTextField
-          v-model="Tahun"
-          :rules="[requiredValidator]"
-          label="Tahun Akademik"
-          type="month"
-          :formatter="
-            (date) => date.toLocaleString('default', { year: 'numeric' })
-          "
-          placeholder="MM/YYYY"
-        />
+        <VTextField v-model="Tahun" :rules="[requiredValidator]" label="Tahun Akademik" type="month" :formatter="(date) => date.toLocaleString('default', { year: 'numeric' })
+          " placeholder="MM/YYYY" />
       </VCol>
       <VCol cols="12" md="4">
-        <VCombobox
-          v-model="semester"
-          :items="semesterList"
-          :rules="[requiredValidator]"
-          label="Semester"
-        />
+        <VCombobox v-model="semester" :items="semesterList" :rules="[requiredValidator]" label="Semester" />
       </VCol>
       <VCol cols="12">
         <div class="d-flex align-items-center">
-          <VTextField
-            v-model="nim"
-            :rules="[requiredValidator, noSpaceValidator]"
-            label="Nim"
-            placeholder="202185.."
-          />
+          <VTextField v-model="nim" :rules="[requiredValidator, noSpaceValidator]" label="Nim" placeholder="202185.." />
         </div>
       </VCol>
       <VCol cols="12">
-        <VTextField
-          v-model="name"
-          :rules="[requiredValidator]"
-          label="Nama"
-          placeholder="Fulan Fulanah"
-        />
+        <VTextField v-model="name" :rules="[requiredValidator]" label="Nama" placeholder="Fulan Fulanah" />
       </VCol>
       <VCol cols="12" md="6">
-        <VTextField
-          v-model="prodi"
-          :rules="[requiredValidator]"
-          label="Program Studi"
-        />
+        <VTextField v-model="prodi" :rules="[requiredValidator]" label="Program Studi" />
       </VCol>
       <VCol cols="12" md="6">
-        <VCombobox
-          v-model="jk"
-          :items="jenisKelaminList"
-          :rules="[requiredValidator]"
-          label="Jenis Kelamin"
-        />
+        <VCombobox v-model="jk" :items="jenisKelaminList" :rules="[requiredValidator]" label="Jenis Kelamin" />
       </VCol>
       <VCol cols="12" md="6">
-        <VTextField
-          v-model="Tahun"
-          :rules="[requiredValidator]"
-          label="Angkatan"
-          type="date"
-          placeholder="YYYY"
-          :formatter="
-            (date) => date.toLocaleString('default', { year: 'numeric' })
-          "
-        />
+        <VTextField v-model="Tahun" :rules="[requiredValidator]" label="Angkatan" type="date" placeholder="YYYY"
+          :formatter="(date) => date.toLocaleString('default', { year: 'numeric' })
+            " />
       </VCol>
       <VCol cols="12" md="6">
-        <VCombobox
-          v-model="kelas"
-          :items="kelasList"
-          :rules="[requiredValidator]"
-          label="Kelas"
-        />
+        <VCombobox v-model="kelas" :items="kelasList" :rules="[requiredValidator]" label="Kelas" />
       </VCol>
       <VCol cols="12" md="3">
-        <VTextField
-          v-model="namaTagihan"
-          :rules="[requiredValidator]"
-          label="Nama Tagihan"
-        />
+        <VTextField v-model="namaTagihan" :rules="[requiredValidator]" label="Nama Tagihan" />
       </VCol>
       <VCol cols="12" md="3">
-        <VTextField
-          v-model="jumlah"
-          :rules="[requiredValidator]"
-          label="jumlah(Rp)"
-        />
+        <VTextField v-model="jumlah" :rules="[requiredValidator]" label="jumlah(Rp)" />
       </VCol>
       <VCol cols="12" md="3">
-        <VTextField
-          v-model="bayar"
-          :rules="[requiredValidator]"
-          label="dibayar(Rp)"
-        />
+        <VTextField v-model="bayar" :rules="[requiredValidator]" label="dibayar(Rp)" />
       </VCol>
       <VCol cols="12" md="3" class="d-flex align-items-center">
         <VBtn color="primary" height="45"> + </VBtn>
       </VCol>
       <VCol cols="12">
-        <VCombobox
-          v-model="jenisPembayaran"
-          :items="jenisPembayaranList"
-          :rules="[requiredValidator]"
-          label="Jenis Pembayaran"
-        />
+        <VCombobox v-model="jenisPembayaran" :items="jenisPembayaranList" :rules="[requiredValidator]"
+          label="Jenis Pembayaran" />
       </VCol>
 
       <VCol cols="12" class="d-flex gap-4">
         <VBtn type="submit" :disabled @click="refForm?.validate()">
           Submit
         </VBtn>
-        <VBtn
-          type="reset"
-          v-if="typeForm !== 'edit'"
-          color="secondary"
-          variant="tonal"
-        >
+        <VBtn type="reset" v-if="typeForm !== 'edit'" color="secondary" variant="tonal">
           Reset
         </VBtn>
       </VCol>

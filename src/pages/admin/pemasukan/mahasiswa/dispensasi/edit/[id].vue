@@ -30,6 +30,9 @@ const fetchUser = async () => {
     isLoading.value = false;
   }
 };
+watch(user, (newVal) => {
+  console.log("User dari parent:", newVal);
+});
 
 const menuList = [
   {

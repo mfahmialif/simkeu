@@ -26,7 +26,6 @@ onMounted(() => {
   document.title = "Catatan Dispensasi Add - SIMKEU";
 });
 
-onMounted(() => {});
 </script>
 
 <template>
@@ -38,11 +37,7 @@ onMounted(() => {});
         </template>
 
         <VCardText>
-          <FormDispensasi
-            typeForm="add"
-            :url="'/admin/pemasukan/mahasiswa/dispensasi'"
-            :isRoleVisible="true"
-          />
+          <FormDispensasi typeForm="add" :url="'/admin/pemasukan/mahasiswa/dispensasi'" :isRoleVisible="true" />
         </VCardText>
       </VCard>
     </VCol>
