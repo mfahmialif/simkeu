@@ -12,9 +12,10 @@ const avatar = ref(null)
 const fetchUser = async () => {
   try {
     isLoading.value = true
-    const response = await $api('/profil/', {
+    const response = await $api('/admin/profil', {
       method: "GET",
     })
+    console.log(response);
     if (response.user.avatar) {
       response.user.avatar = import.meta.env.VITE_BASE_URL + "/avatar/" + response.user.avatar
     } else {

@@ -4,8 +4,9 @@ import DashboardDeliveryExceptions from './DashboardDeliveryExceptions.vue';
 import DashboardDeliveryPerformance from './DashboardDeliveryPerformance.vue';
 import DashboardOrderByCountries from './DashboardOrderByCountries.vue';
 import DashboardOverviewTable from './DashboardOverviewTable.vue';
-import DashboardShipmentStatistics from './DashboardShipmentStatistics.vue';
-import DashboardVehicleOverview from './DashboardVehicleOverview.vue';
+import DashboardFinanceStatistics from './DashboardFinanceStatistics.vue';
+import DashboardFinanceOverview from './DashboardFinanceOverview.vue';
+import DashboardMenu from './DashboardMenu.vue';
 
 </script>
 
@@ -14,21 +15,26 @@ import DashboardVehicleOverview from './DashboardVehicleOverview.vue';
     <VCol cols="12">
       <DashboardCardStatistics />
     </VCol>
+
+    <VCol cols="12">
+      <DashboardMenu />
+    </VCol>
+    
     <VCol
       cols="12"
       md="6"
     >
-      <DashboardVehicleOverview />
+      <DashboardFinanceOverview />
     </VCol>
 
     <VCol
       cols="12"
       md="6"
     >
-      <DashboardShipmentStatistics />
+      <DashboardFinanceStatistics />
     </VCol>
 
-    <VCol
+    <!-- <VCol
       cols="12"
       md="4"
     >
@@ -47,10 +53,10 @@ import DashboardVehicleOverview from './DashboardVehicleOverview.vue';
       md="4"
     >
       <DashboardOrderByCountries />
-    </VCol>
+    </VCol> -->
 
-    <VCol cols="12">
+    <!-- <VCol cols="12">
       <DashboardOverviewTable />
-    </VCol>
+    </VCol> -->
   </VRow>
 </template>

@@ -58,6 +58,8 @@ const login = async () => {
 
     useCookie('userAbilityRules').value = userAbilityRules
     ability.update(userAbilityRules)
+    
+    user.avatar = import.meta.env.VITE_BASE_URL + '/avatar/' + user.avatar
     useCookie('userData').value = user
     useCookie('accessToken').value = token
 
