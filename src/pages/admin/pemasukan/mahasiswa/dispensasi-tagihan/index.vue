@@ -204,6 +204,8 @@ watch(selectedRole, () => {
           { title: 'Nim', key: 'nim' },
           { title: 'L/P', key: 'jenis_kelamin' },
           { title: 'Prodi', key: 'prodi' },
+          { title: 'Tagihan', key: 'tagihan' },
+          { title: 'Jumlah', key: 'jumlah' },
           { title: 'keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"

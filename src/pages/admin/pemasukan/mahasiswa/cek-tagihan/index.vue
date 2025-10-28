@@ -244,7 +244,7 @@ onMounted(() => {
               {{ item.nama }}
             </td>
             <td>
-              {{ formatRupiah(item.sisa) }}
+              {{ formatRupiah(item.sisa) }} {{ item.status_dispensasi ? '(Dispensasi: '+ formatRupiah(item.jumlah_dispensasi)+')': '' }}
             </td>
             <td>
               {{ formatRupiah(item.jumlah) }}
