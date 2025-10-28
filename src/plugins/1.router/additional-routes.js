@@ -32,10 +32,19 @@ export const redirects = [
       // TODO: Get type from backend
       const userData = useCookie("userData");
       const userRole = userData.value?.role.name;
-      if (userRole === "admin") return { name: "admin-dashboard" };
-      if (userRole === "client") return { name: "access-control" };
+      
+      if (!userRole) {
+        return { name: "login", query: to.query };        
+      }
+      
+      if (userRole === "user") {
+        return { name: "access-control" };
+      } else {
+        return { name: "admin-dashboard" };
+      }
+      // if (userRole === "client") return { name: "access-control" };
+      // if (userRole === "admin") return { name: "admin-dashboard" };
 
-      return { name: "login", query: to.query };
     },
   },
   {

@@ -59,7 +59,7 @@ const login = async () => {
     useCookie('userAbilityRules').value = userAbilityRules
     ability.update(userAbilityRules)
     
-    user.avatar = import.meta.env.VITE_BASE_URL + '/avatar/' + user.avatar
+    user.avatar = user.avatar ? import.meta.env.VITE_BASE_URL + '/avatar/' + user.avatar : null
     useCookie('userData').value = user
     useCookie('accessToken').value = token
 
@@ -71,7 +71,7 @@ const login = async () => {
 
     // ❗ nextTick is required to wait for DOM updates and later redirect
     await nextTick(() => {
-      router.replace(route.query.to ? String(route.query.to) : '/home')
+      window.location.replace(route.query.to ? String(route.query.to) : '/home')
     })
   }
   catch (err) {

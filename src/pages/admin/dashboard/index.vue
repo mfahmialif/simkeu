@@ -1,13 +1,15 @@
 <script setup>
-import DashboardCardStatistics from './DashboardCardStatistics.vue';
-import DashboardDeliveryExceptions from './DashboardDeliveryExceptions.vue';
-import DashboardDeliveryPerformance from './DashboardDeliveryPerformance.vue';
-import DashboardOrderByCountries from './DashboardOrderByCountries.vue';
-import DashboardOverviewTable from './DashboardOverviewTable.vue';
-import DashboardFinanceStatistics from './DashboardFinanceStatistics.vue';
-import DashboardFinanceOverview from './DashboardFinanceOverview.vue';
-import DashboardMenu from './DashboardMenu.vue';
+import DashboardCardStatistics from "./DashboardCardStatistics.vue";
+import DashboardDeliveryExceptions from "./DashboardDeliveryExceptions.vue";
+import DashboardDeliveryPerformance from "./DashboardDeliveryPerformance.vue";
+import DashboardOrderByCountries from "./DashboardOrderByCountries.vue";
+import DashboardOverviewTable from "./DashboardOverviewTable.vue";
+import DashboardFinanceStatistics from "./DashboardFinanceStatistics.vue";
+import DashboardFinanceOverview from "./DashboardFinanceOverview.vue";
+import DashboardMenu from "./DashboardMenu.vue";
 
+const userData = useCookie("userData").value ?? {};
+const role = userData.role?.name;
 </script>
 
 <template>
@@ -16,21 +18,18 @@ import DashboardMenu from './DashboardMenu.vue';
       <DashboardCardStatistics />
     </VCol>
 
-    <VCol cols="12">
-      <DashboardMenu />
-    </VCol>
-    
     <VCol
       cols="12"
-      md="6"
+      v-if="role == 'admin' || role == 'pimpinan' || role == 'keuangan'"
     >
+      <DashboardMenu />
+    </VCol>
+
+    <VCol cols="12" md="6">
       <DashboardFinanceOverview />
     </VCol>
 
-    <VCol
-      cols="12"
-      md="6"
-    >
+    <VCol cols="12" md="6">
       <DashboardFinanceStatistics />
     </VCol>
 
