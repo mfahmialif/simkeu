@@ -275,6 +275,9 @@ watch(selectedThAkademik, () => {
             <VChip color="primary" size="x-small" label>
               {{ item.nota ?? item.nomor }}
             </VChip>
+            <VChip class="ms-2" color="success" size="x-small" label v-if="item.keuangan_tagihan_double_degree == 1">
+              (Double Degree)
+            </VChip>
             <div>
               <b>{{ item.keuangan_tagihan_nama }}</b>
             </div>
