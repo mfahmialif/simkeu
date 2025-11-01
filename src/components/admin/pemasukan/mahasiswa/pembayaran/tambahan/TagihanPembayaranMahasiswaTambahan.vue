@@ -52,6 +52,19 @@ watch(
 );
 
 
+const handleJumlahChange = (idx, field) => {
+  const row = rows.value[idx];
+  if (!row) return;
+
+  if (field === "jumlah") {
+    row.dibayar = row.jumlah; // jika jumlah berubah → update dibayar
+  } else if (field === "dibayar") {
+    row.jumlah = row.dibayar; // jika dibayar berubah → update jumlah
+  }
+};
+
+
+
 </script>
 
 <template>
@@ -80,6 +93,7 @@ watch(
             density="comfortable"
             :hint="formatRupiah(row.jumlah)"
             persistent-hint
+            @change="handleJumlahChange(idx, 'jumlah')"
           />
         </VCol>
 
@@ -93,6 +107,7 @@ watch(
             density="comfortable"
             :hint="formatRupiah(row.dibayar)"
             persistent-hint
+            @change="handleJumlahChange(idx, 'bayar')"
           />
         </VCol>
 

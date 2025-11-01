@@ -304,6 +304,14 @@ watch(selectedThAkademik, () => {
         <template #item.tanggal="{ item }">
           <div>{{ formatDate(new Date(item.tanggal), 'YYYY-MM-DD') }}</div>
         </template>
+        <template #item.jumlah="{ item }">
+          <div>
+            <VChip color="primary" size="x-small" label>
+              {{ item.keuangan_jenis_pembayaran_nama }}
+            </VChip>
+          </div>
+          <div>{{ formatRupiah(item.jumlah) }}</div>
+        </template>
 
         <template #item.username="{ item }">
           <div class="d-flex align-center">

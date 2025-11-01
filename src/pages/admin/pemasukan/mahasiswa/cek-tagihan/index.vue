@@ -120,7 +120,7 @@ const fetchDeposit = async () => {
         method: "GET",
       }
     );
-    mahasiswa.deposit = res.jumlah;
+    mahasiswa.deposit = res.jumlah ?? 0;
   } catch (error) {
     showSnackbar({
       text: error,
@@ -128,6 +128,69 @@ const fetchDeposit = async () => {
     });
   } finally {
     loadingDeposit.value = false;
+  }
+};
+
+const isLoadingExcel = ref(false);
+const downloadExcel = async () => {
+  isLoadingExcel.value = true;
+  await download(
+    "excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    `Laporan Tagihan ${mahasiswa.nim}.xlsx`
+  );
+  isLoadingExcel.value = false;
+};
+
+const isLoadingPdf = ref(false);
+const downloadPdf = async () => {
+  isLoadingPdf.value = true;
+  await download("pdf", "application/pdf", `Laporan Tagihan ${mahasiswa.nim}.pdf`);
+  isLoadingPdf.value = false;
+};
+
+
+const isLoadingDownload = ref(false);
+const download = async (type, accept, filename) => {
+  if (!mahasiswa.nim) {
+    showSnackbar({
+      text: "NIM harus diisi",
+      color: "error",
+    });
+    return;
+  }
+  try {
+    isLoadingDownload.value = true;
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    });
+    const response = await $api(`/admin/pemasukan/mahasiswa/cek-tagihan/${type}`, {
+      method: "GET",
+      headers: {
+        Accept: accept,
+      },
+      body: {
+        nim: mahasiswa.nim,
+        prodi: mahasiswa.prodi,
+        tahun_akademik: mahasiswa.angkatan,
+        deposit: mahasiswa.deposit,
+        nama: mahasiswa.nama,
+      },
+    });
+
+    downloadFileExport(response, filename);
+    showSnackbar({
+      text: "Tagihan berhasil di download.",
+      color: "success",
+    });
+  } catch (err) {
+    showSnackbar({
+      text: err.message,
+      color: "error",
+    });
+  } finally {
+    isLoadingDownload.value = false;
   }
 };
 
@@ -171,6 +234,36 @@ onMounted(() => {
             </VBtn>
           </template>
         </VCombobox>
+      </VCol>
+    </VRow>
+
+    <!-- Btn download excel dan pdf -->
+    <VRow class="mb-5">
+      <VCol cols="6">
+        <VBtn
+          class="w-100"
+          :size="$vuetify.display.smAndDown ? 'small' : 'large'"
+          :icon="$vuetify.display.smAndDown"
+          color="success"
+          :disabled="isLoadingExcel"
+          @click="downloadExcel()"
+        >
+          <VIcon icon="ri-file-pdf-line" />
+          <span v-if="$vuetify.display.mdAndUp" class="ms-3">Excel</span>
+        </VBtn>
+      </VCol>
+      <VCol cols="6">
+        <VBtn
+          class="w-100"
+          color="error"
+          :size="$vuetify.display.smAndDown ? 'small' : 'large'"
+          :icon="$vuetify.display.smAndDown"
+          :disabled="isLoadingPdf"
+          @click="downloadPdf()"
+        >
+          <VIcon icon="ri-file-pdf-line" />
+          <span v-if="$vuetify.display.mdAndUp" class="ms-3">PDF</span>
+        </VBtn>
       </VCol>
     </VRow>
 

@@ -183,6 +183,7 @@ watch(selectedRole, () => {
           { title: 'No', key: 'id' },
           { title: 'Nim', key: 'nim' },
           { title: 'jumlah', key: 'jumlah' },
+          { title: 'Tanggal', key: 'updated_at' },
           { title: 'keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
@@ -212,6 +213,10 @@ watch(selectedRole, () => {
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
 
+        <template #item.updated_at="{ item }">
+          {{ formatDate(new Date(item.updated_at)) }}
+        </template>
+
         <template #item.nim="{ item }">
           <div style="margin: 15px 0">
             <VChip color="primary" size="x-small" label>
@@ -222,8 +227,9 @@ watch(selectedRole, () => {
                 {{ item.mahasiswa.nama }} - {{ item.mahasiswa.prodi?.alias }} -
                 {{ item.mahasiswa.jk?.kode }}
               </template>
-               <template v-else-if="item.mahasiswa === false">
-                Data tidak ditemukan di SIAKAD.<br>Silakan hapus atau periksa kembali di SIAKAD.
+              <template v-else-if="item.mahasiswa === false">
+                Data tidak ditemukan di SIAKAD.<br />Silakan hapus atau periksa
+                kembali di SIAKAD.
               </template>
               <template v-else>
                 <VProgressCircular
@@ -287,8 +293,8 @@ watch(selectedRole, () => {
         <VCardText class="d-flex align-center">
           <VIcon icon="ri-alert-line" size="32" class="me-2" />
           <span>
-            Anda yakin ingin menghapus data ini? Penghapusan data
-            tidak dapat dibatalkan.
+            Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
+            dibatalkan.
           </span>
         </VCardText>
 

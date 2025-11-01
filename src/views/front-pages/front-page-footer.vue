@@ -1,8 +1,6 @@
 <script setup>
-import { VNodeRenderer } from '@layouts/components/VNodeRenderer';
-import { themeConfig } from '@themeConfig';
-
-
+import { VNodeRenderer } from "@layouts/components/VNodeRenderer";
+import { themeConfig } from "@themeConfig";
 </script>
 
 <template>
@@ -11,7 +9,11 @@ import { themeConfig } from '@themeConfig';
     <VSheet class="footer-top pt-8 pb-4" theme="dark">
       <VContainer>
         <VRow justify="center">
-          <VCol cols="2" md="8" class="d-flex flex-column align-center text-center">
+          <VCol
+            cols="2"
+            md="8"
+            class="d-flex flex-column align-center text-center"
+          >
             <div class="footer-form">
               <div class="d-flex align-center justify-center py-1 mb-3">
                 <VNodeRenderer :nodes="themeConfig.app.logo" />
@@ -37,10 +39,12 @@ import { themeConfig } from '@themeConfig';
       <VContainer>
         <VRow justify="center">
           <VCol cols="12" md="8" class="d-flex justify-center text-center">
-            <span class="d-flex align-center text-body-2 footer-heading font-weight-regular">
-              &copy; Tim IT Universitas Islam Internasional Darullughah Wadda'wah
-              {{ new Date().getFullYear() }},
-              Made with
+            <span
+              class="d-flex align-center text-body-2 footer-heading font-weight-regular"
+            >
+              &copy; Tim IT Banin & Banat Universitas Islam Internasional
+              Darullughah Wadda'wah
+              {{ new Date().getFullYear() }}, Made with
               <VIcon icon="ri-heart-fill" color="#FF4D49" class="ml-1" />
             </span>
           </VCol>
@@ -52,7 +56,8 @@ import { themeConfig } from '@themeConfig';
 
 <style lang="scss" scoped>
 .footer-top {
-  background: url("@images/front-pages/backgrounds/footer-bg.png") lightgray 50% / cover no-repeat;
+  background: url("@images/front-pages/backgrounds/footer-bg.png") lightgray 50% /
+    cover no-repeat;
 }
 
 .footer-heading {

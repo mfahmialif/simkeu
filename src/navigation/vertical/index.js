@@ -1,13 +1,13 @@
 import dashboard from "./dashboard";
 import pemasukan from "./pemasukan";
 import pengeluaran from "./pengeluaran";
+import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
+import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
 import saldo from "./saldo";
 import setting from "./setting";
 import dashboardStaff from "./staff/dashboardStaff";
 import pemasukanStaff from "./staff/pemasukanStaff";
 import user from "./user";
-import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
-import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
 
 const userData = useCookie("userData").value ?? {};
 const role = userData.role?.name;
@@ -55,8 +55,13 @@ if (role) {
     routes = [...dashboardStaff, ...pemasukanStaff, ...setting];
   }
 
-  if (role == 'rumahtangga') {
-    routes = [...dashboard, ...pemasukanRumahTangga, ...pengeluaranRumahTangga, ...setting];
+  if (role == "rumahtangga") {
+    routes = [
+      ...dashboard,
+      ...pemasukanRumahTangga,
+      ...pengeluaranRumahTangga,
+      ...setting,
+    ];
   }
 }
 
