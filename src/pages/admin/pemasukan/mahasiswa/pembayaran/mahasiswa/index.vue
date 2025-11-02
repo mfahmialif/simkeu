@@ -153,8 +153,11 @@ const kwitansi = async (id) => {
   }
 };
 
+const userData = useCookie("userData").value ?? {};
+
 onMounted(() => {
   document.title = "Pembayaran Mahasiswa - SIMKEU";
+  console.log(userData);
   fetchThAkademik();
 });
 
@@ -275,7 +278,13 @@ watch(selectedThAkademik, () => {
             <VChip color="primary" size="x-small" label>
               {{ item.nota ?? item.nomor }}
             </VChip>
-            <VChip class="ms-2" color="success" size="x-small" label v-if="item.keuangan_tagihan_double_degree == 1">
+            <VChip
+              class="ms-2"
+              color="success"
+              size="x-small"
+              label
+              v-if="item.keuangan_tagihan_double_degree == 1"
+            >
               (Double Degree)
             </VChip>
             <div>
@@ -305,7 +314,7 @@ watch(selectedThAkademik, () => {
           </div>
         </template>
         <template #item.tanggal="{ item }">
-          <div>{{ formatDate(new Date(item.tanggal), 'YYYY-MM-DD') }}</div>
+          <div>{{ formatDate(new Date(item.tanggal), "YYYY-MM-DD") }}</div>
         </template>
         <template #item.jumlah="{ item }">
           <div>
@@ -353,11 +362,17 @@ watch(selectedThAkademik, () => {
                   Edit
                 </VListItem>
                 <VListItem
+                  v-if="
+                    ['admin', 'kabag'].includes(
+                      (userData?.role?.name || '').toLowerCase()
+                    ) ||
+                    ((userData?.role?.name || '').toLowerCase() === 'staff' &&
+                      (userData?.jenis_kelamin || '').toLowerCase() ===
+                        'perempuan')
+                  "
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
-                  @click="
-                    showDialogDelete(item.id, `${item.keuangan_tagihan_nama}`)
-                  "
+                  @click="showDialogDelete(item.id, item.keuangan_tagihan_nama)"
                 >
                   Delete
                 </VListItem>

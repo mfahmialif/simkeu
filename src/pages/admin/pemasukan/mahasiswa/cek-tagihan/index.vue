@@ -242,27 +242,25 @@ onMounted(() => {
       <VCol cols="6">
         <VBtn
           class="w-100"
-          :size="$vuetify.display.smAndDown ? 'small' : 'large'"
-          :icon="$vuetify.display.smAndDown"
+          block
           color="success"
           :disabled="isLoadingExcel"
           @click="downloadExcel()"
         >
           <VIcon icon="ri-file-pdf-line" />
-          <span v-if="$vuetify.display.mdAndUp" class="ms-3">Excel</span>
+          <span class="ms-3">Excel</span>
         </VBtn>
       </VCol>
       <VCol cols="6">
         <VBtn
           class="w-100"
           color="error"
-          :size="$vuetify.display.smAndDown ? 'small' : 'large'"
-          :icon="$vuetify.display.smAndDown"
+          block
           :disabled="isLoadingPdf"
           @click="downloadPdf()"
         >
           <VIcon icon="ri-file-pdf-line" />
-          <span v-if="$vuetify.display.mdAndUp" class="ms-3">PDF</span>
+          <span class="ms-3">PDF</span>
         </VBtn>
       </VCol>
     </VRow>
