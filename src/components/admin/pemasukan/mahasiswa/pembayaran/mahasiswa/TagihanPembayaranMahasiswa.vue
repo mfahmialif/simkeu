@@ -1,16 +1,10 @@
 <script setup>
-import { watch } from 'vue';
-
 const props = defineProps({
-  mahasiswa: {
-    type: Object,
-    required: true,
-    default: () => ({}),
-  },
+  mahasiswa: { type: Object, required: true, default: () => ({}) },
 });
 
 const tagihan = ref([]);
-const selectedTagihan = ref();
+const selectedTagihan = ref([]); // <-- array untuk multiple
 const loadingTagihan = ref(false);
 
 const fetchTagihan = async (nim) => {
@@ -19,9 +13,7 @@ const fetchTagihan = async (nim) => {
     tagihan.value = [];
     const res = await $api(`/admin/pemasukan/mahasiswa/cek-tagihan`, {
       method: "GET",
-      body: {
-        nim: nim,
-      },
+      body: { nim },
     });
 
     tagihan.value = res.data.list_tagihan.map((item) => ({
@@ -31,68 +23,71 @@ const fetchTagihan = async (nim) => {
       }`,
     }));
   } catch (error) {
-    showSnackbar({
-      text: error,
-      color: "error",
-    });
+    showSnackbar({ text: error, color: "error" });
   } finally {
     loadingTagihan.value = false;
   }
 };
 
-defineExpose({ fetchTagihan })
+defineExpose({ fetchTagihan });
 
 /** Daftar baris yang dipilih */
 const rows = ref([]);
 
-/** Saat memilih dari combobox, tambahkan ke daftar bila belum ada */
-function onSelectTagihan(val) {
-  // Jika combobox dikosongkan
-  if (!val) return;
+/** Sinkronkan rows dengan selectedTagihan (multiple) */
+watch(
+  selectedTagihan,
+  (newArr, oldArr) => {
+    // Tambahkan baris utk item yang baru dipilih
+    const added = newArr.filter((n) => !oldArr?.some((o) => o.id === n.id));
+    for (const item of added) {
+      if (!rows.value.some((r) => r.id === item.id)) {
+        rows.value.push({
+          id: item.id,
+          display: item.display,
+          nominal: item.sisa ?? 0,
+          dibayar: item.sisa ?? 0, // default isi penuh
+          deposit: 0,
+        });
+      }
+    }
 
-  // Temukan objek lengkap (kalau yang terisi hanya id)
-  const item =
-    typeof val === "object" ? val : tagihan.value.find((t) => t.id === val);
+    // Hapus baris utk item yang dihapus dari pilihan
+    const removed = (oldArr || []).filter(
+      (o) => !newArr.some((n) => n.id === o.id)
+    );
+    if (removed.length) {
+      rows.value = rows.value.filter(
+        (r) => !removed.some((rem) => rem.id === r.id)
+      );
+    }
+  },
+  { deep: true }
+);
 
-  if (!item) return;
-
-  // Cegah duplikat
-  if (rows.value.some((r) => r.id === item.id)) {
-    selectedTagihan.value = null;
-    return;
-  }
-
-  rows.value.push({
-    id: item.id,
-    display: item.display,
-    nominal: item.sisa ?? 0,
-    dibayar: item.sisa ?? 0, // default isi penuh
-    deposit: 0,
-  });
-
-  // kosongkan combobox setelah tambah
-  selectedTagihan.value = null;
-}
-
-/** Hapus baris */
+/** Hapus baris (sekalian sync ke combobox) */
 function removeRow(id) {
   rows.value = rows.value.filter((r) => r.id !== id);
+  selectedTagihan.value = selectedTagihan.value.filter((s) => s.id !== id);
 }
 
-/** Recalc per-baris (jika ingin batasan tidak melewati nominal bisa diaktifkan) */
+/** Recalc per-baris */
 function recalc(idx) {
-  const r = rows.value[idx]
-  r.dibayar = Math.max(0, Number(r.dibayar || 0))
-  r.deposit = Math.max(0, Number(r.deposit || 0))
-  r.dibayar = Math.min(r.dibayar, r.nominal)
-  const dipakai = Number(props.mahasiswa?.dipakai || 0)
+  const r = rows.value[idx];
+  r.dibayar = Math.max(0, Number(r.dibayar || 0));
+  r.deposit = Math.max(0, Number(r.deposit || 0));
+  r.dibayar = Math.min(r.dibayar, r.nominal);
+
+  const dipakai = Number(props.mahasiswa?.dipakai || 0);
   const totalDepositLain = rows.value.reduce((sum, row, i) => {
-    return i === idx ? sum : sum + (Number(row.deposit) || 0)
-  }, 0)
-  const sisaPlafon = Math.max(0, dipakai - totalDepositLain)
-  r.deposit = Math.min(r.deposit, sisaPlafon)
-  const sisaNominal = Math.max(0, r.nominal - r.dibayar)
-  r.deposit = Math.min(r.deposit, sisaNominal)
+    return i === idx ? sum : sum + (Number(row.deposit) || 0);
+  }, 0);
+
+  const sisaPlafon = Math.max(0, dipakai - totalDepositLain);
+  r.deposit = Math.min(r.deposit, sisaPlafon);
+
+  const sisaNominal = Math.max(0, r.nominal - r.dibayar);
+  r.deposit = Math.min(r.deposit, sisaNominal);
 }
 
 /** Ringkasan */
@@ -104,9 +99,16 @@ const totalDeposit = computed(() =>
 );
 const totalSemua = computed(() => totalDibayar.value + totalDeposit.value);
 
-watch(rows, () => {
-  props.mahasiswa.tagihan = rows;
-}, { deep: true });
+/** Propagate ke parent */
+watch(
+  rows,
+  () => {
+    props.mahasiswa.tagihan = rows;
+  },
+  { deep: true }
+);
+
+// formatRupiah asumsi sudah ada di scope-mu
 </script>
 
 <template>
@@ -118,11 +120,16 @@ watch(rows, () => {
           <VCombobox
             v-model="selectedTagihan"
             :items="tagihan"
-            label="Tagihan"
             item-title="display"
+            item-value="id"
+            label="Tagihan"
+            multiple
+            chips
+            closable-chips
+            return-object
             clearable
             :loading="loadingTagihan"
-            @update:modelValue="onSelectTagihan"
+            autocomplete="off"
           />
         </VCol>
       </VRow>

@@ -48,6 +48,14 @@ const downloadExcelTotalan = async () => {
   );
 };
 
+const downloadExcelTotalanStaff = async () => {
+  download(
+    "excelTotalanStaff",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Laporan Harian Totalan Staff.xlsx"
+  );
+};
+
 const downloadPdf = async () => {
   download("pdf", "application/pdf", "Laporan Harian.pdf");
 };
@@ -96,7 +104,7 @@ const download = async (type, accept, filename) => {
 
 onMounted(() => {
   // date now
-  tanggal.value = new Date().toISOString().split("T")[0];
+  tanggal.value = fDate(new Date());
 });
 </script>
 
@@ -153,9 +161,20 @@ onMounted(() => {
           :loading="props.isLoadingJenisPembayaran"
         />
       </VCol>
-      <VCol cols="12" md="6">
+      <VCol cols="12" md="12">
         <VBtn block color="success" @click="downloadExcel" :loading="isLoading">
           Download Excel
+          <VIcon end icon="ri-arrow-down-circle-line" />
+        </VBtn>
+      </VCol>
+      <VCol cols="12" md="6">
+        <VBtn
+          block
+          color="success"
+          @click="downloadExcelTotalanStaff"
+          :loading="isLoading"
+        >
+          Download Totalan Sesuai Staff
           <VIcon end icon="ri-arrow-down-circle-line" />
         </VBtn>
       </VCol>

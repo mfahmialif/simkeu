@@ -1,12 +1,15 @@
 <script setup>
-import DashboardCardStatistics from './DashboardCardStatistics.vue';
-import DashboardDeliveryExceptions from './DashboardDeliveryExceptions.vue';
-import DashboardDeliveryPerformance from './DashboardDeliveryPerformance.vue';
-import DashboardOrderByCountries from './DashboardOrderByCountries.vue';
-import DashboardOverviewTable from './DashboardOverviewTable.vue';
-import DashboardShipmentStatistics from './DashboardShipmentStatistics.vue';
-import DashboardVehicleOverview from './DashboardVehicleOverview.vue';
+import DashboardCardStatistics from "./DashboardCardStatistics.vue";
+import DashboardDeliveryExceptions from "./DashboardDeliveryExceptions.vue";
+import DashboardDeliveryPerformance from "./DashboardDeliveryPerformance.vue";
+import DashboardOrderByCountries from "./DashboardOrderByCountries.vue";
+import DashboardOverviewTable from "./DashboardOverviewTable.vue";
+import DashboardFinanceStatistics from "./DashboardFinanceStatistics.vue";
+import DashboardFinanceOverview from "./DashboardFinanceOverview.vue";
+import DashboardMenu from "./DashboardMenu.vue";
 
+const userData = useCookie("userData").value ?? {};
+const role = userData.role?.name;
 </script>
 
 <template>
@@ -14,21 +17,23 @@ import DashboardVehicleOverview from './DashboardVehicleOverview.vue';
     <VCol cols="12">
       <DashboardCardStatistics />
     </VCol>
-    <VCol
-      cols="12"
-      md="6"
-    >
-      <DashboardVehicleOverview />
-    </VCol>
 
     <VCol
       cols="12"
-      md="6"
+      v-if="role == 'admin' || role == 'pimpinan' || role == 'keuangan'"
     >
-      <DashboardShipmentStatistics />
+      <DashboardMenu />
     </VCol>
 
-    <VCol
+    <VCol cols="12" md="6">
+      <DashboardFinanceOverview />
+    </VCol>
+
+    <VCol cols="12" md="6">
+      <DashboardFinanceStatistics />
+    </VCol>
+
+    <!-- <VCol
       cols="12"
       md="4"
     >
@@ -47,10 +52,10 @@ import DashboardVehicleOverview from './DashboardVehicleOverview.vue';
       md="4"
     >
       <DashboardOrderByCountries />
-    </VCol>
+    </VCol> -->
 
-    <VCol cols="12">
+    <!-- <VCol cols="12">
       <DashboardOverviewTable />
-    </VCol>
+    </VCol> -->
   </VRow>
 </template>

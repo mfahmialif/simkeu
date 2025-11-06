@@ -215,6 +215,9 @@ watch(
             <VChip color="primary" size="x-small" label>
               {{ item.nota ?? item.nomor }}
             </VChip>
+            <VChip color="success" size="x-small" label>
+              {{ item.jenis_pembayaran }}
+            </VChip>
             <div>
               <b>{{ item.tagihan }}</b>
             </div>
@@ -227,7 +230,7 @@ watch(
         </template>
 
         <template #item.tanggal="{ item }">
-          <div>{{ new Date(item.tanggal).toISOString().split("T")[0] }}</div>
+          <div>{{ formatDate(new Date(item.tanggal), 'YYYY-MM-DD') }}</div>
         </template>
 
         <template #item.jumlah="{ item }">

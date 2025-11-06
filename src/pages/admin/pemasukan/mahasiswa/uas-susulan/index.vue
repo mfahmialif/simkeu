@@ -184,7 +184,7 @@ const refForm = ref(null);
 
 onMounted(() => {
   document.title = "Catatan UAS Susulan - SIMKEU";
-  tanggal.value = new Date().toISOString().split("T")[0];
+  tanggal.value = fDate(new Date());
   fetchData();
   fetchProdi();
 });

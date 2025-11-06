@@ -47,7 +47,7 @@ defineExpose({
       <VRow v-for="(row, idx) in rows" :key="row.id" class="align-center">
         <VCol cols="12" md="4">
           <VTextField
-            :model-value="row.display"
+            v-model="row.display"
             label="Tagihan"
             variant="outlined"
             density="comfortable"

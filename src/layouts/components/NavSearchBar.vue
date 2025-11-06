@@ -1,175 +1,146 @@
 <script setup>
-import Shepherd from 'shepherd.js'
-import { withQuery } from 'ufo'
-import { useConfigStore } from '@core/stores/config'
+import Shepherd from "shepherd.js";
+import { withQuery } from "ufo";
+import { useConfigStore } from "@core/stores/config";
 
 defineOptions({
   inheritAttrs: false,
-})
+});
 
-const configStore = useConfigStore()
-const isAppSearchBarVisible = ref(false)
+const configStore = useConfigStore();
+const isAppSearchBarVisible = ref(false);
 
 // 👉 Default suggestions
 const suggestionGroups = [
   {
-    title: 'Popular Searches',
+    title: "Mahasiswa",
     content: [
       {
-        icon: 'ri-bar-chart-line',
-        title: 'Analytics',
-        url: { name: 'dashboards-analytics' },
+        icon: "ri-user-3-line",
+        title: "Data Mahasiswa",
+        url: { name: "admin-pemasukan-mahasiswa-master-data-mahasiswa" },
       },
       {
-        icon: 'ri-pie-chart-2-line',
-        title: 'CRM',
-        url: { name: 'dashboards-crm' },
+        icon: "ri-file-list-line",
+        title: "Jenis Pembayaran",
+        url: { name: "admin-pemasukan-mahasiswa-master-jenis-pembayaran" },
       },
       {
-        icon: 'ri-shopping-bag-3-line',
-        title: 'eCommerce',
-        url: { name: 'dashboards-ecommerce' },
+        icon: "ri-money-dollar-circle-line",
+        title: "Tagihan",
+        url: { name: "admin-pemasukan-mahasiswa-master-tagihan" },
       },
       {
-        icon: 'ri-car-line',
-        title: 'Logistics',
-        url: { name: 'apps-logistics-dashboard' },
+        icon: "ri-search-line",
+        title: "Cek Tagihan",
+        url: { name: "admin-pemasukan-mahasiswa-cek-tagihan" },
       },
     ],
   },
   {
-    title: 'Apps & Pages',
+    title: "Pembayaran",
     content: [
       {
-        icon: 'ri-calendar-line',
-        title: 'Calendar',
-        url: { name: 'apps-calendar' },
+        icon: "ri-money-dollar-circle-fill",
+        title: "Pembayaran Mahasiswa",
+        url: { name: "admin-pemasukan-mahasiswa-pembayaran-mahasiswa" },
       },
       {
-        icon: 'ri-lock-unlock-line',
-        title: 'Roles & Permissions',
-        url: { name: 'apps-roles' },
+        icon: "ri-bank-card-line",
+        title: "Pembayaran IDN",
+        url: { name: "admin-pemasukan-mahasiswa-pembayaran-idn" },
       },
       {
-        icon: 'ri-settings-4-line',
-        title: 'Account Settings',
-        url: {
-          name: 'pages-account-settings-tab',
-          params: { tab: 'account' },
-        },
-      },
-      {
-        icon: 'ri-file-copy-line',
-        title: 'Dialog Examples',
-        url: { name: 'pages-dialog-examples' },
+        icon: "ri-add-circle-line",
+        title: "Pembayaran Tambahan",
+        url: { name: "admin-pemasukan-mahasiswa-pembayaran-tambahan" },
       },
     ],
   },
   {
-    title: 'User Interface',
+    title: "Lainnya",
     content: [
       {
-        icon: 'ri-text',
-        title: 'Typography',
-        url: { name: 'pages-typography' },
+        icon: "ri-time-line",
+        title: "Dispensasi",
+        url: { name: "admin-pemasukan-mahasiswa-dispensasi" },
       },
       {
-        icon: 'ri-menu-line',
-        title: 'Accordion',
-        url: { name: 'components-expansion-panel' },
+        icon: "ri-arrow-down-line",
+        title: "Pengeluaran",
+        url: { name: "admin-pengeluaran" },
       },
       {
-        icon: 'ri-alert-line',
-        title: 'Alerts',
-        url: { name: 'components-alert' },
+        icon: "ri-wallet-line",
+        title: "Kategori Saldo",
+        url: { name: "admin-saldo-kategori" },
       },
       {
-        icon: 'ri-checkbox-blank-line',
-        title: 'Cards',
-        url: { name: 'pages-cards-card-basic' },
+        icon: "ri-user-line",
+        title: "Profil",
+        url: { name: "admin-profile" },
       },
     ],
   },
-  {
-    title: 'Forms & Tables',
-    content: [
-      {
-        icon: 'ri-radio-button-line',
-        title: 'Radio',
-        url: { name: 'forms-radio' },
-      },
-      {
-        icon: 'ri-file-text-line',
-        title: 'Form Layouts',
-        url: { name: 'forms-form-layouts' },
-      },
-      {
-        icon: 'ri-table-line',
-        title: 'Table',
-        url: { name: 'tables-simple-table' },
-      },
-      {
-        icon: 'ri-edit-box-line',
-        title: 'Editor',
-        url: { name: 'forms-editors' },
-      },
-    ],
-  },
-]
+];
 
 // 👉 No Data suggestion
 const noDataSuggestions = [
   {
-    title: 'Analytics',
-    icon: 'ri-bar-chart-line',
-    url: { name: 'dashboards-analytics' },
+    title: "Mahasiswa",
+    icon: "ri-bar-chart-line",
+    url: { name: "admin-pemasukan-mahasiswa-master-data-mahasiswa" },
   },
   {
-    title: 'CRM',
-    icon: 'ri-pie-chart-2-line',
-    url: { name: 'dashboards-crm' },
+    title: "Pemasukan",
+    icon: "ri-pie-chart-2-line",
+    url: { name: "admin-pemasukan-pemasukan-tambah" },
   },
   {
-    title: 'eCommerce',
-    icon: 'ri-shopping-bag-3-line',
-    url: { name: 'dashboards-ecommerce' },
+    title: "Pengeluaran",
+    icon: "ri-shopping-bag-3-line",
+    url: { name: "admin-pengeluaran" },
   },
-]
+];
 
-const searchQuery = ref('')
-const router = useRouter()
-const searchResult = ref([])
-const isLoading = ref(false)
+const searchQuery = ref("");
+const router = useRouter();
+const searchResult = ref([]);
+const isLoading = ref(false);
 
 const fetchResults = async () => {
-  isLoading.value = true
+  isLoading.value = true;
 
-  const { data } = await useApi(withQuery('/app-bar/search', { q: searchQuery.value }))
+  const { data } = await useApi(
+    withQuery("/app-bar/search", { q: searchQuery.value })
+  );
 
-  searchResult.value = data.value
+  searchResult.value = data.value;
 
   // ℹ️ simulate loading: we have used setTimeout for better user experience your can remove it
   setTimeout(() => {
-    isLoading.value = false
-  }, 500)
-}
+    isLoading.value = false;
+  }, 500);
+};
 
-watch(searchQuery, fetchResults)
+watch(searchQuery, fetchResults);
 
-const redirectToSuggestedOrSearchedPage = selected => {
-  router.push(selected.url)
-  isAppSearchBarVisible.value = false
-  searchQuery.value = ''
-}
+const redirectToSuggestedOrSearchedPage = (selected) => {
+  router.push(selected.url);
+  isAppSearchBarVisible.value = false;
+  searchQuery.value = "";
+};
 
-const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/AppBarSearch.vue'))
+const LazyAppBarSearch = defineAsyncComponent(() =>
+  import("@core/components/AppBarSearch.vue")
+);
 </script>
 
 <template>
   <div
     class="d-flex align-center cursor-pointer gap-x-2"
     v-bind="$attrs"
-    style="user-select: none;"
+    style="user-select: none"
     @click="isAppSearchBarVisible = !isAppSearchBarVisible"
   >
     <!-- 👉 Search Trigger button -->
@@ -183,12 +154,8 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
       class="d-none d-md-flex text-disabled text-body-1 gap-x-2"
       @click="Shepherd.activeTour?.cancel()"
     >
-      <div>
-        Search
-      </div>
-      <div class="meta-key">
-        &#8984;K
-      </div>
+      <div>Search</div>
+      <div class="meta-key">&#8984;K</div>
     </div>
   </div>
 
@@ -209,7 +176,9 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
             cols="12"
             sm="6"
           >
-            <p class="custom-letter-spacing text-xs text-disabled text-uppercase py-2 px-4 mb-0">
+            <p
+              class="custom-letter-spacing text-xs text-disabled text-uppercase py-2 px-4 mb-0"
+            >
               {{ suggestion.title }}
             </p>
             <VList class="card-list">
@@ -222,11 +191,7 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
               >
                 <VListItemTitle>{{ item.title }}</VListItemTitle>
                 <template #prepend>
-                  <VIcon
-                    :icon="item.icon"
-                    size="20"
-                    class="me-n1"
-                  />
+                  <VIcon :icon="item.icon" size="20" class="me-n1" />
                 </template>
               </VListItem>
             </VList>
@@ -238,20 +203,14 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
     <!-- no data suggestion -->
     <template #noDataSuggestion>
       <div class="mt-6">
-        <div class="text-center text-disabled py-2">
-          Try searching for
-        </div>
+        <div class="text-center text-disabled py-2">Try searching for</div>
         <h6
           v-for="suggestion in noDataSuggestions"
           :key="suggestion.title"
           class="app-bar-search-suggestion text-h6 font-weight-regular cursor-pointer py-2 px-4"
           @click="redirectToSuggestedOrSearchedPage(suggestion)"
         >
-          <VIcon
-            size="20"
-            :icon="suggestion.icon"
-            class="me-2"
-          />
+          <VIcon size="20" :icon="suggestion.icon" class="me-2" />
           <span class="d-inline-block">{{ suggestion.title }}</span>
         </h6>
       </div>
@@ -259,7 +218,9 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
 
     <!-- search result -->
     <template #searchResult="{ item }">
-      <VListSubheader class="text-disabled custom-letter-spacing font-weight-regular ps-4">
+      <VListSubheader
+        class="text-disabled custom-letter-spacing font-weight-regular ps-4"
+      >
         {{ item.title }}
       </VListSubheader>
       <VListItem
@@ -268,11 +229,7 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
         @click="redirectToSuggestedOrSearchedPage(list)"
       >
         <template #prepend>
-          <VIcon
-            size="20"
-            :icon="list.icon"
-            class="me-n1"
-          />
+          <VIcon size="20" :icon="list.icon" class="me-n1" />
         </template>
         <template #append>
           <VIcon

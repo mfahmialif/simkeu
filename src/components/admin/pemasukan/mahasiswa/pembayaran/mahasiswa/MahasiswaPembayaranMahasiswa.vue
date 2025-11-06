@@ -56,7 +56,7 @@ watch(search, (newVal) => {
     } finally {
       loadingSearch.value = false;
     }
-  }, 1000); // <-- debounce 2 detik
+  }, 300); // <-- debounce 300 mili detik
 });
 
 watch(selectedMahasiswa, (newVal) => {
@@ -139,6 +139,7 @@ defineExpose({
             label="NIM"
             clearable
             :loading="loadingSearch"
+            autocomplete="off"
           >
             <template #append-inner>
               <VProgressCircular

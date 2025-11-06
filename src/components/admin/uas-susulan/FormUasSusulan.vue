@@ -238,7 +238,7 @@ watch(
 );
 
 onMounted(async () => {
-  tanggal.value = new Date().toISOString().split("T")[0];
+  tanggal.value = fDate(new Date());
   await fetchThAkademik();
 
   if (props.typeForm === "edit") {

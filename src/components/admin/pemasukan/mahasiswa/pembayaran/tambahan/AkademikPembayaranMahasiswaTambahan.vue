@@ -25,7 +25,7 @@ const tanggal = ref("");
 defineExpose({ thAkademik, semesterList, tanggal });
 
 onMounted(() => {
-  tanggal.value = new Date().toISOString().split("T")[0];
+  tanggal.value = fDate(new Date());
 });
 
 watch(

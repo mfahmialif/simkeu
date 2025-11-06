@@ -112,7 +112,7 @@ const onSubmit = async () => {
   }
 
   try {
-    const response = await $api('/profil/', {
+    const response = await $api('/admin/profil', {
       method: 'POST',
       body: formData,
       onResponseError({ response }) {

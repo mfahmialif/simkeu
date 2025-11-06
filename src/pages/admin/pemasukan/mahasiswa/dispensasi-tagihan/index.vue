@@ -38,7 +38,7 @@ const fetchDispensasiTagihan = async () => {
     const dispensasiTagihanList = response.data.data ?? response;
 
     dataTable.value = dispensasiTagihanList;
-    totalItems.value = dispensasiTagihanList.total ?? 0;
+    totalItems.value = response.data.total ?? 0;
 
     fetchMahasiswa();
   } catch (err) {
@@ -67,7 +67,7 @@ const fetchMahasiswa = async () => {
       return {
         ...item,
         nama_mahasiswa: mahasiswa ? mahasiswa.nama : "N/A",
-        jenis_kelamin: mahasiswa ? mahasiswa.jk.nama : "N/A",
+        jenis_kelamin: mahasiswa ? mahasiswa.jk.kode : "N/A",
         prodi: mahasiswa ? mahasiswa.prodi.nama : "N/A",
       };
     });
@@ -204,6 +204,8 @@ watch(selectedRole, () => {
           { title: 'Nim', key: 'nim' },
           { title: 'L/P', key: 'jenis_kelamin' },
           { title: 'Prodi', key: 'prodi' },
+          { title: 'Tagihan', key: 'tagihan' },
+          { title: 'Jumlah', key: 'jumlah' },
           { title: 'keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"

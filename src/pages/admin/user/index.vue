@@ -1,4 +1,8 @@
 <script setup>
+onMounted(() => {
+  // checkRole(["staff"]);
+});
+
 const widgetData = ref([
   {
     title: "In-Store Sales",
@@ -161,8 +165,15 @@ watch(selectedRole, () => {
     <VRow class="mb-2">
       <!-- 👉 Select Role -->
       <VCol cols="12" sm="12">
-        <VSelect v-model="selectedRole" label="Select Role" placeholder="Select Role" :items="role" clearable
-          clear-icon="ri-close-line" class="custom-bg-select" />
+        <VSelect
+          v-model="selectedRole"
+          label="Select Role"
+          placeholder="Select Role"
+          :items="role"
+          clearable
+          clear-icon="ri-close-line"
+          class="custom-bg-select"
+        />
       </VCol>
     </VRow>
 
@@ -176,33 +187,56 @@ watch(selectedRole, () => {
       <VCardText class="d-flex flex-wrap gap-4">
         <div class="d-flex align-center w-100 w-sm-auto">
           <!-- 👉 Search  -->
-          <VTextField v-model="search" placeholder="Search Data" style="inline-size: 200px" density="compact"
-            class="me-3" />
+          <VTextField
+            v-model="search"
+            placeholder="Search Data"
+            style="inline-size: 200px"
+            density="compact"
+            class="me-3"
+          />
         </div>
 
         <VSpacer />
 
         <div class="d-flex gap-x-4 align-center">
           <!-- 👉 Export button -->
-          <VBtn variant="outlined" color="secondary" prepend-icon="ri-upload-2-line">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            prepend-icon="ri-upload-2-line"
+          >
             Export
           </VBtn>
 
-          <VBtn color="primary" prepend-icon="ri-add-line" @click="$router.push('/admin/user/add')">
+          <VBtn
+            color="primary"
+            prepend-icon="ri-add-line"
+            @click="$router.push('/admin/user/add')"
+          >
             Add Data
           </VBtn>
         </div>
       </VCardText>
 
       <!-- 👉 Datatable  -->
-      <VDataTableServer :headers="[
-        { title: 'No', key: 'id' },
-        { title: 'Username', key: 'username' },
-        { title: 'Email', key: 'email' },
-        { title: 'Actions', key: 'actions', sortable: false },
-      ]" v-model:model-value="selectedRows" v-model:items-per-page="itemsPerPage" v-model:page="page" show-select
-        :items="dataTable" :items-length="totalItems" :loading="loading" :search="search" item-value="name"
-        @update:options="loadItems">
+      <VDataTableServer
+        :headers="[
+          { title: 'No', key: 'id' },
+          { title: 'Username', key: 'username' },
+          { title: 'Email', key: 'email' },
+          { title: 'Actions', key: 'actions', sortable: false },
+        ]"
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
+        show-select
+        :items="dataTable"
+        :items-length="totalItems"
+        :loading="loading"
+        :search="search"
+        item-value="name"
+        @update:options="loadItems"
+      >
         <template v-if="initialLoading" #loading>
           <div class="text-center pa-4">
             <VProgressCircular indeterminate color="primary" class="mb-2" />
@@ -238,13 +272,19 @@ watch(selectedRole, () => {
 
             <VMenu activator="parent">
               <VList>
-                <VListItem value="download" prepend-icon="ri-edit-box-line"
-                  @click="$router.push(`/admin/user/edit/${item.id}`)">
+                <VListItem
+                  value="download"
+                  prepend-icon="ri-edit-box-line"
+                  @click="$router.push(`/admin/user/edit/${item.id}`)"
+                >
                   Edit
                 </VListItem>
 
-                <VListItem value="delete" prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.username)">
+                <VListItem
+                  value="delete"
+                  prepend-icon="ri-delete-bin-line"
+                  @click="showDialogDelete(item.id, item.username)"
+                >
                   Delete
                 </VListItem>
               </VList>
@@ -257,7 +297,11 @@ watch(selectedRole, () => {
     <VDialog v-model="isDialogDeleteVisible" width="500">
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
-        <DialogCloseBtn variant="text" size="default" @click="isDialogDeleteVisible = false" />
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="isDialogDeleteVisible = false"
+        />
 
         <VCardText class="d-flex align-center">
           <VIcon icon="ri-alert-line" size="32" class="me-2" />
@@ -268,7 +312,11 @@ watch(selectedRole, () => {
         </VCardText>
 
         <VCardText class="d-flex justify-end flex-wrap gap-4">
-          <VBtn variant="outlined" color="secondary" @click="isDialogDeleteVisible = false">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isDialogDeleteVisible = false"
+          >
             Batal
           </VBtn>
           <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">

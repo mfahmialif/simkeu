@@ -44,7 +44,7 @@ defineExpose({ selectedThAkademik, tanggal });
 
 onMounted(() => {
   fetchThAkademik();
-  tanggal.value = new Date().toISOString().split("T")[0];
+  tanggal.value = fDate(new Date());
 });
 
 watch(

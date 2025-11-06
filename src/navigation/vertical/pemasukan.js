@@ -86,12 +86,8 @@ export default [
     icon: { icon: "ri-money-dollar-circle-line" },
     children: [
       {
-        title: "Jenis Saldo",
-        to: "apps-ecommerce-product-list",
-      },
-      {
-        title: "Saldo",
-        to: "apps-ecommerce-product-list",
+        title: "Tambah Data",
+        to: "admin-pemasukan-pemasukan-tambah",
       },
     ],
   },
