@@ -63,8 +63,6 @@ const loadingSearch = ref(false);
 const mahasiswa = ref(emptyMahasiswa);
 onMounted(async () => {
   await fetchAllTahun();
-
-
 });
 const Mahasiswanim = async (nim) => {
   loadingDataMahasiswa.value = true;
@@ -74,8 +72,8 @@ const Mahasiswanim = async (nim) => {
     const response = await $api("/admin/mahasiswa/nim", {
       method: "GET",
       params: {
-        nim: nim
-      }
+        nim: nim,
+      },
     });
 
     const data = response.data ? response.data : response;
@@ -105,7 +103,7 @@ watch(
       mahasiswa.value.nama = mahasiswa.value.nama;
       mahasiswa.value.prodi = mahasiswa.value.prodi;
       mahasiswa.value.jenisKelamin = mahasiswa.value.jenisKelamin;
-      mahasiswa.value.angkatan = mahasiswa.value.angkatan.slice(0, -1);
+      mahasiswa.value.angkatan = mahasiswa.value.angkatan;
       mahasiswa.value.kelas = mahasiswa.value.kelas;
       mahasiswa.value.semester = mahasiswa.value.semester;
       tahun.value = newVal.th_akademik_id;
@@ -122,7 +120,7 @@ const onSubmit = async () => {
   const method = props.typeForm === "edit" ? "PUT" : "POST";
 
   disabled.value = true;
-  console.log('tahun', tahun.value);
+  console.log("tahun", tahun.value);
 
   const formData = new FormData();
   formData.append("nim", mahasiswa.value.nim);
@@ -225,8 +223,8 @@ const searching = async () => {
     const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
       body: {
-        nim: searchNim.value
-      }
+        nim: searchNim.value,
+      },
     });
 
     if (res.length < 1) {
@@ -245,7 +243,6 @@ const searching = async () => {
     mahasiswa.value.angkatan = res.th_akademik?.kode.slice(0, -1) ?? "-";
     mahasiswa.value.kelas = res.kelas?.nama;
     mahasiswa.value.semester = res.semester;
-
   } catch (error) {
     showSnackbar({
       text: error,
@@ -267,13 +264,12 @@ const fetchAllTahun = async (search) => {
       },
     });
     console.log("response", response.data.data);
-    tahunList.value = response.data.data.map(t => ({
+    tahunList.value = response.data.data.map((t) => ({
       value: t.id,
       title: `${t.nama} - ${t.semester}`,
     }));
 
     console.log("tahunList", tahun.value);
-
   } catch (err) {
     console.error(err);
     tahunList.value = [];
@@ -281,7 +277,6 @@ const fetchAllTahun = async (search) => {
     loading.value = false;
   }
 };
-
 </script>
 <style scoped>
 .autocomplete-list {
@@ -300,19 +295,42 @@ const fetchAllTahun = async (search) => {
   <VForm ref="refForm" @submit.prevent="onSubmit">
     <VRow>
       <VCol cols="12">
-        <VSelect v-model="tahun" label="Select Th Akademik" placeholder="Select Th Akademik" :items="tahunList"
-          :rules="[requiredValidator]" clear-icon="ri-close-line" />
+        <VSelect
+          v-model="tahun"
+          label="Select Th Akademik"
+          placeholder="Select Th Akademik"
+          :items="tahunList"
+          :rules="[requiredValidator]"
+          clear-icon="ri-close-line"
+          :loading="loadingDataMahasiswa"
+        />
       </VCol>
       <VCol cols="12">
-        <VCombobox v-model="selectedMahasiswa" v-model:search="search" :items="mahasiswaList" item-title="display"
-          item-value="nim" label="NIM" clearable :loading="loadingSearch">
+        <VCombobox
+          v-model="selectedMahasiswa"
+          v-model:search="search"
+          :items="mahasiswaList"
+          item-title="display"
+          item-value="nim"
+          label="NIM"
+          clearable
+          :loading="loadingSearch"
+        >
           <template #append-inner>
-            <VProgressCircular v-if="loadingSearch" indeterminate size="16" width="2" />
+            <VProgressCircular
+              v-if="loadingSearch"
+              indeterminate
+              size="16"
+              width="2"
+            />
           </template>
           <!-- Append -->
           <template #append>
-            <VBtn :size="$vuetify.display.smAndDown ? 'small' : 'large'" :icon="$vuetify.display.smAndDown"
-              @click="searching">
+            <VBtn
+              :size="$vuetify.display.smAndDown ? 'small' : 'large'"
+              :icon="$vuetify.display.smAndDown"
+              @click="searching"
+            >
               <VIcon icon="ri-search-line" />
               <span v-if="$vuetify.display.mdAndUp" class="ms-3">Search</span>
             </VBtn>
@@ -320,46 +338,93 @@ const fetchAllTahun = async (search) => {
         </VCombobox>
       </VCol>
       <VCol cols="12" md="6">
-        <VTextField v-model="mahasiswa.nim" label="NIM" placeholder="NIM" readonly :loading="loadingDataMahasiswa">
+        <VTextField
+          v-model="mahasiswa.nim"
+          label="NIM"
+          placeholder="NIM"
+          readonly
+          :loading="loadingDataMahasiswa"
+        >
         </VTextField>
       </VCol>
       <VCol cols="12" md="6">
-        <VTextField v-model="mahasiswa.nama" label="Nama" placeholder="Nama" readonly :loading="loadingDataMahasiswa">
+        <VTextField
+          v-model="mahasiswa.nama"
+          label="Nama"
+          placeholder="Nama"
+          readonly
+          :loading="loadingDataMahasiswa"
+        >
         </VTextField>
       </VCol>
       <VCol cols="12" md="6">
-        <VTextField v-model="mahasiswa.prodi" label="Prodi" placeholder="Prodi" readonly
-          :loading="loadingDataMahasiswa">
+        <VTextField
+          v-model="mahasiswa.prodi"
+          label="Prodi"
+          placeholder="Prodi"
+          readonly
+          :loading="loadingDataMahasiswa"
+        >
         </VTextField>
       </VCol>
       <VCol cols="12" md="6">
-        <VTextField v-model="mahasiswa.jenisKelamin" label="Jenis Kelamin" placeholder="Jenis Kelamin" readonly
-          :loading="loadingDataMahasiswa">
+        <VTextField
+          v-model="mahasiswa.jenisKelamin"
+          label="Jenis Kelamin"
+          placeholder="Jenis Kelamin"
+          readonly
+          :loading="loadingDataMahasiswa"
+        >
         </VTextField>
       </VCol>
       <VCol cols="12" md="4">
-        <VTextField v-model="mahasiswa.angkatan" label="Angkatan" placeholder="Angkatan" readonly
-          :loading="loadingDataMahasiswa">
+        <VTextField
+          v-model="mahasiswa.angkatan"
+          label="Angkatan"
+          placeholder="Angkatan"
+          readonly
+          :loading="loadingDataMahasiswa"
+        >
         </VTextField>
       </VCol>
       <VCol cols="12" md="4">
-        <VTextField v-model="mahasiswa.kelas" label="Kelas" placeholder="Kelas" readonly
-          :loading="loadingDataMahasiswa">
+        <VTextField
+          v-model="mahasiswa.kelas"
+          label="Kelas"
+          placeholder="Kelas"
+          readonly
+          :loading="loadingDataMahasiswa"
+        >
         </VTextField>
       </VCol>
       <VCol cols="12" md="4">
-        <VTextField v-model="mahasiswa.semester" label="Semester" placeholder="Semester" readonly
-          :loading="loadingDataMahasiswa">
+        <VTextField
+          v-model="mahasiswa.semester"
+          label="Semester"
+          placeholder="Semester"
+          readonly
+          :loading="loadingDataMahasiswa"
+        >
         </VTextField>
       </VCol>
       <VCol cols="12">
-        <VTextarea label="Keterangan" v-model="keterangan" placeholder="Placeholder Text" />
+        <VTextarea
+          label="Keterangan"
+          v-model="keterangan"
+          placeholder="Placeholder Text"
+          :loading="loadingDataMahasiswa"
+        />
       </VCol>
       <VCol cols="12" class="d-flex gap-4">
         <VBtn type="submit" :disabled @click="refForm?.validate()">
           Submit
         </VBtn>
-        <VBtn type="reset" v-if="typeForm !== 'edit'" color="secondary" variant="tonal">
+        <VBtn
+          type="reset"
+          v-if="typeForm !== 'edit'"
+          color="secondary"
+          variant="tonal"
+        >
           Reset
         </VBtn>
       </VCol>
