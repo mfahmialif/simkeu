@@ -12,11 +12,26 @@ const id = route.params.id;
 
 const disabled = ref(false);
 const submitData = async () => {
+  const thAkademik = akademikRef.value?.selectedThAkademik ?? null;
+  const tanggal = akademikRef.value?.tanggal ?? null;
+  const jenisPembayaran =
+    jenisPembayaranRef.value?.selectedJenisPembayaran ?? null;
+
+  if (thAkademik === null || tanggal === null || jenisPembayaran === null) {
+    showSnackbar({
+      text: "Harap memilih tahun akademik, tanggal, dan jenis pembayaran",
+      color: "error",
+    });
+    return false;
+  }
+
   const fd = new FormData();
 
   fd.append("tanggal", akademikRef.value.tanggal);
   fd.append("th_akademik_id", akademikRef.value.selectedThAkademik.value);
   fd.append("jumlah", pembayaranRef.value.rows[0].dibayar);
+  fd.append("jenis_pembayaran", jenisPembayaran?.value ?? "");
+
   fd.append("_method", "PUT");
 
   try {

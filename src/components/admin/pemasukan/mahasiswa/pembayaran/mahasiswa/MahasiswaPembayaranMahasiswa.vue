@@ -1,4 +1,6 @@
 <script setup>
+import { consoleError } from 'vuetify/lib/util/console.mjs';
+
 const emit = defineEmits(["refreshTagihan"]);
 
 const mahasiswaList = ref([]);
@@ -14,7 +16,7 @@ const emptyMahasiswa = {
   nama: "",
   prodi: "",
   jenisKelamin: "",
-  jkId:"",
+  jkId: "",
   angkatan: "",
   kelas: "",
   semester: "",
@@ -85,8 +87,8 @@ const searching = async () => {
     const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
       body: {
-        nim: searchNim.value
-      }
+        nim: searchNim.value,
+      },
     });
 
     if (res.length < 1) {
@@ -108,7 +110,6 @@ const searching = async () => {
 
     emit("refreshTagihan", mahasiswa.value.nim);
     emit("refreshDeposit");
-    
   } catch (error) {
     showSnackbar({
       text: error,
@@ -118,6 +119,12 @@ const searching = async () => {
     loadingDataMahasiswa.value = false;
   }
 };
+
+const refSearch = ref(null);
+onMounted(async () => {
+  await nextTick();
+  refSearch.value.focus();
+});
 
 defineExpose({
   mahasiswa,
@@ -131,6 +138,7 @@ defineExpose({
       <VRow>
         <VCol cols="12">
           <VCombobox
+            ref="refSearch"
             v-model="selectedMahasiswa"
             v-model:search="search"
             :items="mahasiswaList"
