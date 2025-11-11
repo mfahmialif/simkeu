@@ -29,7 +29,18 @@ const fetchTagihan = async (nim) => {
   }
 };
 
-defineExpose({ fetchTagihan });
+const clearTagihan = () => {
+  rows.value = [];
+  selectedTagihan.value = [];
+};
+
+const selectAllTagihan = () => {
+  selectedTagihan.value = tagihan.value;
+};
+
+const hasTagihan = computed(() => tagihan.value && tagihan.value.length > 0)
+
+defineExpose({ fetchTagihan, clearTagihan });
 
 /** Daftar baris yang dipilih */
 const rows = ref([]);
@@ -116,6 +127,26 @@ watch(
   <VCard class="mt-4" title="Pembayaran">
     <VCardText>
       <VRow>
+        <VCol cols="6" v-if="hasTagihan">
+          <VBtn
+            class="w-100"
+            color="primary"
+            variant="elevated"
+            @click="selectAllTagihan"
+          >
+            Bayar semua tagihan
+          </VBtn>
+        </VCol>
+        <VCol cols="6" v-if="hasTagihan">
+          <VBtn
+            class="w-100"
+            color="error"
+            variant="elevated"
+            @click="clearTagihan"
+          >
+            Clear Tagihan
+          </VBtn>
+        </VCol>
         <VCol cols="12">
           <VCombobox
             v-model="selectedTagihan"

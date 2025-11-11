@@ -1,5 +1,5 @@
 <script setup>
-import { consoleError } from 'vuetify/lib/util/console.mjs';
+import { consoleError } from "vuetify/lib/util/console.mjs";
 
 const emit = defineEmits(["refreshTagihan"]);
 
@@ -121,13 +121,30 @@ const searching = async () => {
 };
 
 const refSearch = ref(null);
-onMounted(async () => {
+const nimFocus = async () => {
   await nextTick();
   refSearch.value.focus();
+};
+
+const selectAll = async () => {
+  // tunggu sampai elemen input benar-benar ter-render
+  await nextTick();
+
+  // akses input dalam VCombobox
+  const input = refSearch.value?.$el?.querySelector("input");
+  if (input) {
+    input.select(); // ✨ menyorot seluruh teks di dalam field
+  }
+};
+
+onMounted(async () => {
+  nimFocus();
 });
 
 defineExpose({
   mahasiswa,
+  searching,
+  nimFocus,
 });
 </script>
 
@@ -148,6 +165,8 @@ defineExpose({
             clearable
             :loading="loadingSearch"
             autocomplete="off"
+            @focus="selectAll"
+            @click="selectAll"
           >
             <template #append-inner>
               <VProgressCircular

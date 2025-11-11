@@ -16,6 +16,7 @@ const selectedThAkademik = ref();
 const loadingThAkademik = ref(false);
 
 const tanggal = ref("");
+const tanggalReadonly = ref(true);
 
 const fetchThAkademik = async () => {
   try {
@@ -56,6 +57,7 @@ watch(
       selectedThAkademik.value = thAkademik.value.find(
         (item) => item.value === newVal.th_akademik_id
       );
+      tanggalReadonly.value = false;
     }
   },
 );
@@ -72,6 +74,7 @@ watch(
             label="Tanggal"
             placeholder="Tanggal"
             type="date"
+            :readonly="tanggalReadonly"
           />
         </VCol>
         <VCol cols="12">

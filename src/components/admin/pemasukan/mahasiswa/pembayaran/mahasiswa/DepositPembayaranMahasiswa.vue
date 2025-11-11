@@ -36,8 +36,14 @@ const fetchDeposit = async () => {
   }
 };
 
+const clearDeposit = () => {
+  props.mahasiswa.deposit = 0;
+  props.mahasiswa.dipakai = 0;
+}
+
 defineExpose({
   fetchDeposit,
+  clearDeposit,
 });
 
 async function onSimpan() {

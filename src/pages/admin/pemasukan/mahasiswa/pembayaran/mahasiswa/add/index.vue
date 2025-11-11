@@ -10,8 +10,8 @@ const router = useRouter();
 const disabled = ref(false);
 
 const submitData = async () => {
-  const formData = buildPembayaranFormData();
 
+  const formData = buildPembayaranFormData();
   if (!formData) {
     return;
   }
@@ -33,7 +33,17 @@ const submitData = async () => {
         color: "success",
       });
 
-      router.push("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa");
+      if (redirectKwitansi.value) {
+        await kwitansi(response.id);
+
+        tagihanRef.value.clearTagihan();
+        depositRef.value.clearDeposit();
+        mahasiswaRef.value.searching();
+        mahasiswaRef.value.nimFocus();
+        
+      } else {
+        router.push("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa");
+      }
     } else {
       showSnackbar({
         text: response.message,
@@ -111,8 +121,42 @@ function onRefreshDeposit() {
 const akademikRef = ref(null);
 const jenisPembayaranRef = ref(null);
 
+const redirectKwitansi = ref(false);
+
+const kwitansi = async (id) => {
+  try {
+    showSnackbar({
+      text: "Loading cetak kwitansi...",
+      color: "info",
+    });
+    const blob = await $api(
+      "/admin/pemasukan/mahasiswa/pembayaran/kwitansi/" + id + "/view",
+      {
+        method: "GET",
+        headers: { Accept: "application/pdf" },
+      }
+    );
+
+    openFileExport(blob);
+  } catch (err) {
+    console.info(err);
+    showSnackbar({
+      text: err,
+      color: "error",
+    });
+  }
+};
+
+
 onMounted(() => {
   document.title = "Tambah Data Pembayaran Mahasiswa - SIMKEU";
+  const userData = useCookie("userData").value ?? {};
+  const role = userData.role?.name;
+  const jenisKelamin = userData.jenis_kelamin;
+
+  if ((role == "staff" || role == 'kabag') && jenisKelamin == 'Laki-laki') {
+    redirectKwitansi.value = true;
+  }
 });
 </script>
 
@@ -163,6 +207,11 @@ onMounted(() => {
           :mahasiswa="mahasiswaRef?.mahasiswa"
         />
 
+        <VSwitch
+          class="mt-3"
+          v-model="redirectKwitansi"
+          label="Otomatis Print Kwitansi ?"
+        />
         <VBtn color="primary" @click="submitData" :disabled class="w-100 mt-3">
           Simpan Pembayaran
         </VBtn>
