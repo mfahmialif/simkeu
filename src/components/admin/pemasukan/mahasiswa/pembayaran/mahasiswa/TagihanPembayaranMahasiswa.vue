@@ -1,4 +1,5 @@
 <script setup>
+
 const props = defineProps({
   mahasiswa: { type: Object, required: true, default: () => ({}) },
 });
@@ -7,14 +8,50 @@ const tagihan = ref([]);
 const selectedTagihan = ref([]); // <-- array untuk multiple
 const loadingTagihan = ref(false);
 
+const cekPelanggaran = ref(false);
+const fetchCekPelanggaran = async (nim) => {
+  try {
+    cekPelanggaran.value = false;
+    loadingTagihan.value = true;
+    tagihan.value = [];
+    const res = await $api(`/admin/mahasiswa/cek-pelanggaran/${nim}`, {
+      method: "GET",
+    });
+
+    if (!res.status) {
+      showSnackbar({ text: res.message, color: "error" });
+      cekPelanggaran.value = true;
+      return;
+    }
+
+  } catch (error) {
+    showSnackbar({ text: error, color: "error" });
+  } finally {
+    loadingTagihan.value = false;
+  }
+};
+
 const fetchTagihan = async (nim) => {
   try {
+    await fetchCekPelanggaran(nim);
+
+    if (cekPelanggaran.value) {
+      return;
+    }
     loadingTagihan.value = true;
     tagihan.value = [];
     const res = await $api(`/admin/pemasukan/mahasiswa/cek-tagihan`, {
       method: "GET",
-      body: { nim },
+      body: {
+        nim: nim,
+        cekNilai: 1,
+      },
     });
+
+    if (!res.status) {
+      showSnackbar({ text: res.message, color: "error" });
+      return;
+    }
 
     tagihan.value = res.data.list_tagihan.map((item) => ({
       ...item,
@@ -38,7 +75,7 @@ const selectAllTagihan = () => {
   selectedTagihan.value = tagihan.value;
 };
 
-const hasTagihan = computed(() => tagihan.value && tagihan.value.length > 0)
+const hasTagihan = computed(() => tagihan.value && tagihan.value.length > 0);
 
 defineExpose({ fetchTagihan, clearTagihan });
 
