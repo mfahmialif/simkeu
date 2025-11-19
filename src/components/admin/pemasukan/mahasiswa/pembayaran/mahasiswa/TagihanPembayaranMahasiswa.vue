@@ -1,5 +1,4 @@
 <script setup>
-
 const props = defineProps({
   mahasiswa: { type: Object, required: true, default: () => ({}) },
 });
@@ -23,7 +22,6 @@ const fetchCekPelanggaran = async (nim) => {
       cekPelanggaran.value = true;
       return;
     }
-
   } catch (error) {
     showSnackbar({ text: error, color: "error" });
   } finally {
@@ -31,7 +29,9 @@ const fetchCekPelanggaran = async (nim) => {
   }
 };
 
+const cekNilai = ref(true);
 const fetchTagihan = async (nim) => {
+  clearTagihan();
   try {
     await fetchCekPelanggaran(nim);
 
@@ -53,11 +53,16 @@ const fetchTagihan = async (nim) => {
       return;
     }
 
+    cekNilai.value = res.cekNilai;
+
     tagihan.value = res.data.list_tagihan.map((item) => ({
       ...item,
       display: `${item.nama} - Rp.${item.sisa}${
         item.dibayar > 0 ? " (Dibayar: Rp." + item.dibayar + ")" : ""
       }`,
+      itemProps: {
+        disabled: !res.cekNilai && item.nama.toLowerCase() === "skripsi",
+      },
     }));
   } catch (error) {
     showSnackbar({ text: error, color: "error" });
@@ -72,7 +77,10 @@ const clearTagihan = () => {
 };
 
 const selectAllTagihan = () => {
-  selectedTagihan.value = tagihan.value;
+  console.log("cek nilai:", cekNilai.value);
+  selectedTagihan.value = cekNilai.value
+    ? tagihan.value
+    : tagihan.value.filter((i) => i.nama.toLowerCase() !== "skripsi");
 };
 
 const hasTagihan = computed(() => tagihan.value && tagihan.value.length > 0);
@@ -190,6 +198,7 @@ watch(
             :items="tagihan"
             item-title="display"
             item-value="id"
+            item-props="itemProps"
             label="Tagihan"
             multiple
             chips
