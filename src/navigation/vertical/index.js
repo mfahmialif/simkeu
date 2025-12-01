@@ -7,6 +7,7 @@ import saldo from "./saldo";
 import setting from "./setting";
 import dashboardStaff from "./staff/dashboardStaff";
 import pemasukanStaff from "./staff/pemasukanStaff";
+import uiElements from "./ui-elements";
 import user from "./user";
 
 const userData = useCookie("userData").value ?? {};

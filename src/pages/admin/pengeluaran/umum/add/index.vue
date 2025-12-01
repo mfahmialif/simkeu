@@ -18,7 +18,7 @@ const menuList = [
     title: 'Lihat Data',
     value: 'lihat-data',
     icon: 'ri-eye-line',
-    clickHandler: () => router.push('/admin/pengeluaran'),
+    clickHandler: () => router.push('/admin/pengeluaran/umum'),
   },
 ]
 

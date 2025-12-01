@@ -125,7 +125,7 @@ watch(selectedRows, (newValue) => {
             Export
           </VBtn>
 
-          <VBtn color="primary" prepend-icon="ri-add-line" @click="$router.push('/admin/pengeluaran/add')">
+          <VBtn color="primary" prepend-icon="ri-add-line" @click="$router.push('/admin/pengeluaran/umum/add')">
             Add Data
           </VBtn>
         </div>
@@ -170,7 +170,7 @@ watch(selectedRows, (newValue) => {
             <VMenu activator="parent">
               <VList>
                 <VListItem value="edit" prepend-icon="ri-edit-box-line"
-                  @click="$router.push(`/admin/pengeluaran/edit/${item.id}`)">
+                  @click="$router.push(`/admin/pengeluaran/umum/edit/${item.id}`)">
                   Edit
                 </VListItem>
 
