@@ -1,6 +1,8 @@
 import dashboard from "./dashboard";
 import pemasukan from "./pemasukan";
 import pengeluaran from "./pengeluaran";
+import pengeluaranDosen from "./pengeluaran-dosen";
+import pengeluaranHeading from "./pengeluaran-heading";
 import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
 import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
 import saldo from "./saldo";
@@ -20,7 +22,9 @@ if (role) {
       ...dashboard,
       ...saldo,
       ...pemasukan,
+      ...pengeluaranHeading,
       ...pengeluaran,
+      ...pengeluaranDosen,
       ...user,
       ...setting,
     ];
@@ -35,7 +39,9 @@ if (role) {
       ...dashboard,
       ...saldo,
       ...pemasukan,
+      ...pengeluaranHeading,
       ...pengeluaran,
+      ...pengeluaranDosen,
       ...user,
       ...setting,
     ];
@@ -61,6 +67,15 @@ if (role) {
       ...dashboard,
       ...pemasukanRumahTangga,
       ...pengeluaranRumahTangga,
+      ...setting,
+    ];
+  }
+
+  if (role == "barokahdosen") {
+    routes = [
+      ...dashboard,
+      ...pengeluaranHeading,
+      ...pengeluaranDosen,
       ...setting,
     ];
   }
