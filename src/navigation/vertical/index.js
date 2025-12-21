@@ -52,6 +52,7 @@ if (role) {
       ...dashboard,
       ...saldo,
       ...pemasukan,
+      ...pengeluaranHeading,
       ...pengeluaran,
       ...user,
       ...setting,

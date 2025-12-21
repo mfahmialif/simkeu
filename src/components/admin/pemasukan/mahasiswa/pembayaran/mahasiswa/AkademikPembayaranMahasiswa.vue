@@ -52,14 +52,20 @@ watch(
   () => props.dataForm,
   (newVal) => {
     if (props.typeForm === "edit" && newVal) {
-      const date = new Date(newVal.tanggal).toISOString().slice(0, 10);
-      tanggal.value = date;
+      const d = new Date(newVal.tanggal);
+
+      // paksa ke GMT+7
+      d.setHours(d.getHours() + 7);
+
+      tanggal.value = d.toISOString().slice(0, 10);
+
       selectedThAkademik.value = thAkademik.value.find(
         (item) => item.value === newVal.th_akademik_id
       );
+
       tanggalReadonly.value = false;
     }
-  },
+  }
 );
 </script>
 

@@ -1,13 +1,12 @@
 export default [
-  { heading: "PENGELUARAN" },
   {
     title: "Pengeluaran",
     icon: { icon: "ri-arrow-down-line" },
-    to: "admin-pengeluaran-umum"
+    to: "admin-pengeluaran-umum",
   },
   {
     title: "Dosen",
     icon: { icon: "ri-arrow-down-line" },
-    to: "admin-pengeluaran-dosen"
+    to: "admin-pengeluaran-dosen",
   },
 ];

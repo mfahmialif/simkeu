@@ -249,6 +249,10 @@ module.exports = {
     "import/resolver": {
       node: true,
       typescript: { project: "./jsconfig.json" },
+      alias: {
+        map: [["@", "./src"]],
+        extensions: [".js", ".ts", ".vue"],
+      },
     },
   },
 };

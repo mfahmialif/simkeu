@@ -32,8 +32,13 @@ watch(
   () => props.dataForm,
   (newVal) => {
     if (props.typeForm === "edit" && newVal) {
-      const date = new Date(newVal.tanggal).toISOString().slice(0, 10);
-      tanggal.value = date;
+      const d = new Date(newVal.tanggal);
+
+      // paksa ke GMT +7 (Indonesia)
+      d.setHours(d.getHours() + 7);
+
+      tanggal.value = d.toISOString().slice(0, 10);
+
       const getTanggal = newVal.th_akademik.split("-");
       thAkademik.value = {
         start: getTanggal[0],
@@ -41,7 +46,7 @@ watch(
         smt: newVal.smt,
       };
     }
-  },
+  }
 );
 </script>
 
