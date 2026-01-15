@@ -230,7 +230,7 @@ const onSubmit = async () => {
       </VCol>
 
       <VCol cols="12">
-        <VTextField v-model="nama" :rules="[requiredValidator, noSpaceValidator]" label="Nama" placeholder="KRS ...." />
+        <VTextField v-model="nama" :rules="[requiredValidator]" label="Nama" placeholder="KRS ...." />
       </VCol>
       <VCol cols="12">
         <VTextField v-model="jumlah" :rules="[requiredValidator, noSpaceValidator]" label="Jumlah"

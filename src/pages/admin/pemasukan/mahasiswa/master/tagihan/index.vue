@@ -117,6 +117,90 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   fetchData()
 }
 
+// Import dialog state
+const isDialogImportVisible = ref(false)
+const importFile = ref(null)
+const importLoading = ref(false)
+
+const downloadTemplate = async () => {
+  try {
+    showSnackbar({
+      text: 'Downloading template...',
+      color: 'info',
+    })
+    const blob = await $api('/admin/pemasukan/mahasiswa/tagihan/template', {
+      method: 'GET',
+      headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+    })
+    openFileExport(blob)
+  } catch (err) {
+    console.error(err)
+    showSnackbar({
+      text: 'Gagal download template',
+      color: 'error',
+    })
+  }
+}
+
+const submitImport = async () => {
+  if (!importFile.value) {
+    showSnackbar({
+      text: 'Pilih file terlebih dahulu',
+      color: 'error',
+    })
+    return
+  }
+
+  importLoading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', importFile.value)
+
+    const response = await $api('/admin/pemasukan/mahasiswa/tagihan/import', {
+      method: 'POST',
+      body: formData,
+    })
+
+    console.log('Import response:', response)
+
+    if (response.status === true) {
+      let message = `Import selesai! ${response.success_count} data berhasil, ${response.skip_count} dilewati.`
+      
+      // Log skip reasons for debugging
+      if (response.skip_reasons && response.skip_reasons.length > 0) {
+        console.log('Skip reasons:', response.skip_reasons)
+        message += ` Alasan skip: ${response.skip_reasons.slice(0, 3).join(', ')}`
+        if (response.skip_reasons.length > 3) {
+          message += ` dan ${response.skip_reasons.length - 3} lainnya. Lihat console untuk detail.`
+        }
+      }
+      
+      showSnackbar({
+        text: message,
+        color: response.success_count > 0 ? 'success' : 'warning',
+      })
+      fetchData()
+      isDialogImportVisible.value = false
+      importFile.value = null
+    } else {
+      showSnackbar({
+        text: response.message || 'Gagal import data',
+        color: 'error',
+      })
+    }
+  } catch (err) {
+    const message = typeof err.data?.message === 'object'
+      ? Object.values(err.data.message).flat().join('; ')
+      : err.data?.message || 'Terjadi kesalahan saat import.'
+    showSnackbar({
+      text: message,
+      color: 'error',
+    })
+  } finally {
+    importLoading.value = false
+  }
+}
+
 const isDialogDeleteVisible = ref(false)
 const deleteData = ref({})
 
@@ -223,10 +307,16 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi], () => {
 
         <VSpacer />
 
-        <div class="d-flex gap-x-4 align-center">
+        <div class="d-flex gap-x-4 align-center flex-wrap">
           <!-- 👉 Export button -->
           <VBtn variant="outlined" color="secondary" prepend-icon="ri-upload-2-line">
             Export
+          </VBtn>
+
+          <!-- 👉 Import button -->
+          <VBtn variant="outlined" color="info" prepend-icon="ri-download-2-line"
+            @click="isDialogImportVisible = true">
+            Import
           </VBtn>
 
           <VBtn color="primary" prepend-icon="ri-add-line"
@@ -316,6 +406,44 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi], () => {
           <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
             <VIcon icon="ri-delete-bin-line" class="me-1" />
             Hapus
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <!-- Import Dialog -->
+    <VDialog v-model="isDialogImportVisible" width="500">
+      <VCard title="Import Tagihan">
+        <DialogCloseBtn variant="text" size="default" @click="isDialogImportVisible = false" />
+
+        <VCardText>
+          <p class="mb-4">
+            Upload file Excel (.xlsx, .xls) atau CSV dengan format yang sesuai.
+          </p>
+
+          <VBtn variant="text" color="primary" prepend-icon="ri-file-download-line" class="mb-4"
+            @click="downloadTemplate">
+            Download Template
+          </VBtn>
+
+          <VFileInput
+            v-model="importFile"
+            label="Pilih File"
+            accept=".xlsx,.xls,.csv"
+            prepend-icon="ri-file-excel-2-line"
+            show-size
+            :disabled="importLoading"
+          />
+        </VCardText>
+
+        <VCardText class="d-flex justify-end flex-wrap gap-4">
+          <VBtn variant="outlined" color="secondary" @click="isDialogImportVisible = false"
+            :disabled="importLoading">
+            Batal
+          </VBtn>
+          <VBtn color="primary" @click="submitImport" :loading="importLoading">
+            <VIcon icon="ri-upload-cloud-line" class="me-1" />
+            Import
           </VBtn>
         </VCardText>
       </VCard>
