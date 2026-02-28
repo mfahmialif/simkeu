@@ -71,7 +71,7 @@ const login = async () => {
 
     // ❗ nextTick is required to wait for DOM updates and later redirect
     await nextTick(() => {
-      window.location.replace(route.query.to ? String(route.query.to) : '/home')
+      window.location.replace(route.query.to ? String(route.query.to) : '/admin/dashboard')
     })
   }
   catch (err) {

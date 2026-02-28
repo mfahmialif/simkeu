@@ -8,6 +8,10 @@ export default [
         title: "Kategori",
         to: "admin-saldo-kategori",
       },
+      {
+        title: "Catatan Harian",
+        to: "admin-saldo-catatan-harian",
+      },
     ],
   },
 ];

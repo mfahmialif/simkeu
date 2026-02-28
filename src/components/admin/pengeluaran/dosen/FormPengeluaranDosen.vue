@@ -54,9 +54,9 @@ const jamFocus = async () => {
 
 const title = ref('Silahkan diisi : ');
 
-// total otomatis
+// total otomatis: (barokah x jam) + (transport x hari)
 const total = computed(() => {
-  return Number(barokah.value || 0) + Number(transport.value || 0);
+  return (Number(barokah.value || 0) * Number(jam.value || 0)) + (Number(transport.value || 0) * Number(hari.value || 0));
 });
 
 const disabled = ref(false);
