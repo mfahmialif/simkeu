@@ -75,9 +75,10 @@ const login = async () => {
     })
   }
   catch (err) {
-    const message = Array.isArray(err.data.message)
-      ? err.data.message.join('; ')
-      : err.data.message;
+    const message = Array.isArray(err?.response?.data?.message)
+      ? err.response.data.message.join('; ')
+      : err?.response?.data?.message || err.message || 'Terjadi kesalahan';
+
     showSnackbar({
       text: message,
       color: 'error',

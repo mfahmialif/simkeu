@@ -16,7 +16,7 @@ const selectedThAkademik = ref();
 const loadingThAkademik = ref(false);
 
 const tanggal = ref("");
-const tanggalReadonly = ref(true);
+const tanggalReadonly = ref(false);
 
 const fetchThAkademik = async () => {
   try {
