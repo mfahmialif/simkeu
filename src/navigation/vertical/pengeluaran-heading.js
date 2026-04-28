@@ -1,3 +1,3 @@
 export default [
-  { heading: "PENGELUARAN" },
+  { heading: "Pengeluaran" },
 ];

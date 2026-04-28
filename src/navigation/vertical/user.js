@@ -1,8 +1,8 @@
 export default [
-  { heading: "Website" },
+  { heading: "Kelola" },
   {
     title: "User",
-    icon: { icon: "ri-user-3-line" },
+    icon: { icon: "ri-user-settings-line" },
     to: "admin-user",
   },
 ];

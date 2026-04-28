@@ -1,18 +1,8 @@
 export default [
-  { heading: "PENGELUARAN" },
+  { heading: "Pengeluaran" },
   {
     title: "Pengeluaran",
-    icon: { icon: "ri-arrow-down-line" },
-    to: "admin-pengeluaran"
-    // children: [
-    //   {
-    //     title: "Jenis Saldo",
-    //     to: "apps-ecommerce-product-list",
-    //   },
-    //   {
-    //     title: "Saldo",
-    //     to: "apps-ecommerce-product-list",
-    //   },
-    // ],
+    icon: { icon: "ri-exchange-funds-line" },
+    to: "admin-pengeluaran",
   },
 ];

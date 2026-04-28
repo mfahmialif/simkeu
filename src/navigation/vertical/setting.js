@@ -1,19 +1,12 @@
 export default [
-  { heading: "Setting" },
   {
-    title: "Prodi",
-    icon: { icon: "ri-graduation-cap-line" },
-    to: "admin-setting-prodi",
-  },
-  {
-    title: "Tahun Akademik",
-    icon: { icon: "ri-calendar-line" },
-    to: "admin-setting-th-akademik",
-  },
-  {
-    title: "Form Schedule",
-    icon: { icon: "ri-time-line" },
-    to: "admin-setting-form-schadule",
+    title: "Pengaturan",
+    icon: { icon: "ri-settings-3-line" },
+    children: [
+      { title: "Prodi", icon: { icon: "ri-graduation-cap-line" }, to: "admin-setting-prodi" },
+      { title: "Tahun Akademik", icon: { icon: "ri-calendar-line" }, to: "admin-setting-th-akademik" },
+      { title: "Form Schedule", icon: { icon: "ri-time-line" }, to: "admin-setting-form-schadule" },
+    ],
   },
   {
     title: "Profile",
@@ -22,7 +15,7 @@ export default [
   },
   {
     title: "Logout",
-    icon: { icon: "ri-logout-box-line" },
+    icon: { icon: "ri-logout-box-r-line" },
     to: "logout",
   },
 ];

@@ -13,61 +13,45 @@ import pengeluaranBarokahDosen from "./barokahdosen/pengeluaranBarokahDosen";
 const userData = useCookie("userData").value ?? {};
 const role = userData.role?.name;
 
-let routes = [];
-if (role) {
-  if (role == "admin") {
-    routes = [
-      ...dashboard,
-      ...saldo,
-      ...pemasukan,
-      ...pengeluaran,
-      ...user,
-      ...setting,
-    ];
-  }
+const routesByRole = {
+  admin: [
+    ...dashboard,
+    ...saldo,
+    ...pemasukan,
+    ...pengeluaran,
+    ...user,
+    ...setting,
+  ],
 
-  if (role == "staff") {
-    routes = [...dashboardStaff, ...pemasukanStaff, ...setting];
-  }
+  pimpinan: [
+    ...dashboard,
+    ...saldo,
+    ...pemasukan,
+    ...pengeluaran,
+    ...user,
+    ...setting,
+  ],
 
-  if (role == "pimpinan") {
-    routes = [
-      ...dashboard,
-      ...saldo,
-      ...pemasukan,
-      ...pengeluaran,
-      ...user,
-      ...setting,
-    ];
-  }
+  keuangan: [
+    ...dashboard,
+    ...saldo,
+    ...pemasukan,
+    ...pengeluaran,
+    ...user,
+    ...setting,
+  ],
 
-  if (role == "keuangan") {
-    routes = [
-      ...dashboard,
-      ...saldo,
-      ...pemasukan,
-      ...pengeluaran,
-      ...user,
-      ...setting,
-    ];
-  }
+  staff: [...dashboardStaff, ...pemasukanStaff, ...setting],
+  kabag: [...dashboardStaff, ...pemasukanStaff, ...setting],
 
-  if (role == "kabag") {
-    routes = [...dashboardStaff, ...pemasukanStaff, ...setting];
-  }
+  rumahtangga: [
+    ...dashboard,
+    ...pemasukanRumahTangga,
+    ...pengeluaranRumahTangga,
+    ...setting,
+  ],
 
-  if (role == "rumahtangga") {
-    routes = [
-      ...dashboard,
-      ...pemasukanRumahTangga,
-      ...pengeluaranRumahTangga,
-      ...setting,
-    ];
-  }
+  barokahdosen: [...dashboard, ...pengeluaranBarokahDosen, ...setting],
+};
 
-  if (role == "barokahdosen") {
-    routes = [...dashboard, ...pengeluaranBarokahDosen, ...setting];
-  }
-}
-
-export default routes;
+export default routesByRole[role] ?? [];

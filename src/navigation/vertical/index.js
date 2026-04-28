@@ -9,77 +9,60 @@ import saldo from "./saldo";
 import setting from "./setting";
 import dashboardStaff from "./staff/dashboardStaff";
 import pemasukanStaff from "./staff/pemasukanStaff";
-import uiElements from "./ui-elements";
 import user from "./user";
 
 const userData = useCookie("userData").value ?? {};
 const role = userData.role?.name;
 
-let routes = [];
-if (role) {
-  if (role == "admin") {
-    routes = [
-      ...dashboard,
-      ...saldo,
-      ...pemasukan,
-      ...pengeluaranHeading,
-      ...pengeluaran,
-      ...pengeluaranDosen,
-      ...user,
-      ...setting,
-    ];
-  }
+const routesByRole = {
+  admin: [
+    ...dashboard,
+    ...saldo,
+    ...pemasukan,
+    ...pengeluaranHeading,
+    ...pengeluaran,
+    ...pengeluaranDosen,
+    ...user,
+    ...setting,
+  ],
 
-  if (role == "staff") {
-    routes = [...dashboardStaff, ...pemasukanStaff, ...setting];
-  }
+  pimpinan: [
+    ...dashboard,
+    ...saldo,
+    ...pemasukan,
+    ...pengeluaranHeading,
+    ...pengeluaran,
+    ...pengeluaranDosen,
+    ...user,
+    ...setting,
+  ],
 
-  if (role == "pimpinan") {
-    routes = [
-      ...dashboard,
-      ...saldo,
-      ...pemasukan,
-      ...pengeluaranHeading,
-      ...pengeluaran,
-      ...pengeluaranDosen,
-      ...user,
-      ...setting,
-    ];
-  }
+  keuangan: [
+    ...dashboard,
+    ...saldo,
+    ...pemasukan,
+    ...pengeluaranHeading,
+    ...pengeluaran,
+    ...user,
+    ...setting,
+  ],
 
-  if (role == "keuangan") {
-    routes = [
-      ...dashboard,
-      ...saldo,
-      ...pemasukan,
-      ...pengeluaranHeading,
-      ...pengeluaran,
-      ...user,
-      ...setting,
-    ];
-  }
+  staff: [...dashboardStaff, ...pemasukanStaff, ...setting],
+  kabag: [...dashboardStaff, ...pemasukanStaff, ...setting],
 
-  if (role == "kabag") {
-    routes = [...dashboardStaff, ...pemasukanStaff, ...setting];
-  }
+  rumahtangga: [
+    ...dashboard,
+    ...pemasukanRumahTangga,
+    ...pengeluaranRumahTangga,
+    ...setting,
+  ],
 
-  if (role == "rumahtangga") {
-    routes = [
-      ...dashboard,
-      ...pemasukanRumahTangga,
-      ...pengeluaranRumahTangga,
-      ...setting,
-    ];
-  }
+  barokahdosen: [
+    ...dashboard,
+    ...pengeluaranHeading,
+    ...pengeluaranDosen,
+    ...setting,
+  ],
+};
 
-  if (role == "barokahdosen") {
-    routes = [
-      ...dashboard,
-      ...pengeluaranHeading,
-      ...pengeluaranDosen,
-      ...setting,
-    ];
-  }
-}
-
-export default routes;
+export default routesByRole[role] ?? [];
