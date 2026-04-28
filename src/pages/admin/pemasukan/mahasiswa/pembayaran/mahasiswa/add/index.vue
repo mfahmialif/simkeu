@@ -8,6 +8,7 @@ import TagihanPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/p
 const router = useRouter();
 
 const disabled = ref(false);
+const isAdmin = ref(false);
 
 const submitData = async () => {
     const formData = buildPembayaranFormData();
@@ -27,6 +28,22 @@ const submitData = async () => {
 
         console.log(response);
         if (response.status === true) {
+            // Simpan catatan deposit jika ada kelebihan nominal
+            const excessDeposit = Number(mahasiswaRef.value?.mahasiswa?.autoSimpanDeposit) || 0;
+            if (excessDeposit > 0) {
+                try {
+                    await $api("/admin/pemasukan/mahasiswa/catatan-deposit", {
+                        method: "POST",
+                        body: {
+                            nim: mahasiswaRef.value.mahasiswa.nim,
+                            jumlah: excessDeposit,
+                        },
+                    });
+                } catch (e) {
+                    console.error("Gagal simpan catatan deposit:", e);
+                }
+            }
+
             showSnackbar({
                 text: response.message,
                 color: "success",
@@ -151,6 +168,8 @@ onMounted(() => {
     const role = userData.role?.name;
     const jenisKelamin = userData.jenis_kelamin;
 
+    isAdmin.value = role === "admin";
+
     if ((role == "staff" || role == "kabag") && jenisKelamin == "Laki-laki") {
         redirectKwitansi.value = true;
     }
@@ -178,14 +197,12 @@ onMounted(() => {
                     "
                     >Batalkan</VBtn
                 >
-                <VBtn color="primary" @click="submitData" :disabled
-                    >Simpan Pembayaran</VBtn
-                >
             </div>
         </div>
 
-        <VRow>
-            <VCol md="8">
+        <div class="payment-grid">
+            <!-- Akademik + Mahasiswa + Deposit -->
+            <div class="grid-main">
                 <AkademikPembayaranMahasiswa ref="akademikRef" />
 
                 <MahasiswaPembayaranMahasiswa
@@ -194,34 +211,90 @@ onMounted(() => {
                     @refreshDeposit="onRefreshDeposit"
                 />
 
+                <DepositPembayaranMahasiswa
+                    ref="depositRef"
+                    :mahasiswa="mahasiswaRef?.mahasiswa"
+                    :is-admin="isAdmin"
+                    class="mt-4"
+                />
+            </div>
+
+            <!-- Pembayaran -->
+            <div class="grid-pembayaran">
                 <TagihanPembayaranMahasiswa
                     ref="tagihanRef"
                     :mahasiswa="mahasiswaRef?.mahasiswa"
                 />
+            </div>
 
+            <!-- Metode + Print + Simpan (mobile: paling bawah, desktop: sidebar bawah) -->
+            <div class="grid-actions">
                 <JenisPembayaranMahasiswaPembayaran ref="jenisPembayaranRef" />
-            </VCol>
 
-            <VCol md="4" cols="12">
-                <DepositPembayaranMahasiswa
-                    ref="depositRef"
-                    :mahasiswa="mahasiswaRef?.mahasiswa"
-                />
+                <VCard class="mt-4">
+                    <VCardText>
+                        <VSwitch
+                            v-model="redirectKwitansi"
+                            label="Otomatis Print Kwitansi ?"
+                            hide-details
+                            color="primary"
+                        />
+                    </VCardText>
+                </VCard>
 
-                <VSwitch
-                    class="mt-3"
-                    v-model="redirectKwitansi"
-                    label="Otomatis Print Kwitansi ?"
-                />
                 <VBtn
                     color="primary"
                     @click="submitData"
                     :disabled
-                    class="w-100 mt-3"
+                    class="w-100 mt-4"
+                    size="large"
                 >
+                    <VIcon icon="ri-save-line" class="me-2" />
                     Simpan Pembayaran
                 </VBtn>
-            </VCol>
-        </VRow>
+            </div>
+        </div>
     </div>
 </template>
+
+<style scoped>
+/* Mobile: single column */
+.payment-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.grid-main       { order: 1; }
+.grid-pembayaran { order: 2; }
+.grid-actions    { order: 3; }
+
+/* Desktop: 2 kolom */
+@media (min-width: 960px) {
+    .payment-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    .grid-main {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: start;
+    }
+
+    .grid-pembayaran {
+        grid-column: 1;
+        grid-row: 2;
+        align-self: start;
+    }
+
+    .grid-actions {
+        grid-column: 2;
+        grid-row: 1 / -1;
+        position: sticky;
+        top: 80px;
+        align-self: start;
+    }
+}
+</style>
