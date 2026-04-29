@@ -242,7 +242,24 @@ function removeRow(id) {
 }
 
 /** Recalc per-baris */
-function recalc(idx) {
+/** Recalc saat admin ubah field DIBAYAR */
+function recalcDibayar(idx) {
+  const r = rows.value[idx];
+  r.dibayar = Math.max(0, Number(r.dibayar || 0));
+  r.dibayar = Math.min(r.dibayar, r.nominal);
+
+  // Limit deposit agar dibayar + deposit tidak melebihi nominal
+  const sisaNominal = Math.max(0, r.nominal - r.dibayar);
+  r.deposit = Math.min(r.deposit, sisaNominal);
+
+  // Auto-update total deposit yang dipakai
+  props.mahasiswa.dipakai = rows.value.reduce(
+    (sum, row) => sum + (Number(row.deposit) || 0), 0
+  );
+}
+
+/** Recalc saat admin ubah field DEPOSIT */
+function recalcDeposit(idx) {
   const r = rows.value[idx];
   r.deposit = Math.max(0, Number(r.deposit || 0));
 
@@ -546,7 +563,7 @@ watch(
             :hint="formatRupiah(row.dibayar)"
             persistent-hint
             :readonly="paymentMode === 'nominal'"
-            @update:modelValue="recalc(idx)"
+            @update:modelValue="recalcDibayar(idx)"
           />
         </VCol>
 
@@ -561,7 +578,7 @@ watch(
             :hint="formatRupiah(row.deposit)"
             persistent-hint
             :readonly="paymentMode === 'nominal'"
-            @update:modelValue="recalc(idx)"
+            @update:modelValue="recalcDeposit(idx)"
           />
         </VCol>
 
