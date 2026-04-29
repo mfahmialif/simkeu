@@ -7,6 +7,7 @@ import DashboardOverviewTable from "./DashboardOverviewTable.vue";
 import DashboardFinanceStatistics from "./DashboardFinanceStatistics.vue";
 import DashboardFinanceOverview from "./DashboardFinanceOverview.vue";
 import DashboardMenu from "./DashboardMenu.vue";
+import DashboardKRSReport from "./DashboardKRSReport.vue";
 
 const userData = useCookie("userData").value ?? {};
 const role = userData.role?.name;
@@ -31,6 +32,10 @@ const role = userData.role?.name;
 
     <VCol cols="12" md="6">
       <DashboardFinanceStatistics />
+    </VCol>
+
+    <VCol cols="12">
+      <DashboardKRSReport />
     </VCol>
 
     <!-- <VCol
@@ -59,3 +64,4 @@ const role = userData.role?.name;
     </VCol> -->
   </VRow>
 </template>
+

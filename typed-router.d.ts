@@ -26,6 +26,7 @@ declare module 'vue-router/auto-routes' {
     'admin-dashboard-dashboard-delivery-performance': RouteRecordInfo<'admin-dashboard-dashboard-delivery-performance', '/admin/dashboard/DashboardDeliveryPerformance', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-finance-overview': RouteRecordInfo<'admin-dashboard-dashboard-finance-overview', '/admin/dashboard/DashboardFinanceOverview', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-finance-statistics': RouteRecordInfo<'admin-dashboard-dashboard-finance-statistics', '/admin/dashboard/DashboardFinanceStatistics', Record<never, never>, Record<never, never>>,
+    'admin-dashboard-dashboard-krsreport': RouteRecordInfo<'admin-dashboard-dashboard-krsreport', '/admin/dashboard/DashboardKRSReport', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-menu': RouteRecordInfo<'admin-dashboard-dashboard-menu', '/admin/dashboard/DashboardMenu', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-order-by-countries': RouteRecordInfo<'admin-dashboard-dashboard-order-by-countries', '/admin/dashboard/DashboardOrderByCountries', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-overview-table': RouteRecordInfo<'admin-dashboard-dashboard-overview-table', '/admin/dashboard/DashboardOverviewTable', Record<never, never>, Record<never, never>>,

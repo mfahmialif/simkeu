@@ -68,11 +68,8 @@ const login = async () => {
       color: 'success',
     });
     // Redirect to `to` query if exist or redirect to index route
-
-    // ❗ nextTick is required to wait for DOM updates and later redirect
-    await nextTick(() => {
-      window.location.replace(route.query.to ? String(route.query.to) : '/admin/dashboard')
-    })
+    await nextTick()
+    await router.replace(route.query.to ? String(route.query.to) : '/admin/dashboard')
   }
   catch (err) {
     const message = Array.isArray(err?.response?.data?.message)
