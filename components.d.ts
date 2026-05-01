@@ -376,6 +376,7 @@ declare module 'vue' {
     FormProdi: typeof import('./src/components/admin/prodi/FormProdi.vue')['default']
     FormProfile: typeof import('./src/components/admin/profile/FormProfile.vue')['default']
     FormSetoran: typeof import('./src/components/admin/setoran/FormSetoran.vue')['default']
+    FormSyaratTagihan: typeof import('./src/components/admin/syarat-tagihan/FormSyaratTagihan.vue')['default']
     FormTagihan: typeof import('./src/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue')['default']
     FormTambahPemasukan: typeof import('./src/components/admin/pemasukan/pemasukan/tambah/FormTambahPemasukan.vue')['default']
     FormThAkademik: typeof import('./src/components/admin/th-akademik/FormThAkademik.vue')['default']
