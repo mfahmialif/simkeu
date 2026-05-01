@@ -1,9 +1,17 @@
 import { canNavigate } from "@layouts/plugins/casl";
+import NProgress from "nprogress";
+import "nprogress/nprogress.css";
+
+// Konfigurasi NProgress seperti YouTube
+NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 });
 
 export const setupGuards = (router) => {
   // 👉 router.beforeEach
   // Docs: https://router.vuejs.org/guide/advanced/navigation-guards.html#global-before-guards
   router.beforeEach((to) => {
+    // Mulai progress bar
+    NProgress.start();
+
     /*
      * If it's a public route, continue navigation. This kind of pages are allowed to visited by login & non-login users. Basically, without any restrictions.
      * Examples of public routes are, 404, under maintenance, etc.
@@ -40,5 +48,11 @@ export const setupGuards = (router) => {
           };
       /* eslint-enable indent */
     }
+  });
+
+  // 👉 router.afterEach
+  router.afterEach(() => {
+    // Selesai progress bar
+    NProgress.done();
   });
 };

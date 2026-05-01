@@ -39,10 +39,12 @@ watch([
     :is="configStore.appContentLayoutNav === AppContentLayoutNav.Vertical ? DefaultLayoutWithVerticalNav : DefaultLayoutWithHorizontalNav">
     <AppLoadingIndicator ref="refLoadingIndicator" />
 
-    <RouterView v-slot="{ Component }">
-      <Suspense :timeout="0" @fallback="isFallbackStateActive = true" @resolve="isFallbackStateActive = false">
-        <Component :is="Component" />
-      </Suspense>
+    <RouterView v-slot="{ Component, route }">
+      <Transition name="fade-page" mode="out-in">
+        <Suspense :timeout="0" @fallback="isFallbackStateActive = true" @resolve="isFallbackStateActive = false">
+          <Component :is="Component" :key="route.path" />
+        </Suspense>
+      </Transition>
     </RouterView>
   </Component>
 </template>

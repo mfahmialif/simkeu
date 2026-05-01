@@ -27,14 +27,16 @@ watch([
     class="layout-wrapper layout-blank"
     data-allow-mismatch
   >
-    <RouterView #="{Component}">
-      <Suspense
-        :timeout="0"
-        @fallback="isFallbackStateActive = true"
-        @resolve="isFallbackStateActive = false"
-      >
-        <Component :is="Component" />
-      </Suspense>
+    <RouterView #="{ Component, route }">
+      <Transition name="fade-page" mode="out-in">
+        <Suspense
+          :timeout="0"
+          @fallback="isFallbackStateActive = true"
+          @resolve="isFallbackStateActive = false"
+        >
+          <Component :is="Component" :key="route.path" />
+        </Suspense>
+      </Transition>
     </RouterView>
   </div>
 </template>
