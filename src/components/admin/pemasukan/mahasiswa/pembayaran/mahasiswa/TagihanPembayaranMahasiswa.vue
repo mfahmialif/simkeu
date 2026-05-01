@@ -8,7 +8,7 @@ const selectedTagihan = ref([]); // <-- array untuk multiple
 const loadingTagihan = ref(false);
 
 /** ──── Payment Mode Toggle ──── */
-const paymentMode = ref("nominal"); // 'nominal' | 'tagihan'
+const paymentMode = ref("tagihan"); // 'nominal' | 'tagihan'
 const nominalInput = ref(0);
 const sisaNominal = ref(0);
 const showDetailTagihan = ref(false);
@@ -312,23 +312,23 @@ watch(
         <VCol cols="6">
           <VBtn
             block
-            :color="paymentMode === 'nominal' ? 'primary' : 'default'"
-            :variant="paymentMode === 'nominal' ? 'elevated' : 'outlined'"
-            @click="paymentMode = 'nominal'"
-          >
-            <VIcon icon="ri-money-dollar-circle-line" class="me-2" />
-            Mode Bayar
-          </VBtn>
-        </VCol>
-        <VCol cols="6">
-          <VBtn
-            block
             :color="paymentMode === 'tagihan' ? 'primary' : 'default'"
             :variant="paymentMode === 'tagihan' ? 'elevated' : 'outlined'"
             @click="paymentMode = 'tagihan'"
           >
             <VIcon icon="ri-list-check-2" class="me-2" />
             Mode Tagihan
+          </VBtn>
+        </VCol>
+        <VCol cols="6">
+          <VBtn
+            block
+            :color="paymentMode === 'nominal' ? 'primary' : 'default'"
+            :variant="paymentMode === 'nominal' ? 'elevated' : 'outlined'"
+            @click="paymentMode = 'nominal'"
+          >
+            <VIcon icon="ri-money-dollar-circle-line" class="me-2" />
+            Mode Bayar
           </VBtn>
         </VCol>
       </VRow>

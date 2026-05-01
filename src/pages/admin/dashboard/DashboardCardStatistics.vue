@@ -11,15 +11,15 @@ const logisticData = ref([
     isHover: false,
   },
   {
-    icon: "ri-alert-line",
-    color: "warning",
+    icon: "ri-arrow-left-down-line",
+    color: "success",
     title: "Pemasukan",
     value: 0,
     change: 0,
     isHover: false,
   },
   {
-    icon: "ri-route-line",
+    icon: "ri-arrow-right-up-line",
     color: "error",
     title: "Pengeluaran",
     value: 0,
@@ -52,15 +52,15 @@ const fetchData = async () => {
         isHover: false,
       },
       {
-        icon: "ri-alert-line",
-        color: "warning",
+        icon: "ri-arrow-left-down-line",
+        color: "success",
         title: "Pemasukan",
         value: formatRupiah(response.data.pemasukan),
         change: response.data.jumlahPemasukan,
         isHover: false,
       },
       {
-        icon: "ri-route-line",
+        icon: "ri-arrow-right-up-line",
         color: "error",
         title: "Pengeluaran",
         value: formatRupiah(response.data.pengeluaran),
@@ -82,6 +82,14 @@ const fetchData = async () => {
       color: "error",
     });
   }
+};
+
+const isModalOpen = ref(false);
+const selectedData = ref(null);
+
+const openDetailModal = (data) => {
+  selectedData.value = data;
+  isModalOpen.value = true;
 };
 
 onMounted(() => {
@@ -108,6 +116,7 @@ onMounted(() => {
           "
           @mouseenter="data.isHover = true"
           @mouseleave="data.isHover = false"
+          @click="openDetailModal(data)"
         >
           <VCardText>
             <VSkeletonLoader v-if="isLoading" type="paragraph"></VSkeletonLoader>
@@ -116,9 +125,11 @@ onMounted(() => {
                 <VAvatar variant="tonal" :color="data.color" rounded="lg">
                   <VIcon :icon="data.icon" size="24" />
                 </VAvatar>
-                <h4 class="text-h4">
-                  {{ data.value }}
-                </h4>
+                <div style="min-width: 0;">
+                  <h4 class="text-h4 text-truncate" :title="data.value">
+                    {{ data.value }}
+                  </h4>
+                </div>
               </div>
               <h6 class="text-h6 font-weight-regular">
                 {{ data.title }}
@@ -135,6 +146,40 @@ onMounted(() => {
       </div>
     </VCol>
   </VRow>
+
+  <VDialog v-model="isModalOpen" max-width="400">
+    <VCard>
+      <VCardItem class="pb-2">
+        <VCardTitle class="text-h5">
+          Detail {{ selectedData?.title }}
+        </VCardTitle>
+      </VCardItem>
+      <VCardText>
+        <div class="d-flex flex-column gap-y-3">
+          <div class="d-flex align-center gap-x-3">
+            <VAvatar :color="selectedData?.color" variant="tonal" rounded>
+              <VIcon :icon="selectedData?.icon" size="24" />
+            </VAvatar>
+            <div>
+              <div class="text-body-1 font-weight-medium">Total Nilai</div>
+              <h4 class="text-h4">{{ selectedData?.value }}</h4>
+            </div>
+          </div>
+          <VDivider />
+          <div class="d-flex justify-space-between align-center">
+            <span class="text-body-1">Total Data</span>
+            <span class="text-h6">{{ selectedData?.change }} Data</span>
+          </div>
+        </div>
+      </VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn variant="tonal" color="secondary" @click="isModalOpen = false">
+          Tutup
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
 </template>
 
 <style lang="scss" scoped>

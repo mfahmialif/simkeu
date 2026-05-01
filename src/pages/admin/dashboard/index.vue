@@ -8,6 +8,8 @@ import DashboardFinanceStatistics from "./DashboardFinanceStatistics.vue";
 import DashboardFinanceOverview from "./DashboardFinanceOverview.vue";
 import DashboardMenu from "./DashboardMenu.vue";
 import DashboardKRSReport from "./DashboardKRSReport.vue";
+import DashboardKRSReportLocal from "./DashboardKRSReportLocal.vue";
+import DashboardUASReport from "./DashboardUASReport.vue";
 
 const userData = useCookie("userData").value ?? {};
 const role = userData.role?.name;
@@ -34,8 +36,16 @@ const role = userData.role?.name;
       <DashboardFinanceStatistics />
     </VCol>
 
-    <VCol cols="12">
+    <VCol cols="12" md="6">
+      <DashboardKRSReportLocal />
+    </VCol>
+
+    <VCol cols="12" md="6">
       <DashboardKRSReport />
+    </VCol>
+
+    <VCol cols="12" md="6">
+      <DashboardUASReport />
     </VCol>
 
     <!-- <VCol

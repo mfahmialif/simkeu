@@ -107,7 +107,7 @@ function buildPembayaranFormData() {
 
     // Nullable
     if (m.semester != null) fd.append("semester", m.semester);
-    if (m.dipakai != null) fd.append("dipakai_deposit_mhs", m.dipakai); // total deposit yang dipakai
+    fd.append("dipakai_deposit_mhs", m.dipakai ?? 0); // total deposit yang dipakai
     if (m.kamarId != null) fd.append("kamar_id", m.kamarId);
 
     // Array list_tagihan_*
