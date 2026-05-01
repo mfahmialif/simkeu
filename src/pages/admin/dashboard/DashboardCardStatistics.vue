@@ -55,9 +55,28 @@ const fetchData = async () => {
         icon: "ri-arrow-left-down-line",
         color: "success",
         title: "Pemasukan",
-        value: formatRupiah(response.data.pemasukan),
-        change: response.data.jumlahPemasukan,
+        value: formatRupiah(response.data.pemasukanHarian || 0),
+        change: response.data.jumlahPemasukanHarian || 0,
         isHover: false,
+        isPemasukan: true,
+        breakdown: {
+          harian: {
+            value: formatRupiah(response.data.pemasukanHarian || 0),
+            change: response.data.jumlahPemasukanHarian || 0,
+          },
+          mingguan: {
+            value: formatRupiah(response.data.pemasukanMingguan || 0),
+            change: response.data.jumlahPemasukanMingguan || 0,
+          },
+          bulanan: {
+            value: formatRupiah(response.data.pemasukanBulanan || 0),
+            change: response.data.jumlahPemasukanBulanan || 0,
+          },
+          semua: {
+            value: formatRupiah(response.data.pemasukan || 0),
+            change: response.data.jumlahPemasukan || 0,
+          },
+        },
       },
       {
         icon: "ri-arrow-right-up-line",
@@ -155,22 +174,44 @@ onMounted(() => {
         </VCardTitle>
       </VCardItem>
       <VCardText>
-        <div class="d-flex flex-column gap-y-3">
-          <div class="d-flex align-center gap-x-3">
-            <VAvatar :color="selectedData?.color" variant="tonal" rounded>
-              <VIcon :icon="selectedData?.icon" size="24" />
-            </VAvatar>
-            <div>
-              <div class="text-body-1 font-weight-medium">Total Nilai</div>
-              <h4 class="text-h4">{{ selectedData?.value }}</h4>
+        <template v-if="selectedData?.isPemasukan">
+          <div class="d-flex flex-column gap-y-4">
+            <template v-for="(item, key) in selectedData.breakdown" :key="key">
+              <div class="d-flex align-center gap-x-3">
+                <VAvatar :color="selectedData?.color" variant="tonal" rounded>
+                  <VIcon :icon="selectedData?.icon" size="24" />
+                </VAvatar>
+                <div class="flex-grow-1">
+                  <div class="text-body-1 font-weight-medium text-capitalize">Pemasukan {{ key }}</div>
+                  <h4 class="text-h4">{{ item.value }}</h4>
+                </div>
+                <div class="text-right">
+                  <span class="text-body-2 text-disabled">Total Data</span>
+                  <div class="text-h6">{{ item.change }}</div>
+                </div>
+              </div>
+              <VDivider v-if="key !== 'semua'" />
+            </template>
+          </div>
+        </template>
+        <template v-else>
+          <div class="d-flex flex-column gap-y-3">
+            <div class="d-flex align-center gap-x-3">
+              <VAvatar :color="selectedData?.color" variant="tonal" rounded>
+                <VIcon :icon="selectedData?.icon" size="24" />
+              </VAvatar>
+              <div>
+                <div class="text-body-1 font-weight-medium">Total Nilai</div>
+                <h4 class="text-h4">{{ selectedData?.value }}</h4>
+              </div>
+            </div>
+            <VDivider />
+            <div class="d-flex justify-space-between align-center">
+              <span class="text-body-1">Total Data</span>
+              <span class="text-h6">{{ selectedData?.change }} Data</span>
             </div>
           </div>
-          <VDivider />
-          <div class="d-flex justify-space-between align-center">
-            <span class="text-body-1">Total Data</span>
-            <span class="text-h6">{{ selectedData?.change }} Data</span>
-          </div>
-        </div>
+        </template>
       </VCardText>
       <VCardActions>
         <VSpacer />
