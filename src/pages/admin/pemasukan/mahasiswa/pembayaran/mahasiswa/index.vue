@@ -3,6 +3,16 @@ import { formatDate } from "@vueuse/core";
 
 const selectedThAkademik = ref();
 const thAkademik = ref([]);
+const selectedProdi = ref(null);
+const prodiList = ref([]);
+const selectedJenisPembayaran = ref(null);
+const jenisPembayaranList = ref([]);
+const selectedUser = ref(null);
+const userList = ref([]);
+const tanggalMulai = ref(null);
+const tanggalAkhir = ref(null);
+
+const widgetRef = ref(null);
 
 const page = ref(1);
 const itemsPerPage = ref(10);
@@ -28,6 +38,17 @@ const fetchData = async () => {
         ...(selectedThAkademik.value && {
           th_akademik_id: selectedThAkademik.value,
         }),
+        ...(selectedProdi.value && {
+          prodi_id: selectedProdi.value,
+        }),
+        ...(selectedJenisPembayaran.value && {
+          jenis_pembayaran_id: selectedJenisPembayaran.value,
+        }),
+        ...(selectedUser.value && {
+          user_id: selectedUser.value,
+        }),
+        ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
+        ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
       },
     });
 
@@ -83,6 +104,65 @@ const fetchThAkademik = async () => {
     });
   } catch (err) {
     console.error(err);
+  }
+};
+
+const fetchProdi = async () => {
+  try {
+    const response = await $api("/admin/prodi", {
+      method: "GET",
+      body: { limit: 100, sort_key: 'nama', sort_order: 'asc' },
+    });
+    if (response && response.data) {
+      const items = response.data.data || response.data;
+      prodiList.value = [
+        { title: '📚 Semua Prodi Sarjana', value: 'sarjana' },
+        { title: '🎓 Semua Prodi Pasca', value: 'pasca' },
+        ...items
+          .filter(p => p.jenjang !== '---')
+          .map(p => ({
+            title: `${p.alias} - ${p.nama} (${p.jenjang})`,
+            value: p.id,
+          })),
+      ];
+    }
+  } catch (err) {
+    console.error('Failed to fetch prodi:', err);
+  }
+};
+
+const fetchJenisPembayaran = async () => {
+  try {
+    const response = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
+      method: "GET",
+      body: { limit: 100 },
+    });
+    if (response && response.data) {
+      const items = response.data.data || response.data;
+      jenisPembayaranList.value = items.map(jp => ({
+        title: jp.nama+" - "+jp.kategori,
+        value: jp.id,
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to fetch jenis pembayaran:', err);
+  }
+};
+
+const fetchUser = async () => {
+  try {
+    const response = await $api("/helper/petugas-pembayaran", {
+      method: "GET",
+    });
+    if (response && response.data) {
+      const items = response.data.data || response.data;
+      userList.value = items.map(u => ({
+        title: `${u.name} (${u.jenis_kelamin})`,
+        value: u.id,
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to fetch petugas:', err);
   }
 };
 
@@ -159,6 +239,9 @@ onMounted(() => {
   document.title = "Pembayaran Mahasiswa - SIMKEU";
   console.log(userData);
   fetchThAkademik();
+  fetchProdi();
+  fetchJenisPembayaran();
+  fetchUser();
 });
 
 watch(
@@ -172,18 +255,68 @@ watch(
 );
 
 watch(selectedThAkademik, () => {
-  console.log("value from wathc", selectedThAkademik.value);
+  page.value = 1;
   fetchData();
 });
+
+watch(selectedProdi, () => {
+  page.value = 1;
+  fetchData();
+});
+
+watch(selectedJenisPembayaran, () => {
+  page.value = 1;
+  fetchData();
+});
+
+watch(selectedUser, () => {
+  page.value = 1;
+  fetchData();
+});
+
+watch(
+  [tanggalMulai, tanggalAkhir],
+  () => {
+    page.value = 1;
+    fetchData();
+  },
+  { deep: true }
+);
+
+const clearDateFilter = () => {
+  tanggalMulai.value = null;
+  tanggalAkhir.value = null;
+};
+
+const refreshData = () => {
+  fetchData();
+  if (widgetRef.value) {
+    widgetRef.value.fetchStatistics();
+  }
+};
 </script>
 
 <template>
   <div>
-    <!-- <WidgetPembayaranMahasiswa /> -->
+    <div class="d-flex justify-end mb-4">
+      <VBtn color="primary" prepend-icon="ri-refresh-line" @click="refreshData">
+        Refresh Data
+      </VBtn>
+    </div>
 
-    <VRow class="mb-2">
+    <WidgetPembayaranMahasiswa
+      ref="widgetRef"
+      :th-akademik-id="selectedThAkademik"
+      :prodi-id="selectedProdi"
+      :jenis-pembayaran-id="selectedJenisPembayaran"
+      :tanggal-mulai="tanggalMulai"
+      :tanggal-akhir="tanggalAkhir"
+      :user-id="selectedUser"
+    />
+
+    <VRow>
       <!-- 👉 Select ThAkademik -->
-      <VCol cols="12" sm="12">
+      <VCol cols="12" sm="3">
         <VSelect
           v-model="selectedThAkademik"
           label="Select Th Akademik"
@@ -193,6 +326,84 @@ watch(selectedThAkademik, () => {
           clear-icon="ri-close-line"
           class="custom-bg-select"
         />
+      </VCol>
+      <!-- 👉 Select Prodi -->
+      <VCol cols="12" sm="3">
+        <VSelect
+          v-model="selectedProdi"
+          label="Filter Prodi"
+          placeholder="Semua Prodi"
+          :items="prodiList"
+          clearable
+          clear-icon="ri-close-line"
+          class="custom-bg-select"
+        />
+      </VCol>
+      <!-- 👉 Select Jenis Pembayaran -->
+      <VCol cols="12" sm="3">
+        <VSelect
+          v-model="selectedJenisPembayaran"
+          label="Filter Jenis Pembayaran"
+          placeholder="Semua Jenis"
+          :items="jenisPembayaranList"
+          clearable
+          clear-icon="ri-close-line"
+          class="custom-bg-select"
+        />
+      </VCol>
+      <!-- 👉 Select User/Petugas -->
+      <VCol cols="12" sm="3">
+        <VSelect
+          v-model="selectedUser"
+          label="Filter Petugas"
+          placeholder="Semua Petugas"
+          :items="userList"
+          clearable
+          clear-icon="ri-close-line"
+          class="custom-bg-select"
+        />
+      </VCol>
+    </VRow>
+
+    <VRow class="mb-2">
+      <!-- 👉 Dari Tanggal -->
+      <VCol cols="12" sm="5">
+        <AppDateTimePicker
+          v-model="tanggalMulai"
+          label="Dari Tanggal"
+          placeholder="Pilih tanggal"
+          :config="{
+            altInput: true,
+            altFormat: 'F j, Y',
+            dateFormat: 'Y-m-d',
+          }"
+        />
+      </VCol>
+      <!-- 👉 Sampai Tanggal -->
+      <VCol cols="12" sm="5">
+        <AppDateTimePicker
+          v-model="tanggalAkhir"
+          label="Sampai Tanggal"
+          placeholder="Pilih tanggal"
+          :config="{
+            altInput: true,
+            altFormat: 'F j, Y',
+            dateFormat: 'Y-m-d',
+          }"
+        />
+      </VCol>
+      <!-- 👉 Reset -->
+      <VCol cols="12" sm="2" class="d-flex align-end">
+        <VBtn
+          color="secondary"
+          variant="outlined"
+          class="w-100"
+          height="48"
+          prepend-icon="ri-refresh-line"
+          @click="clearDateFilter"
+        >
+          Reset
+        </VBtn>
       </VCol>
     </VRow>
 
@@ -314,7 +525,14 @@ watch(selectedThAkademik, () => {
           </div>
         </template>
         <template #item.tanggal="{ item }">
-          <div>{{ formatDate(new Date(item.tanggal), "YYYY-MM-DD") }}</div>
+          <div class="text-caption font-weight-bold text-primary mb-1">
+            <VIcon icon="ri-user-line" size="14" class="me-1" />
+            {{ item.petugas_nama || '-' }}
+          </div>
+          <div>
+            <VIcon icon="ri-calendar-line" size="14" class="me-1" />
+            {{ formatDate(new Date(item.tanggal), "YYYY-MM-DD") }}
+          </div>
         </template>
         <template #item.jumlah="{ item }">
           <div>

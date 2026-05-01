@@ -59,24 +59,22 @@ const fetchData = async () => {
         change: response.data.jumlahPemasukanHarian || 0,
         isHover: false,
         isPemasukan: true,
-        breakdown: {
-          harian: {
-            value: formatRupiah(response.data.pemasukanHarian || 0),
-            change: response.data.jumlahPemasukanHarian || 0,
-          },
-          mingguan: {
-            value: formatRupiah(response.data.pemasukanMingguan || 0),
-            change: response.data.jumlahPemasukanMingguan || 0,
-          },
-          bulanan: {
-            value: formatRupiah(response.data.pemasukanBulanan || 0),
-            change: response.data.jumlahPemasukanBulanan || 0,
-          },
-          semua: {
-            value: formatRupiah(response.data.pemasukan || 0),
-            change: response.data.jumlahPemasukan || 0,
-          },
-        },
+        breakdown: (() => {
+          const breakdown = {};
+          if (response.data.pemasukanBreakdown) {
+            for (const [period, genders] of Object.entries(response.data.pemasukanBreakdown)) {
+              breakdown[period] = {};
+              for (const [gender, item] of Object.entries(genders)) {
+                breakdown[period][gender] = {
+                  value: formatRupiah(item.value || 0),
+                  change: item.change || 0,
+                  hideIfZero: item.hideIfZero || false
+                };
+              }
+            }
+          }
+          return breakdown;
+        })(),
       },
       {
         icon: "ri-arrow-right-up-line",
@@ -166,31 +164,40 @@ onMounted(() => {
     </VCol>
   </VRow>
 
-  <VDialog v-model="isModalOpen" max-width="400">
+  <VDialog v-model="isModalOpen" max-width="550" scrollable>
     <VCard>
       <VCardItem class="pb-2">
         <VCardTitle class="text-h5">
           Detail {{ selectedData?.title }}
         </VCardTitle>
       </VCardItem>
-      <VCardText>
+      <VCardText style="max-height: 600px; overflow-y: auto;">
         <template v-if="selectedData?.isPemasukan">
-          <div class="d-flex flex-column gap-y-4">
-            <template v-for="(item, key) in selectedData.breakdown" :key="key">
-              <div class="d-flex align-center gap-x-3">
-                <VAvatar :color="selectedData?.color" variant="tonal" rounded>
-                  <VIcon :icon="selectedData?.icon" size="24" />
-                </VAvatar>
-                <div class="flex-grow-1">
-                  <div class="text-body-1 font-weight-medium text-capitalize">Pemasukan {{ key }}</div>
-                  <h4 class="text-h4">{{ item.value }}</h4>
+          <div class="d-flex flex-column gap-y-6">
+            <template v-for="(genders, period) in selectedData.breakdown" :key="period">
+              <VCard variant="outlined" class="pa-4">
+                <h5 class="text-h5 mb-4 text-primary">Pemasukan {{ period }}</h5>
+                <div class="d-flex flex-column gap-y-4">
+                  <template v-for="(item, gender) in genders" :key="gender">
+                    <template v-if="!(item.hideIfZero && item.change === 0)">
+                      <div class="d-flex align-center gap-x-3">
+                        <VAvatar :color="selectedData?.color" variant="tonal" rounded>
+                          <VIcon :icon="selectedData?.icon" size="24" />
+                        </VAvatar>
+                        <div class="flex-grow-1">
+                          <div class="text-body-1 font-weight-medium">{{ gender }}</div>
+                          <h4 class="text-h4">{{ item.value }}</h4>
+                        </div>
+                        <div class="text-right">
+                          <span class="text-body-2 text-disabled">Total Data</span>
+                          <div class="text-h6">{{ item.change }}</div>
+                        </div>
+                      </div>
+                      <VDivider v-if="gender !== 'Keseluruhan'" />
+                    </template>
+                  </template>
                 </div>
-                <div class="text-right">
-                  <span class="text-body-2 text-disabled">Total Data</span>
-                  <div class="text-h6">{{ item.change }}</div>
-                </div>
-              </div>
-              <VDivider v-if="key !== 'semua'" />
+              </VCard>
             </template>
           </div>
         </template>
