@@ -10,6 +10,7 @@ import setting from "./setting";
 import dashboardStaff from "./staff/dashboardStaff";
 import pemasukanStaff from "./staff/pemasukanStaff";
 import user from "./user";
+import laporan from "./laporan";
 
 const userData = useCookie("userData").value ?? {};
 const role = userData.role?.name;
@@ -22,6 +23,7 @@ const routesByRole = {
     ...pengeluaranHeading,
     ...pengeluaran,
     ...pengeluaranDosen,
+    ...laporan,
     ...user,
     ...setting,
   ],
@@ -33,6 +35,7 @@ const routesByRole = {
     ...pengeluaranHeading,
     ...pengeluaran,
     ...pengeluaranDosen,
+    ...laporan,
     ...user,
     ...setting,
   ],
@@ -43,12 +46,13 @@ const routesByRole = {
     ...pemasukan,
     ...pengeluaranHeading,
     ...pengeluaran,
+    ...laporan,
     ...user,
     ...setting,
   ],
 
-  staff: [...dashboardStaff, ...pemasukanStaff, ...setting],
-  kabag: [...dashboardStaff, ...pemasukanStaff, ...setting],
+  staff: [...dashboardStaff, ...pemasukanStaff, ...laporan, ...setting],
+  kabag: [...dashboardStaff, ...pemasukanStaff, ...laporan, ...setting],
 
   rumahtangga: [
     ...dashboard,

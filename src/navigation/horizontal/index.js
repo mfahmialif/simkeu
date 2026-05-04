@@ -9,6 +9,7 @@ import user from "./user";
 import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
 import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
 import pengeluaranBarokahDosen from "./barokahdosen/pengeluaranBarokahDosen";
+import laporan from "./laporan";
 
 const userData = useCookie("userData").value ?? {};
 const role = userData.role?.name;
@@ -19,6 +20,7 @@ const routesByRole = {
     ...saldo,
     ...pemasukan,
     ...pengeluaran,
+    ...laporan,
     ...user,
     ...setting,
   ],
@@ -28,6 +30,7 @@ const routesByRole = {
     ...saldo,
     ...pemasukan,
     ...pengeluaran,
+    ...laporan,
     ...user,
     ...setting,
   ],
@@ -37,6 +40,7 @@ const routesByRole = {
     ...saldo,
     ...pemasukan,
     ...pengeluaran,
+    ...laporan,
     ...user,
     ...setting,
   ],
