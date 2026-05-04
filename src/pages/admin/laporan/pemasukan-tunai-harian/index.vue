@@ -19,6 +19,9 @@ const jenjangOptions = [
   { title: "Pascasarjana", value: "pascasarjana" }
 ];
 
+const selectedJenisPembayaran = ref(null);
+const jenisPembayaranList = ref([]);
+
 const selectedTahun = ref(new Date().getFullYear().toString());
 const tahunOptions = computed(() => {
   const currentYear = new Date().getFullYear();
@@ -70,8 +73,8 @@ const fetchData = async () => {
   try {
     isLoading.value = true;
     const bodyData = selectedMode.value === 'tahunan' 
-      ? { mode: 'tahunan', tahun: selectedTahun.value, jenjang: selectedJenjang.value }
-      : { mode: 'bulanan', bulan: selectedBulan.value, jenjang: selectedJenjang.value };
+      ? { mode: 'tahunan', tahun: selectedTahun.value, jenjang: selectedJenjang.value, ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }) }
+      : { mode: 'bulanan', bulan: selectedBulan.value, jenjang: selectedJenjang.value, ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }) };
 
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/pemasukan-tunai-harian", {
       method: "GET",
@@ -109,8 +112,8 @@ const downloadExcel = async () => {
     showSnackbar({ text: "Loading Excel...", color: "info" });
     
     const bodyData = selectedMode.value === 'tahunan' 
-      ? { mode: 'tahunan', tahun: selectedTahun.value, action: 'excel', jenjang: selectedJenjang.value }
-      : { mode: 'bulanan', bulan: selectedBulan.value, action: 'excel', jenjang: selectedJenjang.value };
+      ? { mode: 'tahunan', tahun: selectedTahun.value, action: 'excel', jenjang: selectedJenjang.value, ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }) }
+      : { mode: 'bulanan', bulan: selectedBulan.value, action: 'excel', jenjang: selectedJenjang.value, ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }) };
       
     const filename = selectedMode.value === 'tahunan' 
       ? `Pemasukan_Tunai_Harian_Tahun_${selectedTahun.value}.xlsx`
@@ -164,10 +167,45 @@ const printTable = () => {
   setTimeout(() => { win.print(); }, 500);
 };
 
+const fetchJenisPembayaran = async () => {
+  try {
+    const userData = useCookie("userData").value ?? {};
+    const response = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
+      method: "GET",
+      body: { limit: 100 },
+    });
+    if (response && response.data) {
+      const items = response.data.data || response.data;
+      
+      const role = (userData?.role?.name || '').toLowerCase();
+      const jk = (userData?.jenis_kelamin || '').toLowerCase();
+      
+      let userCategory = '%';
+      if (role !== 'admin' && role !== 'kabag') {
+         if (jk === 'laki-laki') userCategory = 'Putra';
+         if (jk === 'perempuan') userCategory = 'Putri';
+      }
+
+      jenisPembayaranList.value = items.filter(jp => {
+         if (userCategory === '%') return true;
+         if (jp.kategori && jp.kategori.toLowerCase().includes(userCategory.toLowerCase())) return true;
+         if (jp.kategori === 'Semua' || jp.kategori === '%') return true; 
+         return false;
+      }).map(jp => ({
+        title: jp.nama + " (" + jp.kategori + ")",
+        value: jp.id,
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to fetch jenis pembayaran:', err);
+  }
+};
+
 onMounted(() => {
   document.title = "Pemasukan Tunai Harian";
   const now = new Date();
   selectedBulan.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  fetchJenisPembayaran();
   fetchData();
 });
 </script>
@@ -221,8 +259,8 @@ onMounted(() => {
               v-if="selectedMode === 'bulanan'"
               v-model="selectedBulan"
               :key="'month-'+theme.global.name.value"
-              label="Pilih Bulan"
-              placeholder="Pilih bulan laporan"
+              label="Bulan"
+              placeholder="Bulan laporan"
               :config="monthPickerConfig"
               prepend-inner-icon="ri-calendar-line"
               hide-details
@@ -231,10 +269,22 @@ onMounted(() => {
               v-else
               v-model="selectedTahun"
               :items="tahunOptions"
-              label="Pilih Tahun"
+              label="Tahun"
               variant="outlined"
               density="comfortable"
               prepend-inner-icon="ri-calendar-line"
+              hide-details
+            />
+          </VCol>
+          <VCol cols="12" md="2">
+            <VSelect
+              v-model="selectedJenisPembayaran"
+              :items="jenisPembayaranList"
+              label="Jenis Pembayaran"
+              placeholder="Semua"
+              variant="outlined"
+              density="comfortable"
+              clearable
               hide-details
             />
           </VCol>
