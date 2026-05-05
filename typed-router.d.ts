@@ -34,6 +34,7 @@ declare module 'vue-router/auto-routes' {
     'admin-dashboard-dashboard-uasreport': RouteRecordInfo<'admin-dashboard-dashboard-uasreport', '/admin/dashboard/DashboardUASReport', Record<never, never>, Record<never, never>>,
     'admin-dashboard-finance-detail': RouteRecordInfo<'admin-dashboard-finance-detail', '/admin/dashboard/finance-detail', Record<never, never>, Record<never, never>>,
     'admin-laporan-pemasukan-tunai-harian': RouteRecordInfo<'admin-laporan-pemasukan-tunai-harian', '/admin/laporan/pemasukan-tunai-harian', Record<never, never>, Record<never, never>>,
+    'admin-laporan-pemasukan-uii-dalwa': RouteRecordInfo<'admin-laporan-pemasukan-uii-dalwa', '/admin/laporan/pemasukan-uii-dalwa', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-catatan-deposit': RouteRecordInfo<'admin-pemasukan-mahasiswa-catatan-deposit', '/admin/pemasukan/mahasiswa/catatan-deposit', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-catatan-deposit-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-catatan-deposit-add', '/admin/pemasukan/mahasiswa/catatan-deposit/add', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-catatan-deposit-edit-id': RouteRecordInfo<'admin-pemasukan-mahasiswa-catatan-deposit-edit-id', '/admin/pemasukan/mahasiswa/catatan-deposit/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
