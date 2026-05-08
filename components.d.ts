@@ -375,6 +375,7 @@ declare module 'vue' {
     FormPengeluaranDosen: typeof import('./src/components/admin/pengeluaran/dosen/FormPengeluaranDosen.vue')['default']
     FormProdi: typeof import('./src/components/admin/prodi/FormProdi.vue')['default']
     FormProfile: typeof import('./src/components/admin/profile/FormProfile.vue')['default']
+    FormSemesterPendek: typeof import('./src/components/admin/pemasukan/mahasiswa/SemesterPendek/FormSemesterPendek.vue')['default']
     FormSetoran: typeof import('./src/components/admin/setoran/FormSetoran.vue')['default']
     FormSyaratTagihan: typeof import('./src/components/admin/syarat-tagihan/FormSyaratTagihan.vue')['default']
     FormTagihan: typeof import('./src/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue')['default']
@@ -426,6 +427,7 @@ declare module 'vue' {
     VueApexCharts: typeof import('vue3-apexcharts')['default']
     WidgetPembayaranMahasiswa: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/WidgetPembayaranMahasiswa.vue')['default']
     WidgetPembayaranMahasiswaTambahan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/WidgetPembayaranMahasiswaTambahan.vue')['default']
+    WidgetSemesterPendek: typeof import('./src/components/admin/pemasukan/mahasiswa/SemesterPendek/WidgetSemesterPendek.vue')['default']
     WidgetUser: typeof import('./src/components/admin/user/WidgetUser.vue')['default']
   }
 }
