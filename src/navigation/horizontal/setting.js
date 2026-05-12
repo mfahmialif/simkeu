@@ -1,3 +1,6 @@
+const userData = useCookie("userData").value ?? {};
+const isAdmin = userData.role?.name === "admin";
+
 export default [
   {
     title: "Pengaturan",
@@ -6,6 +9,9 @@ export default [
       { title: "Prodi", to: "admin-setting-prodi" },
       { title: "Tahun Akademik", to: "admin-setting-th-akademik" },
       { title: "Form Schedule", to: "admin-setting-form-schadule" },
+      ...(isAdmin
+        ? [{ title: "Aktifkan Mahasiswa", to: "admin-setting-aktifkan-mahasiswa" }]
+        : []),
     ],
   },
   {

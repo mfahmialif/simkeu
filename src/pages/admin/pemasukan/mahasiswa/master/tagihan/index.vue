@@ -205,7 +205,10 @@ const submitImport = async () => {
 
       showSnackbar({
         text: message,
-        color: response.success_count > 0 ? "success" : "warning",
+        color:
+          response.success_count > 0 || (response.update_count || 0) > 0
+            ? "success"
+            : "warning",
       });
       fetchData();
       isDialogImportVisible.value = false;
@@ -556,7 +559,7 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
 
           <VCheckbox
             v-model="updateExisting"
-            label="Update data yang sudah ada"
+            label="Update data yang sudah ada (cek angkatan + prodi + nama tagihan)"
             density="compact"
             :disabled="importLoading"
             hide-details
