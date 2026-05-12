@@ -14,6 +14,109 @@ const sisaNominal = ref(0);
 const showDetailTagihan = ref(false);
 const useDeposit = ref(false);
 const depositUsed = ref(0);
+const lastPaymentScope = ref("semua");
+
+const mahasiswaSemester = computed(() => {
+  const semester = Number(props.mahasiswa?.semester);
+  return Number.isFinite(semester) && semester > 0 ? semester : null;
+});
+
+const angkatanTahun = computed(() => {
+  const kode = String(props.mahasiswa?.angkatan || "");
+  const tahun = Number(kode.slice(0, 4));
+  return Number.isFinite(tahun) && tahun > 0 ? tahun : null;
+});
+
+const calculateSemesterMahasiswa = (tahunTagihan, semesterKode) => {
+  if (!angkatanTahun.value) return null;
+  if (!Number.isFinite(tahunTagihan) || ![1, 2].includes(semesterKode)) return null;
+
+  return (tahunTagihan - angkatanTahun.value) * 2 + semesterKode;
+};
+
+const getTagihanSemester = (item) => {
+  const kodeTahunAkademik = String(item?.th_akademik_kode || item?.th_akademik?.kode || "");
+  if (angkatanTahun.value && /^\d{5}$/.test(kodeTahunAkademik)) {
+    const tahunTagihan = Number(kodeTahunAkademik.slice(0, 4));
+    const semesterKode = Number(kodeTahunAkademik.slice(4, 5));
+    const semesterMahasiswa = calculateSemesterMahasiswa(tahunTagihan, semesterKode);
+    if (semesterMahasiswa) return semesterMahasiswa;
+  }
+
+  return null;
+};
+
+const isSkripsiBlocked = (item) =>
+  !cekNilai.value && String(item?.nama || "").toLowerCase() === "skripsi";
+
+const scopedTagihan = computed(() => {
+  return tagihan.value;
+});
+
+const semesterIniTagihan = computed(() => {
+  if (!mahasiswaSemester.value) return scopedTagihan.value;
+
+  return scopedTagihan.value.filter((item) => {
+    const semester = getTagihanSemester(item);
+    return !semester || semester <= mahasiswaSemester.value;
+  });
+});
+
+const semesterDepanTagihan = computed(() => {
+  if (!mahasiswaSemester.value) return [];
+
+  return scopedTagihan.value.filter(
+    (item) => {
+      const semester = getTagihanSemester(item);
+      return semester && semester > mahasiswaSemester.value;
+    }
+  );
+});
+
+const groupedTagihanItems = computed(() => {
+  if (!mahasiswaSemester.value) return scopedTagihan.value;
+
+  const groups = [];
+
+  if (semesterIniTagihan.value.length) {
+    groups.push({
+      id: "__group_semester_ini",
+      display: `Semester ini (s/d semester ${mahasiswaSemester.value})`,
+      itemProps: { disabled: true },
+    });
+    groups.push(...semesterIniTagihan.value);
+  }
+
+  if (semesterDepanTagihan.value.length) {
+    groups.push({
+      id: "__group_semester_depan",
+      display: `Semester depan (> semester ${mahasiswaSemester.value})`,
+      itemProps: { disabled: true },
+    });
+    groups.push(...semesterDepanTagihan.value);
+  }
+
+  return groups;
+});
+
+const detailTagihanGroups = computed(() => {
+  if (!mahasiswaSemester.value) {
+    return [{ key: "semua", label: "Semua Tagihan", items: scopedTagihan.value }];
+  }
+
+  return [
+    {
+      key: "semester_ini",
+      label: `Semester ini (s/d semester ${mahasiswaSemester.value})`,
+      items: semesterIniTagihan.value,
+    },
+    {
+      key: "semester_depan",
+      label: `Semester depan (> semester ${mahasiswaSemester.value})`,
+      items: semesterDepanTagihan.value,
+    },
+  ].filter((group) => group.items.length);
+});
 
 const cekPelanggaran = ref(false);
 const fetchCekPelanggaran = async (nim) => {
@@ -84,26 +187,52 @@ const clearTagihan = () => {
   selectedTagihan.value = [];
   nominalInput.value = 0;
   sisaNominal.value = 0;
+  depositUsed.value = 0;
+  lastPaymentScope.value = "semua";
+  props.mahasiswa.dipakai = 0;
+  props.mahasiswa.autoSimpanDeposit = 0;
 };
 
 const selectAllTagihan = () => {
   console.log("cek nilai:", cekNilai.value);
-  selectedTagihan.value = cekNilai.value
-    ? tagihan.value
-    : tagihan.value.filter((i) => i.nama.toLowerCase() !== "skripsi");
+  selectedTagihan.value = eligibleTagihan.value;
 };
 
-const hasTagihan = computed(() => tagihan.value && tagihan.value.length > 0);
+const hasScopedTagihan = computed(() => scopedTagihan.value.length > 0);
 
 /** Total sisa seluruh tagihan yang eligible */
 const eligibleTagihan = computed(() =>
   cekNilai.value
-    ? tagihan.value
-    : tagihan.value.filter((i) => i.nama.toLowerCase() !== "skripsi")
+    ? scopedTagihan.value
+    : scopedTagihan.value.filter((i) => !isSkripsiBlocked(i))
 );
+
+const eligibleSemesterIniTagihan = computed(() => {
+  const semesterIniIds = new Set(semesterIniTagihan.value.map((item) => item.id));
+
+  return eligibleTagihan.value.filter((item) => semesterIniIds.has(item.id));
+});
 
 const totalSisaTagihan = computed(() =>
   eligibleTagihan.value.reduce((sum, t) => sum + (Number(t.sisa) || 0), 0)
+);
+
+const totalSisaSemesterIni = computed(() =>
+  eligibleSemesterIniTagihan.value.reduce((sum, t) => sum + (Number(t.sisa) || 0), 0)
+);
+
+const hasEligibleSemesterIniTagihan = computed(() =>
+  eligibleSemesterIniTagihan.value.length > 0
+);
+
+const canBayarLunasSemesterIni = computed(() =>
+  Boolean(mahasiswaSemester.value)
+    && hasEligibleSemesterIniTagihan.value
+    && totalSisaSemesterIni.value > 0
+);
+
+const canBayarLunasSemua = computed(() =>
+  totalSisaTagihan.value > 0
 );
 
 defineExpose({ fetchTagihan, clearTagihan, paymentMode });
@@ -111,10 +240,18 @@ defineExpose({ fetchTagihan, clearTagihan, paymentMode });
 /** Daftar baris yang dipilih */
 const rows = ref([]);
 
+const normalizePaymentScope = (scope) =>
+  scope === "semester_ini" ? "semester_ini" : "semua";
+
+const getPaymentTargetItems = (scope = "semua") =>
+  scope === "semester_ini" ? eligibleSemesterIniTagihan.value : eligibleTagihan.value;
+
 /** ──── MODE NOMINAL: Distribusi otomatis FIFO ──── */
-function distributePayment() {
+function distributePayment(scope = "semua") {
+  const paymentScope = normalizePaymentScope(scope);
   rows.value = [];
   depositUsed.value = 0;
+  lastPaymentScope.value = paymentScope;
 
   let cashRemaining = Number(nominalInput.value) || 0;
   let depoRemaining = useDeposit.value ? Number(props.mahasiswa?.deposit || 0) : 0;
@@ -126,12 +263,7 @@ function distributePayment() {
     return;
   }
 
-  // Filter tagihan yang eligible (cek skripsi)
-  const eligible = cekNilai.value
-    ? tagihan.value
-    : tagihan.value.filter((i) => i.nama.toLowerCase() !== "skripsi");
-
-  for (const item of eligible) {
+  for (const item of getPaymentTargetItems(paymentScope)) {
     if (cashRemaining <= 0 && depoRemaining <= 0) break;
 
     const sisa = Number(item.sisa) || 0;
@@ -172,11 +304,15 @@ function distributePayment() {
 }
 
 /** Bayar lunas: hitung nominal yang diperlukan (dikurangi deposit jika aktif) */
-function bayarLunas() {
+function bayarLunas(scope = "semua") {
+  const paymentScope = normalizePaymentScope(scope);
   const depositBalance = useDeposit.value ? Number(props.mahasiswa?.deposit || 0) : 0;
-  const needed = Math.max(0, totalSisaTagihan.value - depositBalance);
+  const totalSisa = paymentScope === "semester_ini"
+    ? totalSisaSemesterIni.value
+    : totalSisaTagihan.value;
+  const needed = Math.max(0, totalSisa - depositBalance);
   nominalInput.value = needed;
-  distributePayment();
+  distributePayment(paymentScope);
 }
 
 /** Clear distribusi saat mode berubah */
@@ -185,6 +321,14 @@ watch(paymentMode, () => {
   selectedTagihan.value = [];
   nominalInput.value = 0;
   sisaNominal.value = 0;
+});
+
+watch(scopedTagihan, (newArr) => {
+  const allowedIds = new Set(newArr.map((item) => item.id));
+  selectedTagihan.value = selectedTagihan.value.filter((item) =>
+    allowedIds.has(item.id)
+  );
+  rows.value = rows.value.filter((row) => allowedIds.has(row.id));
 });
 
 /** Auto re-distribute saat toggle deposit berubah */
@@ -198,7 +342,7 @@ watch(useDeposit, (enabled) => {
       // Kembalikan nominal karena deposit tidak dipakai
       nominalInput.value = nominalInput.value + depositUsed.value;
     }
-    distributePayment();
+    distributePayment(lastPaymentScope.value);
   }
 });
 
@@ -334,7 +478,7 @@ watch(
       </VRow>
 
       <!-- Info total sisa tagihan (expandable) -->
-      <div v-if="hasTagihan" class="mb-4">
+      <div v-if="hasScopedTagihan" class="mb-4">
         <VAlert
           type="info"
           variant="tonal"
@@ -367,15 +511,26 @@ watch(
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="t in tagihan" :key="t.id" :class="{ 'text-medium-emphasis': !cekNilai && t.nama.toLowerCase() === 'skripsi' }">
-                  <td>
-                    {{ t.nama }}
-                    <VChip v-if="!cekNilai && t.nama.toLowerCase() === 'skripsi'" size="x-small" color="warning" class="ms-2">Belum memenuhi syarat</VChip>
-                  </td>
-                  <td class="text-end">{{ formatRupiah(t.jumlah) }}</td>
-                  <td class="text-end">{{ formatRupiah(t.dibayar) }}</td>
-                  <td class="text-end font-weight-medium">{{ formatRupiah(t.sisa) }}</td>
-                </tr>
+                <template v-for="group in detailTagihanGroups" :key="group.key">
+                  <tr>
+                    <td colspan="4" class="bg-grey-lighten-4 font-weight-medium">
+                      {{ group.label }}
+                    </td>
+                  </tr>
+                  <tr
+                    v-for="t in group.items"
+                    :key="t.id"
+                    :class="{ 'text-medium-emphasis': isSkripsiBlocked(t) }"
+                  >
+                    <td>
+                      {{ t.nama }}
+                      <VChip v-if="isSkripsiBlocked(t)" size="x-small" color="warning" class="ms-2">Belum memenuhi syarat</VChip>
+                    </td>
+                    <td class="text-end">{{ formatRupiah(t.jumlah) }}</td>
+                    <td class="text-end">{{ formatRupiah(t.dibayar) }}</td>
+                    <td class="text-end font-weight-medium">{{ formatRupiah(t.sisa) }}</td>
+                  </tr>
+                </template>
               </tbody>
             </VTable>
           </div>
@@ -384,7 +539,7 @@ watch(
 
       <!-- Warning tagihan tidak eligible -->
       <VAlert
-        v-if="hasTagihan && !cekNilai"
+        v-if="hasScopedTagihan && !cekNilai"
         type="warning"
         variant="tonal"
         density="compact"
@@ -437,24 +592,36 @@ watch(
           </VAlert>
         </VCol>
 
-        <VCol cols="6">
+        <VCol cols="12" md="4">
           <VBtn
             color="success"
             variant="elevated"
             class="w-100"
-            :disabled="!hasTagihan"
-            @click="bayarLunas"
+            :disabled="!canBayarLunasSemesterIni"
+            @click="bayarLunas('semester_ini')"
           >
             <VIcon icon="ri-check-double-line" class="me-2" />
-            Bayar Lunas
+            Lunas Semester Ini
           </VBtn>
         </VCol>
-        <VCol cols="6">
+        <VCol cols="12" md="4">
+          <VBtn
+            color="success"
+            variant="outlined"
+            class="w-100"
+            :disabled="!canBayarLunasSemua"
+            @click="bayarLunas('semua')"
+          >
+            <VIcon icon="ri-check-double-line" class="me-2" />
+            Lunas Semua
+          </VBtn>
+        </VCol>
+        <VCol cols="12" md="4">
           <VBtn
             color="primary"
             variant="elevated"
             class="w-100"
-            :disabled="!hasTagihan || nominalInput <= 0"
+            :disabled="!hasScopedTagihan || nominalInput <= 0"
             @click="distributePayment"
           >
             <VIcon icon="ri-arrow-right-line" class="me-2" />
@@ -489,7 +656,7 @@ watch(
     <!-- ═══ MODE TAGIHAN (LAMA) ═══ -->
     <VCardText v-if="paymentMode === 'tagihan'">
       <VRow>
-        <VCol cols="6" v-if="hasTagihan">
+        <VCol cols="6" v-if="hasScopedTagihan">
           <VBtn
             class="w-100"
             color="primary"
@@ -499,7 +666,7 @@ watch(
             Bayar semua tagihan
           </VBtn>
         </VCol>
-        <VCol cols="6" v-if="hasTagihan">
+        <VCol cols="6" v-if="hasScopedTagihan">
           <VBtn
             class="w-100"
             color="error"
@@ -512,7 +679,7 @@ watch(
         <VCol cols="12">
           <VCombobox
             v-model="selectedTagihan"
-            :items="tagihan"
+            :items="groupedTagihanItems"
             item-title="display"
             item-value="id"
             item-props="itemProps"
@@ -602,7 +769,7 @@ watch(
       >
         <template v-if="paymentMode === 'nominal'">
           <div>Masukkan nominal dan klik "Proses Pembayaran" untuk melihat tagihan yang akan dibayarkan.</div>
-          <div>Klik tombol "Bayar Lunas" untuk membayar semua tagihan.</div>
+          <div>Pakai tombol lunas untuk membayar semester ini atau semua tagihan.</div>
         </template>
         <template v-else>
           Belum ada tagihan yang dipilih.

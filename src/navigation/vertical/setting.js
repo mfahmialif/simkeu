@@ -6,7 +6,6 @@ export default [
       { title: "Prodi", icon: { icon: "ri-graduation-cap-line" }, to: "admin-setting-prodi" },
       { title: "Tahun Akademik", icon: { icon: "ri-calendar-line" }, to: "admin-setting-th-akademik" },
       { title: "Form Schedule", icon: { icon: "ri-time-line" }, to: "admin-setting-form-schadule" },
-      { title: "Syarat Tagihan", icon: { icon: "ri-price-tag-3-line" }, to: "admin-setting-syarat-tagihan" },
     ],
   },
   {

@@ -1,7 +1,6 @@
 <script setup>
 const nim = ref("");
 const listTagihan = ref([]);
-const total = ref("");
 const mahasiswa = reactive({});
 
 const mahasiswaList = ref([]);
@@ -11,6 +10,82 @@ const searchNim = ref("");
 const selectedMahasiswa = ref("");
 const loadingDataMahasiswa = ref(false);
 const loadingSearch = ref(false);
+
+const mahasiswaSemester = computed(() => {
+  const semester = Number(mahasiswa.semester);
+
+  return Number.isFinite(semester) && semester > 0 ? semester : null;
+});
+
+const angkatanTahun = computed(() => {
+  const kode = String(mahasiswa.angkatan || "");
+  const tahun = Number(kode.slice(0, 4));
+
+  return Number.isFinite(tahun) && tahun > 0 ? tahun : null;
+});
+
+const calculateSemesterMahasiswa = (tahunTagihan, semesterKode) => {
+  if (!angkatanTahun.value) return null;
+  if (!Number.isFinite(tahunTagihan) || ![1, 2].includes(semesterKode)) return null;
+
+  return (tahunTagihan - angkatanTahun.value) * 2 + semesterKode;
+};
+
+const getTagihanSemester = (item) => {
+  const kodeTahunAkademik = String(item?.th_akademik_kode || item?.th_akademik?.kode || "");
+
+  if (angkatanTahun.value && /^\d{5}$/.test(kodeTahunAkademik)) {
+    const tahunTagihan = Number(kodeTahunAkademik.slice(0, 4));
+    const semesterKode = Number(kodeTahunAkademik.slice(4, 5));
+    const semesterMahasiswa = calculateSemesterMahasiswa(tahunTagihan, semesterKode);
+
+    if (semesterMahasiswa) return semesterMahasiswa;
+  }
+
+  return null;
+};
+
+const tagihanSemesterIni = computed(() => {
+  if (!mahasiswaSemester.value) return listTagihan.value;
+
+  return listTagihan.value.filter((item) => {
+    const semester = getTagihanSemester(item);
+
+    return !semester || semester <= mahasiswaSemester.value;
+  });
+});
+
+const tagihanSemesterDepan = computed(() => {
+  if (!mahasiswaSemester.value) return [];
+
+  return listTagihan.value.filter((item) => {
+    const semester = getTagihanSemester(item);
+
+    return semester && semester > mahasiswaSemester.value;
+  });
+});
+
+const sumTagihan = (items) =>
+  items.reduce((sum, item) => sum + Number(item.sisa || 0), 0);
+
+const tagihanTableGroups = computed(() => [
+  {
+    key: "semester_ini",
+    title: mahasiswaSemester.value
+      ? `Tagihan Semester Ini (s/d semester ${mahasiswaSemester.value})`
+      : "Tagihan Semester Ini",
+    items: tagihanSemesterIni.value,
+    total: sumTagihan(tagihanSemesterIni.value),
+  },
+  {
+    key: "semester_depan",
+    title: mahasiswaSemester.value
+      ? `Tagihan Semester Depan (> semester ${mahasiswaSemester.value})`
+      : "Tagihan Semester Depan",
+    items: tagihanSemesterDepan.value,
+    total: sumTagihan(tagihanSemesterDepan.value),
+  },
+]);
 
 const searchTagihan = () => {
   fetchTagihan();
@@ -86,18 +161,10 @@ const fetchTagihan = async () => {
     mahasiswa.angkatan = response.data.angkatan;
     mahasiswa.prodi = response.data.nama_prodi;
     mahasiswa.kelas = response.data.nama_kelas;
+    mahasiswa.semester = response.data.semester ?? selectedMahasiswa.value?.semester ?? null;
 
     if (response.status) {
-      listTagihan.value = response.data.list_tagihan;
-      if (listTagihan.value && listTagihan.value.length > 0) {
-        const totalSisa = listTagihan.value.reduce(
-          (total, item) => total + Number(item.sisa || 0),
-          0
-        );
-        total.value = totalSisa;
-      } else {
-        total.value = "LUNAS";
-      }
+      listTagihan.value = response.data.list_tagihan || [];
     }
   } catch (err) {
     console.error(err);
@@ -176,6 +243,7 @@ const download = async (type, accept, filename) => {
         tahun_akademik: mahasiswa.angkatan,
         deposit: mahasiswa.deposit,
         nama: mahasiswa.nama,
+        scope: "semester_ini",
       },
     });
 
@@ -304,6 +372,11 @@ onMounted(() => {
               <td>:</td>
               <td>{{ mahasiswa.kelas }}</td>
             </tr>
+            <tr>
+              <td>Semester</td>
+              <td>:</td>
+              <td>{{ mahasiswa.semester }}</td>
+            </tr>
             <VSkeletonLoader type="list-item" v-if="loadingDeposit" />
             <tr v-else>
               <td>Deposit</td>
@@ -317,7 +390,16 @@ onMounted(() => {
       <VCardText class="d-flex flex-wrap gap-4"> </VCardText>
     </VCard>
 
-    <VCard class="mb-2">
+    <VCard
+      v-for="group in tagihanTableGroups"
+      :key="group.key"
+      class="mb-2"
+    >
+      <VCardItem class="pb-2">
+        <VCardTitle>{{ group.title }}</VCardTitle>
+      </VCardItem>
+      <VDivider />
+
       <VSkeletonLoader type="table" v-if="loadingDataMahasiswa"/>
       <VTable v-else>
         <thead>
@@ -330,7 +412,7 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr v-for="item in listTagihan" :key="item.id">
+          <tr v-for="item in group.items" :key="item.id">
             <td>
               {{ item.nama }}
             </td>
@@ -349,9 +431,14 @@ onMounted(() => {
               </span>
             </td>
           </tr>
+          <tr v-if="group.items.length === 0">
+            <td colspan="4" class="text-center text-medium-emphasis">
+              Tidak ada tagihan.
+            </td>
+          </tr>
           <tr>
             <td><b>Total</b></td>
-            <td><b>{{ formatRupiah(total) }}</b></td>
+            <td><b>{{ formatRupiah(group.total) }}</b></td>
           </tr>
         </tbody>
       </VTable>

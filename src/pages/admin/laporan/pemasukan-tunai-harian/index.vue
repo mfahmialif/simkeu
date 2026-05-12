@@ -66,6 +66,118 @@ const formatTanggal = (dateStr) => {
   return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
 };
 
+const UAS_COLUMN_KEY = "uas";
+
+const normalizeTagihanText = (value) => String(value || "")
+  .toUpperCase()
+  .replace(/[^A-Z0-9]+/g, " ")
+  .trim();
+
+const isUasColumn = (column) => {
+  const normalizedLabel = normalizeTagihanText(column?.label);
+  const compactLabel = normalizedLabel.replace(/\s+/g, "");
+  const normalizedKey = normalizeTagihanText(column?.key);
+
+  return column?.key === UAS_COLUMN_KEY
+    || /\bUAS\b/.test(normalizedLabel)
+    || compactLabel.includes("UASSEMESTER")
+    || compactLabel.includes("UJIANAKHIRSEMESTER")
+    || normalizedKey === UAS_COLUMN_KEY.toUpperCase();
+};
+
+const toNumber = (value) => Number(value) || 0;
+
+const groupUasColumns = (rawColumns = []) => {
+  const uasKeys = [];
+  let hasUasColumn = false;
+  const groupedColumns = [];
+
+  rawColumns.forEach((column) => {
+    if (isUasColumn(column)) {
+      uasKeys.push(column.key);
+
+      if (!hasUasColumn) {
+        groupedColumns.push({
+          ...column,
+          key: UAS_COLUMN_KEY,
+          label: "UAS",
+        });
+        hasUasColumn = true;
+      }
+
+      return;
+    }
+
+    groupedColumns.push(column);
+  });
+
+  return { columns: groupedColumns, uasKeys };
+};
+
+const groupUasRow = (row = {}, uasKeys = []) => {
+  if (!uasKeys.length) return row;
+
+  const groupedRow = { ...row };
+  groupedRow[UAS_COLUMN_KEY] = uasKeys.reduce((sum, key) => sum + toNumber(row[key]), 0);
+
+  uasKeys
+    .filter(key => key !== UAS_COLUMN_KEY)
+    .forEach((key) => {
+      delete groupedRow[key];
+    });
+
+  return groupedRow;
+};
+
+const groupUasRows = (rows = [], uasKeys = []) => rows.map(row => groupUasRow(row, uasKeys));
+
+const groupUasTotals = (rawTotals = {}, uasKeys = []) => {
+  if (!uasKeys.length) return rawTotals;
+
+  const groupedTotals = { ...rawTotals };
+  groupedTotals[UAS_COLUMN_KEY] = uasKeys.reduce((sum, key) => sum + toNumber(rawTotals[key]), 0);
+
+  uasKeys
+    .filter(key => key !== UAS_COLUMN_KEY)
+    .forEach((key) => {
+      delete groupedTotals[key];
+    });
+
+  return groupedTotals;
+};
+
+const groupUasMonthlyData = (monthData = {}, uasKeys = []) => ({
+  ...monthData,
+  data: groupUasRows(monthData.data || [], uasKeys),
+  totals: groupUasTotals(monthData.totals || {}, uasKeys),
+});
+
+const normalizeUasReportData = (response = {}) => {
+  const { columns: groupedColumns, uasKeys } = groupUasColumns(response.columns || []);
+
+  if (!uasKeys.length) {
+    return {
+      ...response,
+      columns: groupedColumns,
+    };
+  }
+
+  return {
+    ...response,
+    columns: groupedColumns,
+    data: response.data ? groupUasRows(response.data, uasKeys) : response.data,
+    totals: response.totals ? groupUasTotals(response.totals, uasKeys) : response.totals,
+    all_data: response.all_data
+      ? Object.fromEntries(
+        Object.entries(response.all_data).map(([month, monthData]) => [
+          month,
+          groupUasMonthlyData(monthData, uasKeys),
+        ]),
+      )
+      : response.all_data,
+  };
+};
+
 const fetchData = async () => {
   if (selectedMode.value === 'bulanan' && !selectedBulan.value) return;
   if (selectedMode.value === 'tahunan' && !selectedTahun.value) return;
@@ -82,18 +194,20 @@ const fetchData = async () => {
     });
 
     if (response.status) {
+      const normalizedResponse = normalizeUasReportData(response);
+
       if (selectedMode.value === 'tahunan') {
         reportTitle.value = "PEMASUKAN TUNAI TAHUN " + selectedTahun.value;
-        columns.value = Object.freeze(response.columns);
-        allData.value = Object.freeze(response.all_data);
-        jkInfo.value = response.jenis_kelamin == '%' ? 'Semua' : response.jenis_kelamin;
+        columns.value = Object.freeze(normalizedResponse.columns);
+        allData.value = Object.freeze(normalizedResponse.all_data);
+        jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin;
         hasData.value = true;
       } else {
-        reportTitle.value = response.title;
-        columns.value = Object.freeze(response.columns);
-        tableData.value = Object.freeze(response.data);
-        totals.value = Object.freeze(response.totals);
-        jkInfo.value = response.jenis_kelamin == '%' ? 'Semua' : response.jenis_kelamin;
+        reportTitle.value = normalizedResponse.title;
+        columns.value = Object.freeze(normalizedResponse.columns);
+        tableData.value = Object.freeze(normalizedResponse.data);
+        totals.value = Object.freeze(normalizedResponse.totals);
+        jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin;
         hasData.value = true;
       }
     } else {

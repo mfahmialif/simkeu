@@ -137,6 +137,7 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
 // Import dialog state
 const isDialogImportVisible = ref(false);
 const importFile = ref(null);
+const updateExisting = ref(false);
 const importLoading = ref(false);
 
 const downloadTemplate = async () => {
@@ -175,6 +176,7 @@ const submitImport = async () => {
   try {
     const formData = new FormData();
     formData.append("file", importFile.value);
+    formData.append("update_existing", updateExisting.value ? "1" : "0");
 
     const response = await $api("/admin/pemasukan/mahasiswa/tagihan/import", {
       method: "POST",
@@ -184,7 +186,9 @@ const submitImport = async () => {
     console.log("Import response:", response);
 
     if (response.status === true) {
-      let message = `Import selesai! ${response.success_count} data berhasil, ${response.skip_count} dilewati.`;
+      let message = `Import selesai! ${response.success_count} data baru, ${
+        response.update_count || 0
+      } data diupdate, ${response.skip_count} dilewati.`;
 
       // Log skip reasons for debugging
       if (response.skip_reasons && response.skip_reasons.length > 0) {
@@ -206,6 +210,7 @@ const submitImport = async () => {
       fetchData();
       isDialogImportVisible.value = false;
       importFile.value = null;
+      updateExisting.value = false;
     } else {
       showSnackbar({
         text: response.message || "Gagal import data",
@@ -547,6 +552,15 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
             prepend-icon="ri-file-excel-2-line"
             show-size
             :disabled="importLoading"
+          />
+
+          <VCheckbox
+            v-model="updateExisting"
+            label="Update data yang sudah ada"
+            density="compact"
+            :disabled="importLoading"
+            hide-details
+            class="mt-2"
           />
         </VCardText>
 

@@ -144,6 +144,7 @@ watch(
         :headers="[
           { title: 'No', key: 'id', width: 60 },
           { title: 'Kode', key: 'kode' },
+          { title: 'Alias', key: 'alias' },
           { title: 'Nama', key: 'nama' },
           { title: 'Jenjang', key: 'jenjang' },
           { title: 'Akreditasi', key: 'akreditasi' },

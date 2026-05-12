@@ -6,7 +6,6 @@ export default [
       { title: "Prodi", to: "admin-setting-prodi" },
       { title: "Tahun Akademik", to: "admin-setting-th-akademik" },
       { title: "Form Schedule", to: "admin-setting-form-schadule" },
-      { title: "Syarat Tagihan", to: "admin-setting-syarat-tagihan" },
     ],
   },
   {
