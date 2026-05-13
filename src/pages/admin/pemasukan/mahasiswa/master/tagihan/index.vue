@@ -535,7 +535,8 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
 
         <VCardText>
           <p class="mb-4">
-            Upload file Excel (.xlsx, .xls) atau CSV dengan format yang sesuai.
+            Upload file Excel (.xlsx, .xls) atau CSV dengan urutan kolom:
+            aliasprodi, tahun, namatagihan, jumlahtagihan.
           </p>
 
           <VBtn
