@@ -138,6 +138,7 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
 const isDialogImportVisible = ref(false);
 const importFile = ref(null);
 const updateExisting = ref(false);
+const appendAmountZeros = ref(false);
 const importLoading = ref(false);
 
 const downloadTemplate = async () => {
@@ -177,6 +178,7 @@ const submitImport = async () => {
     const formData = new FormData();
     formData.append("file", importFile.value);
     formData.append("update_existing", updateExisting.value ? "1" : "0");
+    formData.append("append_amount_zeros", appendAmountZeros.value ? "1" : "0");
 
     const response = await $api("/admin/pemasukan/mahasiswa/tagihan/import", {
       method: "POST",
@@ -217,6 +219,7 @@ const submitImport = async () => {
       isDialogImportVisible.value = false;
       importFile.value = null;
       updateExisting.value = false;
+      appendAmountZeros.value = false;
     } else {
       showSnackbar({
         text: response.message || "Gagal import data",
@@ -563,8 +566,17 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
           />
 
           <VCheckbox
+            v-model="appendAmountZeros"
+            label="Tambah 000 ke jumlah tagihan"
+            density="compact"
+            :disabled="importLoading"
+            hide-details
+            class="mt-2"
+          />
+
+          <VCheckbox
             v-model="updateExisting"
-            label="Update data yang sudah ada (cek angkatan + prodi + nama tagihan)"
+            label="Update data yang sudah ada (cek aliasprodi + tahun + namatagihan)"
             density="compact"
             :disabled="importLoading"
             hide-details
