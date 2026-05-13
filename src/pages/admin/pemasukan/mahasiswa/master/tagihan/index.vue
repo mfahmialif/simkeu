@@ -26,6 +26,7 @@ const dataTable = ref([]);
 const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
+const allYearsLimit = 1000;
 
 const fetchData = async () => {
   try {
@@ -66,7 +67,7 @@ const fetchThAkademik = async () => {
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
       body: {
-        limit: 0,
+        limit: allYearsLimit,
         sort_key: "kode",
         sort_order: "desc",
       },
@@ -87,7 +88,7 @@ const fetchThAngkatan = async () => {
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
       body: {
-        limit: 0,
+        limit: allYearsLimit,
         sort_key: "kode",
         sort_order: "desc",
         search: "ganjil",
