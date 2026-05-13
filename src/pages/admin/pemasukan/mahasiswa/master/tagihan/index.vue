@@ -186,7 +186,10 @@ const submitImport = async () => {
     console.log("Import response:", response);
 
     if (response.status === true) {
-      let message = `Import selesai! ${response.success_count} data baru, ${
+      const sheetInfo = response.sheet_count
+        ? `${response.sheet_count} sheet, `
+        : "";
+      let message = `Import selesai! ${sheetInfo}${response.success_count} data baru, ${
         response.update_count || 0
       } data diupdate, ${response.skip_count} dilewati.`;
 
@@ -535,8 +538,9 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
 
         <VCardText>
           <p class="mb-4">
-            Upload file Excel (.xlsx, .xls) atau CSV dengan urutan kolom:
-            aliasprodi, tahun, namatagihan, jumlahtagihan.
+            Upload file Excel (.xlsx, .xls) atau CSV. Satu file Excel boleh
+            berisi beberapa sheet, dengan urutan kolom di setiap sheet:
+            aliasprodi, tahun, namatagihan, smt, jumlahtagihan.
           </p>
 
           <VBtn
