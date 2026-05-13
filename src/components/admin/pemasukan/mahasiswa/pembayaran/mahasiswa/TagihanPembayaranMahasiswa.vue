@@ -49,6 +49,20 @@ const getTagihanSemester = (item) => {
 const isSkripsiBlocked = (item) =>
   !cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi");
 
+const getRawTagihanItem = (item) => item?.raw || item;
+
+const isGroupTagihanItem = (item) =>
+  String(getRawTagihanItem(item)?.id || "").startsWith("__group_");
+
+const getTagihanItemProps = (item) => {
+  const rawItem = getRawTagihanItem(item);
+
+  return {
+    ...(rawItem?.itemProps || {}),
+    disabled: isGroupTagihanItem(rawItem),
+  };
+};
+
 const scopedTagihan = computed(() => {
   return tagihan.value;
 });
@@ -192,7 +206,6 @@ const clearTagihan = () => {
 };
 
 const selectAllTagihan = () => {
-  console.log("cek nilai:", cekNilai.value);
   selectedTagihan.value = eligibleTagihan.value;
 };
 
@@ -678,7 +691,7 @@ watch(
             :items="groupedTagihanItems"
             item-title="display"
             item-value="id"
-            item-props="itemProps"
+            :item-props="getTagihanItemProps"
             label="Tagihan"
             multiple
             chips
