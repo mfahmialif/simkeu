@@ -466,6 +466,7 @@ onMounted(() => {
                 v-for="(row, index) in tableData"
                 :key="index"
                 class="data-row"
+                :class="{ 'even-row': index % 2 === 0 }"
               >
                 <td class="col-no text-center border-cell">{{ row.no }}</td>
                 <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">{{ row.kategori }}</td>
@@ -495,7 +496,7 @@ onMounted(() => {
             <table class="report-table">
               <thead>
                 <tr class="header-main">
-                  <th colspan="6" class="text-center font-weight-black text-uppercase" style="background-color: #8faadc;">
+                  <th colspan="6" class="text-center font-weight-black text-uppercase month-header">
                     {{ monthInfo.title }}
                   </th>
                 </tr>
@@ -513,6 +514,7 @@ onMounted(() => {
                   v-for="(row, index) in monthInfo.data"
                   :key="index"
                   class="data-row"
+                  :class="{ 'even-row': index % 2 === 0 }"
                 >
                   <td class="col-no text-center border-cell">{{ row.no }}</td>
                   <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">{{ row.kategori }}</td>
@@ -611,6 +613,13 @@ onMounted(() => {
   text-transform: none;
 }
 
+/* REPORT TABLE CARD */
+.report-table-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
 /* TABLE SCROLL */
 .table-scroll-container {
   overflow-x: auto;
@@ -635,47 +644,79 @@ onMounted(() => {
 /* TABLE STYLES */
 .report-table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8rem;
   min-width: max-content;
-  color: black;
 }
 
 .report-table thead .header-main th {
-  background-color: #ffc000;
-  color: #000;
+  background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
+  color: white;
   padding: 12px 10px;
-  font-size: 1rem;
-  letter-spacing: 0.02em;
-  border: 1px solid #000;
-}
-
-.report-table thead .header-sub th {
-  background-color: #ffffff;
-  color: #000;
-  padding: 10px;
   font-weight: 700;
-  font-size: 0.8rem;
-  border: 1px solid #000;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-block-end: 3px solid #3949ab;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
   text-align: center;
 }
 
-.border-cell {
-  border: 1px solid #000;
+.report-table thead .header-main th.month-header {
+  background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
+}
+
+.report-table thead .header-sub th {
+  background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
+  color: white;
+  padding: 12px 10px;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-block-end: 3px solid #3949ab;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: center;
+}
+
+.report-table tbody td {
   padding: 8px 10px;
+  border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
 }
 
 .col-no { width: 50px; }
 .col-kategori { min-width: 250px; }
-.col-amount { min-width: 140px; }
+.col-amount { min-width: 140px; font-variant-numeric: tabular-nums; }
 
-.data-row:hover td {
-  background-color: #f8faff;
+.report-table .data-row:hover td {
+  background-color: rgba(var(--v-theme-primary), 0.08) !important;
+}
+
+.report-table .even-row td {
+  background-color: rgba(var(--v-theme-on-surface), 0.02);
 }
 
 .total-row td {
-  background-color: #ffffff;
+  background: linear-gradient(135deg, #1a237e 0%, #283593 100%) !important;
+  color: white !important;
+  font-weight: 700;
+  padding: 14px 10px;
+  border: none;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
 }
+
 
 /* LOADER */
 .custom-loader {
