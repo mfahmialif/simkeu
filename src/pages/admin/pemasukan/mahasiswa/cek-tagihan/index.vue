@@ -1,6 +1,7 @@
 <script setup>
 const nim = ref("");
 const listTagihan = ref([]);
+const cekNilai = ref(true);
 const mahasiswa = reactive({});
 
 const mahasiswaList = ref([]);
@@ -67,6 +68,12 @@ const tagihanSemesterDepan = computed(() => {
 
 const sumTagihan = (items) =>
   items.reduce((sum, item) => sum + Number(item.sisa || 0), 0);
+
+const isSkripsiTagihan = (item) =>
+  String(item?.nama || "").toLowerCase().includes("skripsi");
+
+const isSkripsiTidakBisaDibayar = (item) =>
+  !cekNilai.value && isSkripsiTagihan(item);
 
 const tagihanTableGroups = computed(() => [
   {
@@ -151,6 +158,7 @@ const fetchTagihan = async () => {
       method: "GET",
       body: {
         nim: searchNim.value,
+        cekNilai: 1,
       },
     });
 
@@ -162,6 +170,7 @@ const fetchTagihan = async () => {
     mahasiswa.prodi = response.data.nama_prodi;
     mahasiswa.kelas = response.data.nama_kelas;
     mahasiswa.semester = response.data.semester ?? selectedMahasiswa.value?.semester ?? null;
+    cekNilai.value = response.cekNilai ?? true;
 
     if (response.status) {
       listTagihan.value = response.data.list_tagihan || [];
@@ -243,7 +252,8 @@ const download = async (type, accept, filename) => {
         tahun_akademik: mahasiswa.angkatan,
         deposit: mahasiswa.deposit,
         nama: mahasiswa.nama,
-        scope: "semester_ini",
+        scope: "semua",
+        cek_nilai: cekNilai.value ? 1 : 0,
       },
     });
 
@@ -412,7 +422,11 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr v-for="item in group.items" :key="item.id">
+          <tr
+            v-for="item in group.items"
+            :key="item.id"
+            :class="{ 'text-medium-emphasis': isSkripsiTidakBisaDibayar(item) }"
+          >
             <td>
               {{ item.nama }}
             </td>
@@ -428,6 +442,15 @@ onMounted(() => {
               </span>
               <span v-else>
                 <VChip color="error" size="x-small" label> Belum Lunas </VChip>
+                <VChip
+                  v-if="isSkripsiTidakBisaDibayar(item)"
+                  color="warning"
+                  size="x-small"
+                  label
+                  class="ms-2"
+                >
+                  Tidak bisa dibayar
+                </VChip>
               </span>
             </td>
           </tr>

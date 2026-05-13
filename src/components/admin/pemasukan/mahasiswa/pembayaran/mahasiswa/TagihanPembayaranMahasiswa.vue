@@ -47,7 +47,7 @@ const getTagihanSemester = (item) => {
 };
 
 const isSkripsiBlocked = (item) =>
-  !cekNilai.value && String(item?.nama || "").toLowerCase() === "skripsi";
+  !cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi");
 
 const scopedTagihan = computed(() => {
   return tagihan.value;
@@ -171,9 +171,7 @@ const fetchTagihan = async (nim) => {
       display: `${item.nama} - Rp.${item.sisa}${
         item.dibayar > 0 ? " (Dibayar: Rp." + item.dibayar + ")" : ""
       }`,
-      itemProps: {
-        disabled: !res.cekNilai && item.nama.toLowerCase() === "skripsi",
-      },
+      itemProps: {},
     }));
   } catch (error) {
     showSnackbar({ text: error, color: "error" });
@@ -202,9 +200,7 @@ const hasScopedTagihan = computed(() => scopedTagihan.value.length > 0);
 
 /** Total sisa seluruh tagihan yang eligible */
 const eligibleTagihan = computed(() =>
-  cekNilai.value
-    ? scopedTagihan.value
-    : scopedTagihan.value.filter((i) => !isSkripsiBlocked(i))
+  scopedTagihan.value
 );
 
 const eligibleSemesterIniTagihan = computed(() => {
@@ -545,7 +541,7 @@ watch(
         density="compact"
         class="mb-4"
       >
-        *Beberapa tagihan tidak bisa dibayar karena belum memenuhi syarat (Skripsi).
+        *Tagihan Skripsi belum memenuhi syarat, tetapi tetap bisa dipilih oleh petugas.
       </VAlert>
     </VCardText>
 

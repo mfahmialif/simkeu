@@ -21,6 +21,8 @@ const jenjangOptions = [
 
 const selectedJenisPembayaran = ref(null);
 const jenisPembayaranList = ref([]);
+const selectedUser = ref(null);
+const userList = ref([]);
 
 const selectedTahun = ref(new Date().getFullYear().toString());
 const tahunOptions = computed(() => {
@@ -66,43 +68,64 @@ const formatTanggal = (dateStr) => {
   return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
 };
 
-const UAS_COLUMN_KEY = "uas";
-
 const normalizeTagihanText = (value) => String(value || "")
   .toUpperCase()
   .replace(/[^A-Z0-9]+/g, " ")
   .trim();
 
-const isUasColumn = (column) => {
+const REPORT_COLUMN_GROUPS = [
+  {
+    key: "uas",
+    label: "UAS",
+    match: ({ normalizedLabel, compactLabel, normalizedKey }) =>
+      normalizedKey === "UAS"
+      || /\bUAS\b/.test(normalizedLabel)
+      || compactLabel.includes("UASSEMESTER")
+      || compactLabel.includes("UJIANAKHIRSEMESTER"),
+  },
+  {
+    key: "uts",
+    label: "UTS",
+    match: ({ normalizedLabel, compactLabel, normalizedKey }) =>
+      normalizedKey === "UTS"
+      || /\bUTS\b/.test(normalizedLabel)
+      || compactLabel.includes("UTSSEMESTER")
+      || compactLabel.includes("UJIANTENGAHSEMESTER"),
+  },
+];
+
+const getReportColumnGroup = (column) => {
   const normalizedLabel = normalizeTagihanText(column?.label);
   const compactLabel = normalizedLabel.replace(/\s+/g, "");
   const normalizedKey = normalizeTagihanText(column?.key);
 
-  return column?.key === UAS_COLUMN_KEY
-    || /\bUAS\b/.test(normalizedLabel)
-    || compactLabel.includes("UASSEMESTER")
-    || compactLabel.includes("UJIANAKHIRSEMESTER")
-    || normalizedKey === UAS_COLUMN_KEY.toUpperCase();
+  return REPORT_COLUMN_GROUPS.find((group) =>
+    group.match({ normalizedLabel, compactLabel, normalizedKey })
+  );
 };
 
 const toNumber = (value) => Number(value) || 0;
 
-const groupUasColumns = (rawColumns = []) => {
-  const uasKeys = [];
-  let hasUasColumn = false;
+const groupReportColumns = (rawColumns = []) => {
+  const groupedKeys = Object.fromEntries(
+    REPORT_COLUMN_GROUPS.map((group) => [group.key, []])
+  );
+  const hasGroupColumn = new Set();
   const groupedColumns = [];
 
   rawColumns.forEach((column) => {
-    if (isUasColumn(column)) {
-      uasKeys.push(column.key);
+    const group = getReportColumnGroup(column);
 
-      if (!hasUasColumn) {
+    if (group) {
+      groupedKeys[group.key].push(column.key);
+
+      if (!hasGroupColumn.has(group.key)) {
         groupedColumns.push({
           ...column,
-          key: UAS_COLUMN_KEY,
-          label: "UAS",
+          key: group.key,
+          label: group.label,
         });
-        hasUasColumn = true;
+        hasGroupColumn.add(group.key);
       }
 
       return;
@@ -111,51 +134,60 @@ const groupUasColumns = (rawColumns = []) => {
     groupedColumns.push(column);
   });
 
-  return { columns: groupedColumns, uasKeys };
+  return { columns: groupedColumns, groupedKeys };
 };
 
-const groupUasRow = (row = {}, uasKeys = []) => {
-  if (!uasKeys.length) return row;
-
+const groupReportRow = (row = {}, groupedKeys = {}) => {
   const groupedRow = { ...row };
-  groupedRow[UAS_COLUMN_KEY] = uasKeys.reduce((sum, key) => sum + toNumber(row[key]), 0);
 
-  uasKeys
-    .filter(key => key !== UAS_COLUMN_KEY)
-    .forEach((key) => {
-      delete groupedRow[key];
-    });
+  Object.entries(groupedKeys).forEach(([groupKey, keys]) => {
+    if (!keys.length) return;
+
+    groupedRow[groupKey] = keys.reduce((sum, key) => sum + toNumber(row[key]), 0);
+
+    keys
+      .filter(key => key !== groupKey)
+      .forEach((key) => {
+        delete groupedRow[key];
+      });
+  });
 
   return groupedRow;
 };
 
-const groupUasRows = (rows = [], uasKeys = []) => rows.map(row => groupUasRow(row, uasKeys));
+const groupReportRows = (rows = [], groupedKeys = {}) => rows.map(row => groupReportRow(row, groupedKeys));
 
-const groupUasTotals = (rawTotals = {}, uasKeys = []) => {
-  if (!uasKeys.length) return rawTotals;
-
+const groupReportTotals = (rawTotals = {}, groupedKeys = {}) => {
   const groupedTotals = { ...rawTotals };
-  groupedTotals[UAS_COLUMN_KEY] = uasKeys.reduce((sum, key) => sum + toNumber(rawTotals[key]), 0);
 
-  uasKeys
-    .filter(key => key !== UAS_COLUMN_KEY)
-    .forEach((key) => {
-      delete groupedTotals[key];
-    });
+  Object.entries(groupedKeys).forEach(([groupKey, keys]) => {
+    if (!keys.length) return;
+
+    groupedTotals[groupKey] = keys.reduce((sum, key) => sum + toNumber(rawTotals[key]), 0);
+
+    keys
+      .filter(key => key !== groupKey)
+      .forEach((key) => {
+        delete groupedTotals[key];
+      });
+  });
 
   return groupedTotals;
 };
 
-const groupUasMonthlyData = (monthData = {}, uasKeys = []) => ({
+const hasGroupedKeys = (groupedKeys = {}) =>
+  Object.values(groupedKeys).some((keys) => keys.length);
+
+const groupReportMonthlyData = (monthData = {}, groupedKeys = {}) => ({
   ...monthData,
-  data: groupUasRows(monthData.data || [], uasKeys),
-  totals: groupUasTotals(monthData.totals || {}, uasKeys),
+  data: groupReportRows(monthData.data || [], groupedKeys),
+  totals: groupReportTotals(monthData.totals || {}, groupedKeys),
 });
 
-const normalizeUasReportData = (response = {}) => {
-  const { columns: groupedColumns, uasKeys } = groupUasColumns(response.columns || []);
+const normalizeReportData = (response = {}) => {
+  const { columns: groupedColumns, groupedKeys } = groupReportColumns(response.columns || []);
 
-  if (!uasKeys.length) {
+  if (!hasGroupedKeys(groupedKeys)) {
     return {
       ...response,
       columns: groupedColumns,
@@ -165,13 +197,13 @@ const normalizeUasReportData = (response = {}) => {
   return {
     ...response,
     columns: groupedColumns,
-    data: response.data ? groupUasRows(response.data, uasKeys) : response.data,
-    totals: response.totals ? groupUasTotals(response.totals, uasKeys) : response.totals,
+    data: response.data ? groupReportRows(response.data, groupedKeys) : response.data,
+    totals: response.totals ? groupReportTotals(response.totals, groupedKeys) : response.totals,
     all_data: response.all_data
       ? Object.fromEntries(
         Object.entries(response.all_data).map(([month, monthData]) => [
           month,
-          groupUasMonthlyData(monthData, uasKeys),
+          groupReportMonthlyData(monthData, groupedKeys),
         ]),
       )
       : response.all_data,
@@ -184,9 +216,14 @@ const fetchData = async () => {
   
   try {
     isLoading.value = true;
+    const filterData = {
+      jenjang: selectedJenjang.value,
+      ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
+      ...(selectedUser.value && { user_id: selectedUser.value }),
+    };
     const bodyData = selectedMode.value === 'tahunan' 
-      ? { mode: 'tahunan', tahun: selectedTahun.value, jenjang: selectedJenjang.value, ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }) }
-      : { mode: 'bulanan', bulan: selectedBulan.value, jenjang: selectedJenjang.value, ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }) };
+      ? { mode: 'tahunan', tahun: selectedTahun.value, ...filterData }
+      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData };
 
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/pemasukan-tunai-harian", {
       method: "GET",
@@ -194,7 +231,7 @@ const fetchData = async () => {
     });
 
     if (response.status) {
-      const normalizedResponse = normalizeUasReportData(response);
+      const normalizedResponse = normalizeReportData(response);
 
       if (selectedMode.value === 'tahunan') {
         reportTitle.value = "PEMASUKAN TUNAI TAHUN " + selectedTahun.value;
@@ -225,9 +262,15 @@ const downloadExcel = async () => {
     isLoading.value = true;
     showSnackbar({ text: "Loading Excel...", color: "info" });
     
+    const filterData = {
+      action: 'excel',
+      jenjang: selectedJenjang.value,
+      ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
+      ...(selectedUser.value && { user_id: selectedUser.value }),
+    };
     const bodyData = selectedMode.value === 'tahunan' 
-      ? { mode: 'tahunan', tahun: selectedTahun.value, action: 'excel', jenjang: selectedJenjang.value, ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }) }
-      : { mode: 'bulanan', bulan: selectedBulan.value, action: 'excel', jenjang: selectedJenjang.value, ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }) };
+      ? { mode: 'tahunan', tahun: selectedTahun.value, ...filterData }
+      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData };
       
     const filename = selectedMode.value === 'tahunan' 
       ? `Pemasukan_Tunai_Harian_Tahun_${selectedTahun.value}.xlsx`
@@ -315,11 +358,29 @@ const fetchJenisPembayaran = async () => {
   }
 };
 
+const fetchUser = async () => {
+  try {
+    const response = await $api("/helper/petugas-pembayaran", {
+      method: "GET",
+    });
+    if (response && response.data) {
+      const items = response.data.data || response.data;
+      userList.value = items.map(u => ({
+        title: `${u.name} (${u.jenis_kelamin})`,
+        value: u.id,
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to fetch petugas:', err);
+  }
+};
+
 onMounted(() => {
   document.title = "Pemasukan Tunai Harian";
   const now = new Date();
   selectedBulan.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   fetchJenisPembayaran();
+  fetchUser();
   fetchData();
 });
 </script>
@@ -396,6 +457,18 @@ onMounted(() => {
               :items="jenisPembayaranList"
               label="Jenis Pembayaran"
               placeholder="Semua"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              hide-details
+            />
+          </VCol>
+          <VCol cols="12" md="2">
+            <VSelect
+              v-model="selectedUser"
+              :items="userList"
+              label="Filter Petugas"
+              placeholder="Semua Petugas"
               variant="outlined"
               density="comfortable"
               clearable

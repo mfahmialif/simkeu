@@ -38,6 +38,9 @@ const jenisKelaminOptions = computed(() => {
   return options;
 });
 
+const selectedUser = ref(null);
+const userList = ref([]);
+
 const selectedTahun = ref(new Date().getFullYear().toString());
 const tahunOptions = computed(() => {
   const currentYear = new Date().getFullYear();
@@ -75,15 +78,105 @@ const formatRupiah = (val) => {
   return "Rp " + new Intl.NumberFormat("id-ID").format(val);
 };
 
+const normalizeKategoriText = (value) => String(value || "")
+  .toUpperCase()
+  .replace(/[^A-Z0-9]+/g, " ")
+  .trim();
+
+const KATEGORI_ROW_GROUPS = [
+  {
+    key: "uas",
+    label: "UAS",
+    match: ({ normalized, compact }) =>
+      /\bUAS\b/.test(normalized)
+      || compact.includes("UASSEMESTER")
+      || compact.includes("UJIANAKHIRSEMESTER"),
+  },
+  {
+    key: "uts",
+    label: "UTS",
+    match: ({ normalized, compact }) =>
+      /\bUTS\b/.test(normalized)
+      || compact.includes("UTSSEMESTER")
+      || compact.includes("UJIANTENGAHSEMESTER"),
+  },
+];
+
+const getKategoriRowGroup = (kategori) => {
+  const normalized = normalizeKategoriText(kategori);
+  const compact = normalized.replace(/\s+/g, "");
+
+  return KATEGORI_ROW_GROUPS.find((group) =>
+    group.match({ normalized, compact })
+  );
+};
+
+const toNumber = (value) => Number(value) || 0;
+
+const groupKategoriRows = (rows = []) => {
+  const groupRows = new Map();
+  const groupedRows = [];
+
+  rows.forEach((row) => {
+    const group = getKategoriRowGroup(row?.kategori);
+
+    if (!group) {
+      groupedRows.push({ ...row });
+      return;
+    }
+
+    if (!groupRows.has(group.key)) {
+      const groupedRow = {
+        ...row,
+        kategori: group.label,
+        tunai: 0,
+        transfer: 0,
+        yayasan: 0,
+        total: 0,
+      };
+
+      groupRows.set(group.key, groupedRow);
+      groupedRows.push(groupedRow);
+    }
+
+    const groupedRow = groupRows.get(group.key);
+    groupedRow.tunai += toNumber(row.tunai);
+    groupedRow.transfer += toNumber(row.transfer);
+    groupedRow.yayasan += toNumber(row.yayasan);
+    groupedRow.total += toNumber(row.total);
+  });
+
+  return groupedRows.map((row, index) => ({
+    ...row,
+    no: index + 1,
+  }));
+};
+
+const normalizeReportData = (response = {}) => ({
+  ...response,
+  data: groupKategoriRows(response.data || []),
+  all_data: response.all_data
+    ? response.all_data.map((monthInfo) => ({
+      ...monthInfo,
+      data: groupKategoriRows(monthInfo.data || []),
+    }))
+    : response.all_data,
+});
+
 const fetchData = async () => {
   if (selectedMode.value === 'bulanan' && !selectedBulan.value) return;
   if (selectedMode.value === 'tahunan' && !selectedTahun.value) return;
   
   try {
     isLoading.value = true;
+    const filterData = {
+      jenjang: selectedJenjang.value,
+      jenis_kelamin: selectedJenisKelamin.value,
+      ...(selectedUser.value && { user_id: selectedUser.value }),
+    };
     const bodyData = selectedMode.value === 'tahunan' 
-      ? { mode: 'tahunan', tahun: selectedTahun.value, jenjang: selectedJenjang.value, jenis_kelamin: selectedJenisKelamin.value }
-      : { mode: 'bulanan', bulan: selectedBulan.value, jenjang: selectedJenjang.value, jenis_kelamin: selectedJenisKelamin.value };
+      ? { mode: 'tahunan', tahun: selectedTahun.value, ...filterData }
+      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData };
 
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/pemasukan-uii-dalwa", {
       method: "GET",
@@ -91,11 +184,13 @@ const fetchData = async () => {
     });
 
     if (response.status) {
-      reportTitle.value = response.title;
-      tableData.value = Object.freeze(response.data);
-      totals.value = Object.freeze(response.totals);
-      allData.value = Object.freeze(response.all_data || []);
-      jkInfo.value = response.jenis_kelamin == '%' ? 'Semua' : response.jenis_kelamin;
+      const normalizedResponse = normalizeReportData(response);
+
+      reportTitle.value = normalizedResponse.title;
+      tableData.value = Object.freeze(normalizedResponse.data);
+      totals.value = Object.freeze(normalizedResponse.totals);
+      allData.value = Object.freeze(normalizedResponse.all_data || []);
+      jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin;
       hasData.value = true;
     } else {
       showSnackbar({ text: response.message, color: "error" });
@@ -112,9 +207,15 @@ const downloadExcel = async () => {
     isLoading.value = true;
     showSnackbar({ text: "Loading Excel...", color: "info" });
     
+    const filterData = {
+      action: 'excel',
+      jenjang: selectedJenjang.value,
+      jenis_kelamin: selectedJenisKelamin.value,
+      ...(selectedUser.value && { user_id: selectedUser.value }),
+    };
     const bodyData = selectedMode.value === 'tahunan' 
-      ? { mode: 'tahunan', tahun: selectedTahun.value, action: 'excel', jenjang: selectedJenjang.value, jenis_kelamin: selectedJenisKelamin.value }
-      : { mode: 'bulanan', bulan: selectedBulan.value, action: 'excel', jenjang: selectedJenjang.value, jenis_kelamin: selectedJenisKelamin.value };
+      ? { mode: 'tahunan', tahun: selectedTahun.value, ...filterData }
+      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData };
       
     const filename = `Pemasukan_UII_Dalwa_${selectedMode.value === 'tahunan' ? selectedTahun.value : selectedBulan.value}.xlsx`;
 
@@ -166,6 +267,22 @@ const printTable = () => {
   setTimeout(() => { win.print(); }, 500);
 };
 
+const fetchUser = async () => {
+  try {
+    const response = await $api("/helper/petugas-pembayaran", {
+      method: "GET",
+    });
+    if (response && response.data) {
+      const items = response.data.data || response.data;
+      userList.value = items.map(u => ({
+        title: `${u.name} (${u.jenis_kelamin})`,
+        value: u.id,
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to fetch petugas:', err);
+  }
+};
 
 onMounted(() => {
   if (isAdmin.value) {
@@ -179,6 +296,7 @@ onMounted(() => {
   document.title = "Pemasukan UII Dalwa";
   const now = new Date();
   selectedBulan.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  fetchUser();
   fetchData();
 });
 </script>
@@ -256,6 +374,18 @@ onMounted(() => {
               label="Jenis Kelamin"
               variant="outlined"
               density="comfortable"
+              hide-details
+            />
+          </VCol>
+          <VCol cols="12" md="2">
+            <VSelect
+              v-model="selectedUser"
+              :items="userList"
+              label="Filter Petugas"
+              placeholder="Semua Petugas"
+              variant="outlined"
+              density="comfortable"
+              clearable
               hide-details
             />
           </VCol>
