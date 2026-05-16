@@ -32,6 +32,8 @@ const editItem      = ref(null);
 const editJumlah    = ref(0);
 const editTanggal   = ref("");
 const editJenisPembayaranId = ref(null);
+const editSamahah = ref(false);
+const editDhomin = ref(false);
 const deleteDialog  = ref(false);
 const deleteItem    = ref(null);
 const isProcessing  = ref(false);
@@ -62,44 +64,31 @@ const emptyKrs = {
 const krs     = ref({ ...emptyKrs });
 const riwayat = ref([]);
 const jumlah  = ref(0);
+const tanggal = ref("");
 const jenisPembayaranId = ref(null);
+const samahah = ref(false);
+const dhomin = ref(false);
 
 const listJenisPembayaran = ref([]);
-const JENIS_PEMBAYARAN_SAMAHAH_DHOMIN = "samahah_dhomin";
-const jenisPembayaranSamahahDhomin = {
-  title: "Samahah/Dhomin",
-  value: JENIS_PEMBAYARAN_SAMAHAH_DHOMIN,
-};
-
-const isSamahahDhomin = computed(
-  () => jenisPembayaranId.value === JENIS_PEMBAYARAN_SAMAHAH_DHOMIN
+const jenisPembayaranYayasanId = computed(() =>
+  listJenisPembayaran.value.find((item) => item.nama?.toLowerCase() === "yayasan")?.value ?? null
 );
-
-const isEditSamahahDhomin = computed(
-  () => editJenisPembayaranId.value === JENIS_PEMBAYARAN_SAMAHAH_DHOMIN
-);
-
 const sisaTagihan = computed(() =>
   Math.max(0, (krs.value.total_pembayaran || 0) - totalTerbayar.value)
 );
 
-const isiPembayaranLunas = () => {
-  if (!isSamahahDhomin.value) return;
-  jumlah.value = sisaTagihan.value;
-  depositPakai.value = 0;
-};
-
 const fetchJenisPembayaran = async () => {
   try {
-    const res = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", { method: "GET" });
+    const res = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
+      method: "GET",
+      params: { limit: 0 },
+    });
     const items = res?.data?.data ?? res?.data ?? [];
-    listJenisPembayaran.value = [
-      ...items.map((jp) => ({
-        title: jp.nama + " - " + jp.kategori,
-        value: jp.id,
-      })),
-      jenisPembayaranSamahahDhomin,
-    ];
+    listJenisPembayaran.value = items.map((jp) => ({
+      title: jp.nama + " - " + jp.kategori,
+      value: jp.id,
+      nama: jp.nama,
+    }));
   } catch (e) {
     console.error("Gagal load jenis pembayaran", e);
   }
@@ -141,6 +130,9 @@ watch(selectedKrs, async (newVal) => {
   riwayat.value = [];
   jumlah.value  = 0;
   depositPakai.value = 0;
+  tanggal.value = new Date().toISOString().substring(0, 10);
+  samahah.value = false;
+  dhomin.value = false;
 
   if (!newVal || typeof newVal !== "object") {
     krs.value = { ...emptyKrs };
@@ -182,7 +174,6 @@ watch(selectedKrs, async (newVal) => {
   } finally {
     loadingDetail.value = false;
     await nextTick();
-    isiPembayaranLunas();
     refJumlah.value?.$el?.querySelector("input")?.focus();
   }
 
@@ -204,7 +195,7 @@ watch(selectedKrs, async (newVal) => {
 
 // ─── Clamp deposit agar tidak melebihi saldo ───────────────────────────────
 watch(depositPakai, (val) => {
-  if (isSamahahDhomin.value) {
+  if (dhomin.value) {
     depositPakai.value = 0;
     return;
   }
@@ -212,14 +203,37 @@ watch(depositPakai, (val) => {
   if (val < 0) depositPakai.value = 0;
 });
 
-watch(jenisPembayaranId, () => {
-  isiPembayaranLunas();
+watch(samahah, (val) => {
+  if (val) dhomin.value = false;
 });
 
-watch(editJenisPembayaranId, () => {
-  if (!isEditSamahahDhomin.value || !editItem.value) return;
-  const terbayarSelainItem = Math.max(0, totalTerbayar.value - (editItem.value.jumlah || 0));
-  editJumlah.value = Math.max(0, (krs.value.total_pembayaran || 0) - terbayarSelainItem);
+watch(dhomin, (val) => {
+  if (!val) return;
+  samahah.value = false;
+  jumlah.value = 0;
+  depositPakai.value = 0;
+  if (jenisPembayaranYayasanId.value) {
+    jenisPembayaranId.value = jenisPembayaranYayasanId.value;
+  }
+});
+
+watch(jenisPembayaranYayasanId, (val) => {
+  if (dhomin.value && val) {
+    jenisPembayaranId.value = val;
+  }
+});
+
+watch(editSamahah, (val) => {
+  if (val) editDhomin.value = false;
+});
+
+watch(editDhomin, (val) => {
+  if (!val) return;
+  editSamahah.value = false;
+  editJumlah.value = 0;
+  if (jenisPembayaranYayasanId.value) {
+    editJenisPembayaranId.value = jenisPembayaranYayasanId.value;
+  }
 });
 
 // ─── Refresh riwayat setelah edit/delete ───────────────────────────────────
@@ -241,11 +255,13 @@ const openEditDialog = (item) => {
   editJumlah.value = item.jumlah;
   editTanggal.value = item.tanggal ? item.tanggal.substring(0, 10) : "";
   editJenisPembayaranId.value = item.jenis_pembayaran_id;
+  editSamahah.value = false;
+  editDhomin.value = false;
   editDialog.value = true;
 };
 
 const submitEditRiwayat = async () => {
-  if (!editJumlah.value || editJumlah.value <= 0) {
+  if (!editDhomin.value && (!editJumlah.value || editJumlah.value <= 0)) {
     showSnackbar({ text: "Nominal harus lebih dari 0.", color: "warning" });
     return;
   }
@@ -254,11 +270,11 @@ const submitEditRiwayat = async () => {
     const res = await $api(`/admin/pemasukan/mahasiswa/semester-pendek/${editItem.value.id}`, {
       method: "PUT",
       body: {
-        jumlah: editJumlah.value,
+        jumlah: editDhomin.value ? 0 : editJumlah.value,
         jenis_pembayaran_id: editJenisPembayaranId.value,
-        ...(isEditSamahahDhomin.value && {
-          jenis_pembayaran_static: JENIS_PEMBAYARAN_SAMAHAH_DHOMIN,
-        }),
+        samahah: editSamahah.value,
+        dhomin: editDhomin.value,
+        total_pembayaran: krs.value.total_pembayaran || 0,
         ...(editTanggal.value && { tanggal: editTanggal.value }),
       },
     });
@@ -325,15 +341,15 @@ const submitPembayaran = async () => {
     showSnackbar({ text: "Silakan pilih data KRS terlebih dahulu.", color: "error" });
     return;
   }
-  if (!jenisPembayaranId.value) {
+  if (!dhomin.value && !jenisPembayaranId.value) {
     showSnackbar({ text: "Silakan pilih Jenis Pembayaran.", color: "warning" });
     return;
   }
 
   const depositAktual = Math.min(depositPakai.value || 0, saldoDeposit.value);
-  const totalBayar = (jumlah.value || 0) + depositAktual;
+  const totalBayar = dhomin.value ? 0 : (jumlah.value || 0) + depositAktual;
 
-  if (totalBayar <= 0) {
+  if (!dhomin.value && totalBayar <= 0) {
     showSnackbar({ text: "Total pembayaran harus lebih dari 0.", color: "warning" });
     return;
   }
@@ -345,11 +361,12 @@ const submitPembayaran = async () => {
       res = await $api(`/admin/pemasukan/mahasiswa/semester-pendek/${props.dataForm.id}`, {
         method: "PUT",
         body: {
-          jumlah: jumlah.value || 0,
+          jumlah: dhomin.value ? 0 : jumlah.value || 0,
           jenis_pembayaran_id: jenisPembayaranId.value,
-          ...(isSamahahDhomin.value && {
-            jenis_pembayaran_static: JENIS_PEMBAYARAN_SAMAHAH_DHOMIN,
-          }),
+          samahah: samahah.value,
+          dhomin: dhomin.value,
+          total_pembayaran: krs.value.total_pembayaran || 0,
+          ...(tanggal.value && { tanggal: tanggal.value }),
         },
       });
     } else {
@@ -360,12 +377,13 @@ const submitPembayaran = async () => {
           th_akademik_id: krs.value.th_akademik_id,
           periode_id:     krs.value.periode_id,
           jk_id:          krs.value.mhs_jk_id,
-          jumlah:         jumlah.value || 0,
-          deposit:        depositAktual,
+          jumlah:         dhomin.value ? 0 : jumlah.value || 0,
+          deposit:        dhomin.value ? 0 : depositAktual,
           jenis_pembayaran_id: jenisPembayaranId.value,
-          ...(isSamahahDhomin.value && {
-            jenis_pembayaran_static: JENIS_PEMBAYARAN_SAMAHAH_DHOMIN,
-          }),
+          samahah:        samahah.value,
+          dhomin:         dhomin.value,
+          total_pembayaran: krs.value.total_pembayaran || 0,
+          ...(tanggal.value && { tanggal: tanggal.value }),
         },
       });
     }
@@ -409,6 +427,7 @@ const refJumlah = ref(null);
 
 onMounted(() => {
   fetchJenisPembayaran();
+  tanggal.value = new Date().toISOString().substring(0, 10);
   if (props.typeForm === "add") {
     nextTick(() => refSearch.value?.focus?.());
   }
@@ -435,6 +454,7 @@ watch(
       
       jumlah.value = newVal.jumlah;
       jenisPembayaranId.value = newVal.jenis_pembayaran_id;
+      tanggal.value = newVal.tanggal ? newVal.tanggal.substring(0, 10) : tanggal.value;
     }
   },
   { immediate: true, deep: true }
@@ -717,6 +737,16 @@ const selectAll = async () => {
               </div>
             </div>
 
+            <!-- Input Tanggal -->
+            <VTextField
+              v-model="tanggal"
+              type="date"
+              label="Tanggal"
+              variant="outlined"
+              density="comfortable"
+              class="mb-2"
+            />
+
             <!-- Input Dibayar -->
             <VTextField
               ref="refJumlah"
@@ -730,7 +760,7 @@ const selectAll = async () => {
               persistent-hint
               placeholder="0"
               class="mb-2"
-              :disabled="isSamahahDhomin"
+              :disabled="dhomin"
               @keyup.enter="submitPembayaran"
             />
 
@@ -747,16 +777,16 @@ const selectAll = async () => {
               persistent-hint
               placeholder="0"
               class="mb-2"
-              :disabled="saldoDeposit <= 0 || isSamahahDhomin"
+              :disabled="saldoDeposit <= 0 || dhomin"
             />
 
             <!-- Total Pembayaran -->
             <div class="rounded-lg pa-3 mb-4" style="background: rgba(var(--v-theme-success), 0.08);">
               <p class="text-xs text-medium-emphasis mb-1">Total Pembayaran</p>
               <p class="text-h6 font-weight-bold text-success mb-0">
-                {{ formatRupiah((jumlah || 0) + Math.min(depositPakai || 0, saldoDeposit)) }}
+                {{ formatRupiah(dhomin ? 0 : (jumlah || 0) + Math.min(depositPakai || 0, saldoDeposit)) }}
               </p>
-              <p v-if="depositPakai > 0" class="text-xs text-medium-emphasis mt-1">
+              <p v-if="!dhomin && depositPakai > 0" class="text-xs text-medium-emphasis mt-1">
                 {{ formatRupiah(jumlah || 0) }} tunai + {{ formatRupiah(Math.min(depositPakai || 0, saldoDeposit)) }} deposit
               </p>
             </div>
@@ -767,6 +797,20 @@ const selectAll = async () => {
               :items="listJenisPembayaran"
               label="Jenis Pembayaran"
               variant="outlined"
+              density="comfortable"
+              class="mb-4"
+            />
+
+            <VCheckbox
+              v-model="samahah"
+              label="Samahah"
+              density="comfortable"
+              class="mb-1"
+            />
+
+            <VCheckbox
+              v-model="dhomin"
+              label="Dhomin"
               density="comfortable"
               class="mb-4"
             />
@@ -890,13 +934,23 @@ const selectAll = async () => {
             :hint="formatRupiah(editJumlah)"
             persistent-hint
             class="mb-4"
-            :disabled="isEditSamahahDhomin"
+            :disabled="editDhomin"
           />
           <VSelect
             v-model="editJenisPembayaranId"
             :items="listJenisPembayaran"
             label="Jenis Pembayaran"
             variant="outlined"
+          />
+          <VCheckbox
+            v-model="editSamahah"
+            label="Samahah"
+            density="comfortable"
+          />
+          <VCheckbox
+            v-model="editDhomin"
+            label="Dhomin"
+            density="comfortable"
           />
         </VCardText>
         <VCardText class="d-flex justify-end gap-3">

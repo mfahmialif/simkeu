@@ -18,12 +18,25 @@ const loadingThAkademik = ref(false);
 const tanggal = ref("");
 const tanggalReadonly = ref(false);
 
+const selectThAkademikFromDataForm = () => {
+  if (props.typeForm !== "edit" || !props.dataForm?.th_akademik_id) return;
+
+  const selectedId = Number(props.dataForm.th_akademik_id);
+
+  selectedThAkademik.value = thAkademik.value.find(
+    (item) => Number(item.value) === selectedId
+  );
+};
+
 const fetchThAkademik = async () => {
   try {
     loadingThAkademik.value = true;
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
-      body: props.typeForm !== "edit" ? { aktif: "y" } : {},
+      params:
+        props.typeForm !== "edit"
+          ? { aktif: "y", limit: 0 }
+          : { limit: 0 },
     });
 
     thAkademik.value = data.data.map((thAkademik) => {
@@ -33,7 +46,11 @@ const fetchThAkademik = async () => {
       };
     });
 
-    selectedThAkademik.value = thAkademik.value[0];
+    if (props.typeForm === "edit") {
+      selectThAkademikFromDataForm();
+    } else {
+      selectedThAkademik.value = thAkademik.value[0];
+    }
   } catch (err) {
     console.error(err);
   } finally {
@@ -60,7 +77,7 @@ watch(
       tanggal.value = d.toISOString().slice(0, 10);
 
       selectedThAkademik.value = thAkademik.value.find(
-        (item) => item.value === newVal.th_akademik_id
+        (item) => Number(item.value) === Number(newVal.th_akademik_id)
       );
 
       tanggalReadonly.value = false;

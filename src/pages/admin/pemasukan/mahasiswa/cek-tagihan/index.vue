@@ -33,6 +33,11 @@ const calculateSemesterMahasiswa = (tahunTagihan, semesterKode) => {
 };
 
 const getTagihanSemester = (item) => {
+  const semesterTagihan = Number(item?.semester_tagihan);
+
+  if (Number.isFinite(semesterTagihan) && semesterTagihan > 0)
+    return semesterTagihan;
+
   const kodeTahunAkademik = String(item?.th_akademik_kode || item?.th_akademik?.kode || "");
 
   if (angkatanTahun.value && /^\d{5}$/.test(kodeTahunAkademik)) {
@@ -156,7 +161,7 @@ const fetchTagihan = async () => {
     loadingDataMahasiswa.value = true;
     const response = await $api("/admin/pemasukan/mahasiswa/cek-tagihan", {
       method: "GET",
-      body: {
+      params: {
         nim: searchNim.value,
         cekNilai: 1,
       },
@@ -173,7 +178,13 @@ const fetchTagihan = async () => {
     cekNilai.value = response.cekNilai ?? true;
 
     if (response.status) {
-      listTagihan.value = response.data.list_tagihan || [];
+      const semesterIni = response.data.list_tagihan_semester_ini || [];
+      const semesterDepan = response.data.list_tagihan_semester_depan || [];
+
+      listTagihan.value = response.data.list_tagihan || [
+        ...semesterIni,
+        ...semesterDepan,
+      ];
     }
   } catch (err) {
     console.error(err);
@@ -246,13 +257,13 @@ const download = async (type, accept, filename) => {
       headers: {
         Accept: accept,
       },
-      body: {
+      params: {
         nim: mahasiswa.nim,
         prodi: mahasiswa.prodi,
         tahun_akademik: mahasiswa.angkatan,
         deposit: mahasiswa.deposit,
         nama: mahasiswa.nama,
-        scope: "semua",
+        scope: "semester_ini",
         cek_nilai: cekNilai.value ? 1 : 0,
       },
     });

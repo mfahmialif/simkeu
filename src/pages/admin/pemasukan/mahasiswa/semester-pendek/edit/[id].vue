@@ -16,38 +16,48 @@ const krsData = ref(null);
 const jumlah = ref(0);
 const tanggal = ref("");
 const jenisPembayaranId = ref(null);
-const JENIS_PEMBAYARAN_SAMAHAH_DHOMIN = "samahah_dhomin";
-const jenisPembayaranSamahahDhomin = {
-  title: "Samahah/Dhomin",
-  value: JENIS_PEMBAYARAN_SAMAHAH_DHOMIN,
-};
-
-const isSamahahDhomin = computed(
-  () => jenisPembayaranId.value === JENIS_PEMBAYARAN_SAMAHAH_DHOMIN
-);
+const samahah = ref(false);
+const dhomin = ref(false);
 
 // Options
 const listJenisPembayaran = ref([]);
+const jenisPembayaranYayasanId = computed(() =>
+  listJenisPembayaran.value.find((item) => item.nama?.toLowerCase() === "yayasan")?.value ?? null
+);
 
 const fetchJenisPembayaran = async () => {
   try {
-    const res = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", { method: "GET" });
+    const res = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
+      method: "GET",
+      params: { limit: 0 },
+    });
     const items = res?.data?.data ?? res?.data ?? [];
-    listJenisPembayaran.value = [
-      ...items.map((jp) => ({
-        title: jp.nama + " - " + jp.kategori,
-        value: jp.id,
-      })),
-      jenisPembayaranSamahahDhomin,
-    ];
+    listJenisPembayaran.value = items.map((jp) => ({
+      title: jp.nama + " - " + jp.kategori,
+      value: jp.id,
+      nama: jp.nama,
+    }));
   } catch (e) {
     console.error("Gagal load jenis pembayaran", e);
   }
 };
 
-watch(jenisPembayaranId, () => {
-  if (isSamahahDhomin.value) {
-    jumlah.value = krsData.value?.total_pembayaran ?? pembayaran.value?.jumlah ?? 0;
+watch(samahah, (val) => {
+  if (val) dhomin.value = false;
+});
+
+watch(dhomin, (val) => {
+  if (!val) return;
+  samahah.value = false;
+  jumlah.value = 0;
+  if (jenisPembayaranYayasanId.value) {
+    jenisPembayaranId.value = jenisPembayaranYayasanId.value;
+  }
+});
+
+watch(jenisPembayaranYayasanId, (val) => {
+  if (dhomin.value && val) {
+    jenisPembayaranId.value = val;
   }
 });
 
@@ -78,11 +88,11 @@ const fetchData = async () => {
 };
 
 const submitEdit = async () => {
-  if (!jumlah.value || jumlah.value <= 0) {
+  if (!dhomin.value && (!jumlah.value || jumlah.value <= 0)) {
     showSnackbar({ text: "Nominal pembayaran harus lebih dari 0.", color: "warning" });
     return;
   }
-  if (!jenisPembayaranId.value) {
+  if (!dhomin.value && !jenisPembayaranId.value) {
     showSnackbar({ text: "Silakan pilih Jenis Pembayaran.", color: "warning" });
     return;
   }
@@ -92,11 +102,11 @@ const submitEdit = async () => {
     const res = await $api(`/admin/pemasukan/mahasiswa/semester-pendek/${route.params.id}`, {
       method: "PUT",
       body: {
-        jumlah: jumlah.value,
+        jumlah: dhomin.value ? 0 : jumlah.value,
         jenis_pembayaran_id: jenisPembayaranId.value,
-        ...(isSamahahDhomin.value && {
-          jenis_pembayaran_static: JENIS_PEMBAYARAN_SAMAHAH_DHOMIN,
-        }),
+        samahah: samahah.value,
+        dhomin: dhomin.value,
+        total_pembayaran: krsData.value?.total_pembayaran ?? 0,
         ...(tanggal.value && { tanggal: tanggal.value }),
       },
     });
@@ -320,7 +330,19 @@ onMounted(() => {
               variant="outlined"
               prefix="Rp"
               class="mb-4"
-              :disabled="isSamahahDhomin"
+              :disabled="dhomin"
+            />
+
+            <VCheckbox
+              v-model="samahah"
+              label="Samahah"
+              class="mb-1"
+            />
+
+            <VCheckbox
+              v-model="dhomin"
+              label="Dhomin"
+              class="mb-4"
             />
 
             <VBtn
