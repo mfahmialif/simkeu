@@ -206,6 +206,9 @@ const fetchAllTahun = async (search) => {
       method: "GET",
       params: {
         // id: search || "",
+        limit: 0,
+        sort_key: "kode",
+        sort_order: "desc",
         search: search || "",
       },
     });
@@ -213,7 +216,13 @@ const fetchAllTahun = async (search) => {
     tahunList.value = response.data.data.map((t) => ({
       value: t.id,
       title: `${t.nama} - ${t.semester}`,
+      aktif: t.aktif,
     }));
+
+    if (props.typeForm === "add") {
+      const tahunAktif = tahunList.value.find((item) => item.aktif === "Y");
+      tahun.value = (tahunAktif ?? tahunList.value[0])?.value ?? null;
+    }
 
     console.log("tahunList", tahun.value);
   } catch (err) {

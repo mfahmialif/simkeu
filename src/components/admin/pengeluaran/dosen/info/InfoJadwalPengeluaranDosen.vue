@@ -66,16 +66,23 @@ const fetchThAkademik = async () => {
     isLoadingThAkademik.value = true;
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
+      params: {
+        limit: 0,
+        sort_key: "kode",
+        sort_order: "desc",
+      },
     });
 
     thAkademik.value = data.data.map((thAkademik) => {
       return {
         title: `${thAkademik.nama} - ${thAkademik.semester}`,
         value: thAkademik.kode,
+        aktif: thAkademik.aktif,
       };
     });
 
-    selectedThAkademik.value = thAkademik.value[0].value;
+    const aktif = thAkademik.value.find((item) => item.aktif === "Y");
+    selectedThAkademik.value = (aktif ?? thAkademik.value[0])?.value ?? null;
   } catch (err) {
     console.error(err);
   } finally {

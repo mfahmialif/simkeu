@@ -109,7 +109,7 @@ const fetchProdi = async () => {
   try {
     const { data } = await $api("/admin/prodi", {
       method: "GET",
-      body: {
+      params: {
         limit: 0,
         sort_key: "kode",
         sort_order: "desc",

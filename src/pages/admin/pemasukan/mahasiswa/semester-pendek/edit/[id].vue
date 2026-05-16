@@ -16,6 +16,15 @@ const krsData = ref(null);
 const jumlah = ref(0);
 const tanggal = ref("");
 const jenisPembayaranId = ref(null);
+const JENIS_PEMBAYARAN_SAMAHAH_DHOMIN = "samahah_dhomin";
+const jenisPembayaranSamahahDhomin = {
+  title: "Samahah/Dhomin",
+  value: JENIS_PEMBAYARAN_SAMAHAH_DHOMIN,
+};
+
+const isSamahahDhomin = computed(
+  () => jenisPembayaranId.value === JENIS_PEMBAYARAN_SAMAHAH_DHOMIN
+);
 
 // Options
 const listJenisPembayaran = ref([]);
@@ -24,14 +33,23 @@ const fetchJenisPembayaran = async () => {
   try {
     const res = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", { method: "GET" });
     const items = res?.data?.data ?? res?.data ?? [];
-    listJenisPembayaran.value = items.map((jp) => ({
-      title: jp.nama + " - " + jp.kategori,
-      value: jp.id,
-    }));
+    listJenisPembayaran.value = [
+      ...items.map((jp) => ({
+        title: jp.nama + " - " + jp.kategori,
+        value: jp.id,
+      })),
+      jenisPembayaranSamahahDhomin,
+    ];
   } catch (e) {
     console.error("Gagal load jenis pembayaran", e);
   }
 };
+
+watch(jenisPembayaranId, () => {
+  if (isSamahahDhomin.value) {
+    jumlah.value = krsData.value?.total_pembayaran ?? pembayaran.value?.jumlah ?? 0;
+  }
+});
 
 const fetchData = async () => {
   loading.value = true;
@@ -76,6 +94,9 @@ const submitEdit = async () => {
       body: {
         jumlah: jumlah.value,
         jenis_pembayaran_id: jenisPembayaranId.value,
+        ...(isSamahahDhomin.value && {
+          jenis_pembayaran_static: JENIS_PEMBAYARAN_SAMAHAH_DHOMIN,
+        }),
         ...(tanggal.value && { tanggal: tanggal.value }),
       },
     });
@@ -299,6 +320,7 @@ onMounted(() => {
               variant="outlined"
               prefix="Rp"
               class="mb-4"
+              :disabled="isSamahahDhomin"
             />
 
             <VBtn
