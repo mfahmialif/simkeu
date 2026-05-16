@@ -320,6 +320,8 @@ onMounted(() => {
               label="Jenis Pembayaran"
               variant="outlined"
               class="mb-4"
+              :readonly="dhomin"
+              :disabled="dhomin"
             />
 
             <!-- Nominal (Editable) -->

@@ -799,6 +799,8 @@ const selectAll = async () => {
               variant="outlined"
               density="comfortable"
               class="mb-4"
+              :readonly="dhomin"
+              :disabled="dhomin"
             />
 
             <VCheckbox
@@ -941,6 +943,8 @@ const selectAll = async () => {
             :items="listJenisPembayaran"
             label="Jenis Pembayaran"
             variant="outlined"
+            :readonly="editDhomin"
+            :disabled="editDhomin"
           />
           <VCheckbox
             v-model="editSamahah"
