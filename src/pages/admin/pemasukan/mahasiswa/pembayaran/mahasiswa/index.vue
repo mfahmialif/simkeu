@@ -459,7 +459,8 @@ const refreshData = () => {
           { title: 'Pembayaran', key: 'keuangan_tagihan_nama' },
           { title: 'Jumlah', key: 'jumlah' },
           { title: 'Tahun', key: 'th_akademik_kode' },
-          { title: 'Tanggal', key: 'tanggal' },
+          { title: 'Tanggal Pelayanan', key: 'created_at' },
+          { title: 'Tanggal Transaksi', key: 'tanggal' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
         v-model:model-value="selectedRows"
@@ -522,6 +523,12 @@ const refreshData = () => {
                 </VProgressCircular>
               </template>
             </div>
+          </div>
+        </template>
+        <template #item.created_at="{ item }">
+          <div>
+            <VIcon icon="ri-calendar-check-line" size="14" class="me-1" />
+            {{ item.created_at ? formatDate(new Date(item.created_at), "YYYY-MM-DD") : '-' }}
           </div>
         </template>
         <template #item.tanggal="{ item }">
