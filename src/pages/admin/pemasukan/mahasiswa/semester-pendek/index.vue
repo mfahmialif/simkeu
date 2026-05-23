@@ -11,7 +11,7 @@ const dataTable = ref([]);
 const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
-let isFetching = ref(false);
+let fetchRequestId = 0;
 
 const filterPeriode = ref(null);
 const filterJenisPembayaran = ref(null);
@@ -24,10 +24,25 @@ const listJenisPembayaran = ref([]);
 const listPetugas = ref([]);
 
 const widgetRef = ref(null);
+let searchTimeout = null;
+
+const resolvePaginatedResponse = (response) => {
+  const isPaginator = (value) =>
+    value && typeof value === "object" && ("total" in value || "current_page" in value || "last_page" in value);
+
+  const payload = isPaginator(response) ? response : (response?.data ?? response);
+  const paginator = payload?.data && !Array.isArray(payload.data)
+    ? payload.data
+    : payload;
+
+  return {
+    items: Array.isArray(paginator?.data) ? paginator.data : (Array.isArray(paginator) ? paginator : []),
+    total: Number(paginator?.total ?? (Array.isArray(paginator) ? paginator.length : 0)),
+  };
+};
 
 const fetchSemesterPendek = async () => {
-  if (isFetching.value) return;
-  isFetching.value = true;
+  const requestId = ++fetchRequestId;
   loading.value = true;
 
   try {
@@ -50,9 +65,11 @@ const fetchSemesterPendek = async () => {
       }
     );
 
-    const result = response.data?.data ?? response.data;
-    dataTable.value = result.data ?? result;
-    totalItems.value = result.total ?? (result.data ? result.data.length : 0);
+    if (requestId !== fetchRequestId) return;
+
+    const result = resolvePaginatedResponse(response);
+    dataTable.value = result.items;
+    totalItems.value = result.total;
 
     // Fetch KRS detail from SIAKAD
     if (dataTable.value.length > 0) {
@@ -61,9 +78,10 @@ const fetchSemesterPendek = async () => {
   } catch (err) {
     console.error("Gagal fetch data semester pendek:", err);
   } finally {
-    isFetching.value = false;
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    if (requestId === fetchRequestId) {
+      loading.value = false;
+      if (initialLoading.value) initialLoading.value = false;
+    }
   }
 };
 
@@ -94,6 +112,11 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   page.value = p;
   itemsPerPage.value = ipp;
   if (sb && sb.length) sortBy.value = sb[0];
+  fetchSemesterPendek();
+};
+
+const applySearch = () => {
+  page.value = 1;
   fetchSemesterPendek();
 };
 
@@ -177,10 +200,18 @@ const fetchOptions = async () => {
 watch(
   [filterPeriode, filterJenisPembayaran, filterPetugas, filterTanggalMulai, filterTanggalAkhir],
   () => {
+    page.value = 1;
     fetchSemesterPendek();
     widgetRef.value?.fetchStatistics();
   }
 );
+
+watch(search, () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    applySearch();
+  }, 400);
+});
 
 onMounted(() => {
   document.title = "Semester Pendek - SIMKEU";
@@ -268,11 +299,11 @@ onMounted(() => {
           <div class="d-flex align-center w-100 w-sm-auto">
             <VTextField
               v-model="search"
-              placeholder="Cari Nomor Transaksi"
+              placeholder="Cari Nomor / NIM / Nama"
               style="inline-size: 200px"
               density="compact"
               class="me-3"
-              @keyup.enter="fetchSemesterPendek"
+              @keyup.enter="applySearch"
             />
           </div>
 
@@ -305,7 +336,6 @@ onMounted(() => {
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
-        :search="search"
         @update:options="loadItems"
       >
         <template v-if="initialLoading" #loading>
