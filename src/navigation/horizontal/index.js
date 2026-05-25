@@ -1,4 +1,5 @@
 import dashboard from "./dashboard";
+import mahasiswa from "./mahasiswa";
 import pemasukan from "./pemasukan";
 import pengeluaran from "./pengeluaran";
 import saldo from "./saldo";
@@ -17,6 +18,7 @@ const role = userData.role?.name;
 const routesByRole = {
   admin: [
     ...dashboard,
+    ...mahasiswa,
     ...saldo,
     ...pemasukan,
     ...pengeluaran,
@@ -27,6 +29,7 @@ const routesByRole = {
 
   pimpinan: [
     ...dashboard,
+    ...mahasiswa,
     ...saldo,
     ...pemasukan,
     ...pengeluaran,
@@ -37,6 +40,7 @@ const routesByRole = {
 
   keuangan: [
     ...dashboard,
+    ...mahasiswa,
     ...saldo,
     ...pemasukan,
     ...pengeluaran,
@@ -45,17 +49,18 @@ const routesByRole = {
     ...setting,
   ],
 
-  staff: [...dashboardStaff, ...pemasukanStaff, ...setting],
-  kabag: [...dashboardStaff, ...pemasukanStaff, ...setting],
+  staff: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
+  kabag: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
 
   rumahtangga: [
     ...dashboard,
+    ...mahasiswa,
     ...pemasukanRumahTangga,
     ...pengeluaranRumahTangga,
     ...setting,
   ],
 
-  barokahdosen: [...dashboard, ...pengeluaranBarokahDosen, ...setting],
+  barokahdosen: [...dashboard, ...mahasiswa, ...pengeluaranBarokahDosen, ...setting],
 };
 
 export default routesByRole[role] ?? [];

@@ -17,7 +17,7 @@ const suggestionGroups = [
     content: [
       {
         icon: "ri-user-3-line",
-        title: "Data Mahasiswa",
+        title: "Mahasiswa",
         url: { name: "admin-pemasukan-mahasiswa-master-data-mahasiswa" },
       },
       {
@@ -34,6 +34,11 @@ const suggestionGroups = [
         icon: "ri-search-line",
         title: "Cek Tagihan",
         url: { name: "admin-pemasukan-mahasiswa-cek-tagihan" },
+      },
+      {
+        icon: "ri-user-received-line",
+        title: "Tagihan Perorangan",
+        url: { name: "admin-pemasukan-mahasiswa-tagihan-perorangan" },
       },
     ],
   },

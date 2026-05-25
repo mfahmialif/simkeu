@@ -3,15 +3,15 @@ export default [
     title: "Mahasiswa",
     icon: { icon: "ri-group-line" },
     children: [
+      { title: "Jenis Pembayaran", to: "admin-pemasukan-mahasiswa-master-jenis-pembayaran" },
       {
-        title: "Master Data",
+        title: "Tagihan",
         children: [
-          { title: "Data Mahasiswa", to: "admin-pemasukan-mahasiswa-master-data-mahasiswa" },
-          { title: "Jenis Pembayaran", to: "admin-pemasukan-mahasiswa-master-jenis-pembayaran" },
           { title: "Tagihan", to: "admin-pemasukan-mahasiswa-master-tagihan" },
+          { title: "Tagihan Perorangan", to: "admin-pemasukan-mahasiswa-tagihan-perorangan" },
+          { title: "Cek Tagihan", to: "admin-pemasukan-mahasiswa-cek-tagihan" },
         ],
       },
-      { title: "Cek Tagihan", to: "admin-pemasukan-mahasiswa-cek-tagihan" },
       {
         title: "Pembayaran",
         children: [

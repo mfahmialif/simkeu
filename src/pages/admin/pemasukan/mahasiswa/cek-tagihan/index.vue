@@ -1,4 +1,6 @@
 <script setup>
+const router = useRouter();
+
 const nim = ref("");
 const listTagihan = ref([]);
 const cekNilai = ref(true);
@@ -11,6 +13,29 @@ const searchNim = ref("");
 const selectedMahasiswa = ref("");
 const loadingDataMahasiswa = ref(false);
 const loadingSearch = ref(false);
+
+const hasMahasiswa = computed(() => Boolean(mahasiswa.nim && mahasiswa.nama));
+
+const selectedMahasiswaData = computed(() => {
+  if (
+    selectedMahasiswa.value
+    && typeof selectedMahasiswa.value === "object"
+    && !Array.isArray(selectedMahasiswa.value)
+  ) {
+    return selectedMahasiswa.value;
+  }
+
+  return {};
+});
+
+const resetMahasiswa = () => {
+  listTagihan.value = [];
+  cekNilai.value = true;
+
+  Object.keys(mahasiswa).forEach((key) => {
+    delete mahasiswa[key];
+  });
+};
 
 const mahasiswaSemester = computed(() => {
   const semester = Number(mahasiswa.semester);
@@ -80,6 +105,8 @@ const isSkripsiTagihan = (item) =>
 const isSkripsiTidakBisaDibayar = (item) =>
   !cekNilai.value && isSkripsiTagihan(item);
 
+const isTagihanPerorangan = (item) => Boolean(item?.nim);
+
 const tagihanTableGroups = computed(() => [
   {
     key: "semester_ini",
@@ -102,6 +129,27 @@ const tagihanTableGroups = computed(() => [
 const searchTagihan = () => {
   fetchTagihan();
   fetchDeposit();
+};
+
+const goToTagihanPerorangan = () => {
+  const selected = selectedMahasiswaData.value;
+  const prodiDoubleDegreeId = Number(selected.prodi_double_degree_id) > 0
+    ? selected.prodi_double_degree_id
+    : null;
+  const query = {
+    nim: mahasiswa.nim,
+    th_angkatan_id: selected.th_akademik_id || selected.th_angkatan_id,
+    prodi_id: prodiDoubleDegreeId || selected.prodi_id,
+    kelas_id: selected.kelas_id,
+    double_degree: prodiDoubleDegreeId ? 1 : selected.double_degree,
+  };
+
+  router.push({
+    path: "/admin/pemasukan/mahasiswa/tagihan-perorangan/add",
+    query: Object.fromEntries(
+      Object.entries(query).filter(([, value]) => value !== undefined && value !== null && value !== "")
+    ),
+  });
 };
 
 let typingTimeout = null;
@@ -146,6 +194,7 @@ watch(selectedMahasiswa, (newVal) => {
     searchNim.value = newVal;
   } else if (!newVal) {
     searchNim.value = "";
+    resetMahasiswa();
   }
 });
 
@@ -159,6 +208,7 @@ const fetchTagihan = async () => {
   }
   try {
     loadingDataMahasiswa.value = true;
+    resetMahasiswa();
     const response = await $api("/admin/pemasukan/mahasiswa/cek-tagihan", {
       method: "GET",
       params: {
@@ -328,7 +378,7 @@ onMounted(() => {
 
     <!-- Btn download excel dan pdf -->
     <VRow class="mb-5">
-      <VCol cols="6">
+      <VCol cols="12" sm="6" :md="hasMahasiswa ? 4 : 6">
         <VBtn
           class="w-100"
           block
@@ -340,7 +390,7 @@ onMounted(() => {
           <span class="ms-3">Excel</span>
         </VBtn>
       </VCol>
-      <VCol cols="6">
+      <VCol cols="12" sm="6" :md="hasMahasiswa ? 4 : 6">
         <VBtn
           class="w-100"
           color="error"
@@ -350,6 +400,17 @@ onMounted(() => {
         >
           <VIcon icon="ri-file-pdf-line" />
           <span class="ms-3">PDF</span>
+        </VBtn>
+      </VCol>
+      <VCol v-if="hasMahasiswa" cols="12" md="4">
+        <VBtn
+          class="w-100"
+          color="primary"
+          block
+          @click="goToTagihanPerorangan"
+        >
+          <VIcon icon="ri-add-line" />
+          <span class="ms-3">Tagihan Perorangan</span>
         </VBtn>
       </VCol>
     </VRow>
@@ -440,6 +501,15 @@ onMounted(() => {
           >
             <td>
               {{ item.nama }}
+              <VChip
+                v-if="isTagihanPerorangan(item)"
+                color="info"
+                size="x-small"
+                label
+                class="ms-2"
+              >
+                Tagihan Perorangan
+              </VChip>
             </td>
             <td>
               {{ formatRupiah(item.sisa) }} {{ item.status_dispensasi ? '(Dispensasi: '+ formatRupiah(item.jumlah_dispensasi)+')': '' }}

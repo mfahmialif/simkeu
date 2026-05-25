@@ -1,4 +1,5 @@
 import dashboard from "./dashboard";
+import mahasiswa from "./mahasiswa";
 import pemasukan from "./pemasukan";
 import pengeluaran from "./pengeluaran";
 import pengeluaranDosen from "./pengeluaran-dosen";
@@ -18,6 +19,7 @@ const role = userData.role?.name;
 const routesByRole = {
   admin: [
     ...dashboard,
+    ...mahasiswa,
     ...saldo,
     ...pemasukan,
     ...pengeluaranHeading,
@@ -30,6 +32,7 @@ const routesByRole = {
 
   pimpinan: [
     ...dashboard,
+    ...mahasiswa,
     ...saldo,
     ...pemasukan,
     ...pengeluaranHeading,
@@ -42,6 +45,7 @@ const routesByRole = {
 
   keuangan: [
     ...dashboard,
+    ...mahasiswa,
     ...saldo,
     ...pemasukan,
     ...pengeluaranHeading,
@@ -51,11 +55,12 @@ const routesByRole = {
     ...setting,
   ],
 
-  staff: [...dashboardStaff, ...pemasukanStaff, ...laporan, ...setting],
-  kabag: [...dashboardStaff, ...pemasukanStaff, ...laporan, ...setting],
+  staff: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...laporan, ...setting],
+  kabag: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...laporan, ...setting],
 
   rumahtangga: [
     ...dashboard,
+    ...mahasiswa,
     ...pemasukanRumahTangga,
     ...pengeluaranRumahTangga,
     ...setting,
@@ -63,6 +68,7 @@ const routesByRole = {
 
   barokahdosen: [
     ...dashboard,
+    ...mahasiswa,
     ...pengeluaranHeading,
     ...pengeluaranDosen,
     ...setting,

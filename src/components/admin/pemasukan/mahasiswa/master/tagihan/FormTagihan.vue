@@ -16,6 +16,46 @@ const props = defineProps({
     type: String,
     required: false,
   },
+  nim: {
+    type: String,
+    default: "",
+  },
+  showNim: {
+    type: Boolean,
+    default: false,
+  },
+  searchNim: {
+    type: Boolean,
+    default: false,
+  },
+  submitRedirect: {
+    type: String,
+    default: "/admin/pemasukan/mahasiswa/master/tagihan",
+  },
+  defaultThAkademikId: {
+    type: [Number, String],
+    default: null,
+  },
+  defaultThAngkatanId: {
+    type: [Number, String],
+    default: null,
+  },
+  defaultProdiId: {
+    type: [Number, String],
+    default: null,
+  },
+  defaultDoubleDegree: {
+    type: [Number, String],
+    default: null,
+  },
+  defaultKelasId: {
+    type: [Number, String],
+    default: 6,
+  },
+  useActiveThAkademik: {
+    type: Boolean,
+    default: false,
+  },
   isRoleVisible: {
     type: Boolean,
     required: false,
@@ -54,7 +94,13 @@ const doubleDegree = ref([
   },
 ]);
 const selectedDoubleDegree = ref();
+const selectedKelasId = ref(6);
 
+const nim = ref("");
+const mahasiswaList = ref([]);
+const selectedMahasiswa = ref(null);
+const searchMahasiswa = ref("");
+const loadingSearchMahasiswa = ref(false);
 const nama = ref("");
 const jumlah = ref("");
 
@@ -62,15 +108,66 @@ const disabled = ref(false);
 
 const passwordRules = ref([requiredValidator, passwordValidator]);
 
+const normalizeSelectValue = (value) => {
+  if (value === null || value === undefined || value === "") return undefined;
+
+  const numericValue = Number(value);
+  return Number.isNaN(numericValue) ? value : numericValue;
+};
+
+const makeMahasiswaOption = (mahasiswa) => ({
+  ...mahasiswa,
+  display: mahasiswa.display || `${mahasiswa.nim}${mahasiswa.nama ? ` - ${mahasiswa.nama}` : ""}`,
+});
+
+const setSelectedMahasiswaFromNim = (value) => {
+  if (!value || !props.searchNim) return;
+
+  const mahasiswa = makeMahasiswaOption({
+    nim: value,
+    nama: "",
+  });
+
+  selectedMahasiswa.value = mahasiswa;
+  searchMahasiswa.value = mahasiswa.display;
+};
+
+const applyMahasiswaDefaults = (mahasiswa) => {
+  if (!mahasiswa || typeof mahasiswa !== "object" || Array.isArray(mahasiswa))
+    return;
+
+  const prodiDoubleDegreeId = Number(mahasiswa.prodi_double_degree_id) > 0
+    ? mahasiswa.prodi_double_degree_id
+    : null;
+
+  const thAngkatanId = normalizeSelectValue(
+    mahasiswa.th_akademik_id || mahasiswa.th_angkatan_id
+  );
+  const prodiId = normalizeSelectValue(prodiDoubleDegreeId || mahasiswa.prodi_id);
+  const kelasId = normalizeSelectValue(mahasiswa.kelas_id);
+  const doubleDegreeValue = normalizeSelectValue(
+    prodiDoubleDegreeId ? 1 : mahasiswa.double_degree
+  );
+
+  if (thAngkatanId !== undefined) selectedThAngkatan.value = thAngkatanId;
+  if (prodiId !== undefined) selectedProdi.value = prodiId;
+  if (kelasId !== undefined) selectedKelasId.value = kelasId;
+  selectedDoubleDegree.value = doubleDegreeValue ?? 0;
+};
+
 const fetchThAkademik = async () => {
   try {
+    const params = {
+      limit: 0,
+      sort_key: "kode",
+      sort_order: "desc",
+    };
+
+    if (props.useActiveThAkademik) params.aktif = "Y";
+
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
-      body: {
-        limit: 0,
-        sort_key: "kode",
-        sort_order: "desc",
-      },
+      params,
     });
 
     thAkademik.value = data.data.map((thAkademik) => {
@@ -79,6 +176,10 @@ const fetchThAkademik = async () => {
         value: thAkademik.id,
       };
     });
+
+    if (props.useActiveThAkademik && thAkademik.value.length > 0) {
+      selectedThAkademik.value = thAkademik.value[0].value;
+    }
   } catch (err) {
     console.error(err);
   }
@@ -146,11 +247,15 @@ const fetchFormSchadule = async () => {
   }
 };
 
-onMounted(() => {
-  fetchThAkademik();
+onMounted(async () => {
+  await fetchThAkademik();
   fetchThAngkatan();
   fetchProdi();
   fetchFormSchadule();
+
+  nim.value = props.nim || "";
+  setSelectedMahasiswaFromNim(nim.value);
+  selectedKelasId.value = normalizeSelectValue(props.defaultKelasId) ?? 6;
 
   if (props.typeForm === "edit") {
     selectedThAkademik.value = props.dataForm.th_akademik_id;
@@ -158,14 +263,89 @@ onMounted(() => {
     selectedFormSchadule.value = props.dataForm.form_schadule_id;
     selectedProdi.value = props.dataForm.prodi_id;
     selectedDoubleDegree.value = props.dataForm.double_degree;
+    selectedKelasId.value = props.dataForm.kelas_id ?? selectedKelasId.value;
+    nim.value = props.dataForm.nim ?? nim.value;
+    setSelectedMahasiswaFromNim(nim.value);
     nama.value = props.dataForm.nama;
     jumlah.value = props.dataForm.jumlah;
+  } else {
+    selectedThAkademik.value = normalizeSelectValue(props.defaultThAkademikId) ?? selectedThAkademik.value;
+    selectedThAngkatan.value = normalizeSelectValue(props.defaultThAngkatanId);
+    selectedProdi.value = normalizeSelectValue(props.defaultProdiId);
+    selectedDoubleDegree.value = normalizeSelectValue(props.defaultDoubleDegree);
   }
+});
+
+let typingMahasiswaTimeout = null;
+
+watch(searchMahasiswa, (newVal) => {
+  if (!props.showNim || !props.searchNim) return;
+
+  clearTimeout(typingMahasiswaTimeout);
+
+  const keyword = String(newVal || "").trim();
+  if (!keyword || keyword === selectedMahasiswa.value?.display) {
+    mahasiswaList.value = [];
+    loadingSearchMahasiswa.value = false;
+    return;
+  }
+
+  typingMahasiswaTimeout = setTimeout(async () => {
+    try {
+      loadingSearchMahasiswa.value = true;
+      const res = await $api(`/admin/mahasiswa/search/${keyword}`, {
+        method: "GET",
+      });
+
+      mahasiswaList.value = res.map((mahasiswa) =>
+        makeMahasiswaOption(mahasiswa)
+      );
+    } catch (err) {
+      showSnackbar({
+        text: err.data?.message || "Gagal mencari mahasiswa",
+        color: "error",
+      });
+      mahasiswaList.value = [];
+    } finally {
+      loadingSearchMahasiswa.value = false;
+    }
+  }, 1000);
+});
+
+watch(selectedMahasiswa, (newVal) => {
+  if (!props.showNim || !props.searchNim) return;
+
+  if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
+    nim.value = newVal.nim;
+    applyMahasiswaDefaults(newVal);
+  } else if (!newVal) {
+    nim.value = "";
+  }
+});
+
+onBeforeUnmount(() => {
+  clearTimeout(typingMahasiswaTimeout);
 });
 
 const onSubmit = async () => {
   const valid = await refForm.value.validate();
   if (!valid.valid) return;
+
+  if (props.showNim && props.searchNim && !selectedMahasiswa.value?.nim) {
+    showSnackbar({
+      text: "Pilih mahasiswa dari hasil pencarian",
+      color: "error",
+    });
+    return;
+  }
+
+  if (props.showNim && !nim.value) {
+    showSnackbar({
+      text: "NIM harus diisi",
+      color: "error",
+    });
+    return;
+  }
 
   const method = props.typeForm === "edit" ? "PUT" : "POST";
 
@@ -177,7 +357,8 @@ const onSubmit = async () => {
   formData.append("prodi_id", selectedProdi.value);
   formData.append("double_degree", selectedDoubleDegree.value);
   formData.append("form_schadule_id", selectedFormSchadule.value);
-  formData.append("kelas_id", 6);
+  formData.append("kelas_id", selectedKelasId.value);
+  if (props.showNim) formData.append("nim", nim.value);
   formData.append("nama", nama.value);
   formData.append("jumlah", jumlah.value);
 
@@ -198,7 +379,7 @@ const onSubmit = async () => {
         color: "success",
       });
 
-      router.push("/admin/pemasukan/mahasiswa/master/tagihan");
+      router.push(props.submitRedirect);
     } else {
       showSnackbar({
         text: response.message,
@@ -222,6 +403,40 @@ const onSubmit = async () => {
 <template>
   <VForm ref="refForm" @submit.prevent="onSubmit">
     <VRow>
+      <VCol v-if="showNim && searchNim" cols="12">
+        <VCombobox
+          v-model="selectedMahasiswa"
+          v-model:search="searchMahasiswa"
+          :items="mahasiswaList"
+          item-title="display"
+          item-value="nim"
+          label="NIM"
+          placeholder="Cari NIM / nama mahasiswa"
+          :rules="[requiredValidator]"
+          :loading="loadingSearchMahasiswa"
+          :readonly="Boolean(props.nim)"
+          :clearable="!Boolean(props.nim)"
+          return-object
+        >
+          <template #append-inner>
+            <VProgressCircular
+              v-if="loadingSearchMahasiswa"
+              indeterminate
+              size="16"
+              width="2"
+            />
+          </template>
+        </VCombobox>
+      </VCol>
+      <VCol v-else-if="showNim" cols="12">
+        <VTextField
+          v-model="nim"
+          :rules="[requiredValidator]"
+          label="NIM"
+          placeholder="NIM Mahasiswa"
+          :readonly="Boolean(props.nim)"
+        />
+      </VCol>
       <VCol cols="12">
         <VSelect
           v-model="selectedThAkademik"

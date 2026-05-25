@@ -5,25 +5,29 @@ export const db = {
       icon: "ri-user-3-line",
       children: [
         {
-          title: "Master",
+          url: { name: "admin-pemasukan-mahasiswa-master-data-mahasiswa" },
+          title: "Mahasiswa",
+        },
+        {
+          url: { name: "admin-pemasukan-mahasiswa-master-jenis-pembayaran" },
+          title: "Jenis Pembayaran",
+        },
+        {
+          title: "Tagihan",
           children: [
-            {
-              url: { name: "admin-pemasukan-mahasiswa-master-data-mahasiswa" },
-              title: "Data Mahasiswa",
-            },
-            {
-              url: { name: "admin-pemasukan-mahasiswa-master-jenis-pembayaran" },
-              title: "Jenis Pembayaran",
-            },
             {
               url: { name: "admin-pemasukan-mahasiswa-master-tagihan" },
               title: "Tagihan",
             },
+            {
+              url: { name: "admin-pemasukan-mahasiswa-tagihan-perorangan" },
+              title: "Tagihan Perorangan",
+            },
+            {
+              url: { name: "admin-pemasukan-mahasiswa-cek-tagihan" },
+              title: "Cek Tagihan",
+            },
           ],
-        },
-        {
-          url: { name: "admin-pemasukan-mahasiswa-cek-tagihan" },
-          title: "Cek Tagihan",
         },
         {
           title: "Pembayaran",
