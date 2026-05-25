@@ -101,6 +101,18 @@ const mahasiswaList = ref([]);
 const selectedMahasiswa = ref(null);
 const searchMahasiswa = ref("");
 const loadingSearchMahasiswa = ref(false);
+const loadingDataMahasiswa = ref(false);
+const createEmptyMahasiswaDetail = () => ({
+  nim: "",
+  nama: "",
+  prodi: "",
+  jenisKelamin: "",
+  angkatan: "",
+  kelas: "",
+  semester: "",
+});
+const mahasiswaDetail = ref(createEmptyMahasiswaDetail());
+const hasMahasiswaDetail = computed(() => Boolean(mahasiswaDetail.value.nim));
 const nama = ref("");
 const jumlah = ref("");
 
@@ -119,6 +131,22 @@ const makeMahasiswaOption = (mahasiswa) => ({
   ...mahasiswa,
   display: mahasiswa.display || `${mahasiswa.nim}${mahasiswa.nama ? ` - ${mahasiswa.nama}` : ""}`,
 });
+
+const setMahasiswaDetail = (mahasiswa = {}) => {
+  mahasiswaDetail.value = {
+    nim: mahasiswa.nim || "",
+    nama: mahasiswa.nama || "",
+    prodi: mahasiswa.prodi?.nama || mahasiswa.prodi_nama || mahasiswa.nama_prodi || "",
+    jenisKelamin: mahasiswa.jk?.nama || mahasiswa.jenis_kelamin || mahasiswa.jenisKelamin || "",
+    angkatan: mahasiswa.th_akademik?.kode || mahasiswa.angkatan || mahasiswa.th_angkatan_kode || "",
+    kelas: mahasiswa.kelas?.nama || mahasiswa.kelas_nama || mahasiswa.nama_kelas || "",
+    semester: mahasiswa.semester || "",
+  };
+};
+
+const resetMahasiswaDetail = () => {
+  mahasiswaDetail.value = createEmptyMahasiswaDetail();
+};
 
 const setSelectedMahasiswaFromNim = (value) => {
   if (!value || !props.searchNim) return;
@@ -153,6 +181,44 @@ const applyMahasiswaDefaults = (mahasiswa) => {
   if (prodiId !== undefined) selectedProdi.value = prodiId;
   if (kelasId !== undefined) selectedKelasId.value = kelasId;
   selectedDoubleDegree.value = doubleDegreeValue ?? 0;
+};
+
+const fetchMahasiswaDetail = async (nimValue) => {
+  if (!nimValue || !props.searchNim) return null;
+
+  try {
+    loadingDataMahasiswa.value = true;
+
+    const mahasiswa = await $api("/admin/mahasiswa/nim", {
+      method: "GET",
+      body: {
+        nim: nimValue,
+      },
+    });
+
+    if (!mahasiswa || (Array.isArray(mahasiswa) && mahasiswa.length < 1)) {
+      resetMahasiswaDetail();
+      showSnackbar({
+        text: "Data mahasiswa tidak ditemukan",
+        color: "error",
+      });
+      return null;
+    }
+
+    setMahasiswaDetail(mahasiswa);
+    applyMahasiswaDefaults(mahasiswa);
+
+    return mahasiswa;
+  } catch (err) {
+    resetMahasiswaDetail();
+    showSnackbar({
+      text: err.data?.message || "Gagal mendapatkan detail mahasiswa",
+      color: "error",
+    });
+    return null;
+  } finally {
+    loadingDataMahasiswa.value = false;
+  }
 };
 
 const fetchThAkademik = async () => {
@@ -318,8 +384,14 @@ watch(selectedMahasiswa, (newVal) => {
   if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
     nim.value = newVal.nim;
     applyMahasiswaDefaults(newVal);
+    setMahasiswaDetail(newVal);
+    fetchMahasiswaDetail(newVal.nim);
+  } else if (typeof newVal === "string") {
+    nim.value = newVal;
+    resetMahasiswaDetail();
   } else if (!newVal) {
     nim.value = "";
+    resetMahasiswaDetail();
   }
 });
 
@@ -428,6 +500,71 @@ const onSubmit = async () => {
           </template>
         </VCombobox>
       </VCol>
+      <template v-if="showNim && searchNim && (hasMahasiswaDetail || loadingDataMahasiswa)">
+        <VCol cols="12" md="6">
+          <VTextField
+            v-model="mahasiswaDetail.nim"
+            label="NIM"
+            placeholder="NIM"
+            readonly
+            :loading="loadingDataMahasiswa"
+          />
+        </VCol>
+        <VCol cols="12" md="6">
+          <VTextField
+            v-model="mahasiswaDetail.nama"
+            label="Nama"
+            placeholder="Nama"
+            readonly
+            :loading="loadingDataMahasiswa"
+          />
+        </VCol>
+        <VCol cols="12" md="6">
+          <VTextField
+            v-model="mahasiswaDetail.prodi"
+            label="Prodi"
+            placeholder="Prodi"
+            readonly
+            :loading="loadingDataMahasiswa"
+          />
+        </VCol>
+        <VCol cols="12" md="6">
+          <VTextField
+            v-model="mahasiswaDetail.jenisKelamin"
+            label="Jenis Kelamin"
+            placeholder="Jenis Kelamin"
+            readonly
+            :loading="loadingDataMahasiswa"
+          />
+        </VCol>
+        <VCol cols="12" md="4">
+          <VTextField
+            v-model="mahasiswaDetail.angkatan"
+            label="Angkatan"
+            placeholder="Angkatan"
+            readonly
+            :loading="loadingDataMahasiswa"
+          />
+        </VCol>
+        <VCol cols="12" md="4">
+          <VTextField
+            v-model="mahasiswaDetail.kelas"
+            label="Kelas"
+            placeholder="Kelas"
+            readonly
+            :loading="loadingDataMahasiswa"
+          />
+        </VCol>
+        <VCol cols="12" md="4">
+          <VTextField
+            v-model="mahasiswaDetail.semester"
+            label="Semester"
+            placeholder="Semester"
+            readonly
+            :loading="loadingDataMahasiswa"
+          />
+        </VCol>
+      </template>
       <VCol v-else-if="showNim" cols="12">
         <VTextField
           v-model="nim"
