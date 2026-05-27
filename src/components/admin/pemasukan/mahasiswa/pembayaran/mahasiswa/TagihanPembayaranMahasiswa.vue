@@ -249,6 +249,162 @@ defineExpose({ fetchTagihan, clearTagihan, paymentMode });
 /** Daftar baris yang dipilih */
 const rows = ref([]);
 
+const semesterPendekKrsDetails = ref({});
+const semesterPendekKrsLoading = ref({});
+const semesterPendekKrsErrors = ref({});
+
+const parseSemesterPendekTagihanName = (nama) => {
+  const parts = String(nama || "")
+    .split(" - ")
+    .map((part) => part.trim());
+
+  if (parts.length < 3 || parts[0].toUpperCase() !== "SEMESTER PENDEK") {
+    return null;
+  }
+
+  const krsId = Number(parts[parts.length - 1]);
+  if (!Number.isFinite(krsId) || krsId <= 0) {
+    return null;
+  }
+
+  return {
+    krsId,
+    periode: parts.slice(1, -1).join(" - "),
+  };
+};
+
+const getTagihanByRow = (row) =>
+  tagihan.value.find((item) => String(item.id) === String(row.id));
+
+const semesterPendekKrsRows = computed(() => {
+  const seenKrsIds = new Set();
+
+  return rows.value
+    .map((row) => {
+      const tagihanItem = getTagihanByRow(row);
+      const parsed = parseSemesterPendekTagihanName(tagihanItem?.nama);
+
+      if (!parsed || seenKrsIds.has(parsed.krsId)) {
+        return null;
+      }
+
+      seenKrsIds.add(parsed.krsId);
+
+      return {
+        krsId: parsed.krsId,
+        periode: parsed.periode,
+        tagihanNama: tagihanItem.nama,
+      };
+    })
+    .filter(Boolean);
+});
+
+const fetchSemesterPendekKrsDetail = async (krsId) => {
+  const key = String(krsId);
+
+  if (semesterPendekKrsDetails.value[key] || semesterPendekKrsLoading.value[key]) {
+    return;
+  }
+
+  semesterPendekKrsLoading.value = {
+    ...semesterPendekKrsLoading.value,
+    [key]: true,
+  };
+  semesterPendekKrsErrors.value = {
+    ...semesterPendekKrsErrors.value,
+    [key]: null,
+  };
+
+  try {
+    const res = await $api(`/admin/pemasukan/mahasiswa/semester-pendek/krs-detail/${krsId}`, {
+      method: "GET",
+    });
+
+    if (res?.status === false) {
+      throw new Error(res.message || "Gagal memuat detail KRS Semester Pendek.");
+    }
+
+    semesterPendekKrsDetails.value = {
+      ...semesterPendekKrsDetails.value,
+      [key]: res?.data ?? res,
+    };
+  } catch (error) {
+    semesterPendekKrsErrors.value = {
+      ...semesterPendekKrsErrors.value,
+      [key]: error?.data?.message || error?.message || "Gagal memuat detail KRS Semester Pendek.",
+    };
+  } finally {
+    semesterPendekKrsLoading.value = {
+      ...semesterPendekKrsLoading.value,
+      [key]: false,
+    };
+  }
+};
+
+watch(
+  semesterPendekKrsRows,
+  (items) => {
+    items.forEach((item) => fetchSemesterPendekKrsDetail(item.krsId));
+  },
+  { deep: true }
+);
+
+const getSemesterPendekDetails = (krsData) => {
+  const details = krsData?.details ?? krsData?.krs_detail ?? krsData?.detail ?? [];
+  return Array.isArray(details) ? details : [];
+};
+
+const getMataKuliah = (detail) =>
+  detail?.mata_kuliah ?? detail?.matakuliah ?? detail?.mk ?? {};
+
+const getMkNama = (detail) => {
+  const mataKuliah = getMataKuliah(detail);
+
+  return mataKuliah?.nama
+    ?? detail?.nama_mk
+    ?? detail?.nama_matakuliah
+    ?? detail?.nama
+    ?? "-";
+};
+
+const getMkSks = (detail) => {
+  const mataKuliah = getMataKuliah(detail);
+
+  return mataKuliah?.sks
+    ?? detail?.sks
+    ?? "-";
+};
+
+const getMkSemester = (detail) => {
+  const mataKuliah = getMataKuliah(detail);
+
+  return mataKuliah?.smt
+    ?? mataKuliah?.semester
+    ?? detail?.smt
+    ?? detail?.semester
+    ?? "-";
+};
+
+const semesterPendekKrsCards = computed(() =>
+  semesterPendekKrsRows.value.map((item) => {
+    const key = String(item.krsId);
+    const krsData = semesterPendekKrsDetails.value[key] ?? null;
+    const details = getSemesterPendekDetails(krsData);
+
+    return {
+      ...item,
+      krsData,
+      details,
+      loading: Boolean(semesterPendekKrsLoading.value[key]),
+      error: semesterPendekKrsErrors.value[key],
+      totalSks: details.reduce((sum, detail) => {
+        const sks = Number(getMkSks(detail));
+        return sum + (Number.isFinite(sks) ? sks : 0);
+      }, 0),
+    };
+  })
+);
+
 const normalizePaymentScope = (scope) =>
   scope === "semester_ini" ? "semester_ini" : "semua";
 
@@ -783,6 +939,65 @@ watch(
         <template v-else>
           Belum ada tagihan yang dipilih.
         </template>
+      </div>
+
+      <div v-if="semesterPendekKrsCards.length" class="mt-4">
+        <div
+          v-for="card in semesterPendekKrsCards"
+          :key="card.krsId"
+          class="border rounded pa-4 mb-4"
+        >
+          <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-3">
+            <div>
+              <div class="text-subtitle-1 font-weight-medium">
+                Detail KRS Semester Pendek
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ card.periode || card.tagihanNama }}
+              </div>
+            </div>
+            <VChip color="primary" variant="tonal" size="small">
+              {{ card.totalSks }} SKS
+            </VChip>
+          </div>
+
+          <div v-if="card.loading" class="d-flex align-center justify-center py-6">
+            <VProgressCircular indeterminate color="primary" size="28" class="me-3" />
+            <span class="text-medium-emphasis">Memuat detail KRS...</span>
+          </div>
+
+          <VAlert
+            v-else-if="card.error"
+            type="warning"
+            variant="tonal"
+            density="compact"
+          >
+            {{ card.error }}
+          </VAlert>
+
+          <VTable v-else-if="card.details.length" density="compact" class="border rounded">
+            <thead>
+              <tr>
+                <th class="text-left">No</th>
+                <th class="text-left">Nama MK</th>
+                <th class="text-center">SKS</th>
+                <th class="text-center">SMT MK</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(detail, idx) in card.details" :key="detail.id ?? idx">
+                <td>{{ idx + 1 }}</td>
+                <td>{{ getMkNama(detail) }}</td>
+                <td class="text-center">{{ getMkSks(detail) }}</td>
+                <td class="text-center">{{ getMkSemester(detail) }}</td>
+              </tr>
+            </tbody>
+          </VTable>
+
+          <div v-else class="text-medium-emphasis text-center py-6">
+            Detail KRS Semester Pendek tidak tersedia.
+          </div>
+        </div>
       </div>
     </VCardText>
   </VCard>
