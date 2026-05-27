@@ -107,6 +107,19 @@ const isSkripsiTidakBisaDibayar = (item) =>
 
 const isTagihanPerorangan = (item) => Boolean(item?.nim);
 
+const formatBatasDispensasi = (value) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
 const tagihanTableGroups = computed(() => [
   {
     key: "semester_ini",
@@ -512,7 +525,13 @@ onMounted(() => {
               </VChip>
             </td>
             <td>
-              {{ formatRupiah(item.sisa) }} {{ item.status_dispensasi ? '(Dispensasi: '+ formatRupiah(item.jumlah_dispensasi)+')': '' }}
+              <div>{{ formatRupiah(item.sisa) }}</div>
+              <div v-if="item.status_dispensasi" class="text-caption text-success">
+                Dispensasi: {{ formatRupiah(item.jumlah_dispensasi) }}
+              </div>
+              <div v-if="item.status_dispensasi" class="text-caption text-medium-emphasis">
+                Batas: {{ formatBatasDispensasi(item.batas_dispensasi) }}
+              </div>
             </td>
             <td>
               {{ formatRupiah(item.jumlah) }}

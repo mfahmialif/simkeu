@@ -6,6 +6,7 @@ export const $api = async (url, options = {}) => {
 
   const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
   const accessToken = useCookie("accessToken").value;
+  const jkScope = useCookie("simkeuJkScope").value;
 
   const method = (options.method || "GET").toUpperCase();
   const headers = {
@@ -66,6 +67,9 @@ export const $api = async (url, options = {}) => {
 
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+  if (jkScope) {
+    headers["X-Simkeu-Jk-Scope"] = jkScope;
   }
 
   try {

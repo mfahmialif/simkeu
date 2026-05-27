@@ -3,6 +3,9 @@ import { ref, onMounted, watch } from "vue";
 import WidgetSemesterPendek from "@/components/admin/pemasukan/mahasiswa/SemesterPendek/WidgetSemesterPendek.vue";
 import { openFileExport } from "@/composables/exportFile";
 
+const router = useRouter();
+const redirectPath = "/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add";
+
 const page = ref(1);
 const itemsPerPage = ref(10);
 const sortBy = ref({ key: "id", order: "desc" });
@@ -214,9 +217,7 @@ watch(search, () => {
 });
 
 onMounted(() => {
-  document.title = "Semester Pendek - SIMKEU";
-  fetchOptions();
-  fetchSemesterPendek();
+  router.replace(redirectPath);
 });
 </script>
 

@@ -75,6 +75,12 @@ watch([selectedThAkademik, selectedProdi, selectedJk], () => {
 const totalAmount = computed(() =>
   rawFinanceData.value.reduce((s, i) => s + i.amount, 0)
 );
+const totalLakiLaki = computed(() =>
+  rawFinanceData.value.reduce((s, i) => s + (i.laki_laki || 0), 0)
+);
+const totalPerempuan = computed(() =>
+  rawFinanceData.value.reduce((s, i) => s + (i.perempuan || 0), 0)
+);
 
 const allFinanceData = computed(() => {
   const total = totalAmount.value || 1;
@@ -96,10 +102,14 @@ const financeData = computed(() => {
   const top2 = all.slice(0, 2);
 
   const lainnyaAmount = all.slice(2).reduce((s, i) => s + i.amount, 0);
+  const lainnyaLakiLaki = all.slice(2).reduce((s, i) => s + (i.laki_laki || 0), 0);
+  const lainnyaPerempuan = all.slice(2).reduce((s, i) => s + (i.perempuan || 0), 0);
   const lainnya = {
     icon: "ri-more-line",
     name: "Lainnya",
     amount: lainnyaAmount,
+    laki_laki: lainnyaLakiLaki,
+    perempuan: lainnyaPerempuan,
     color: colorPalette[2],
     percentage: +((lainnyaAmount / total) * 100).toFixed(1),
     isLainnya: true,
@@ -167,7 +177,9 @@ const fetchData = async () => {
 
   rawFinanceData.value = (response.data || []).map((item) => ({
     name: item.name,
-    amount: item.amount,
+    amount: Number(item.amount || 0),
+    laki_laki: Number(item.laki_laki || 0),
+    perempuan: Number(item.perempuan || 0),
   }));
 };
 
@@ -186,7 +198,7 @@ onMounted(() => {
     <template v-else>
       <VCardItem
         :title="`Distribusi Pemasukan Keuangan UII Dalwa`"
-        :subtitle="`Total: ${toIDR(totalAmount)}`"
+        :subtitle="`Total: ${toIDR(totalAmount)} | Laki-laki: ${toIDR(totalLakiLaki)} | Perempuan: ${toIDR(totalPerempuan)}`"
       >
         <template #append>
           <MoreBtn :menu-list="moreList" />
@@ -292,6 +304,15 @@ onMounted(() => {
 
         <!-- Tabel rincian -->
         <VTable class="text-no-wrap">
+          <thead>
+            <tr>
+              <th class="ps-0">Jenis Tagihan</th>
+              <th>Laki-laki</th>
+              <th>Perempuan</th>
+              <th>Jumlah</th>
+              <th>Persentase</th>
+            </tr>
+          </thead>
           <tbody>
             <tr
               v-for="(row, idx) in financeData"
@@ -299,7 +320,7 @@ onMounted(() => {
               style="cursor: pointer"
               @click="handleRowClick(row)"
             >
-              <td width="50%" class="ps-0" style="block-size: 48px">
+              <td width="40%" class="ps-0" style="block-size: 48px">
                 <div class="d-flex align-center text-high-emphasis">
                   <VIcon :icon="row.icon" size="24" class="me-2" />
                   <h6 class="text-h6 font-weight-regular">
@@ -312,10 +333,16 @@ onMounted(() => {
                   </h6>
                 </div>
               </td>
-              <td width="30%">
-                <h6 class="text-h6">{{ toIDR(row.amount) }}</h6>
+              <td width="15%">
+                <span class="text-body-2">{{ toIDR(row.laki_laki || 0) }}</span>
+              </td>
+              <td width="15%">
+                <span class="text-body-2">{{ toIDR(row.perempuan || 0) }}</span>
               </td>
               <td width="20%">
+                <h6 class="text-h6">{{ toIDR(row.amount) }}</h6>
+              </td>
+              <td width="10%">
                 <span class="text-body-1">{{ row.percentage }}%</span>
               </td>
             </tr>
@@ -324,6 +351,12 @@ onMounted(() => {
             <tr>
               <td class="ps-0">
                 <strong>Total</strong>
+              </td>
+              <td>
+                <strong>{{ toIDR(totalLakiLaki) }}</strong>
+              </td>
+              <td>
+                <strong>{{ toIDR(totalPerempuan) }}</strong>
               </td>
               <td>
                 <strong>{{ toIDR(totalAmount) }}</strong>
@@ -339,7 +372,7 @@ onMounted(() => {
   </VCard>
 
   <!-- Modal detail Lainnya -->
-  <VDialog v-model="showLainnyaModal" max-width="600">
+  <VDialog v-model="showLainnyaModal" max-width="900">
     <VCard>
       <VCardTitle class="d-flex align-center justify-space-between pa-4">
         <span>Detail Pemasukan Lainnya</span>
@@ -353,6 +386,8 @@ onMounted(() => {
           <thead>
             <tr>
               <th class="ps-0">Jenis Tagihan</th>
+              <th>Laki-laki</th>
+              <th>Perempuan</th>
               <th>Jumlah</th>
               <th>Persentase</th>
             </tr>
@@ -374,6 +409,12 @@ onMounted(() => {
                 </div>
               </td>
               <td>
+                <span class="text-body-1 font-weight-medium">{{ toIDR(row.laki_laki || 0) }}</span>
+              </td>
+              <td>
+                <span class="text-body-1 font-weight-medium">{{ toIDR(row.perempuan || 0) }}</span>
+              </td>
+              <td>
                 <span class="text-body-1 font-weight-medium">{{ toIDR(row.amount) }}</span>
               </td>
               <td>
@@ -385,6 +426,12 @@ onMounted(() => {
             <tr>
               <td class="ps-0">
                 <strong>Total Lainnya</strong>
+              </td>
+              <td>
+                <strong>{{ toIDR(lainnyaDetails.reduce((s, i) => s + (i.laki_laki || 0), 0)) }}</strong>
+              </td>
+              <td>
+                <strong>{{ toIDR(lainnyaDetails.reduce((s, i) => s + (i.perempuan || 0), 0)) }}</strong>
               </td>
               <td>
                 <strong>{{ toIDR(lainnyaDetails.reduce((s, i) => s + i.amount, 0)) }}</strong>

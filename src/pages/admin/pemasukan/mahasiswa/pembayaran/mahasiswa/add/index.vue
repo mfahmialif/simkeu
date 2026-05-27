@@ -49,9 +49,14 @@ const submitData = async () => {
                 color: "success",
             });
 
-            if (redirectKwitansi.value) {
+            if (redirectKwitansi.value && response.id) {
                 await kwitansi(response.id);
 
+                tagihanRef.value.clearTagihan();
+                depositRef.value.clearDeposit();
+                mahasiswaRef.value.searching();
+                mahasiswaRef.value.nimFocus();
+            } else if (redirectKwitansi.value) {
                 tagihanRef.value.clearTagihan();
                 depositRef.value.clearDeposit();
                 mahasiswaRef.value.searching();
@@ -111,14 +116,35 @@ function buildPembayaranFormData() {
     if (m.kamarId != null) fd.append("kamar_id", m.kamarId);
 
     // Array list_tagihan_*
-    rows.forEach((r) => {
+    for (const r of rows) {
+        const keringananJenis = normalizeKeringananJenis(r.keringanan_jenis);
+        const keringananJumlah = Number(r.keringanan_jumlah) || 0;
+        const keringananBatas =
+            keringananJenis === "dhomin" ? "9999-12-31" : (r.keringanan_batas ?? "");
+
+        if (keringananJenis === "samahah" && (keringananJumlah <= 0 || !keringananBatas)) {
+            showSnackbar({
+                text: "Harap isi jumlah dan batas tanggal keringanan Samahah",
+                color: "error",
+            });
+            return false;
+        }
+
         fd.append("list_tagihan_id[]", r.id ?? "");
         fd.append("list_tagihan[]", r.display ?? r.nama ?? r.judul ?? ""); // nama tagihan
         fd.append("list_dibayar[]", r.dibayar ?? 0);
         fd.append("list_deposit[]", r.deposit ?? 0);
-    });
+        fd.append("list_keringanan_jenis[]", keringananJenis);
+        fd.append("list_keringanan_jumlah[]", keringananJumlah);
+        fd.append("list_keringanan_batas[]", keringananBatas);
+    }
 
     return fd;
+}
+
+function normalizeKeringananJenis(value) {
+    const jenis = String(value || "").toLowerCase();
+    return ["samahah", "dhomin"].includes(jenis) ? jenis : "";
 }
 
 const tagihanRef = ref(null);
@@ -269,12 +295,12 @@ onMounted(() => {
 .grid-pembayaran { order: 2; }
 .grid-actions    { order: 3; }
 
-/* Desktop: 2 kolom */
+/* Desktop: full width, actions tetap di bawah area pembayaran */
 @media (min-width: 960px) {
     .payment-grid {
         display: grid;
-        grid-template-columns: 2fr 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
     }
 
     .grid-main {
@@ -290,10 +316,8 @@ onMounted(() => {
     }
 
     .grid-actions {
-        grid-column: 2;
-        grid-row: 1 / -1;
-        position: sticky;
-        top: 80px;
+        grid-column: 1;
+        grid-row: 3;
         align-self: start;
     }
 }

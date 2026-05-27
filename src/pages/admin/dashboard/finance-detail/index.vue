@@ -70,6 +70,8 @@ const activeTab = ref("detail");
 const isLoading = ref(false);
 const detailData = ref([]);
 const totalAmount = ref(0);
+const totalLakiLaki = ref(0);
+const totalPerempuan = ref(0);
 
 const toIDR = (n) =>
   new Intl.NumberFormat("id-ID", {
@@ -77,6 +79,13 @@ const toIDR = (n) =>
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(n);
+
+const paymentMethodColor = (jenisKelamin) => {
+  const value = String(jenisKelamin || "").toLowerCase();
+  if (value.includes("putra") || value.includes("laki")) return "primary";
+  if (value.includes("putri") || value.includes("perempuan")) return "error";
+  return "secondary";
+};
 
 const fetchDetail = async () => {
   isLoading.value = true;
@@ -101,8 +110,21 @@ const fetchDetail = async () => {
       return;
     }
 
-    detailData.value = response.data || [];
-    totalAmount.value = response.total || 0;
+    detailData.value = (response.data || []).map((row) => ({
+      ...row,
+      amount: Number(row.amount || 0),
+      laki_laki: Number(row.laki_laki || 0),
+      perempuan: Number(row.perempuan || 0),
+      payment_methods: (row.payment_methods || []).map((method) => ({
+        ...method,
+        amount: Number(method.amount || 0),
+        laki_laki: Number(method.laki_laki || 0),
+        perempuan: Number(method.perempuan || 0),
+      })),
+    }));
+    totalAmount.value = Number(response.total || 0);
+    totalLakiLaki.value = Number(response.total_laki_laki || 0);
+    totalPerempuan.value = Number(response.total_perempuan || 0);
   } catch (err) {
     isLoading.value = false;
     showSnackbar({ text: "Gagal memuat data", color: "error" });
@@ -139,7 +161,9 @@ onMounted(() => {
             Detail Pemasukan: {{ category }}
           </VCardTitle>
           <VCardSubtitle>
-            Total: {{ toIDR(totalAmount) }}
+            Total: {{ toIDR(totalAmount) }} |
+            Laki-laki: {{ toIDR(totalLakiLaki) }} |
+            Perempuan: {{ toIDR(totalPerempuan) }}
           </VCardSubtitle>
         </VCardItem>
 
@@ -204,13 +228,16 @@ onMounted(() => {
               <tr>
                 <th>No</th>
                 <th>{{ activeTab === 'detail' ? 'Nama Tagihan' : activeTab === 'semester' ? 'Semester' : activeTab === 'prodi' ? 'Prodi' : activeTab === 'bulan' ? 'Bulan' : 'Tahun' }}</th>
+                <th>Laki-laki</th>
+                <th>Perempuan</th>
+                <th>Jenis Pembayaran</th>
                 <th>Jumlah</th>
                 <th>Persentase</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="detailData.length === 0">
-                <td colspan="4" class="text-center text-disabled py-8">
+                <td colspan="7" class="text-center text-disabled py-8">
                   Tidak ada data
                 </td>
               </tr>
@@ -218,6 +245,38 @@ onMounted(() => {
                 <td>{{ idx + 1 }}</td>
                 <td>
                   <span class="font-weight-medium">{{ row.label }}</span>
+                </td>
+                <td>
+                  <span class="font-weight-medium">{{ toIDR(row.laki_laki || 0) }}</span>
+                </td>
+                <td>
+                  <span class="font-weight-medium">{{ toIDR(row.perempuan || 0) }}</span>
+                </td>
+                <td style="min-inline-size: 280px;">
+                  <div v-if="row.payment_methods?.length" class="d-flex flex-column gap-y-1">
+                    <div
+                      v-for="(method, methodIdx) in row.payment_methods"
+                      :key="methodIdx"
+                      class="payment-method-row"
+                    >
+                      <div class="d-flex align-center gap-x-2" style="min-inline-size: 0;">
+                        <VChip
+                          size="x-small"
+                          label
+                          :color="paymentMethodColor(method.jenis_kelamin)"
+                        >
+                          {{ method.jenis_kelamin || 'Semua' }}
+                        </VChip>
+                        <span class="text-body-2 text-truncate">
+                          {{ method.nama || 'Lainnya' }}
+                        </span>
+                      </div>
+                      <span class="text-body-2 font-weight-medium">
+                        {{ toIDR(method.amount || 0) }}
+                      </span>
+                    </div>
+                  </div>
+                  <span v-else class="text-disabled">-</span>
                 </td>
                 <td>
                   <span class="font-weight-medium">{{ toIDR(row.amount) }}</span>
@@ -240,6 +299,9 @@ onMounted(() => {
               <tr v-if="detailData.length > 0">
                 <td></td>
                 <td><strong>Total</strong></td>
+                <td><strong>{{ toIDR(totalLakiLaki) }}</strong></td>
+                <td><strong>{{ toIDR(totalPerempuan) }}</strong></td>
+                <td></td>
                 <td><strong>{{ toIDR(totalAmount) }}</strong></td>
                 <td><strong>100%</strong></td>
               </tr>
@@ -250,3 +312,13 @@ onMounted(() => {
     </VCol>
   </VRow>
 </template>
+
+<style lang="scss" scoped>
+.payment-method-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-inline-size: 0;
+}
+</style>

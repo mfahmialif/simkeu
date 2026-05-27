@@ -16,7 +16,7 @@ const widgetRef = ref(null);
 
 const page = ref(1);
 const itemsPerPage = ref(10);
-const sortBy = ref({ key: "id", order: "desc" });
+const sortBy = ref({ key: "created_at", order: "desc" });
 const search = ref("");
 const selectedRows = ref([]);
 const dataTable = ref([]);

@@ -12,10 +12,17 @@ export const useApi = createFetch({
     refetch: true,
     async beforeFetch({ options }) {
       const accessToken = useCookie('accessToken').value
+      const jkScope = useCookie('simkeuJkScope').value
       if (accessToken) {
         options.headers = {
           ...options.headers,
           Authorization: `Bearer ${accessToken}`,
+        }
+      }
+      if (jkScope) {
+        options.headers = {
+          ...options.headers,
+          'X-Simkeu-Jk-Scope': jkScope,
         }
       }
       

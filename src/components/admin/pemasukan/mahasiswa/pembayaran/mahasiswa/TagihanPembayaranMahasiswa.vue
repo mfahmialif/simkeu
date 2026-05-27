@@ -49,6 +49,36 @@ const getTagihanSemester = (item) => {
 const isSkripsiBlocked = (item) =>
   !cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi");
 
+const hasDispensasiTagihan = (item) =>
+  Boolean(item?.status_dispensasi) && Number(item?.jumlah_dispensasi || 0) > 0;
+
+const formatTagihanRupiah = (value) =>
+  `Rp.${Number(value || 0).toLocaleString("id-ID")}`;
+
+const formatBatasDispensasi = (value) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+const getTagihanDisplay = (item) => {
+  const dibayarText = Number(item?.dibayar || 0) > 0
+    ? ` (Dibayar: ${formatTagihanRupiah(item.dibayar)})`
+    : "";
+  const dispensasiText = hasDispensasiTagihan(item)
+    ? ` (Dispensasi: ${formatTagihanRupiah(item.jumlah_dispensasi)}, Batas: ${formatBatasDispensasi(item.batas_dispensasi)})`
+    : "";
+
+  return `${item.nama} - ${formatTagihanRupiah(item.sisa)}${dibayarText}${dispensasiText}`;
+};
+
 const getRawTagihanItem = (item) => item?.raw || item;
 
 const isGroupTagihanItem = (item) =>
@@ -182,9 +212,7 @@ const fetchTagihan = async (nim) => {
 
     tagihan.value = res.data.list_tagihan.map((item) => ({
       ...item,
-      display: `${item.nama} - Rp.${item.sisa}${
-        item.dibayar > 0 ? " (Dibayar: Rp." + item.dibayar + ")" : ""
-      }`,
+      display: getTagihanDisplay(item),
       itemProps: {},
     }));
   } catch (error) {
@@ -249,9 +277,56 @@ defineExpose({ fetchTagihan, clearTagihan, paymentMode });
 /** Daftar baris yang dipilih */
 const rows = ref([]);
 
+const keringananOptions = [
+  { title: "Tanpa Keringanan", value: "" },
+  { title: "Samahah", value: "samahah" },
+  { title: "Dhomin", value: "dhomin" },
+];
+
+const normalizeKeringananJenis = (value) => {
+  const jenis = String(value || "").toLowerCase();
+  return ["samahah", "dhomin"].includes(jenis) ? jenis : "";
+};
+
+const createPaymentRow = (item, dibayar, deposit = 0) => ({
+  id: item.id,
+  display: item.display,
+  nominal: Number(item.sisa) || 0,
+  dibayar: Number(dibayar) || 0,
+  deposit: Number(deposit) || 0,
+  keringanan_jenis: "",
+  keringanan_jumlah: 0,
+  keringanan_batas: null,
+});
+
+const isDhominRow = (row) => normalizeKeringananJenis(row?.keringanan_jenis) === "dhomin";
+const isSamahahRow = (row) => normalizeKeringananJenis(row?.keringanan_jenis) === "samahah";
+
+function syncPaymentTotalsState() {
+  const totalDepositRows = rows.value.reduce(
+    (sum, row) => sum + (Number(row.deposit) || 0),
+    0
+  );
+
+  props.mahasiswa.dipakai = totalDepositRows;
+
+  if (paymentMode.value === "nominal") {
+    depositUsed.value = totalDepositRows;
+    const totalCashRows = rows.value.reduce(
+      (sum, row) => sum + (Number(row.dibayar) || 0),
+      0
+    );
+    sisaNominal.value = Math.max(0, (Number(nominalInput.value) || 0) - totalCashRows);
+    props.mahasiswa.autoSimpanDeposit = sisaNominal.value;
+  } else {
+    props.mahasiswa.autoSimpanDeposit = 0;
+  }
+}
+
 const semesterPendekKrsDetails = ref({});
 const semesterPendekKrsLoading = ref({});
 const semesterPendekKrsErrors = ref({});
+const semesterPendekKeringananKeys = ref({});
 
 const parseSemesterPendekTagihanName = (nama) => {
   const parts = String(nama || "")
@@ -292,6 +367,7 @@ const semesterPendekKrsRows = computed(() => {
 
       return {
         krsId: parsed.krsId,
+        tagihanId: row.id,
         periode: parsed.periode,
         tagihanNama: tagihanItem.nama,
       };
@@ -344,6 +420,16 @@ const fetchSemesterPendekKrsDetail = async (krsId) => {
 watch(
   semesterPendekKrsRows,
   (items) => {
+    const allowedKrsIds = new Set(items.map((item) => String(item.krsId)));
+    const activeKeys = Object.fromEntries(
+      Object.entries(semesterPendekKeringananKeys.value).filter(([krsId]) =>
+        allowedKrsIds.has(krsId)
+      )
+    );
+    if (Object.keys(activeKeys).length !== Object.keys(semesterPendekKeringananKeys.value).length) {
+      semesterPendekKeringananKeys.value = activeKeys;
+    }
+
     items.forEach((item) => fetchSemesterPendekKrsDetail(item.krsId));
   },
   { deep: true }
@@ -385,16 +471,91 @@ const getMkSemester = (detail) => {
     ?? "-";
 };
 
+const getBiayaPerMk = (krsData) => {
+  const value = krsData?.biaya_per_mk
+    ?? krsData?.periode_semester_pendek?.biaya_per_mk
+    ?? krsData?.search_krs?.biaya_per_mk
+    ?? krsData?.search_krs?.periode_semester_pendek?.biaya_per_mk
+    ?? 0;
+
+  const biaya = Number(value);
+  return Number.isFinite(biaya) ? biaya : 0;
+};
+
+const getSemesterPendekKeringananKey = (detail, idx) =>
+  String(detail?.id ?? detail?.krs_detail_id ?? detail?.matakuliah_id ?? detail?.mata_kuliah_id ?? `${getMkNama(detail)}-${idx}`);
+
+const getSemesterPendekKeringananKeys = (krsId) =>
+  semesterPendekKeringananKeys.value[String(krsId)] ?? [];
+
+const isSemesterPendekKeringananSelected = (card, detail, idx) =>
+  getSemesterPendekKeringananKeys(card.krsId).includes(getSemesterPendekKeringananKey(detail, idx));
+
+function applySemesterPendekKeringanan(card) {
+  const rowIndex = rows.value.findIndex((row) => String(row.id) === String(card.tagihanId));
+  if (rowIndex < 0) return;
+
+  const row = rows.value[rowIndex];
+  const selectedCount = getSemesterPendekKeringananKeys(card.krsId).length;
+  const biayaPerMk = getBiayaPerMk(card.krsData);
+
+  if (selectedCount <= 0) {
+    if (isSamahahRow(row)) {
+      row.keringanan_jenis = "";
+      row.keringanan_jumlah = 0;
+      row.keringanan_batas = null;
+      if (paymentMode.value === "tagihan") {
+        row.deposit = 0;
+        row.dibayar = Number(row.nominal) || 0;
+      }
+    }
+    syncPaymentTotalsState();
+    return;
+  }
+
+  row.keringanan_jenis = "samahah";
+  row.keringanan_jumlah = selectedCount * biayaPerMk;
+  if (row.keringanan_batas === "9999-12-31") {
+    row.keringanan_batas = null;
+  }
+  recalcKeringanan(rowIndex);
+}
+
+function toggleSemesterPendekKeringanan(card, detail, idx) {
+  if (!card.biayaPerMk) {
+    showSnackbar({ text: "Biaya per MK Semester Pendek tidak tersedia", color: "warning" });
+    return;
+  }
+
+  const key = getSemesterPendekKeringananKey(detail, idx);
+  const currentKeys = getSemesterPendekKeringananKeys(card.krsId);
+  const nextKeys = currentKeys.includes(key)
+    ? currentKeys.filter((item) => item !== key)
+    : [...currentKeys, key];
+
+  semesterPendekKeringananKeys.value = {
+    ...semesterPendekKeringananKeys.value,
+    [String(card.krsId)]: nextKeys,
+  };
+
+  applySemesterPendekKeringanan(card);
+}
+
 const semesterPendekKrsCards = computed(() =>
   semesterPendekKrsRows.value.map((item) => {
     const key = String(item.krsId);
     const krsData = semesterPendekKrsDetails.value[key] ?? null;
     const details = getSemesterPendekDetails(krsData);
+    const biayaPerMk = getBiayaPerMk(krsData);
+    const keringananCount = getSemesterPendekKeringananKeys(item.krsId).length;
 
     return {
       ...item,
       krsData,
       details,
+      biayaPerMk,
+      keringananCount,
+      keringananTotal: keringananCount * biayaPerMk,
       loading: Boolean(semesterPendekKrsLoading.value[key]),
       error: semesterPendekKrsErrors.value[key],
       totalSks: details.reduce((sum, detail) => {
@@ -441,27 +602,13 @@ function distributePayment(scope = "semua") {
 
     if (fromCash + fromDepo <= 0) continue;
 
-    rows.value.push({
-      id: item.id,
-      display: item.display,
-      nominal: sisa,
-      dibayar: fromCash,
-      deposit: fromDepo,
-    });
+    rows.value.push(createPaymentRow(item, fromCash, fromDepo));
 
     depoRemaining -= fromDepo;
     cashRemaining -= fromCash;
   }
 
-  // Total deposit yang dipakai
-  depositUsed.value = useDeposit.value
-    ? Number(props.mahasiswa?.deposit || 0) - depoRemaining
-    : 0;
-  props.mahasiswa.dipakai = depositUsed.value;
-
-  // Kelebihan cash → masukkan ke catatan deposit mahasiswa
-  sisaNominal.value = cashRemaining;
-  props.mahasiswa.autoSimpanDeposit = cashRemaining;
+  syncPaymentTotalsState();
 
   if (rows.value.length === 0) {
     showSnackbar({ text: "Tidak ada tagihan yang bisa dibayarkan", color: "warning" });
@@ -486,6 +633,7 @@ watch(paymentMode, () => {
   selectedTagihan.value = [];
   nominalInput.value = 0;
   sisaNominal.value = 0;
+  syncPaymentTotalsState();
 });
 
 watch(scopedTagihan, (newArr) => {
@@ -494,6 +642,7 @@ watch(scopedTagihan, (newArr) => {
     allowedIds.has(item.id)
   );
   rows.value = rows.value.filter((row) => allowedIds.has(row.id));
+  syncPaymentTotalsState();
 });
 
 /** Auto re-distribute saat toggle deposit berubah */
@@ -521,13 +670,7 @@ watch(
     const added = newArr.filter((n) => !oldArr?.some((o) => o.id === n.id));
     for (const item of added) {
       if (!rows.value.some((r) => r.id === item.id)) {
-        rows.value.push({
-          id: item.id,
-          display: item.display,
-          nominal: item.sisa ?? 0,
-          dibayar: item.sisa ?? 0, // default isi penuh
-          deposit: 0,
-        });
+        rows.value.push(createPaymentRow(item, item.sisa ?? 0));
       }
     }
 
@@ -539,6 +682,7 @@ watch(
       rows.value = rows.value.filter(
         (r) => !removed.some((rem) => rem.id === r.id)
       );
+      syncPaymentTotalsState();
     }
   },
   { deep: true }
@@ -548,28 +692,46 @@ watch(
 function removeRow(id) {
   rows.value = rows.value.filter((r) => r.id !== id);
   selectedTagihan.value = selectedTagihan.value.filter((s) => s.id !== id);
+  syncPaymentTotalsState();
 }
 
 /** Recalc per-baris */
 /** Recalc saat admin ubah field DIBAYAR */
 function recalcDibayar(idx) {
   const r = rows.value[idx];
-  r.dibayar = Math.max(0, Number(r.dibayar || 0));
-  r.dibayar = Math.min(r.dibayar, r.nominal);
+  if (isDhominRow(r)) {
+    r.dibayar = 0;
+    r.deposit = 0;
+    r.keringanan_jumlah = Number(r.nominal) || 0;
+    r.keringanan_batas = "9999-12-31";
+    syncPaymentTotalsState();
+    return;
+  }
 
-  // Limit deposit agar dibayar + deposit tidak melebihi nominal
-  const sisaNominal = Math.max(0, r.nominal - r.dibayar);
+  const keringanan = isSamahahRow(r) ? Number(r.keringanan_jumlah || 0) : 0;
+  r.dibayar = Math.max(0, Number(r.dibayar || 0));
+  r.dibayar = Math.min(r.dibayar, Math.max(0, r.nominal - keringanan));
+
+  // Limit deposit agar dibayar + deposit + keringanan tidak melebihi nominal
+  const sisaNominal = Math.max(0, r.nominal - r.dibayar - keringanan);
   r.deposit = Math.min(r.deposit, sisaNominal);
 
-  // Auto-update total deposit yang dipakai
-  props.mahasiswa.dipakai = rows.value.reduce(
-    (sum, row) => sum + (Number(row.deposit) || 0), 0
-  );
+  syncPaymentTotalsState();
 }
 
 /** Recalc saat admin ubah field DEPOSIT */
 function recalcDeposit(idx) {
   const r = rows.value[idx];
+  if (isDhominRow(r)) {
+    r.dibayar = 0;
+    r.deposit = 0;
+    r.keringanan_jumlah = Number(r.nominal) || 0;
+    r.keringanan_batas = "9999-12-31";
+    syncPaymentTotalsState();
+    return;
+  }
+
+  const keringanan = isSamahahRow(r) ? Number(r.keringanan_jumlah || 0) : 0;
   r.deposit = Math.max(0, Number(r.deposit || 0));
 
   // Limit deposit: tidak melebihi saldo catatan deposit dikurangi deposit baris lain
@@ -580,15 +742,68 @@ function recalcDeposit(idx) {
 
   const sisaPlafon = Math.max(0, saldoDeposit - totalDepositLain);
   r.deposit = Math.min(r.deposit, sisaPlafon);
-  r.deposit = Math.min(r.deposit, r.nominal);
+  r.deposit = Math.min(r.deposit, Math.max(0, r.nominal - keringanan));
 
-  // Dibayar = sisa nominal setelah deposit
-  r.dibayar = Math.max(0, r.nominal - r.deposit);
+  // Dibayar = sisa nominal setelah deposit dan keringanan
+  r.dibayar = Math.max(0, r.nominal - r.deposit - keringanan);
 
-  // Auto-update total deposit yang dipakai
-  props.mahasiswa.dipakai = rows.value.reduce(
-    (sum, row) => sum + (Number(row.deposit) || 0), 0
-  );
+  syncPaymentTotalsState();
+}
+
+function recalcKeringanan(idx) {
+  const r = rows.value[idx];
+  if (!r) return;
+
+  if (isDhominRow(r)) {
+    r.keringanan_jumlah = Number(r.nominal) || 0;
+    r.keringanan_batas = "9999-12-31";
+    r.dibayar = 0;
+    r.deposit = 0;
+    syncPaymentTotalsState();
+    return;
+  }
+
+  if (!isSamahahRow(r)) {
+    r.keringanan_jumlah = 0;
+    r.keringanan_batas = null;
+    syncPaymentTotalsState();
+    return;
+  }
+
+  r.keringanan_jumlah = Math.max(0, Number(r.keringanan_jumlah || 0));
+  r.keringanan_jumlah = Math.min(r.keringanan_jumlah, Number(r.nominal) || 0);
+  r.deposit = Math.min(Number(r.deposit) || 0, Math.max(0, r.nominal - r.keringanan_jumlah));
+  r.dibayar = Math.max(0, r.nominal - r.deposit - r.keringanan_jumlah);
+
+  syncPaymentTotalsState();
+}
+
+function onKeringananChange(idx) {
+  const r = rows.value[idx];
+  if (!r) return;
+
+  r.keringanan_jenis = normalizeKeringananJenis(r.keringanan_jenis);
+
+  if (isDhominRow(r)) {
+    r.keringanan_jumlah = Number(r.nominal) || 0;
+    r.keringanan_batas = "9999-12-31";
+    r.dibayar = 0;
+    r.deposit = 0;
+  } else if (isSamahahRow(r)) {
+    if (r.keringanan_batas === "9999-12-31") {
+      r.keringanan_batas = null;
+    }
+    recalcKeringanan(idx);
+  } else {
+    r.keringanan_jumlah = 0;
+    r.keringanan_batas = null;
+    if (paymentMode.value === "tagihan") {
+      r.deposit = 0;
+      r.dibayar = Number(r.nominal) || 0;
+    }
+  }
+
+  syncPaymentTotalsState();
 }
 
 /** Ringkasan */
@@ -693,7 +908,21 @@ watch(
                     </td>
                     <td class="text-end">{{ formatRupiah(t.jumlah) }}</td>
                     <td class="text-end">{{ formatRupiah(t.dibayar) }}</td>
-                    <td class="text-end font-weight-medium">{{ formatRupiah(t.sisa) }}</td>
+                    <td class="text-end font-weight-medium">
+                      <div>{{ formatRupiah(t.sisa) }}</div>
+                      <div
+                        v-if="hasDispensasiTagihan(t)"
+                        class="text-caption text-success"
+                      >
+                        Dispensasi: {{ formatRupiah(t.jumlah_dispensasi) }}
+                      </div>
+                      <div
+                        v-if="hasDispensasiTagihan(t)"
+                        class="text-caption text-medium-emphasis"
+                      >
+                        Batas: {{ formatBatasDispensasi(t.batas_dispensasi) }}
+                      </div>
+                    </td>
                   </tr>
                 </template>
               </tbody>
@@ -757,7 +986,7 @@ watch(
           </VAlert>
         </VCol>
 
-        <VCol cols="12" md="4">
+        <VCol cols="12" :md="paymentMode === 'tagihan' ? 4 : 4">
           <VBtn
             color="success"
             variant="elevated"
@@ -871,62 +1100,105 @@ watch(
         Preview Distribusi Pembayaran
       </div>
 
-      <VRow v-for="(row, idx) in rows" :key="row.id" class="align-center">
-        <VCol cols="12" md="6">
-          <VTextField
-            :model-value="row.display"
-            label="Tagihan"
-            variant="outlined"
-            density="comfortable"
-            readonly
-            hint="Tagihan yang dipilih"
-            persistent-hint
-          />
-        </VCol>
+      <div v-for="(row, idx) in rows" :key="row.id" class="py-3">
+        <div class="text-body-1 font-weight-medium mb-3">
+          {{ idx + 1 }}. {{ row.display }}
+        </div>
 
-        <VCol cols="12" :md="row.deposit > 0 || paymentMode === 'tagihan' ? 3 : 6">
-          <VTextField
-            v-model.number="row.dibayar"
-            label="Dibayar"
-            type="number"
-            min="0"
-            variant="outlined"
-            density="comfortable"
-            :hint="formatRupiah(row.dibayar)"
-            persistent-hint
-            :readonly="paymentMode === 'nominal'"
-            @update:modelValue="recalcDibayar(idx)"
-          />
-        </VCol>
+        <VRow class="align-center">
+          <VCol cols="12" md="2">
+            <VTextField
+              v-model.number="row.dibayar"
+              label="Dibayar"
+              type="number"
+              min="0"
+              variant="outlined"
+              density="comfortable"
+              :hint="formatRupiah(row.dibayar)"
+              persistent-hint
+              :readonly="paymentMode === 'nominal' || isDhominRow(row)"
+              @update:modelValue="recalcDibayar(idx)"
+            />
+          </VCol>
 
-        <VCol v-if="paymentMode === 'tagihan' || row.deposit > 0" cols="12" md="2">
-          <VTextField
-            v-model.number="row.deposit"
-            label="Deposit"
-            type="number"
-            min="0"
-            variant="outlined"
-            density="comfortable"
-            :hint="formatRupiah(row.deposit)"
-            persistent-hint
-            :readonly="paymentMode === 'nominal'"
-            @update:modelValue="recalcDeposit(idx)"
-          />
-        </VCol>
+          <VCol v-if="paymentMode === 'tagihan' || row.deposit > 0" cols="12" md="2">
+            <VTextField
+              v-model.number="row.deposit"
+              label="Deposit"
+              type="number"
+              min="0"
+              variant="outlined"
+              density="comfortable"
+              :hint="formatRupiah(row.deposit)"
+              persistent-hint
+              :readonly="paymentMode === 'nominal' || isDhominRow(row)"
+              @update:modelValue="recalcDeposit(idx)"
+            />
+          </VCol>
 
-        <VCol v-if="paymentMode === 'tagihan'" cols="12" md="1" class="d-flex mb-5">
-          <VBtn
-            color="error"
-            icon="ri-delete-bin-line"
-            variant="elevated"
-            class="ml-auto"
-            @click="removeRow(row.id)"
-            :aria-label="`Hapus ${row.display}`"
-            hint="delete"
-            persistent-hint
-          />
-        </VCol>
-      </VRow>
+          <VCol
+            cols="12"
+            :md="paymentMode === 'tagihan' ? 7 : row.deposit > 0 ? 8 : 10"
+          >
+            <VRow dense>
+              <VCol cols="12" :md="isSamahahRow(row) ? 4 : isDhominRow(row) ? 6 : 12">
+                <VSelect
+                  v-model="row.keringanan_jenis"
+                  :items="keringananOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Keringanan"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Dhomin/Samahah"
+                  persistent-hint
+                  @update:modelValue="onKeringananChange(idx)"
+                />
+              </VCol>
+
+              <VCol v-if="isSamahahRow(row) || isDhominRow(row)" cols="12" :md="isSamahahRow(row) ? 4 : 6">
+                <VTextField
+                  v-model.number="row.keringanan_jumlah"
+                  label="Jumlah Keringanan"
+                  type="number"
+                  min="0"
+                  variant="outlined"
+                  density="comfortable"
+                  :hint="formatRupiah(row.keringanan_jumlah)"
+                  persistent-hint
+                  :readonly="isDhominRow(row)"
+                  @update:modelValue="recalcKeringanan(idx)"
+                />
+              </VCol>
+
+              <VCol v-if="isSamahahRow(row)" cols="12" md="4">
+                <VTextField
+                  v-model="row.keringanan_batas"
+                  label="Batas Keringanan"
+                  type="date"
+                  variant="outlined"
+                  density="comfortable"
+                />
+              </VCol>
+            </VRow>
+          </VCol>
+
+          <VCol v-if="paymentMode === 'tagihan'" cols="12" md="1" class="d-flex mb-5">
+            <VBtn
+              color="error"
+              icon="ri-delete-bin-line"
+              variant="elevated"
+              class="ml-auto"
+              @click="removeRow(row.id)"
+              :aria-label="`Hapus ${row.display}`"
+              hint="delete"
+              persistent-hint
+            />
+          </VCol>
+        </VRow>
+
+        <VDivider v-if="idx < rows.length - 1" class="mt-1" />
+      </div>
 
       <div
         v-if="rows.length === 0"
@@ -956,9 +1228,22 @@ watch(
                 {{ card.periode || card.tagihanNama }}
               </div>
             </div>
-            <VChip color="primary" variant="tonal" size="small">
-              {{ card.totalSks }} SKS
-            </VChip>
+            <div class="d-flex flex-wrap align-center gap-2">
+              <VChip color="primary" variant="tonal" size="small">
+                {{ card.totalSks }} SKS
+              </VChip>
+              <VChip color="success" variant="tonal" size="small">
+                Biaya/MK {{ formatRupiah(card.biayaPerMk) }}
+              </VChip>
+              <VChip
+                v-if="card.keringananCount > 0"
+                color="warning"
+                variant="tonal"
+                size="small"
+              >
+                Keringanan {{ card.keringananCount }} MK = {{ formatRupiah(card.keringananTotal) }}
+              </VChip>
+            </div>
           </div>
 
           <div v-if="card.loading" class="d-flex align-center justify-center py-6">
@@ -982,6 +1267,7 @@ watch(
                 <th class="text-left">Nama MK</th>
                 <th class="text-center">SKS</th>
                 <th class="text-center">SMT MK</th>
+                <th class="text-center">Keringanan</th>
               </tr>
             </thead>
             <tbody>
@@ -990,6 +1276,17 @@ watch(
                 <td>{{ getMkNama(detail) }}</td>
                 <td class="text-center">{{ getMkSks(detail) }}</td>
                 <td class="text-center">{{ getMkSemester(detail) }}</td>
+                <td class="text-center">
+                  <VBtn
+                    size="small"
+                    :color="isSemesterPendekKeringananSelected(card, detail, idx) ? 'error' : 'primary'"
+                    :variant="isSemesterPendekKeringananSelected(card, detail, idx) ? 'tonal' : 'outlined'"
+                    :disabled="!card.biayaPerMk"
+                    @click="toggleSemesterPendekKeringanan(card, detail, idx)"
+                  >
+                    {{ isSemesterPendekKeringananSelected(card, detail, idx) ? "Batalkan" : "Beri Keringanan" }}
+                  </VBtn>
+                </td>
               </tr>
             </tbody>
           </VTable>

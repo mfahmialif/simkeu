@@ -97,8 +97,14 @@ onMounted(async () => {
 });
 
 const onSubmit = async () => {
+  if (disabled.value) return;
+  disabled.value = true;
+
   const valid = await refForm.value.validate();
-  if (!valid.valid) return;
+  if (!valid.valid) {
+    disabled.value = false;
+    return;
+  }
 
   const method = props.typeForm === "edit" ? "PUT" : "POST";
   console.log("tahun", tahun.value);
@@ -284,9 +290,9 @@ const fetchTagihanId = async (id, jenis_tagihan_id) => {
 
     const data = res.data ? res.data : res;
     rows.value = data.map((item) => ({
-      id: item.id,
+      id: item.id_tagihan,
       display: item.nama_tagihan,
-      jumlah: item.jumlah ?? 0,
+      jumlah: item.jumlah_tagihan ?? 0,
       jumlah_dispensasi: item.jumlah_dispensasi ?? 0, // default isi penuh
       deposit: 0,
     }));
@@ -463,7 +469,7 @@ function removeRow(id) {
           clear-icon="ri-close-line"
         />
       </VCol>
-      <VCol cols="12">
+      <VCol v-if="typeForm !== 'edit'" cols="12">
         <VCombobox
           v-model="selectedMahasiswa"
           v-model:search="search"
@@ -627,7 +633,7 @@ function removeRow(id) {
             persistent-hint
           />
         </VCol>
-        <VCol cols="12" md="1" class="d-flex mb-5">
+        <VCol v-if="typeForm !== 'edit'" cols="12" md="1" class="d-flex mb-5">
           <VBtn
             color="error"
             icon="ri-delete-bin-line"
@@ -655,7 +661,7 @@ function removeRow(id) {
         />
       </VCol>
       <VCol cols="12" class="d-flex gap-4">
-        <VBtn type="submit" :disabled @click="refForm?.validate()">
+        <VBtn type="submit" :disabled="disabled" :loading="disabled">
           Submit
         </VBtn>
         <VBtn

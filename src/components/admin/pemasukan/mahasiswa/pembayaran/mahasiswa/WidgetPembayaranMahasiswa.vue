@@ -45,11 +45,16 @@ const openDetail = (data) => {
 };
 
 const selectedCategory = ref(null);
+const selectedPaymentMethod = ref(null);
 const detailProdiData = ref([]);
 const loadingDetailProdi = ref(false);
 
-const openDetailProdi = async (category) => {
+const openDetailProdi = async (row) => {
+  const category = typeof row === 'string' ? row : row?.tagihan_nama;
+  const paymentMethod = typeof row === 'string' ? null : row?.jp_nama;
+
   selectedCategory.value = category;
+  selectedPaymentMethod.value = paymentMethod;
   loadingDetailProdi.value = true;
   
   try {
@@ -58,6 +63,7 @@ const openDetailProdi = async (category) => {
       ...(props.thAkademikId && props.thAkademikId !== 'all' && { th_akademik_id: props.thAkademikId }),
       ...(props.prodiId && props.prodiId !== 'all' && { prodi_id: props.prodiId }),
       ...(props.jenisPembayaranId && props.jenisPembayaranId !== 'all' && { jenis_pembayaran_id: props.jenisPembayaranId }),
+      ...((!props.jenisPembayaranId || props.jenisPembayaranId === 'all') && paymentMethod && { payment_method: paymentMethod }),
       ...(props.userId && props.userId !== 'all' && { user_id: props.userId }),
       ...(props.tanggalMulai && { tanggal_mulai: props.tanggalMulai }),
       ...(props.tanggalAkhir && { tanggal_akhir: props.tanggalAkhir }),
@@ -91,6 +97,7 @@ const openDetailProdi = async (category) => {
 watch(isModalOpen, (val) => {
   if (!val) {
     selectedCategory.value = null;
+    selectedPaymentMethod.value = null;
     detailProdiData.value = [];
   }
 });
@@ -411,7 +418,7 @@ const getDateInfo = (title) => {
                 <tr 
                   v-for="(row, idx) in harianDetailData" 
                   :key="idx" 
-                  @click="openDetailProdi(row.tagihan_nama)"
+                  @click="openDetailProdi(row)"
                   style="cursor: pointer;"
                   class="hover-row"
                 >
@@ -452,7 +459,7 @@ const getDateInfo = (title) => {
                 <tr 
                   v-for="(row, idx) in semuaDetailData" 
                   :key="idx" 
-                  @click="openDetailProdi(row.tagihan_nama)"
+                  @click="openDetailProdi(row)"
                   style="cursor: pointer;"
                   class="hover-row"
                 >
@@ -479,7 +486,12 @@ const getDateInfo = (title) => {
           <!-- Detail per Prodi -->
           <div v-if="selectedCategory" class="mt-6">
             <div class="d-flex justify-space-between align-center mb-3">
-              <h6 class="text-h6">Detail Pemasukan per Prodi: {{ selectedCategory }}</h6>
+              <h6 class="text-h6">
+                Detail Pemasukan per Prodi: {{ selectedCategory }}
+                <span v-if="selectedPaymentMethod" class="text-body-2 text-disabled">
+                  - {{ selectedPaymentMethod }}
+                </span>
+              </h6>
               <VBtn size="small" variant="tonal" color="primary" @click="selectedCategory = null">
                 <VIcon icon="ri-arrow-left-line" start /> Kembali
               </VBtn>

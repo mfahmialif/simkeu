@@ -2,9 +2,10 @@
 import FormSemesterPendek from "@/components/admin/pemasukan/mahasiswa/SemesterPendek/FormSemesterPendek.vue";
 
 const pageTitle = "Tambah Pembayaran Semester Pendek";
+const router = useRouter();
 
 onMounted(() => {
-  document.title = `${pageTitle} - SIMKEU`;
+  router.replace("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add");
 });
 </script>
 

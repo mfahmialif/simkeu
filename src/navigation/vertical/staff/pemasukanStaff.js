@@ -46,10 +46,6 @@ export default [
           },
         ],
       },
-      {
-        title: "Semester Pendek",
-        to: "admin-pemasukan-mahasiswa-semester-pendek",
-      },
       { title: "UAS Susulan", to: "admin-pemasukan-mahasiswa-uas-susulan" },
       { title: "Setoran", to: "admin-pemasukan-mahasiswa-setoran" },
       {

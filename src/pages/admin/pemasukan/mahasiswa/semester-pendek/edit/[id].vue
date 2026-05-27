@@ -143,9 +143,7 @@ const formatTanggal = (val) => {
 };
 
 onMounted(() => {
-  document.title = `${pageTitle} - SIMKEU`;
-  fetchJenisPembayaran();
-  fetchData();
+  router.replace("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add");
 });
 </script>
 
