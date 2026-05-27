@@ -119,12 +119,13 @@ function buildPembayaranFormData() {
     for (const r of rows) {
         const keringananJenis = normalizeKeringananJenis(r.keringanan_jenis);
         const keringananJumlah = Number(r.keringanan_jumlah) || 0;
-        const keringananBatas =
-            keringananJenis === "dhomin" ? "9999-12-31" : (r.keringanan_batas ?? "");
+        const keringananBatas = keringananJenis
+            ? (r.keringanan_batas || "9999-12-31")
+            : "";
 
         if (keringananJenis === "samahah" && (keringananJumlah <= 0 || !keringananBatas)) {
             showSnackbar({
-                text: "Harap isi jumlah dan batas tanggal keringanan Samahah",
+                text: "Harap isi jumlah keringanan Samahah",
                 color: "error",
             });
             return false;

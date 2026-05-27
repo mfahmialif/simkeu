@@ -282,6 +282,7 @@ const keringananOptions = [
   { title: "Samahah", value: "samahah" },
   { title: "Dhomin", value: "dhomin" },
 ];
+const DEFAULT_KERINGANAN_BATAS = "9999-12-31";
 
 const normalizeKeringananJenis = (value) => {
   const jenis = String(value || "").toLowerCase();
@@ -301,6 +302,20 @@ const createPaymentRow = (item, dibayar, deposit = 0) => ({
 
 const isDhominRow = (row) => normalizeKeringananJenis(row?.keringanan_jenis) === "dhomin";
 const isSamahahRow = (row) => normalizeKeringananJenis(row?.keringanan_jenis) === "samahah";
+
+const getSisaSetelahPembayaran = (row) => Math.max(
+  0,
+  (Number(row?.nominal) || 0) - (Number(row?.dibayar) || 0) - (Number(row?.deposit) || 0)
+);
+
+function syncDhominKeringanan(row) {
+  row.dibayar = Math.max(0, Number(row.dibayar || 0));
+  row.dibayar = Math.min(row.dibayar, Number(row.nominal) || 0);
+  row.deposit = Math.max(0, Number(row.deposit || 0));
+  row.deposit = Math.min(row.deposit, Math.max(0, (Number(row.nominal) || 0) - row.dibayar));
+  row.keringanan_jumlah = getSisaSetelahPembayaran(row);
+  row.keringanan_batas = DEFAULT_KERINGANAN_BATAS;
+}
 
 function syncPaymentTotalsState() {
   const totalDepositRows = rows.value.reduce(
@@ -515,8 +530,8 @@ function applySemesterPendekKeringanan(card) {
 
   row.keringanan_jenis = "samahah";
   row.keringanan_jumlah = selectedCount * biayaPerMk;
-  if (row.keringanan_batas === "9999-12-31") {
-    row.keringanan_batas = null;
+  if (!row.keringanan_batas) {
+    row.keringanan_batas = DEFAULT_KERINGANAN_BATAS;
   }
   recalcKeringanan(rowIndex);
 }
@@ -700,10 +715,7 @@ function removeRow(id) {
 function recalcDibayar(idx) {
   const r = rows.value[idx];
   if (isDhominRow(r)) {
-    r.dibayar = 0;
-    r.deposit = 0;
-    r.keringanan_jumlah = Number(r.nominal) || 0;
-    r.keringanan_batas = "9999-12-31";
+    syncDhominKeringanan(r);
     syncPaymentTotalsState();
     return;
   }
@@ -723,10 +735,7 @@ function recalcDibayar(idx) {
 function recalcDeposit(idx) {
   const r = rows.value[idx];
   if (isDhominRow(r)) {
-    r.dibayar = 0;
-    r.deposit = 0;
-    r.keringanan_jumlah = Number(r.nominal) || 0;
-    r.keringanan_batas = "9999-12-31";
+    syncDhominKeringanan(r);
     syncPaymentTotalsState();
     return;
   }
@@ -755,10 +764,7 @@ function recalcKeringanan(idx) {
   if (!r) return;
 
   if (isDhominRow(r)) {
-    r.keringanan_jumlah = Number(r.nominal) || 0;
-    r.keringanan_batas = "9999-12-31";
-    r.dibayar = 0;
-    r.deposit = 0;
+    syncDhominKeringanan(r);
     syncPaymentTotalsState();
     return;
   }
@@ -772,6 +778,9 @@ function recalcKeringanan(idx) {
 
   r.keringanan_jumlah = Math.max(0, Number(r.keringanan_jumlah || 0));
   r.keringanan_jumlah = Math.min(r.keringanan_jumlah, Number(r.nominal) || 0);
+  if (!r.keringanan_batas) {
+    r.keringanan_batas = DEFAULT_KERINGANAN_BATAS;
+  }
   r.deposit = Math.min(Number(r.deposit) || 0, Math.max(0, r.nominal - r.keringanan_jumlah));
   r.dibayar = Math.max(0, r.nominal - r.deposit - r.keringanan_jumlah);
 
@@ -785,13 +794,12 @@ function onKeringananChange(idx) {
   r.keringanan_jenis = normalizeKeringananJenis(r.keringanan_jenis);
 
   if (isDhominRow(r)) {
-    r.keringanan_jumlah = Number(r.nominal) || 0;
-    r.keringanan_batas = "9999-12-31";
     r.dibayar = 0;
     r.deposit = 0;
+    syncDhominKeringanan(r);
   } else if (isSamahahRow(r)) {
-    if (r.keringanan_batas === "9999-12-31") {
-      r.keringanan_batas = null;
+    if (!r.keringanan_batas) {
+      r.keringanan_batas = DEFAULT_KERINGANAN_BATAS;
     }
     recalcKeringanan(idx);
   } else {
@@ -1116,7 +1124,7 @@ watch(
               density="comfortable"
               :hint="formatRupiah(row.dibayar)"
               persistent-hint
-              :readonly="paymentMode === 'nominal' || isDhominRow(row)"
+              :readonly="paymentMode === 'nominal'"
               @update:modelValue="recalcDibayar(idx)"
             />
           </VCol>
