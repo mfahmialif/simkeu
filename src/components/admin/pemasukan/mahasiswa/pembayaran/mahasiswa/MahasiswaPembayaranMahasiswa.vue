@@ -14,7 +14,9 @@ const loadingSearch = ref(false);
 const emptyMahasiswa = {
   nim: "",
   nama: "",
+  namaAyah: "",
   prodi: "",
+  prodiAlias: "",
   jenisKelamin: "",
   jkId: "",
   angkatan: "",
@@ -23,6 +25,7 @@ const emptyMahasiswa = {
   deposit: 0,
   dipakai: 0,
   tagihan: [],
+  wisuda: null,
 };
 
 const mahasiswa = ref(emptyMahasiswa);
@@ -101,7 +104,9 @@ const searching = async () => {
 
     mahasiswa.value.nim = res.nim;
     mahasiswa.value.nama = res.nama;
+    mahasiswa.value.namaAyah = res.nama_ayah ?? res.ayah ?? res.mhs_ayah ?? "-";
     mahasiswa.value.prodi = res.prodi?.nama;
+    mahasiswa.value.prodiAlias = res.prodi?.alias ?? res.prodi_alias ?? res.alias ?? res.prodi?.nama;
     mahasiswa.value.jenisKelamin = res.jk?.nama;
     mahasiswa.value.jkId = res.jk?.id;
     mahasiswa.value.angkatan = res.th_akademik?.kode;

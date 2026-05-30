@@ -3,6 +3,221 @@ const props = defineProps({
   mahasiswa: { type: Object, required: true, default: () => ({}) },
 });
 
+const ukuranBajuWisuda = ["S", "M", "L", "XL", "XXL", "XXXL"];
+const jenisKelaminWisuda = ["Laki-Laki", "Perempuan"];
+const WISUDA_TANPA_BAYAR = false;
+const wisudaTahunOptions = ref([]);
+const loadingWisudaTahun = ref(false);
+const prodiWisudaOptions = ref([]);
+const loadingProdiWisuda = ref(false);
+
+const todayInputDate = () => {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 10);
+};
+
+const normalizeWisudaJenisKelamin = (value) => {
+  const text = String(value || "").toLowerCase();
+  return text.includes("perempuan") || text.includes("wanita") || text.includes("putri")
+    ? "Perempuan"
+    : "Laki-Laki";
+};
+
+const getPayloadItems = (payload) => {
+  const data = payload?.data?.data ?? payload?.data ?? payload;
+
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") return Object.values(data);
+
+  return [];
+};
+
+const getWisudaTahunValue = (tahun) => Number(tahun?.id ?? tahun?.value ?? tahun?.tahun_id);
+
+const isWisudaTahunAktif = (tahun) => {
+  const value = tahun?.aktif ?? tahun?.is_active ?? tahun?.active ?? tahun?.status;
+
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+
+  const text = String(value || "").trim().toLowerCase();
+  return ["1", "y", "ya", "yes", "true", "aktif", "active"].includes(text);
+};
+
+const getWisudaTahunTitle = (tahun) => {
+  const parts = [
+    tahun?.nama,
+    tahun?.tahun,
+    tahun?.kode,
+    tahun?.semester,
+  ].filter((item) => item != null && String(item).trim() !== "");
+
+  return parts.length ? parts.join(" - ") : `Tahun ${tahun?.id ?? ""}`.trim();
+};
+
+const defaultWisudaTahunId = () => {
+  const tahunAktif = wisudaTahunOptions.value.find((tahun) => tahun.aktif);
+  return Number(tahunAktif?.value ?? wisudaTahunOptions.value[0]?.value) || 1;
+};
+
+const createDefaultWisudaForm = () => ({
+  nim: "",
+  nama: "",
+  nama_ayah: "-",
+  judul: "",
+  tanggal_sidang: todayInputDate(),
+  tahun_id: defaultWisudaTahunId(),
+  jenis_kelamin: "Laki-Laki",
+  prodi: "",
+  ukuran_baju: "M",
+  is_bayar: WISUDA_TANPA_BAYAR,
+});
+
+const wisudaForm = ref(createDefaultWisudaForm());
+
+const getWisudaProdiValue = (prodi) => (
+  prodi?.alias
+  ?? prodi?.kode
+  ?? prodi?.nama
+  ?? prodi?.value
+  ?? ""
+);
+
+const getWisudaProdiTitle = (prodi) => {
+  const value = getWisudaProdiValue(prodi);
+  const nama = prodi?.nama ?? prodi?.title ?? "";
+
+  if (value && nama && value !== nama) return `${value} - ${nama}`;
+
+  return nama || value;
+};
+
+const ensureWisudaProdiOption = (value) => {
+  const prodiValue = String(value || "").trim();
+  if (!prodiValue) return;
+
+  if (!prodiWisudaOptions.value.some((item) => item.value === prodiValue)) {
+    prodiWisudaOptions.value = [
+      { title: prodiValue, value: prodiValue },
+      ...prodiWisudaOptions.value,
+    ];
+  }
+};
+
+const setDefaultWisudaTahun = () => {
+  if (!wisudaTahunOptions.value.length) return;
+
+  const selected = Number(wisudaForm.value.tahun_id);
+  const selectedOption = wisudaTahunOptions.value.find((item) => Number(item.value) === selected);
+  const activeOption = wisudaTahunOptions.value.find((item) => item.aktif);
+
+  if (activeOption && !selectedOption?.aktif) {
+    wisudaForm.value.tahun_id = activeOption.value;
+  } else if (!selectedOption) {
+    wisudaForm.value.tahun_id = wisudaTahunOptions.value[0].value;
+  }
+};
+
+const fetchWisudaTahun = async () => {
+  try {
+    loadingWisudaTahun.value = true;
+
+    const res = await $api("/admin/pemasukan/mahasiswa/wisuda/tahun", {
+      method: "GET",
+    });
+
+    if (res?.status === false) {
+      throw new Error(res.message || "Gagal mengambil data tahun wisuda.");
+    }
+
+    const seen = new Set();
+    wisudaTahunOptions.value = getPayloadItems(res)
+      .map((tahun) => ({
+        title: getWisudaTahunTitle(tahun),
+        value: getWisudaTahunValue(tahun),
+        aktif: isWisudaTahunAktif(tahun),
+      }))
+      .filter((tahun) => Number.isFinite(tahun.value) && tahun.value > 0)
+      .filter((tahun) => {
+        if (seen.has(tahun.value)) return false;
+        seen.add(tahun.value);
+        return true;
+      });
+
+    setDefaultWisudaTahun();
+  } catch (error) {
+    showSnackbar({
+      text: error?.data?.message || error?.message || "Gagal mengambil data tahun wisuda.",
+      color: "error",
+    });
+  } finally {
+    loadingWisudaTahun.value = false;
+  }
+};
+
+const fetchProdiWisuda = async () => {
+  try {
+    loadingProdiWisuda.value = true;
+
+    const res = await $api("/admin/prodi?limit=0&sort_key=kode&sort_order=asc", {
+      method: "GET",
+    });
+
+    if (res?.status === false) {
+      throw new Error(res.message || "Gagal mengambil data prodi.");
+    }
+
+    const seen = new Set();
+    prodiWisudaOptions.value = getPayloadItems(res)
+      .map((prodi) => ({
+        title: getWisudaProdiTitle(prodi),
+        value: String(getWisudaProdiValue(prodi)).trim(),
+      }))
+      .filter((prodi) => prodi.value)
+      .filter((prodi) => {
+        if (seen.has(prodi.value)) return false;
+        seen.add(prodi.value);
+        return true;
+      });
+
+    ensureWisudaProdiOption(wisudaForm.value.prodi);
+  } catch (error) {
+    showSnackbar({
+      text: error?.data?.message || error?.message || "Gagal mengambil data prodi.",
+      color: "error",
+    });
+  } finally {
+    loadingProdiWisuda.value = false;
+  }
+};
+
+const ensureWisudaOptionsLoaded = () => {
+  if (!loadingWisudaTahun.value && !wisudaTahunOptions.value.length) {
+    fetchWisudaTahun();
+  }
+
+  if (!loadingProdiWisuda.value && !prodiWisudaOptions.value.length) {
+    fetchProdiWisuda();
+  }
+};
+
+const resetWisudaFormFromMahasiswa = () => {
+  const mahasiswa = props.mahasiswa ?? {};
+  const prodi = mahasiswa.prodiAlias ?? mahasiswa.prodi_alias ?? mahasiswa.prodi ?? "";
+
+  wisudaForm.value = {
+    ...createDefaultWisudaForm(),
+    nim: mahasiswa.nim ?? "",
+    nama: mahasiswa.nama ?? "",
+    nama_ayah: mahasiswa.namaAyah ?? mahasiswa.nama_ayah ?? "-",
+    jenis_kelamin: normalizeWisudaJenisKelamin(mahasiswa.jenisKelamin ?? mahasiswa.jenis_kelamin),
+    prodi,
+  };
+
+  ensureWisudaProdiOption(prodi);
+};
+
 const tagihan = ref([]);
 const selectedTagihan = ref([]); // <-- array untuk multiple
 const loadingTagihan = ref(false);
@@ -231,6 +446,7 @@ const clearTagihan = () => {
   lastPaymentScope.value = "semua";
   props.mahasiswa.dipakai = 0;
   props.mahasiswa.autoSimpanDeposit = 0;
+  props.mahasiswa.wisuda = null;
 };
 
 const selectAllTagihan = () => {
@@ -365,6 +581,57 @@ const parseSemesterPendekTagihanName = (nama) => {
 
 const getTagihanByRow = (row) =>
   tagihan.value.find((item) => String(item.id) === String(row.id));
+
+const isWisudaTagihan = (item) =>
+  String(item?.nama || item?.display || "").toLowerCase().includes("wisuda");
+
+const hasWisudaTagihan = computed(() =>
+  rows.value.some((row) => isWisudaTagihan(getTagihanByRow(row) || row))
+);
+
+watch(hasWisudaTagihan, (selected) => {
+  if (selected) {
+    ensureWisudaOptionsLoaded();
+  }
+});
+
+const buildWisudaPayload = () => ({
+  nim: wisudaForm.value.nim ?? "",
+  nama: wisudaForm.value.nama ?? "",
+  nama_ayah: wisudaForm.value.nama_ayah || "-",
+  judul: wisudaForm.value.judul || null,
+  tanggal_sidang: wisudaForm.value.tanggal_sidang || null,
+  tahun_id: Number(wisudaForm.value.tahun_id) || 1,
+  jenis_kelamin: normalizeWisudaJenisKelamin(wisudaForm.value.jenis_kelamin),
+  prodi: wisudaForm.value.prodi ?? "",
+  ukuran_baju: wisudaForm.value.ukuran_baju || "M",
+  is_bayar: WISUDA_TANPA_BAYAR,
+});
+
+const syncWisudaToMahasiswa = () => {
+  props.mahasiswa.wisuda = hasWisudaTagihan.value ? buildWisudaPayload() : null;
+};
+
+watch(
+  () => [
+    props.mahasiswa?.nim,
+    props.mahasiswa?.nama,
+    props.mahasiswa?.namaAyah,
+    props.mahasiswa?.nama_ayah,
+    props.mahasiswa?.jenisKelamin,
+    props.mahasiswa?.jenis_kelamin,
+    props.mahasiswa?.prodi,
+    props.mahasiswa?.prodiAlias,
+    props.mahasiswa?.prodi_alias,
+  ],
+  () => {
+    resetWisudaFormFromMahasiswa();
+    syncWisudaToMahasiswa();
+  },
+  { immediate: true }
+);
+
+watch(wisudaForm, syncWisudaToMahasiswa, { deep: true });
 
 const semesterPendekKrsRows = computed(() => {
   const seenKrsIds = new Set();
@@ -828,6 +1095,7 @@ watch(
   rows,
   () => {
     props.mahasiswa.tagihan = rows;
+    syncWisudaToMahasiswa();
   },
   { deep: true }
 );
@@ -1220,6 +1488,104 @@ watch(
           Belum ada tagihan yang dipilih.
         </template>
       </div>
+
+      <VExpandTransition>
+        <div v-if="hasWisudaTagihan" class="border rounded pa-4 mt-4">
+          <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-3">
+            <div class="text-subtitle-1 font-weight-medium">
+              Detail Input Wisuda
+            </div>
+          </div>
+
+          <VRow>
+            <VCol cols="12" md="4">
+              <VTextField
+                v-model="wisudaForm.nim"
+                label="NIM"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+            <VCol cols="12" md="4">
+              <VTextField
+                v-model="wisudaForm.nama"
+                label="Nama"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+            <VCol cols="12" md="4">
+              <VTextField
+                v-model="wisudaForm.nama_ayah"
+                label="Nama Ayah"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+            <VCol cols="12" md="6">
+              <VTextField
+                v-model="wisudaForm.judul"
+                label="Judul"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+            <VCol cols="12" md="3">
+              <VTextField
+                v-model="wisudaForm.tanggal_sidang"
+                label="Tanggal Sidang"
+                type="date"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+            <VCol cols="12" md="3">
+              <VSelect
+                v-model="wisudaForm.tahun_id"
+                :items="wisudaTahunOptions"
+                item-title="title"
+                item-value="value"
+                label="Tahun Wisuda"
+                :loading="loadingWisudaTahun"
+                :disabled="loadingWisudaTahun && !wisudaTahunOptions.length"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+            <VCol cols="12" md="4">
+              <VSelect
+                v-model="wisudaForm.jenis_kelamin"
+                :items="jenisKelaminWisuda"
+                label="Jenis Kelamin"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+            <VCol cols="12" md="4">
+              <VSelect
+                v-model="wisudaForm.prodi"
+                :items="prodiWisudaOptions"
+                item-title="title"
+                item-value="value"
+                label="Prodi"
+                :loading="loadingProdiWisuda"
+                :disabled="loadingProdiWisuda && !prodiWisudaOptions.length"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+            <VCol cols="12" md="4">
+              <VSelect
+                v-model="wisudaForm.ukuran_baju"
+                :items="ukuranBajuWisuda"
+                label="Ukuran Baju"
+                variant="outlined"
+                density="comfortable"
+              />
+            </VCol>
+          </VRow>
+        </div>
+      </VExpandTransition>
 
       <div v-if="semesterPendekKrsCards.length" class="mt-4">
         <div
