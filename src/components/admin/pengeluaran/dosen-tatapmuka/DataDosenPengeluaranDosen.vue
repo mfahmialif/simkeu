@@ -58,15 +58,18 @@ const syncTanggalToForm = () => {
   props.refForm?.setTanggal?.(tanggal.value);
 };
 
-const lookupPengeluaranByTanggal = async (kode = dosen.value.kode) => {
+const prodiName = item => item?.dosen?.prodi?.nama || item?.dosen?.prodi?.alias || "-";
+const jenisKelaminLabel = item => item?.jenis_kelamin === "L" ? "Laki-laki" : item?.jenis_kelamin === "P" ? "Perempuan" : item?.jenis_kelamin || "";
+
+const lookupPengeluaranByTanggal = async (pegawaiId = dosen.value.id) => {
   syncTanggalToForm();
 
-  if (!kode || !tanggal.value) {
+  if (!pegawaiId || !tanggal.value) {
     props.refForm?.resetExistingPengeluaran?.();
     return;
   }
 
-  await props.refForm?.lookupExistingPengeluaran?.(kode, tanggal.value);
+  await props.refForm?.lookupExistingPengeluaran?.(pegawaiId, tanggal.value);
 };
 
 watch(search, (newVal) => {
@@ -81,13 +84,20 @@ watch(search, (newVal) => {
   typingTimeout = setTimeout(async () => {
     try {
       loadingSearch.value = true;
-      const res = await $api(`/admin/dosen/search/${newVal}`, {
+      const res = await $api("/admin/pegawai", {
         method: "GET",
+        body: {
+          search: newVal,
+          tipe: "dosen",
+          limit: 30,
+          sort_key: "nama",
+          sort_order: "asc",
+        },
       });
-      // ubah hasil API jadi format { kode, nama, display: "nama - kode" }
-      dataList.value = res.map((m) => ({
+
+      dataList.value = (res.data?.data || []).map((m) => ({
         ...m,
-        display: `${m.kode} - ${m.nama} - ${m.nama_prodi}`,
+        display: `${m.kode} - ${m.nama} - ${prodiName(m)}`,
       }));
     } catch (err) {
       showSnackbar({
@@ -136,12 +146,25 @@ const searching = async () => {
   try {
     loadingData.value = true;
 
-    const res = await $api(`/admin/dosen/kode`, {
-      method: "GET",
-      body: {
-        kode: searchKode.value,
-      },
-    });
+    let res = selectedDosen.value && typeof selectedDosen.value === "object" && !Array.isArray(selectedDosen.value)
+      ? selectedDosen.value
+      : null;
+
+    if (!res) {
+      const response = await $api("/admin/pegawai", {
+        method: "GET",
+        body: {
+          search: searchKode.value,
+          tipe: "dosen",
+          limit: 10,
+          sort_key: "nama",
+          sort_order: "asc",
+        },
+      });
+
+      const items = response.data?.data || [];
+      res = items.find(item => String(item.kode) === String(searchKode.value)) || items[0];
+    }
 
     if (!res || (Array.isArray(res) && res.length < 1)) {
       showSnackbar({
@@ -151,16 +174,17 @@ const searching = async () => {
       return;
     }
 
-    (dosen.value.id = res.id), (dosen.value.kode = res.kode);
+    dosen.value.id = res.id;
+    dosen.value.kode = res.kode;
     dosen.value.nama = res.nama;
-    dosen.value.prodi = res.prodi?.nama;
-    dosen.value.jenisKelamin = res.jk?.nama;
-    dosen.value.jkId = res.jk?.id;
+    dosen.value.prodi = prodiName(res);
+    dosen.value.jenisKelamin = jenisKelaminLabel(res);
+    dosen.value.jkId = res.jenis_kelamin;
 
     props.refInfo.fetchDataHistory(res.kode);
     props.refInfo.fetchDataJadwal();
     props.refInfo.fetchDataAbsensi();
-    await lookupPengeluaranByTanggal(res.kode);
+    await lookupPengeluaranByTanggal(res.id);
   } catch (error) {
     showSnackbar({
       text: error,

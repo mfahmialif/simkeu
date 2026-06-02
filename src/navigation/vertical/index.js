@@ -10,6 +10,7 @@ import pengeluaranDosen, {
 import pengeluaranHeading from "./pengeluaran-heading";
 import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
 import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
+import pegawai from "./pegawai";
 import saldo from "./saldo";
 import setting from "./setting";
 import settingHeading from "./setting-heading";
@@ -25,6 +26,7 @@ const routesByRole = {
   admin: [
     ...dashboard,
     ...mahasiswa,
+    ...pegawai,
     ...saldo,
     ...pemasukan,
     ...pengeluaranHeading,

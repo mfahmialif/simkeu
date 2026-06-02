@@ -195,12 +195,12 @@ const resetExistingPengeluaran = () => {
   setAddTitle();
 };
 
-const lookupExistingPengeluaran = async (dosenKode, selectedTanggal) => {
+const lookupExistingPengeluaran = async (pegawaiId, selectedTanggal) => {
   if (props.typeForm === "edit") return;
 
   tanggal.value = selectedTanggal;
 
-  if (!dosenKode || !selectedTanggal) {
+  if (!pegawaiId || !selectedTanggal) {
     resetExistingPengeluaran();
     return;
   }
@@ -209,7 +209,7 @@ const lookupExistingPengeluaran = async (dosenKode, selectedTanggal) => {
     const response = await $api("/admin/pengeluaran/dosen/by-date", {
       method: "GET",
       body: {
-        dosen_kode: dosenKode,
+        pegawai_id: pegawaiId,
         tanggal: selectedTanggal,
       },
     });
@@ -217,7 +217,7 @@ const lookupExistingPengeluaran = async (dosenKode, selectedTanggal) => {
     if (response.status === true && response.data) {
       existingPengeluaran.value = response.data;
       fillFormFromData(response.data);
-      title.value = "Update Barokah Dosen Tatapmuka: " + response.data.dosen_kode;
+      title.value = "Update Barokah Dosen Tatapmuka: " + (response.data.kode_dosen || "");
     } else {
       resetExistingPengeluaran();
       tanggal.value = selectedTanggal;
@@ -273,7 +273,7 @@ const onSubmit = async () => {
   const valid = await refForm.value.validate();
   if (!valid.valid) return;
 
-  if (props.typeForm === "add" && !props.refDataDosen?.dosen?.kode) {
+  if (props.typeForm === "add" && !props.refDataDosen?.dosen?.id) {
     showSnackbar({
       text: "Silakan pilih dosen terlebih dahulu.",
       color: "warning",
@@ -314,9 +314,9 @@ const onSubmit = async () => {
 
   formData.append("tanggal", tanggal.value);
   if (props.typeForm === "add") {
-    formData.append("dosen_kode", props.refDataDosen.dosen.kode);
-  } else if (props.dataForm?.dosen_kode) {
-    formData.append("dosen_kode", props.dataForm.dosen_kode);
+    formData.append("pegawai_id", props.refDataDosen.dosen.id);
+  } else if (props.dataForm?.pegawai_id) {
+    formData.append("pegawai_id", props.dataForm.pegawai_id);
   }
 
   formData.append("jam", jam.value);
@@ -381,7 +381,7 @@ watch(
   () => {
     if (props.typeForm === "edit" && props.dataForm) {
       existingPengeluaran.value = props.dataForm;
-      title.value = "Update Barokah Dosen Tatapmuka: " + props.dataForm.dosen_kode;
+      title.value = "Update Barokah Dosen Tatapmuka: " + (props.dataForm.kode_dosen || "");
       fillFormFromData(props.dataForm);
     }
   },

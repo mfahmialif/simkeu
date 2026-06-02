@@ -127,6 +127,8 @@ onMounted(() => {
       <VDataTableServer
         :headers="[
           { title: 'No', key: 'id' },
+          { title: 'Tanggal', key: 'tanggal' },
+          { title: 'Dosen', key: 'nama_dosen' },
           { title: 'Nama Kegiatan', key: 'nama_kegiatan' },
           { title: 'Transport', key: 'transport' },
           { title: 'Barokah', key: 'barokah' },
@@ -159,6 +161,19 @@ onMounted(() => {
 
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
+        </template>
+
+        <template #item.tanggal="{ item }">
+          {{ item.tanggal || "-" }}
+        </template>
+
+        <template #item.nama_dosen="{ item }">
+          <div class="font-weight-medium">
+            {{ item.nama_dosen || "-" }}
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            {{ item.kode_dosen || "-" }}
+          </div>
         </template>
 
         <template #item.transport="{ item }">

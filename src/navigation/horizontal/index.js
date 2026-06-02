@@ -2,6 +2,7 @@ import dashboard from "./dashboard";
 import mahasiswa from "./mahasiswa";
 import pemasukan from "./pemasukan";
 import pengeluaran from "./pengeluaran";
+import pegawai from "./pegawai";
 import saldo from "./saldo";
 import setting from "./setting";
 import dashboardStaff from "./staff/dashboardStaff";
@@ -23,6 +24,7 @@ const routesByRole = {
   admin: [
     ...dashboard,
     ...mahasiswa,
+    ...pegawai,
     ...saldo,
     ...pemasukan,
     ...pengeluaran,
