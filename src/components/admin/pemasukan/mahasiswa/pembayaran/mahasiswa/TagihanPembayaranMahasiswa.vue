@@ -261,8 +261,12 @@ const getTagihanSemester = (item) => {
   return null;
 };
 
-const isSkripsiBlocked = (item) =>
-  !cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi");
+const isTagihanBlocked = (item) =>
+  Boolean(item?.tidak_bisa_dibayar)
+  || (!cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi"));
+
+const isPayableTagihan = (item) =>
+  !isGroupTagihanItem(item) && !isTagihanBlocked(item);
 
 const hasDispensasiTagihan = (item) =>
   Boolean(item?.status_dispensasi) && Number(item?.jumlah_dispensasi || 0) > 0;
@@ -304,7 +308,7 @@ const getTagihanItemProps = (item) => {
 
   return {
     ...(rawItem?.itemProps || {}),
-    disabled: isGroupTagihanItem(rawItem),
+    disabled: !isPayableTagihan(rawItem),
   };
 };
 
@@ -457,7 +461,7 @@ const hasScopedTagihan = computed(() => scopedTagihan.value.length > 0);
 
 /** Total sisa seluruh tagihan yang eligible */
 const eligibleTagihan = computed(() =>
-  scopedTagihan.value
+  scopedTagihan.value.filter((item) => isPayableTagihan(item))
 );
 
 const eligibleSemesterIniTagihan = computed(() => {
@@ -919,7 +923,7 @@ watch(paymentMode, () => {
 });
 
 watch(scopedTagihan, (newArr) => {
-  const allowedIds = new Set(newArr.map((item) => item.id));
+  const allowedIds = new Set(newArr.filter((item) => isPayableTagihan(item)).map((item) => item.id));
   selectedTagihan.value = selectedTagihan.value.filter((item) =>
     allowedIds.has(item.id)
   );
@@ -948,8 +952,18 @@ watch(
   (newArr, oldArr) => {
     if (paymentMode.value !== "tagihan") return;
 
+    const nextSelected = newArr.filter((item) => isPayableTagihan(item));
+    const previousSelected = (oldArr || []).filter((item) => isPayableTagihan(item));
+    if (nextSelected.length !== newArr.length) {
+      selectedTagihan.value = nextSelected;
+      showSnackbar({
+        text: "Tagihan yang belum memenuhi syarat tidak bisa dipilih.",
+        color: "warning",
+      });
+    }
+
     // Tambahkan baris utk item yang baru dipilih
-    const added = newArr.filter((n) => !oldArr?.some((o) => o.id === n.id));
+    const added = nextSelected.filter((n) => !previousSelected.some((o) => o.id === n.id));
     for (const item of added) {
       if (!rows.value.some((r) => r.id === item.id)) {
         rows.value.push(createPaymentRow(item, item.sisa ?? 0));
@@ -957,8 +971,8 @@ watch(
     }
 
     // Hapus baris utk item yang dihapus dari pilihan
-    const removed = (oldArr || []).filter(
-      (o) => !newArr.some((n) => n.id === o.id)
+    const removed = previousSelected.filter(
+      (o) => !nextSelected.some((n) => n.id === o.id)
     );
     if (removed.length) {
       rows.value = rows.value.filter(
@@ -1176,11 +1190,11 @@ watch(
                   <tr
                     v-for="t in group.items"
                     :key="t.id"
-                    :class="{ 'text-medium-emphasis': isSkripsiBlocked(t) }"
+                    :class="{ 'text-medium-emphasis': isTagihanBlocked(t) }"
                   >
                     <td>
                       {{ t.nama }}
-                      <VChip v-if="isSkripsiBlocked(t)" size="x-small" color="warning" class="ms-2">Belum memenuhi syarat</VChip>
+                      <VChip v-if="isTagihanBlocked(t)" size="x-small" color="warning" class="ms-2">Belum memenuhi syarat</VChip>
                     </td>
                     <td class="text-end">{{ formatRupiah(t.jumlah) }}</td>
                     <td class="text-end">{{ formatRupiah(t.dibayar) }}</td>
@@ -1215,7 +1229,7 @@ watch(
         density="compact"
         class="mb-4"
       >
-        *Tagihan Skripsi belum memenuhi syarat, tetapi tetap bisa dipilih oleh petugas.
+        *Tagihan Skripsi belum memenuhi syarat dan tidak bisa dipilih atau dibayarkan.
       </VAlert>
     </VCardText>
 
@@ -1291,7 +1305,7 @@ watch(
             color="primary"
             variant="elevated"
             class="w-100"
-            :disabled="!hasScopedTagihan || nominalInput <= 0"
+            :disabled="!eligibleTagihan.length || nominalInput <= 0"
             @click="distributePayment"
           >
             <VIcon icon="ri-arrow-right-line" class="me-2" />
@@ -1331,6 +1345,7 @@ watch(
             class="w-100"
             color="primary"
             variant="elevated"
+            :disabled="!eligibleTagihan.length"
             @click="selectAllTagihan"
           >
             Bayar semua tagihan
