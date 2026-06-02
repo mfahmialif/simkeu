@@ -9,11 +9,15 @@ import pemasukanStaff from "./staff/pemasukanStaff";
 import user from "./user";
 import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
 import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
-import pengeluaranBarokahDosen from "./barokahdosen/pengeluaranBarokahDosen";
+import {
+  pengeluaranDosenBulanan,
+  pengeluaranDosenKegiatan,
+  pengeluaranDosenTatapmuka,
+} from "./barokahdosen/pengeluaranBarokahDosen";
 import laporan from "./laporan";
 
 const userData = useCookie("userData").value ?? {};
-const role = userData.role?.name;
+const role = String(userData.role?.name || "").toLowerCase();
 
 const routesByRole = {
   admin: [
@@ -60,7 +64,9 @@ const routesByRole = {
     ...setting,
   ],
 
-  barokahdosen: [...dashboard, ...mahasiswa, ...pengeluaranBarokahDosen, ...setting],
+  barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...setting],
+  barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...setting],
+  barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...setting],
 };
 
 export default routesByRole[role] ?? [];

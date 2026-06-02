@@ -2,19 +2,24 @@ import dashboard from "./dashboard";
 import mahasiswa from "./mahasiswa";
 import pemasukan from "./pemasukan";
 import pengeluaran from "./pengeluaran";
-import pengeluaranDosen from "./pengeluaran-dosen";
+import pengeluaranDosen, {
+  pengeluaranDosenBulanan,
+  pengeluaranDosenKegiatan,
+  pengeluaranDosenTatapmuka,
+} from "./pengeluaran-dosen";
 import pengeluaranHeading from "./pengeluaran-heading";
 import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
 import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
 import saldo from "./saldo";
 import setting from "./setting";
+import settingHeading from "./setting-heading";
 import dashboardStaff from "./staff/dashboardStaff";
 import pemasukanStaff from "./staff/pemasukanStaff";
 import user from "./user";
 import laporan from "./laporan";
 
 const userData = useCookie("userData").value ?? {};
-const role = userData.role?.name;
+const role = String(userData.role?.name || "").toLowerCase();
 
 const routesByRole = {
   admin: [
@@ -66,11 +71,30 @@ const routesByRole = {
     ...setting,
   ],
 
-  barokahdosen: [
+  barokahdosen_tatapmuka: [
     ...dashboard,
     ...mahasiswa,
     ...pengeluaranHeading,
-    ...pengeluaranDosen,
+    ...pengeluaranDosenTatapmuka,
+    ...settingHeading,
+    ...setting,
+  ],
+
+  barokahdosen_kegiatan: [
+    ...dashboard,
+    ...mahasiswa,
+    ...pengeluaranHeading,
+    ...pengeluaranDosenKegiatan,
+    ...settingHeading,
+    ...setting,
+  ],
+
+  barokahdosen_bulanan: [
+    ...dashboard,
+    ...mahasiswa,
+    ...pengeluaranHeading,
+    ...pengeluaranDosenBulanan,
+    ...settingHeading,
     ...setting,
   ],
 };
