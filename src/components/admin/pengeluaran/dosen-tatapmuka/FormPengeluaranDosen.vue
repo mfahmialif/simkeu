@@ -663,7 +663,7 @@ defineExpose({
                   />
                   <div class="preset-badges">
                     <span
-                      v-for="value in barokahMengajarDoubleDegreePresets"
+                      v-for="value in barokahMengajarPresets"
                       :key="'barokah-mengajar-biasa-' + value"
                       class="preset-badge"
                       role="button"
@@ -725,7 +725,7 @@ defineExpose({
                   />
                   <div class="preset-badges">
                     <span
-                      v-for="value in barokahMengajarPresets"
+                      v-for="value in barokahMengajarDoubleDegreePresets"
                       :key="'barokah-mengajar-dd-' + value"
                       class="preset-badge"
                       role="button"
