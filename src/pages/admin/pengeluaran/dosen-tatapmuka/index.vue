@@ -16,14 +16,11 @@ const amountValue = (value, fallback = 0) => value ?? fallback ?? 0;
 const subtotalTransport = (item) => {
   const transportMotor = numberValue(amountValue(item.transport_motor, item.transport));
   const hariMotor = numberValue(amountValue(item.hari_transport_motor, item.hari));
-  const transportMobilTol = numberValue(item.transport_mobil_tol);
-  const hariMobilTol = numberValue(item.hari_transport_mobil_tol);
-  const transportMobilTanpaTol = numberValue(amountValue(item.transport_mobil_tanpa_tol, item.transport_mobil));
-  const hariMobilTanpaTol = numberValue(amountValue(item.hari_transport_mobil_tanpa_tol, item.hari_transport_mobil));
+  const transportMobil = numberValue(amountValue(item.transport_mobil, item.transport_mobil_tanpa_tol));
+  const hariMobil = numberValue(amountValue(item.hari_transport_mobil, item.hari_transport_mobil_tanpa_tol));
 
   return transportMotor * hariMotor
-    + transportMobilTol * hariMobilTol
-    + transportMobilTanpaTol * hariMobilTanpaTol;
+    + transportMobil * hariMobil;
 };
 const subtotalMengajar = (item) => {
   const barokahBiasa = numberValue(amountValue(item.barokah_mengajar_biasa, item.barokah));
@@ -31,9 +28,9 @@ const subtotalMengajar = (item) => {
   const barokahDoubleDegree = numberValue(item.barokah_mengajar_double_degree);
   const jamDoubleDegree = numberValue(amountValue(item.jam_mengajar_double_degree, item.jam));
 
-  return Math.round((barokahBiasa * jamBiasa) + (barokahDoubleDegree * jamDoubleDegree * 1.5));
+  return Math.round((barokahBiasa * jamBiasa) + (barokahDoubleDegree * jamDoubleDegree));
 };
-const subtotalSempro = (item) => numberValue(item.barokah_sempro);
+const subtotalSempro = (item) => numberValue(item.barokah_sempro) * numberValue(amountValue(item.jam_sempro, item.barokah_sempro ? 1 : 0));
 const subtotalUas = (item) => numberValue(item.barokah_uas) * numberValue(item.jumlah_mahasiswa_uas);
 
 const fetchData = async () => {

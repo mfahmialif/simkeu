@@ -39,16 +39,16 @@ const tanggal = ref(null);
 const jam = ref(0);
 const jamMengajarDoubleDegree = ref(0);
 const hariTransportMotor = ref(0);
-const hariTransportMobilTol = ref(0);
-const hariTransportMobilTanpaTol = ref(0);
+const hariTransportMobil = ref(0);
 const transportMotor = ref(0);
-const transportMobilTol = ref(0);
-const transportMobilTanpaTol = ref(0);
+const transportMobil = ref(0);
 const barokahMengajarBiasa = ref(0);
 const barokahMengajarDoubleDegree = ref(0);
 const barokahUas = ref(0);
 const jumlahMahasiswaUas = ref(0);
 const barokahSempro = ref(0);
+const jamSempro = ref(0);
+const keteranganSempro = ref("");
 const jenisPembayaran = ref("CUS BSI");
 const buktiTransfer = ref(null);
 const existingBuktiTransferUrl = ref(null);
@@ -78,29 +78,30 @@ const numberValue = (value) => Number(value || 0);
 const selectInput = (event) => event?.target?.select?.();
 const dayPresets = Array.from({ length: 7 }, (_, index) => index + 1);
 const jamPresets = Array.from({ length: 12 }, (_, index) => index + 1);
-const transportMotorPresets = [25000, 50000, 75000, 100000];
-const transportMobilPresets = [100000, 125000, 150000, 175000, 200000, 225000];
+const transportMotorPresets = Array.from({ length: 8 }, (_, index) => 15000 + (index * 5000));
+const transportMobilPresets = [100000, 150000, 200000, 250000];
 const barokahMengajarPresets = [50000, 75000, 100000, 125000, 150000];
+const barokahMengajarDoubleDegreePresets = [115000, 150000, 180000];
+const barokahSemproPresets = [50000, 75000, 100000, 125000, 150000];
+const barokahUasPresets = [2000, 5000, 10000, 15000, 20000, 25000];
 const formatPresetNominal = (value) => new Intl.NumberFormat("id-ID").format(value);
 
-const totalNominalMobil = computed(() => numberValue(transportMobilTol.value) + numberValue(transportMobilTanpaTol.value));
-const totalHariTransportMobil = computed(() => numberValue(hariTransportMobilTol.value) + numberValue(hariTransportMobilTanpaTol.value));
+const totalNominalMobil = computed(() => numberValue(transportMobil.value));
+const totalHariTransportMobil = computed(() => numberValue(hariTransportMobil.value));
 const totalNominalTransport = computed(() => numberValue(transportMotor.value) + totalNominalMobil.value);
 const totalHariTransport = computed(() => numberValue(hariTransportMotor.value) + totalHariTransportMobil.value);
 const subtotalTransportMotor = computed(() => numberValue(transportMotor.value) * numberValue(hariTransportMotor.value));
-const subtotalTransportMobilTol = computed(() => numberValue(transportMobilTol.value) * numberValue(hariTransportMobilTol.value));
-const subtotalTransportMobilTanpaTol = computed(() => numberValue(transportMobilTanpaTol.value) * numberValue(hariTransportMobilTanpaTol.value));
+const subtotalTransportMobil = computed(() => numberValue(transportMobil.value) * numberValue(hariTransportMobil.value));
 const subtotalTransport = computed(() => (
   subtotalTransportMotor.value
-    + subtotalTransportMobilTol.value
-    + subtotalTransportMobilTanpaTol.value
+    + subtotalTransportMobil.value
 ));
 const subtotalMengajarBiasa = computed(() => numberValue(barokahMengajarBiasa.value) * numberValue(jam.value));
 const subtotalMengajarDoubleDegree = computed(() => (
-  numberValue(barokahMengajarDoubleDegree.value) * numberValue(jamMengajarDoubleDegree.value) * 1.5
+  numberValue(barokahMengajarDoubleDegree.value) * numberValue(jamMengajarDoubleDegree.value)
 ));
 const subtotalMengajar = computed(() => subtotalMengajarBiasa.value + subtotalMengajarDoubleDegree.value);
-const subtotalSempro = computed(() => numberValue(barokahSempro.value));
+const subtotalSempro = computed(() => numberValue(barokahSempro.value) * numberValue(jamSempro.value));
 const subtotalUas = computed(() => numberValue(barokahUas.value) * numberValue(jumlahMahasiswaUas.value));
 
 const total = computed(() => {
@@ -146,16 +147,16 @@ const resetFormValues = () => {
   jam.value = 0;
   jamMengajarDoubleDegree.value = 0;
   hariTransportMotor.value = 0;
-  hariTransportMobilTol.value = 0;
-  hariTransportMobilTanpaTol.value = 0;
+  hariTransportMobil.value = 0;
   transportMotor.value = 0;
-  transportMobilTol.value = 0;
-  transportMobilTanpaTol.value = 0;
+  transportMobil.value = 0;
   barokahMengajarBiasa.value = 0;
   barokahMengajarDoubleDegree.value = 0;
   barokahUas.value = 0;
   jumlahMahasiswaUas.value = 0;
   barokahSempro.value = 0;
+  jamSempro.value = 0;
+  keteranganSempro.value = "";
   jenisPembayaran.value = "CUS BSI";
   buktiTransfer.value = null;
   existingBuktiTransferUrl.value = null;
@@ -167,16 +168,16 @@ const fillFormFromData = (data) => {
   jam.value = data.jam ?? 0;
   jamMengajarDoubleDegree.value = data.jam_mengajar_double_degree ?? data.jam ?? 0;
   hariTransportMotor.value = data.hari_transport_motor ?? data.hari ?? 0;
-  hariTransportMobilTol.value = data.hari_transport_mobil_tol ?? 0;
-  hariTransportMobilTanpaTol.value = data.hari_transport_mobil_tanpa_tol ?? data.hari_transport_mobil ?? 0;
+  hariTransportMobil.value = data.hari_transport_mobil ?? data.hari_transport_mobil_tanpa_tol ?? 0;
   transportMotor.value = data.transport_motor ?? data.transport ?? 0;
-  transportMobilTol.value = data.transport_mobil_tol ?? 0;
-  transportMobilTanpaTol.value = data.transport_mobil_tanpa_tol ?? data.transport_mobil ?? 0;
+  transportMobil.value = data.transport_mobil ?? data.transport_mobil_tanpa_tol ?? 0;
   barokahMengajarBiasa.value = data.barokah_mengajar_biasa ?? data.barokah ?? 0;
   barokahMengajarDoubleDegree.value = data.barokah_mengajar_double_degree ?? 0;
   barokahUas.value = data.barokah_uas ?? 0;
   jumlahMahasiswaUas.value = data.jumlah_mahasiswa_uas ?? 0;
   barokahSempro.value = data.barokah_sempro ?? 0;
+  jamSempro.value = data.jam_sempro ?? (numberValue(data.barokah_sempro) > 0 ? 1 : 0);
+  keteranganSempro.value = data.keterangan_sempro ?? "";
   jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI";
   buktiTransfer.value = null;
   existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null;
@@ -324,18 +325,20 @@ const onSubmit = async () => {
   formData.append("hari", totalHariTransport.value);
   formData.append("hari_transport_motor", hariTransportMotor.value ?? 0);
   formData.append("hari_transport_mobil", totalHariTransportMobil.value);
-  formData.append("hari_transport_mobil_tol", hariTransportMobilTol.value ?? 0);
-  formData.append("hari_transport_mobil_tanpa_tol", hariTransportMobilTanpaTol.value ?? 0);
+  formData.append("hari_transport_mobil_tol", 0);
+  formData.append("hari_transport_mobil_tanpa_tol", totalHariTransportMobil.value);
   formData.append("transport_motor", transportMotor.value ?? 0);
   formData.append("transport_mobil", totalNominalMobil.value);
-  formData.append("transport_mobil_tol", transportMobilTol.value ?? 0);
-  formData.append("transport_mobil_tanpa_tol", transportMobilTanpaTol.value ?? 0);
+  formData.append("transport_mobil_tol", 0);
+  formData.append("transport_mobil_tanpa_tol", totalNominalMobil.value);
   formData.append("transport", totalNominalTransport.value);
   formData.append("barokah_mengajar_biasa", barokahMengajarBiasa.value ?? 0);
   formData.append("barokah_mengajar_double_degree", barokahMengajarDoubleDegree.value ?? 0);
   formData.append("barokah_uas", barokahUas.value ?? 0);
   formData.append("jumlah_mahasiswa_uas", jumlahMahasiswaUas.value ?? 0);
   formData.append("barokah_sempro", barokahSempro.value ?? 0);
+  formData.append("jam_sempro", jamSempro.value ?? 0);
+  formData.append("keterangan_sempro", keteranganSempro.value ?? "");
   formData.append("jenis_pembayaran", jenisPembayaran.value);
   formData.append("keterangan", keterangan.value ?? "");
   formData.append("total", total.value);
@@ -542,15 +545,15 @@ defineExpose({
           <section class="form-section">
             <div class="section-heading">
               <span class="section-number">{{ sectionNumber(2) }}</span>
-              <div class="section-title">Mobil Pakai Tol</div>
+              <div class="section-title">Transport Mobil</div>
             </div>
             <div class="section-content">
               <VRow>
                 <VCol cols="12" md="4">
                   <VTextField
-                    v-model="hariTransportMobilTol"
+                    v-model="hariTransportMobil"
                     type="number"
-                    label="Hari Mobil Pakai Tol"
+                    label="Hari Mobil"
                     placeholder="0"
                     autocomplete="off"
                     @focus="selectInput"
@@ -559,13 +562,13 @@ defineExpose({
                   <div class="preset-badges">
                     <span
                       v-for="value in dayPresets"
-                      :key="'hari-mobil-tol-' + value"
+                      :key="'hari-mobil-' + value"
                       class="preset-badge"
                       role="button"
                       tabindex="0"
-                      @click="hariTransportMobilTol = value"
-                      @keydown.enter.prevent="hariTransportMobilTol = value"
-                      @keydown.space.prevent="hariTransportMobilTol = value"
+                      @click="hariTransportMobil = value"
+                      @keydown.enter.prevent="hariTransportMobil = value"
+                      @keydown.space.prevent="hariTransportMobil = value"
                     >
                       {{ value }}
                     </span>
@@ -574,12 +577,12 @@ defineExpose({
 
                 <VCol cols="12" md="4">
                   <VTextField
-                    v-model="transportMobilTol"
+                    v-model="transportMobil"
                     type="number"
-                    label="Transport Mobil Pakai Tol"
+                    label="Transport Mobil"
                     placeholder="0"
                     autocomplete="off"
-                    :hint="formatRupiah(transportMobilTol)"
+                    :hint="formatRupiah(transportMobil)"
                     persistent-hint
                     @focus="selectInput"
                     @click="selectInput"
@@ -587,13 +590,13 @@ defineExpose({
                   <div class="preset-badges">
                     <span
                       v-for="value in transportMobilPresets"
-                      :key="'transport-mobil-tol-' + value"
+                      :key="'transport-mobil-' + value"
                       class="preset-badge"
                       role="button"
                       tabindex="0"
-                      @click="transportMobilTol = value"
-                      @keydown.enter.prevent="transportMobilTol = value"
-                      @keydown.space.prevent="transportMobilTol = value"
+                      @click="transportMobil = value"
+                      @keydown.enter.prevent="transportMobil = value"
+                      @keydown.space.prevent="transportMobil = value"
                     >
                       {{ formatPresetNominal(value) }}
                     </span>
@@ -602,8 +605,8 @@ defineExpose({
 
                 <VCol cols="12" md="4">
                   <VTextField
-                    :model-value="formatRupiah(subtotalTransportMobilTol)"
-                    label="Subtotal Mobil Pakai Tol"
+                    :model-value="formatRupiah(subtotalTransportMobil)"
+                    label="Subtotal Mobil"
                     readonly
                   />
                 </VCol>
@@ -614,78 +617,6 @@ defineExpose({
           <section class="form-section">
             <div class="section-heading">
               <span class="section-number">{{ sectionNumber(3) }}</span>
-              <div class="section-title">Mobil Tanpa Tol</div>
-            </div>
-            <div class="section-content">
-              <VRow>
-                <VCol cols="12" md="4">
-                  <VTextField
-                    v-model="hariTransportMobilTanpaTol"
-                    type="number"
-                    label="Hari Mobil Tanpa Tol"
-                    placeholder="0"
-                    autocomplete="off"
-                    @focus="selectInput"
-                    @click="selectInput"
-                  />
-                  <div class="preset-badges">
-                    <span
-                      v-for="value in dayPresets"
-                      :key="'hari-mobil-tanpa-tol-' + value"
-                      class="preset-badge"
-                      role="button"
-                      tabindex="0"
-                      @click="hariTransportMobilTanpaTol = value"
-                      @keydown.enter.prevent="hariTransportMobilTanpaTol = value"
-                      @keydown.space.prevent="hariTransportMobilTanpaTol = value"
-                    >
-                      {{ value }}
-                    </span>
-                  </div>
-                </VCol>
-
-                <VCol cols="12" md="4">
-                  <VTextField
-                    v-model="transportMobilTanpaTol"
-                    type="number"
-                    label="Transport Mobil Tanpa Tol"
-                    placeholder="0"
-                    autocomplete="off"
-                    :hint="formatRupiah(transportMobilTanpaTol)"
-                    persistent-hint
-                    @focus="selectInput"
-                    @click="selectInput"
-                  />
-                  <div class="preset-badges">
-                    <span
-                      v-for="value in transportMobilPresets"
-                      :key="'transport-mobil-tanpa-tol-' + value"
-                      class="preset-badge"
-                      role="button"
-                      tabindex="0"
-                      @click="transportMobilTanpaTol = value"
-                      @keydown.enter.prevent="transportMobilTanpaTol = value"
-                      @keydown.space.prevent="transportMobilTanpaTol = value"
-                    >
-                      {{ formatPresetNominal(value) }}
-                    </span>
-                  </div>
-                </VCol>
-
-                <VCol cols="12" md="4">
-                  <VTextField
-                    :model-value="formatRupiah(subtotalTransportMobilTanpaTol)"
-                    label="Subtotal Mobil Tanpa Tol"
-                    readonly
-                  />
-                </VCol>
-              </VRow>
-            </div>
-          </section>
-
-          <section class="form-section">
-            <div class="section-heading">
-              <span class="section-number">{{ sectionNumber(4) }}</span>
               <div class="section-title">Mengajar</div>
             </div>
             <div class="section-content">
@@ -732,7 +663,7 @@ defineExpose({
                   />
                   <div class="preset-badges">
                     <span
-                      v-for="value in barokahMengajarPresets"
+                      v-for="value in barokahMengajarDoubleDegreePresets"
                       :key="'barokah-mengajar-biasa-' + value"
                       class="preset-badge"
                       role="button"
@@ -821,16 +752,42 @@ defineExpose({
 
           <section class="form-section">
             <div class="section-heading">
-              <span class="section-number">{{ sectionNumber(5) }}</span>
+              <span class="section-number">{{ sectionNumber(4) }}</span>
               <div class="section-title">Sempro</div>
             </div>
-            <div class="section-content">
-              <VRow>
-                <VCol cols="12" md="6">
+              <div class="section-content">
+                <VRow>
+                  <VCol cols="12" md="4">
+                  <VTextField
+                    v-model="jamSempro"
+                    type="number"
+                    label="Jam Sempro"
+                    placeholder="0"
+                    autocomplete="off"
+                    @focus="selectInput"
+                    @click="selectInput"
+                  />
+                  <div class="preset-badges">
+                    <span
+                      v-for="value in jamPresets"
+                      :key="'jam-sempro-' + value"
+                      class="preset-badge"
+                      role="button"
+                      tabindex="0"
+                      @click="jamSempro = value"
+                      @keydown.enter.prevent="jamSempro = value"
+                      @keydown.space.prevent="jamSempro = value"
+                    >
+                      {{ value }}
+                    </span>
+                  </div>
+                </VCol>
+
+                <VCol cols="12" md="4">
                   <VTextField
                     v-model="barokahSempro"
                     type="number"
-                    label="Barokah Sempro"
+                    label="Barokah Sempro / Jam"
                     placeholder="0"
                     autocomplete="off"
                     :hint="formatRupiah(barokahSempro)"
@@ -838,13 +795,36 @@ defineExpose({
                     @focus="selectInput"
                     @click="selectInput"
                   />
+                  <div class="preset-badges">
+                    <span
+                      v-for="value in barokahSemproPresets"
+                      :key="'barokah-sempro-' + value"
+                      class="preset-badge"
+                      role="button"
+                      tabindex="0"
+                      @click="barokahSempro = value"
+                      @keydown.enter.prevent="barokahSempro = value"
+                      @keydown.space.prevent="barokahSempro = value"
+                    >
+                      {{ formatPresetNominal(value) }}
+                    </span>
+                  </div>
                 </VCol>
 
-                <VCol cols="12" md="6">
+                <VCol cols="12" md="4">
                   <VTextField
                     :model-value="formatRupiah(subtotalSempro)"
                     label="Subtotal Sempro"
                     readonly
+                  />
+                </VCol>
+
+                <VCol cols="12">
+                  <VTextField
+                    v-model="keteranganSempro"
+                    label="Penguji Sempro"
+                    placeholder="Contoh: Penguji 1"
+                    autocomplete="off"
                   />
                 </VCol>
               </VRow>
@@ -853,7 +833,7 @@ defineExpose({
 
           <section class="form-section">
             <div class="section-heading">
-              <span class="section-number">{{ sectionNumber(6) }}</span>
+              <span class="section-number">{{ sectionNumber(5) }}</span>
               <div class="section-title">UAS</div>
             </div>
             <div class="section-content">
@@ -870,6 +850,20 @@ defineExpose({
                     @focus="selectInput"
                     @click="selectInput"
                   />
+                  <div class="preset-badges">
+                    <span
+                      v-for="value in barokahUasPresets"
+                      :key="'barokah-uas-' + value"
+                      class="preset-badge"
+                      role="button"
+                      tabindex="0"
+                      @click="barokahUas = value"
+                      @keydown.enter.prevent="barokahUas = value"
+                      @keydown.space.prevent="barokahUas = value"
+                    >
+                      {{ formatPresetNominal(value) }}
+                    </span>
+                  </div>
                 </VCol>
 
                 <VCol cols="12" md="4">
@@ -897,7 +891,7 @@ defineExpose({
 
           <section class="form-section">
             <div class="section-heading">
-              <span class="section-number">{{ sectionNumber(7) }}</span>
+              <span class="section-number">{{ sectionNumber(6) }}</span>
               <div class="section-title">Keterangan dan Total</div>
             </div>
             <div class="section-content">
