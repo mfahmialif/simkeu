@@ -80,7 +80,7 @@ const dayPresets = Array.from({ length: 7 }, (_, index) => index + 1);
 const jamPresets = Array.from({ length: 12 }, (_, index) => index + 1);
 const transportMotorPresets = Array.from({ length: 8 }, (_, index) => 15000 + (index * 5000));
 const transportMobilPresets = [100000, 150000, 200000, 250000];
-const barokahMengajarPresets = [50000, 75000, 100000, 125000, 150000];
+const barokahMengajarPresets = [50000, 75000, 100000, 125000, 150000, 175000, 200000, 225000];
 const barokahMengajarDoubleDegreePresets = [115000, 150000, 180000];
 const barokahSemproPresets = [50000, 75000, 100000, 125000, 150000];
 const barokahUasPresets = [2000, 5000, 10000, 15000, 20000, 25000];
