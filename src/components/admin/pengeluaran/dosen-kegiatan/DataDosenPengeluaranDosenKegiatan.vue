@@ -2,6 +2,10 @@
 import { useRouter } from "vue-router";
 
 const props = defineProps({
+  refInfo: {
+    type: Object,
+    default: () => ({}),
+  },
   refForm: {
     type: Object,
     default: () => ({}),
@@ -37,7 +41,7 @@ const emptyData = {
   id: "",
   kode: "",
   nama: "",
-  prodi: "",
+  unit: "",
   jenisKelamin: "",
   jkId: "",
 };
@@ -45,22 +49,13 @@ const emptyData = {
 const dosen = ref(emptyData);
 let typingTimeout = null;
 
-const prodiName = item => item?.dosen?.prodi?.nama || item?.dosen?.prodi?.alias || "-";
+const tipeLabel = item => item?.tipe === "staff" ? "Staff" : item?.tipe === "dosen" ? "Dosen" : "";
+const unitName = item => item?.dosen?.prodi?.nama || item?.dosen?.prodi?.alias || item?.staff?.jabatan || "-";
+const unitDescription = item => [tipeLabel(item), unitName(item)].filter(value => value && value !== "-").join(" - ") || "-";
 const jenisKelaminLabel = item => item?.jenis_kelamin === "L" ? "Laki-laki" : item?.jenis_kelamin === "P" ? "Perempuan" : item?.jenis_kelamin || "";
 
 const syncTanggalToForm = () => {
   props.refForm?.setTanggal?.(tanggal.value);
-};
-
-const lookupPengeluaranByTanggal = async (pegawaiId = dosen.value.id) => {
-  syncTanggalToForm();
-
-  if (!pegawaiId || !tanggal.value) {
-    props.refForm?.resetExistingPengeluaran?.();
-    return;
-  }
-
-  await props.refForm?.lookupExistingPengeluaran?.(pegawaiId, tanggal.value);
 };
 
 watch(search, (newVal) => {
@@ -79,7 +74,6 @@ watch(search, (newVal) => {
         method: "GET",
         body: {
           search: newVal,
-          tipe: "dosen",
           limit: 30,
           sort_key: "nama",
           sort_order: "asc",
@@ -88,11 +82,11 @@ watch(search, (newVal) => {
 
       dataList.value = (res.data?.data || []).map((item) => ({
         ...item,
-        display: `${item.kode} - ${item.nama} - ${prodiName(item)}`,
+        display: `${item.kode} - ${item.nama} - ${unitDescription(item)}`,
       }));
     } catch (err) {
       showSnackbar({
-        text: "Gagal mendapatkan list dosen",
+        text: "Gagal mendapatkan list pegawai",
         color: "error",
       });
       dataList.value = [];
@@ -114,7 +108,7 @@ watch(selectedDosen, (newVal) => {
 });
 
 watch(tanggal, () => {
-  lookupPengeluaranByTanggal();
+  syncTanggalToForm();
 });
 
 const searching = async () => {
@@ -146,7 +140,6 @@ const searching = async () => {
         method: "GET",
         body: {
           search: searchKode.value,
-          tipe: "dosen",
           limit: 10,
           sort_key: "nama",
           sort_order: "asc",
@@ -159,7 +152,7 @@ const searching = async () => {
 
     if (!res || (Array.isArray(res) && res.length < 1)) {
       showSnackbar({
-        text: "Data dosen tidak ditemukan",
+        text: "Data pegawai tidak ditemukan",
         color: "error",
       });
       return;
@@ -168,11 +161,12 @@ const searching = async () => {
     dosen.value.id = res.id;
     dosen.value.kode = res.kode;
     dosen.value.nama = res.nama;
-    dosen.value.prodi = prodiName(res);
+    dosen.value.unit = unitDescription(res);
     dosen.value.jenisKelamin = jenisKelaminLabel(res);
     dosen.value.jkId = res.jenis_kelamin;
 
-    await lookupPengeluaranByTanggal(res.id);
+    syncTanggalToForm();
+    props.refInfo?.fetchDataHistory?.(res.id);
   } catch (error) {
     showSnackbar({
       text: error,
@@ -210,7 +204,7 @@ defineExpose({
 </script>
 
 <template>
-  <VCard class="mb-6" title="Pencarian Dosen :">
+  <VCard class="mb-6" title="Pencarian Pegawai :">
     <template #append>
       <MoreBtnAction :menu-list="menuList" />
     </template>
@@ -238,7 +232,7 @@ defineExpose({
             :items="dataList"
             item-title="display"
             item-value="kode"
-            label="NIY / Nama Dosen"
+            label="NIY / Nama Pegawai"
             clearable
             :loading="loadingSearch"
             autocomplete="off"
@@ -289,9 +283,9 @@ defineExpose({
 
         <VCol cols="12" md="6">
           <VTextField
-            v-model="dosen.prodi"
-            label="Prodi"
-            placeholder="Prodi"
+            v-model="dosen.unit"
+            label="Tipe / Unit / Jabatan"
+            placeholder="Tipe / Unit / Jabatan"
             readonly
             :loading="loadingData"
           />

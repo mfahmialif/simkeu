@@ -28,7 +28,7 @@ const fetchDataForm = async () => {
 };
 
 onMounted(() => {
-  document.title = "Edit Barokah Dosen Kegiatan - SIMKEU";
+  document.title = "Edit Barokah Pegawai Kegiatan - SIMKEU";
   fetchDataForm();
 });
 </script>

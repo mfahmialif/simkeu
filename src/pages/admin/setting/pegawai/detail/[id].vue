@@ -31,41 +31,40 @@ const fetchPegawai = async () => {
   }
 };
 
-const menuList = [
+const menuList = computed(() => [
   {
     title: "Kembali",
     value: "back",
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
-  {
-    title: "Edit",
-    value: "edit",
-    icon: "ri-edit-box-line",
-    clickHandler: () => router.push(`/admin/setting/pegawai/edit/${id}`),
-  },
+  ...(isAdmin.value
+    ? [
+        {
+          title: "Edit",
+          value: "edit",
+          icon: "ri-edit-box-line",
+          clickHandler: () => router.push(`/admin/setting/pegawai/edit/${id}`),
+        },
+      ]
+    : []),
   {
     title: "Lihat Data",
     value: "lihat-data",
     icon: "ri-list-check",
     clickHandler: () => router.push("/admin/pegawai"),
   },
-];
+]);
 
 onMounted(() => {
   document.title = "Pegawai Detail - SIMKEU";
-
-  if (!isAdmin.value) {
-    router.replace({ name: "not-authorized" });
-    return;
-  }
 
   fetchPegawai();
 });
 </script>
 
 <template>
-  <VRow v-if="isAdmin">
+  <VRow>
     <VCol cols="12">
       <VCard title="Detail Pegawai">
         <template #append>

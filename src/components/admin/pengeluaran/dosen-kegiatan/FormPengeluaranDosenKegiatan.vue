@@ -34,7 +34,7 @@ const menuList = [
 ];
 
 const refForm = ref(null);
-const title = ref("Tambah Barokah Dosen Kegiatan");
+const title = ref("Tambah Barokah Pegawai Kegiatan");
 const tanggal = ref(null);
 const pegawaiId = ref(null);
 const kodeDosen = ref("");
@@ -46,10 +46,8 @@ const buktiTransfer = ref(null);
 const existingBuktiTransferUrl = ref(null);
 const keterangan = ref("");
 const disabled = ref(false);
-const existingPengeluaran = ref(null);
 
 const jenisPembayaranList = ["CUS BSI", "Transfer"];
-const isAddPageEditing = computed(() => props.typeForm === "add" && !!existingPengeluaran.value?.id);
 const showMainDataInForm = computed(() => props.typeForm === "edit");
 
 const total = computed(() => {
@@ -75,24 +73,10 @@ watch(jenisPembayaran, (newValue) => {
   }
 });
 
-const setAddTitle = () => {
-  title.value = "Tambah Barokah Dosen Kegiatan";
-};
-
-const resetFormValues = () => {
-  namaKegiatan.value = "";
-  transport.value = 0;
-  barokah.value = 0;
-  jenisPembayaran.value = "CUS BSI";
-  buktiTransfer.value = null;
-  existingBuktiTransferUrl.value = null;
-  keterangan.value = "";
-};
-
 const fillFormFromData = (data) => {
   tanggal.value = data.tanggal ?? tanggal.value;
   pegawaiId.value = data.pegawai_id ?? pegawaiId.value;
-  kodeDosen.value = data.kode_dosen ?? kodeDosen.value;
+  kodeDosen.value = data.kode_pegawai ?? data.kode_dosen ?? kodeDosen.value;
   namaKegiatan.value = data.nama_kegiatan ?? "";
   transport.value = data.transport ?? 0;
   barokah.value = data.barokah ?? 0;
@@ -106,71 +90,13 @@ const setTanggal = (value) => {
   tanggal.value = value;
 };
 
-const resetExistingPengeluaran = () => {
-  if (props.typeForm === "edit") return;
-
-  existingPengeluaran.value = null;
-  resetFormValues();
-  setAddTitle();
-};
-
-const lookupExistingPengeluaran = async (selectedPegawaiId, selectedTanggal) => {
-  if (props.typeForm === "edit") return;
-
-  tanggal.value = selectedTanggal;
-  pegawaiId.value = selectedPegawaiId;
-  kodeDosen.value = props.refDataDosen?.dosen?.kode || kodeDosen.value;
-
-  if (!selectedPegawaiId || !selectedTanggal) {
-    resetExistingPengeluaran();
-    return;
-  }
-
-  try {
-    const response = await $api("/admin/pengeluaran/dosen-kegiatan/by-date", {
-      method: "GET",
-      body: {
-        pegawai_id: selectedPegawaiId,
-        tanggal: selectedTanggal,
-      },
-    });
-
-    if (response.status === true && response.data) {
-      existingPengeluaran.value = response.data;
-      fillFormFromData(response.data);
-      title.value = "Update Barokah Dosen Kegiatan: " + (response.data.kode_dosen || "");
-    } else {
-      resetExistingPengeluaran();
-      tanggal.value = selectedTanggal;
-      pegawaiId.value = selectedPegawaiId;
-      kodeDosen.value = props.refDataDosen?.dosen?.kode || kodeDosen.value;
-    }
-  } catch (err) {
-    resetExistingPengeluaran();
-    tanggal.value = selectedTanggal;
-    pegawaiId.value = selectedPegawaiId;
-    kodeDosen.value = props.refDataDosen?.dosen?.kode || kodeDosen.value;
-
-    const message = Array.isArray(err.data?.message)
-      ? err.data.message.join("; ")
-      : typeof err.data?.message === "object"
-        ? Object.values(err.data.message).flat().join("; ")
-        : err.data?.message || "Gagal mengecek data barokah kegiatan pada tanggal tersebut.";
-
-    showSnackbar({
-      text: message,
-      color: "error",
-    });
-  }
-};
-
 const onSubmit = async () => {
   const valid = await refForm.value.validate();
   if (!valid.valid) return;
 
   if (props.typeForm === "add" && !props.refDataDosen?.dosen?.id) {
     showSnackbar({
-      text: "Silakan pilih dosen terlebih dahulu.",
+      text: "Silakan pilih pegawai terlebih dahulu.",
       color: "warning",
     });
     return;
@@ -198,7 +124,7 @@ const onSubmit = async () => {
 
   const editId = props.typeForm === "edit"
     ? props.dataForm.id
-    : existingPengeluaran.value?.id;
+    : null;
   const method = editId ? "PUT" : "POST";
   const url = editId
     ? "/admin/pengeluaran/dosen-kegiatan/" + editId
@@ -265,8 +191,7 @@ watch(
   () => props.dataForm,
   () => {
     if (props.typeForm === "edit" && props.dataForm) {
-      existingPengeluaran.value = props.dataForm;
-      title.value = "Update Barokah Dosen Kegiatan: " + (props.dataForm.kode_dosen || "");
+      title.value = "Update Barokah Pegawai Kegiatan: " + (props.dataForm.kode_pegawai || props.dataForm.kode_dosen || "");
       fillFormFromData(props.dataForm);
     }
   },
@@ -280,8 +205,6 @@ onMounted(() => {
 });
 
 defineExpose({
-  lookupExistingPengeluaran,
-  resetExistingPengeluaran,
   setTanggal,
 });
 </script>
@@ -295,16 +218,6 @@ defineExpose({
     <VCardText>
       <VForm ref="refForm" @submit.prevent="onSubmit">
         <VRow>
-          <VCol v-if="isAddPageEditing" cols="12">
-            <VAlert
-              type="info"
-              variant="tonal"
-              density="comfortable"
-            >
-              Data sudah pernah diinputkan, silahkan mengisi untuk memperbarui data.
-            </VAlert>
-          </VCol>
-
           <VCol v-if="showMainDataInForm" cols="12" md="6">
             <AppDateTimePicker
               v-model="tanggal"
@@ -322,7 +235,7 @@ defineExpose({
           <VCol v-if="showMainDataInForm" cols="12" md="6">
             <VTextField
               v-model="kodeDosen"
-              label="NIY Dosen"
+              label="NIY Pegawai"
               :rules="[requiredValidator]"
               readonly
             />

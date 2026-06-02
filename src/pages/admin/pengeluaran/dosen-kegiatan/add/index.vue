@@ -1,14 +1,16 @@
 <script setup>
 import DataDosenPengeluaranDosenKegiatan from "@/components/admin/pengeluaran/dosen-kegiatan/DataDosenPengeluaranDosenKegiatan.vue";
 import FormPengeluaranDosenKegiatan from "@/components/admin/pengeluaran/dosen-kegiatan/FormPengeluaranDosenKegiatan.vue";
+import InfoPengeluaranDosenKegiatan from "@/components/admin/pengeluaran/dosen-kegiatan/InfoPengeluaranDosenKegiatan.vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 const refDataDosen = ref(null);
 const refForm = ref(null);
+const refInfo = ref(null);
 
 onMounted(() => {
-  document.title = "Tambah Barokah Dosen Kegiatan - SIMKEU";
+  document.title = "Tambah Barokah Pegawai Kegiatan - SIMKEU";
 });
 </script>
 
@@ -29,6 +31,7 @@ onMounted(() => {
       <DataDosenPengeluaranDosenKegiatan
         ref="refDataDosen"
         class="pb-3"
+        :ref-info="refInfo"
         :ref-form="refForm"
       />
     </VCol>
@@ -38,6 +41,10 @@ onMounted(() => {
         ref="refForm"
         :ref-data-dosen="refDataDosen"
       />
+    </VCol>
+
+    <VCol cols="12">
+      <InfoPengeluaranDosenKegiatan ref="refInfo" />
     </VCol>
   </VRow>
 </template>

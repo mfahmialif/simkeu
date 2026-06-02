@@ -155,8 +155,6 @@ const fetchProdi = async () => {
 };
 
 const fetchData = async () => {
-  if (!isAdmin.value) return;
-
   try {
     loading.value = true;
     const tipe = props.fixedTipe || selectedTipe.value;
@@ -287,17 +285,12 @@ watch(
 onMounted(() => {
   document.title = `${props.documentTitle || props.title} - SIMKEU`;
 
-  if (!isAdmin.value) {
-    router.replace({ name: "not-authorized" });
-    return;
-  }
-
   if (showProdiFilter.value) fetchProdi();
 });
 </script>
 
 <template>
-  <div v-if="isAdmin">
+  <div>
     <div
       class="pegawai-stat-grid mb-4"
       :style="{ '--stat-count': statCards.length }"
@@ -397,6 +390,7 @@ onMounted(() => {
           </VBtn>
 
           <VBtn
+            v-if="isAdmin"
             color="primary"
             prepend-icon="ri-add-line"
             @click="$router.push(addUrl)"
@@ -500,6 +494,7 @@ onMounted(() => {
                 </VListItem>
 
                 <VListItem
+                  v-if="isAdmin"
                   value="edit"
                   prepend-icon="ri-edit-box-line"
                   @click="$router.push(`/admin/setting/pegawai/edit/${item.id}`)"
@@ -508,6 +503,7 @@ onMounted(() => {
                 </VListItem>
 
                 <VListItem
+                  v-if="isAdmin"
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
                   @click="showDialogDelete(item.id, item.nama)"

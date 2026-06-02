@@ -87,7 +87,7 @@ const deleteDataSubmit = async (id) => {
 };
 
 onMounted(() => {
-  document.title = "Barokah Dosen Kegiatan - SIMKEU";
+  document.title = "Barokah Pegawai Kegiatan - SIMKEU";
 });
 </script>
 
@@ -95,7 +95,7 @@ onMounted(() => {
   <div>
     <VCard>
       <VCardItem class="pb-4">
-        <VCardTitle>Barokah Dosen Kegiatan</VCardTitle>
+        <VCardTitle>Barokah Pegawai Kegiatan</VCardTitle>
       </VCardItem>
 
       <VDivider />
@@ -128,7 +128,7 @@ onMounted(() => {
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
-          { title: 'Dosen', key: 'nama_dosen' },
+          { title: 'Pegawai', key: 'nama_pegawai' },
           { title: 'Nama Kegiatan', key: 'nama_kegiatan' },
           { title: 'Transport', key: 'transport' },
           { title: 'Barokah', key: 'barokah' },
@@ -167,12 +167,24 @@ onMounted(() => {
           {{ item.tanggal || "-" }}
         </template>
 
-        <template #item.nama_dosen="{ item }">
+        <template #item.nama_pegawai="{ item }">
           <div class="font-weight-medium">
-            {{ item.nama_dosen || "-" }}
+            {{ item.nama_pegawai || item.nama_dosen || "-" }}
           </div>
           <div class="text-caption text-medium-emphasis">
-            {{ item.kode_dosen || "-" }}
+            {{ item.kode_pegawai || item.kode_dosen || "-" }}
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            {{
+              item.tipe_pegawai === "staff"
+                ? "Staff"
+                : item.tipe_pegawai === "dosen"
+                  ? "Dosen"
+                  : "-"
+            }}
+            <span v-if="item.jabatan_staff || item.nama_prodi_dosen">
+              - {{ item.jabatan_staff || item.nama_prodi_dosen }}
+            </span>
           </div>
         </template>
 

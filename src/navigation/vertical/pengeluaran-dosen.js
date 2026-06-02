@@ -20,7 +20,7 @@ export const pengeluaranDosenTatapmuka = barokahDosenSingleMenu(
 );
 
 export const pengeluaranDosenKegiatan = barokahDosenSingleMenu(
-  "Dosen Kegiatan",
+  "Pegawai Kegiatan",
   "admin-pengeluaran-dosen-kegiatan",
 );
 

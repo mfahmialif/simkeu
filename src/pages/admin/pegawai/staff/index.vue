@@ -3,6 +3,8 @@ import { showSnackbar } from "@/composables/snackbar"
 import PegawaiTable from "@/components/admin/pegawai/PegawaiTable.vue"
 
 const tableKey = ref(0)
+const userData = useCookie("userData").value ?? {}
+const isAdmin = computed(() => String(userData.role?.name || "").toLowerCase() === "admin")
 const isSyncDialogVisible = ref(false)
 const isLoadingPreview = ref(false)
 const isSyncing = ref(false)
@@ -375,7 +377,7 @@ watch(
 
 <template>
   <div>
-    <div class="d-flex justify-end mb-4">
+    <div v-if="isAdmin" class="d-flex justify-end mb-4">
       <VBtn
         color="primary"
         prepend-icon="ri-loop-right-line"
@@ -392,6 +394,7 @@ watch(
     />
 
     <VDialog
+      v-if="isAdmin"
       v-model="isSyncDialogVisible"
       width="1120"
       scrollable
