@@ -113,14 +113,13 @@ export default defineConfig({
     chunkSizeWarningLimit: 5000,
     rollupOptions: {
       output: {
+        // Merge small chunks (< 20KB) into their parent chunks automatically
+        // This prevents tiny files like useSkins.js from becoming separate HTTP requests
+        experimentalMinChunkSize: 20_000,
         manualChunks(id) {
-          // Bundle Vuetify, @core and @layouts into a single vendor chunk
-          // This prevents many separate HTTP requests that cause 522 timeout
+          // Bundle all Vuetify into a single chunk
           if (id.includes('node_modules/vuetify')) {
             return 'vuetify'
-          }
-          if (id.includes('/@core/') || id.includes('/@layouts/')) {
-            return 'app-core'
           }
         },
       },

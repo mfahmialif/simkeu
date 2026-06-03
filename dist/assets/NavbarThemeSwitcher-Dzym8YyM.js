@@ -1,1 +1,0 @@
-import{ac as a,a2 as c,a_ as o}from"./app-core-BBiCCfYH.js";import"./vuetify-BC4vKTOI.js";const _={__name:"NavbarThemeSwitcher",setup(t){const e=[{name:"system",icon:"ri-macbook-line"},{name:"light",icon:"ri-sun-line"},{name:"dark",icon:"ri-moon-clear-line"}];return(r,m)=>{const n=o;return c(),a(n,{themes:e})}}};export{_ as default};
