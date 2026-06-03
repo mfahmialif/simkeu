@@ -1,4 +1,6 @@
 <script setup>
+import { downloadFileExport } from "@/composables/exportFile";
+
 const props = defineProps({
   title: {
     type: String,
@@ -36,6 +38,11 @@ const selectedJenisKelamin = ref(null);
 const selectedStatus = ref(null);
 const selectedProdi = ref(null);
 const prodiOptions = ref([]);
+const isLoadingExport = ref(false);
+const isImportDialogVisible = ref(false);
+const isImporting = ref(false);
+const importFile = ref(null);
+const importSummary = ref(null);
 
 const stats = ref({
   total: 0,
@@ -55,6 +62,21 @@ const filterColMd = computed(() => {
 
   return 3;
 });
+
+const currentFilterPayload = () => {
+  const tipe = props.fixedTipe || selectedTipe.value;
+
+  return {
+    search: search.value,
+    ...(tipe && { tipe }),
+    ...(selectedJenisKelamin.value && {
+      jenis_kelamin: selectedJenisKelamin.value,
+    }),
+    ...(selectedStatus.value && { status: selectedStatus.value }),
+    ...(showProdiFilter.value &&
+      selectedProdi.value && { prodi_id: selectedProdi.value }),
+  };
+};
 
 const tipeOptions = [
   { title: "Dosen", value: "dosen" },
@@ -157,7 +179,6 @@ const fetchProdi = async () => {
 const fetchData = async () => {
   try {
     loading.value = true;
-    const tipe = props.fixedTipe || selectedTipe.value;
     const response = await $api("/admin/pegawai", {
       method: "GET",
       body: {
@@ -165,14 +186,7 @@ const fetchData = async () => {
         limit: itemsPerPage.value,
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
-        search: search.value,
-        ...(tipe && { tipe }),
-        ...(selectedJenisKelamin.value && {
-          jenis_kelamin: selectedJenisKelamin.value,
-        }),
-        ...(selectedStatus.value && { status: selectedStatus.value }),
-        ...(showProdiFilter.value &&
-          selectedProdi.value && { prodi_id: selectedProdi.value }),
+        ...currentFilterPayload(),
       },
     });
 
@@ -246,6 +260,87 @@ const deleteDataSubmit = async (id) => {
     });
   } finally {
     isDialogDeleteVisible.value = false;
+  }
+};
+
+const exportData = async () => {
+  try {
+    isLoadingExport.value = true;
+    const response = await $api("/admin/pegawai/export-excel", {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        sort_key: sortBy.value.key,
+        sort_order: sortBy.value.order,
+        ...currentFilterPayload(),
+      },
+    });
+
+    downloadFileExport(response, `Data ${props.title}.xlsx`);
+    showSnackbar({
+      text: `Data ${listNameLower.value} berhasil di download.`,
+      color: "success",
+    });
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    isLoadingExport.value = false;
+  }
+};
+
+const openImportDialog = () => {
+  importFile.value = null;
+  importSummary.value = null;
+  isImportDialogVisible.value = true;
+};
+
+const importData = async () => {
+  const file = Array.isArray(importFile.value)
+    ? importFile.value[0]
+    : importFile.value;
+
+  if (!file) {
+    showSnackbar({
+      text: "Pilih file Excel terlebih dahulu.",
+      color: "warning",
+    });
+    return;
+  }
+
+  try {
+    isImporting.value = true;
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const tipe = props.fixedTipe || selectedTipe.value;
+    if (tipe) {
+      formData.append("tipe", tipe);
+    }
+
+    const response = await $api("/admin/pegawai/import-excel", {
+      method: "POST",
+      body: formData,
+    });
+
+    importSummary.value = response.data || null;
+    showSnackbar({
+      text: response.message || "Import data selesai.",
+      color: "success",
+    });
+    fetchData();
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    isImporting.value = false;
   }
 };
 
@@ -379,8 +474,31 @@ onMounted(() => {
           </VCol>
         </VRow>
 
-        <div class="d-flex justify-end flex-wrap gap-3 mt-4">
+        <div class="pegawai-actions d-flex justify-end flex-wrap gap-3 mt-4">
           <VBtn
+            class="pegawai-action-btn"
+            variant="outlined"
+            color="success"
+            prepend-icon="ri-file-excel-2-line"
+            :loading="isLoadingExport"
+            @click="exportData"
+          >
+            Download Data
+          </VBtn>
+
+          <VBtn
+            v-if="isAdmin"
+            class="pegawai-action-btn"
+            variant="outlined"
+            color="primary"
+            prepend-icon="ri-upload-cloud-2-line"
+            @click="openImportDialog"
+          >
+            Import Data
+          </VBtn>
+
+          <VBtn
+            class="pegawai-action-btn"
             variant="outlined"
             color="secondary"
             prepend-icon="ri-filter-off-line"
@@ -391,6 +509,7 @@ onMounted(() => {
 
           <VBtn
             v-if="isAdmin"
+            class="pegawai-action-btn"
             color="primary"
             prepend-icon="ri-add-line"
             @click="$router.push(addUrl)"
@@ -409,6 +528,7 @@ onMounted(() => {
           { title: 'Jenis Kelamin', key: 'jenis_kelamin' },
           { title: 'Prodi/Jabatan', key: 'unit' },
           { title: 'Email', key: 'email' },
+          { title: 'Rekening', key: 'rekening', sortable: false },
           { title: 'Status', key: 'status' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
@@ -467,6 +587,14 @@ onMounted(() => {
 
         <template #item.email="{ item }">
           {{ item.email || "-" }}
+        </template>
+
+        <template #item.rekening="{ item }">
+          <div class="d-flex flex-column">
+            <span class="font-weight-medium">{{ item.nomer_rekening || "-" }}</span>
+            <small class="text-medium-emphasis">{{ item.nama_pemilik_rekening || item.nama || "-" }}</small>
+            <small class="text-medium-emphasis">{{ item.bank || "-" }}</small>
+          </div>
         </template>
 
         <template #item.status="{ item }">
@@ -548,6 +676,68 @@ onMounted(() => {
         </VCardText>
       </VCard>
     </VDialog>
+
+    <VDialog v-if="isAdmin" v-model="isImportDialogVisible" width="560">
+      <VCard :title="`Import Data ${title}`">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="isImportDialogVisible = false"
+        />
+
+        <VCardText>
+          <VFileInput
+            v-model="importFile"
+            label="File Excel"
+            accept=".xlsx,.xls,.csv"
+            prepend-icon="ri-file-excel-2-line"
+            show-size
+          />
+
+          <VAlert
+            v-if="importSummary"
+            type="success"
+            variant="tonal"
+            class="mt-4"
+          >
+            {{ importSummary.created || 0 }} baru,
+            {{ importSummary.updated || 0 }} diperbarui,
+            {{ importSummary.skipped || 0 }} dilewati.
+          </VAlert>
+
+          <VAlert
+            v-if="importSummary?.errors?.length"
+            type="warning"
+            variant="tonal"
+            class="mt-3"
+          >
+            <div
+              v-for="item in importSummary.errors"
+              :key="item"
+            >
+              {{ item }}
+            </div>
+          </VAlert>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end flex-wrap gap-4">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isImportDialogVisible = false"
+          >
+            Tutup
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="isImporting"
+            @click="importData"
+          >
+            Import
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 
@@ -567,6 +757,15 @@ onMounted(() => {
 @media (max-width: 599px) {
   .pegawai-stat-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pegawai-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pegawai-action-btn {
+    inline-size: 100%;
   }
 }
 </style>

@@ -37,6 +37,7 @@ const form = reactive({
   email: "",
   hp: "",
   nomer_rekening: "",
+  nama_pemilik_rekening: "",
   bank: "",
   status: "aktif",
   dosen_kode: "",
@@ -108,6 +109,7 @@ const applyData = (data) => {
   form.email = data?.email || "";
   form.hp = data?.hp || "";
   form.nomer_rekening = data?.nomer_rekening || "";
+  form.nama_pemilik_rekening = data?.nama_pemilik_rekening || "";
   form.bank = data?.bank || "";
   form.status = data?.status || "aktif";
   form.dosen_kode = data?.dosen?.kode || data?.kode || "";
@@ -167,6 +169,7 @@ const onSubmit = async () => {
     email: form.email || null,
     hp: form.hp || null,
     nomer_rekening: form.nomer_rekening || null,
+    nama_pemilik_rekening: form.nama_pemilik_rekening || null,
     bank: form.bank || null,
     status: form.status,
     dosen_kode: form.tipe === "dosen" ? form.dosen_kode || form.kode : null,
@@ -315,7 +318,7 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol cols="12" md="4">
         <VTextField
           v-model="form.nomer_rekening"
           label="Nomer Rekening"
@@ -324,7 +327,16 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol cols="12" md="4">
+        <VTextField
+          v-model="form.nama_pemilik_rekening"
+          label="Nama Pemilik Rekening"
+          placeholder="Nama sesuai rekening"
+          :readonly="readOnly"
+        />
+      </VCol>
+
+      <VCol cols="12" md="4">
         <VTextField
           v-model="form.bank"
           label="Bank"

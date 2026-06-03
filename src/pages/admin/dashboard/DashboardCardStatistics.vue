@@ -8,6 +8,15 @@ const props = defineProps({
   },
 });
 
+const router = useRouter();
+
+const detailRoutes = {
+  saldo: "/admin/saldo/kategori",
+  pemasukan: "/admin/pemasukan/mahasiswa/laporan",
+  pengeluaran: "/admin/pengeluaran/umum",
+  user: "/admin/user",
+};
+
 const logisticData = ref([
   {
     key: "saldo",
@@ -120,12 +129,12 @@ const fetchData = async () => {
   }
 };
 
-const isModalOpen = ref(false);
-const selectedData = ref(null);
+const goToDetail = (data) => {
+  const path = detailRoutes[data.key];
 
-const openDetailModal = (data) => {
-  selectedData.value = data;
-  isModalOpen.value = true;
+  if (path) {
+    router.push(path);
+  }
 };
 
 onMounted(() => {
@@ -152,16 +161,16 @@ onMounted(() => {
           "
           @mouseenter="data.isHover = true"
           @mouseleave="data.isHover = false"
-          @click="openDetailModal(data)"
+          @click="goToDetail(data)"
         >
           <VCardText>
             <VSkeletonLoader v-if="isLoading" type="paragraph"></VSkeletonLoader>
             <template v-else>
-              <div class="d-flex align-center gap-x-4 mb-2">
+              <div class="dashboard-stat-content d-flex align-center gap-x-4 mb-2 min-w-0">
                 <VAvatar variant="tonal" :color="data.color" rounded="lg">
                   <VIcon :icon="data.icon" size="24" />
                 </VAvatar>
-                <div style="min-width: 0;">
+                <div class="dashboard-stat-value">
                   <h4 class="text-h4 text-truncate" :title="data.value">
                     {{ data.value }}
                   </h4>
@@ -182,71 +191,6 @@ onMounted(() => {
       </div>
     </VCol>
   </VRow>
-
-  <VDialog v-model="isModalOpen" max-width="550" scrollable>
-    <VCard>
-      <VCardItem class="pb-2">
-        <VCardTitle class="text-h5">
-          Detail {{ selectedData?.title }}
-        </VCardTitle>
-      </VCardItem>
-      <VCardText style="max-height: 600px; overflow-y: auto;">
-        <template v-if="selectedData?.isPemasukan">
-          <div class="d-flex flex-column gap-y-6">
-            <template v-for="(genders, period) in selectedData.breakdown" :key="period">
-              <VCard variant="outlined" class="pa-4">
-                <h5 class="text-h5 mb-4 text-primary">Pemasukan {{ period }}</h5>
-                <div class="d-flex flex-column gap-y-4">
-                  <template v-for="(item, gender) in genders" :key="gender">
-                    <template v-if="!(item.hideIfZero && item.change === 0)">
-                      <div class="d-flex align-center gap-x-3">
-                        <VAvatar :color="selectedData?.color" variant="tonal" rounded>
-                          <VIcon :icon="selectedData?.icon" size="24" />
-                        </VAvatar>
-                        <div class="flex-grow-1">
-                          <div class="text-body-1 font-weight-medium">{{ gender }}</div>
-                          <h4 class="text-h4">{{ item.value }}</h4>
-                        </div>
-                        <div class="text-right">
-                          <span class="text-body-2 text-disabled">Total Data</span>
-                          <div class="text-h6">{{ item.change }}</div>
-                        </div>
-                      </div>
-                      <VDivider v-if="gender !== 'Keseluruhan'" />
-                    </template>
-                  </template>
-                </div>
-              </VCard>
-            </template>
-          </div>
-        </template>
-        <template v-else>
-          <div class="d-flex flex-column gap-y-3">
-            <div class="d-flex align-center gap-x-3">
-              <VAvatar :color="selectedData?.color" variant="tonal" rounded>
-                <VIcon :icon="selectedData?.icon" size="24" />
-              </VAvatar>
-              <div>
-                <div class="text-body-1 font-weight-medium">Total Nilai</div>
-                <h4 class="text-h4">{{ selectedData?.value }}</h4>
-              </div>
-            </div>
-            <VDivider />
-            <div class="d-flex justify-space-between align-center">
-              <span class="text-body-1">Total Data</span>
-              <span class="text-h6">{{ selectedData?.change }} Data</span>
-            </div>
-          </div>
-        </template>
-      </VCardText>
-      <VCardActions>
-        <VSpacer />
-        <VBtn variant="tonal" color="secondary" @click="isModalOpen = false">
-          Tutup
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
 </template>
 
 <style lang="scss" scoped>
@@ -264,6 +208,20 @@ onMounted(() => {
 
     transition: all 0.1s ease-out;
   }
+}
+
+.dashboard-stat-content {
+  min-inline-size: 0;
+  overflow: hidden;
+}
+
+.dashboard-stat-content .v-avatar {
+  flex: 0 0 auto;
+}
+
+.dashboard-stat-value {
+  min-inline-size: 0;
+  overflow: hidden;
 }
 
 .skin--bordered {

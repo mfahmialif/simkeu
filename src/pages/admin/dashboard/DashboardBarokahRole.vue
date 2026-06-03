@@ -2,6 +2,8 @@
 import { showSnackbar } from "@/composables/snackbar";
 import { computed, onMounted, ref } from "vue";
 
+const router = useRouter();
+
 const summary = ref({
   modules: [],
   stats: {},
@@ -174,6 +176,13 @@ const chartCards = computed(() => {
 
 const topPegawai = computed(() => summary.value.top_pegawai || []);
 const modules = computed(() => summary.value.modules || []);
+const primaryModulePath = computed(() => modules.value[0]?.path || null);
+
+const goToPath = (path) => {
+  if (path) {
+    router.push(path);
+  }
+};
 
 onMounted(fetchData);
 </script>
@@ -181,11 +190,15 @@ onMounted(fetchData);
 <template>
   <VRow class="match-height">
     <VCol v-for="card in statCards" :key="card.key" cols="12" sm="6" md="3">
-      <VCard>
+      <VCard
+        class="barokah-stat-card"
+        :class="{ 'cursor-pointer': primaryModulePath }"
+        @click="goToPath(primaryModulePath)"
+      >
         <VCardText>
           <VSkeletonLoader v-if="isLoading" type="paragraph" />
           <template v-else>
-            <div class="d-flex align-center gap-x-4 mb-3">
+            <div class="barokah-stat-content d-flex align-center gap-x-4 mb-3 min-w-0">
               <VAvatar :color="card.color" variant="tonal" rounded="lg">
                 <VIcon :icon="card.icon" size="24" />
               </VAvatar>
@@ -213,7 +226,20 @@ onMounted(fetchData);
       <VCard>
         <VSkeletonLoader v-if="isLoading" type="card, paragraph" />
         <template v-else>
-          <VCardItem :title="chart.title" :subtitle="chart.subtitle" />
+          <VCardItem :title="chart.title" :subtitle="chart.subtitle">
+            <template v-if="primaryModulePath" #append>
+              <VBtn
+                icon
+                size="small"
+                variant="tonal"
+                color="secondary"
+                class="barokah-link-btn"
+                @click="goToPath(primaryModulePath)"
+              >
+                <VIcon icon="ri-arrow-right-up-line" size="18" />
+              </VBtn>
+            </template>
+          </VCardItem>
           <VCardText>
             <VueApexCharts
               :id="`barokah-${chart.key}`"
@@ -308,7 +334,7 @@ onMounted(fetchData);
             <div
               v-for="module in modules"
               :key="module.key"
-              class="d-flex align-center gap-x-3"
+              class="barokah-module-item d-flex align-center gap-x-3"
             >
               <VAvatar :color="module.color" variant="tonal" rounded>
                 <VIcon :icon="module.icon" size="22" />
@@ -321,9 +347,19 @@ onMounted(fetchData);
                   {{ module.jumlah }} data
                 </div>
               </div>
-              <div class="text-end font-weight-medium">
+              <div class="barokah-module-total text-end font-weight-medium">
                 {{ currency(module.total) }}
               </div>
+              <VBtn
+                icon
+                size="small"
+                variant="tonal"
+                :color="module.color"
+                class="barokah-link-btn"
+                @click="goToPath(module.path)"
+              >
+                <VIcon icon="ri-arrow-right-up-line" size="18" />
+              </VBtn>
             </div>
           </div>
         </VCardText>
@@ -337,5 +373,33 @@ onMounted(fetchData);
 
 .barokah-table-wrapper {
   overflow-x: auto;
+}
+
+.barokah-stat-content {
+  min-inline-size: 0;
+  overflow: hidden;
+}
+
+.barokah-stat-content .v-avatar,
+.barokah-link-btn {
+  flex: 0 0 auto;
+}
+
+.barokah-link-btn {
+  margin-inline-start: auto;
+}
+
+.barokah-module-item {
+  border-radius: 8px;
+  margin-inline: -8px;
+  padding: 8px;
+}
+
+.barokah-module-total {
+  flex: 0 1 auto;
+  min-inline-size: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

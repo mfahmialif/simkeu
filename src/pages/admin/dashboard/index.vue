@@ -5,7 +5,6 @@ import DashboardFinanceOverview from "./DashboardFinanceOverview.vue";
 import DashboardFinanceStatistics from "./DashboardFinanceStatistics.vue";
 import DashboardKRSReport from "./DashboardKRSReport.vue";
 import DashboardKRSReportLocal from "./DashboardKRSReportLocal.vue";
-import DashboardMenu from "./DashboardMenu.vue";
 import DashboardUASReport from "./DashboardUASReport.vue";
 
 const userData = useCookie("userData").value ?? {};
@@ -35,123 +34,6 @@ const displayName = computed(
 const roleLabel = computed(() =>
   role.value ? role.value.replaceAll("_", " ") : "tanpa role",
 );
-
-const baseShortcuts = [
-  { title: "Saldo", icon: "ri-wallet-3-line", route: "/admin/saldo/kategori" },
-  {
-    title: "Pembayaran",
-    icon: "ri-hand-coin-line",
-    route: "/admin/pemasukan/mahasiswa/pembayaran/mahasiswa",
-  },
-  {
-    title: "Pengeluaran",
-    icon: "ri-money-dollar-circle-line",
-    route: "/admin/pengeluaran/umum",
-  },
-  {
-    title: "Laporan",
-    icon: "ri-file-chart-line",
-    route: "/admin/pemasukan/mahasiswa/laporan",
-  },
-  {
-    title: "UAS Susulan",
-    icon: "ri-file-list-3-line",
-    route: "/admin/pemasukan/mahasiswa/uas-susulan",
-  },
-];
-
-const userShortcut = {
-  title: "User",
-  icon: "ri-user-settings-line",
-  route: "/admin/user",
-};
-
-const pegawaiShortcut = {
-  title: "Pegawai",
-  icon: "ri-team-line",
-  route: "/admin/pegawai",
-};
-
-const staffShortcuts = [
-  {
-    title: "Pembayaran",
-    icon: "ri-hand-coin-line",
-    route: "/admin/pemasukan/mahasiswa/pembayaran/mahasiswa",
-  },
-  {
-    title: "Laporan",
-    icon: "ri-file-chart-line",
-    route: "/admin/pemasukan/mahasiswa/laporan",
-  },
-  {
-    title: "UAS Susulan",
-    icon: "ri-file-list-3-line",
-    route: "/admin/pemasukan/mahasiswa/uas-susulan",
-  },
-];
-
-const barokahShortcutMap = {
-  barokahdosen_tatapmuka: [
-    {
-      title: "Tatapmuka",
-      icon: "ri-user-voice-line",
-      route: "/admin/pengeluaran/dosen-tatapmuka",
-    },
-  ],
-  barokahdosen_kegiatan: [
-    {
-      title: "Kegiatan",
-      icon: "ri-calendar-event-line",
-      route: "/admin/pengeluaran/dosen-kegiatan",
-    },
-    {
-      title: "Staff Bulanan",
-      icon: "ri-team-line",
-      route: "/admin/pengeluaran/staff-bulanan",
-    },
-  ],
-  barokahdosen_bulanan: [
-    {
-      title: "Dosen Bulanan",
-      icon: "ri-calendar-check-line",
-      route: "/admin/pengeluaran/dosen-bulanan",
-    },
-  ],
-};
-
-const allBarokahShortcuts = [
-  ...barokahShortcutMap.barokahdosen_tatapmuka,
-  ...barokahShortcutMap.barokahdosen_kegiatan,
-  ...barokahShortcutMap.barokahdosen_bulanan,
-];
-
-const shortcutItems = computed(() => {
-  if (role.value === "admin") {
-    return [...baseShortcuts, pegawaiShortcut, ...allBarokahShortcuts, userShortcut];
-  }
-
-  if (role.value === "pimpinan") {
-    return [...baseShortcuts, ...allBarokahShortcuts, userShortcut];
-  }
-
-  if (role.value === "keuangan") {
-    return [...baseShortcuts, userShortcut];
-  }
-
-  if (role.value === "kabag") {
-    return staffShortcuts;
-  }
-
-  if (isStaffDashboard.value) {
-    return staffShortcuts;
-  }
-
-  if (isBarokahDashboard.value) {
-    return barokahShortcutMap[role.value] || [];
-  }
-
-  return [];
-});
 
 const emptyDashboardMessage = computed(() => {
   if (role.value === "rumahtangga") {
@@ -189,10 +71,6 @@ const emptyDashboardMessage = computed(() => {
           </div>
         </VCardText>
       </VCard>
-    </VCol>
-
-    <VCol v-if="shortcutItems.length" cols="12">
-      <DashboardMenu :items="shortcutItems" />
     </VCol>
 
     <template v-if="canSeeAllDashboard">

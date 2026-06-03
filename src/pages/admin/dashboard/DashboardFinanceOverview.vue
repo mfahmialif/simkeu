@@ -128,28 +128,32 @@ const toIDR = (n) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-const moreList = [{ title: "Lihat Data", value: "lihat-data" }];
-
 // Modal state
 const showLainnyaModal = ref(false);
 
 // Router untuk navigasi ke detail
 const router = useRouter();
 
-const goToDetail = (category) => {
-  const query = { category };
+const goToDetail = (category = null) => {
+  const query = {};
+  if (category) query.category = category;
   if (selectedThAkademik.value) query.th_akademik_id = selectedThAkademik.value;
   if (selectedProdi.value) query.prodi_id = selectedProdi.value;
   if (selectedJk.value) query.jk_id = selectedJk.value;
   router.push({ path: '/admin/dashboard/finance-detail', query });
 };
 
-const handleRowClick = (row) => {
+const handleRowAction = (row) => {
   if (row.isLainnya) {
     showLainnyaModal.value = true;
   } else {
     goToDetail(row.name);
   }
+};
+
+const openModalRowDetail = (row) => {
+  showLainnyaModal.value = false;
+  goToDetail(row.name);
 };
 
 const isLoading = ref(false);
@@ -201,7 +205,16 @@ onMounted(() => {
         :subtitle="`Total: ${toIDR(totalAmount)} | Laki-laki: ${toIDR(totalLakiLaki)} | Perempuan: ${toIDR(totalPerempuan)}`"
       >
         <template #append>
-          <MoreBtn :menu-list="moreList" />
+          <VBtn
+            icon
+            size="small"
+            variant="tonal"
+            color="primary"
+            aria-label="Lihat detail distribusi pemasukan"
+            @click="goToDetail()"
+          >
+            <VIcon icon="ri-arrow-right-up-line" size="18" />
+          </VBtn>
         </template>
       </VCardItem>
 
@@ -311,25 +324,19 @@ onMounted(() => {
               <th>Perempuan</th>
               <th>Jumlah</th>
               <th>Persentase</th>
+              <th class="text-end">Aksi</th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="(row, idx) in financeData"
               :key="idx"
-              style="cursor: pointer"
-              @click="handleRowClick(row)"
             >
               <td width="40%" class="ps-0" style="block-size: 48px">
                 <div class="d-flex align-center text-high-emphasis">
                   <VIcon :icon="row.icon" size="24" class="me-2" />
                   <h6 class="text-h6 font-weight-regular">
                     {{ row.name }}
-                    <VIcon
-                      icon="ri-arrow-right-s-line"
-                      size="18"
-                      class="ms-1"
-                    />
                   </h6>
                 </div>
               </td>
@@ -344,6 +351,21 @@ onMounted(() => {
               </td>
               <td width="10%">
                 <span class="text-body-1">{{ row.percentage }}%</span>
+              </td>
+              <td class="text-end">
+                <VBtn
+                  icon
+                  size="small"
+                  variant="tonal"
+                  :color="row.isLainnya ? 'secondary' : 'primary'"
+                  aria-label="Lihat detail jenis tagihan"
+                  @click="handleRowAction(row)"
+                >
+                  <VIcon
+                    :icon="row.isLainnya ? 'ri-eye-line' : 'ri-arrow-right-up-line'"
+                    size="18"
+                  />
+                </VBtn>
               </td>
             </tr>
 
@@ -364,6 +386,7 @@ onMounted(() => {
               <td>
                 <strong>100%</strong>
               </td>
+              <td />
             </tr>
           </tbody>
         </VTable>
@@ -390,21 +413,19 @@ onMounted(() => {
               <th>Perempuan</th>
               <th>Jumlah</th>
               <th>Persentase</th>
+              <th class="text-end">Aksi</th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="(row, idx) in lainnyaDetails"
               :key="idx"
-              style="cursor: pointer"
-              @click="showLainnyaModal = false; goToDetail(row.name)"
             >
               <td class="ps-0" style="block-size: 48px">
                 <div class="d-flex align-center text-high-emphasis">
                   <VIcon :icon="row.icon" size="24" class="me-2" />
                   <span class="text-body-1 font-weight-medium">
                     {{ row.name }}
-                    <VIcon icon="ri-arrow-right-s-line" size="16" class="ms-1" />
                   </span>
                 </div>
               </td>
@@ -419,6 +440,18 @@ onMounted(() => {
               </td>
               <td>
                 <span class="text-body-1">{{ row.percentage }}%</span>
+              </td>
+              <td class="text-end">
+                <VBtn
+                  icon
+                  size="small"
+                  variant="tonal"
+                  color="primary"
+                  aria-label="Lihat detail jenis tagihan"
+                  @click="openModalRowDetail(row)"
+                >
+                  <VIcon icon="ri-arrow-right-up-line" size="18" />
+                </VBtn>
               </td>
             </tr>
 
@@ -439,6 +472,7 @@ onMounted(() => {
               <td>
                 <strong>{{ lainnyaDetails.reduce((s, i) => s + i.percentage, 0).toFixed(1) }}%</strong>
               </td>
+              <td />
             </tr>
           </tbody>
         </VTable>

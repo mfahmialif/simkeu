@@ -2,6 +2,7 @@
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import { downloadFileExport } from "@/composables/exportFile";
 import { formatRupiah } from "@/composables/formatRupiah";
+import { copyTextToClipboard } from "@/utils/clipboard";
 
 const page = ref(1);
 const itemsPerPage = ref(5);
@@ -18,6 +19,8 @@ const tanggalHarian = ref(null);
 const tanggalMulai = ref(null);
 const tanggalAkhir = ref(null);
 const isLoadingExcel = ref(false);
+const isLoadingBsiExcel = ref(false);
+const isLoadingBsiCopy = ref(false);
 
 const filterModeOptions = [
   { title: "Harian", value: "harian" },
@@ -170,6 +173,83 @@ const exportExcel = async () => {
   }
 };
 
+const exportBsiExcel = async () => {
+  try {
+    isLoadingBsiExcel.value = true;
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    });
+
+    const response = await $api("/admin/pengeluaran/dosen-kegiatan/export-bsi", {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        search: search.value,
+        ...dateFilterPayload.value,
+      },
+    });
+
+    downloadFileExport(response, "CUS BSI Barokah Pegawai Kegiatan.xlsx");
+    showSnackbar({
+      text: "Laporan CUS BSI berhasil di download.",
+      color: "success",
+    });
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    isLoadingBsiExcel.value = false;
+  }
+};
+
+const copyBsiData = async () => {
+  try {
+    isLoadingBsiCopy.value = true;
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    });
+
+    const response = await $api("/admin/pengeluaran/dosen-kegiatan/copy-bsi", {
+      method: "GET",
+      body: {
+        search: search.value,
+        ...dateFilterPayload.value,
+      },
+    });
+
+    const text = response.data?.text || "";
+    const total = Number(response.data?.total || 0);
+
+    if (!text || total === 0) {
+      showSnackbar({
+        text: "Tidak ada data CUS BSI untuk disalin.",
+        color: "warning",
+      });
+      return;
+    }
+
+    await copyTextToClipboard(text);
+    showSnackbar({
+      text: `${total} data CUS BSI berhasil disalin.`,
+      color: "success",
+    });
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    isLoadingBsiCopy.value = false;
+  }
+};
+
 watch(filterMode, () => {
   tanggalHarian.value = null;
   tanggalMulai.value = null;
@@ -287,7 +367,7 @@ onMounted(() => {
 
         <VSpacer />
 
-        <div class="d-flex gap-x-4 align-center">
+        <div class="d-flex flex-wrap gap-3 align-center">
           <VBtn
             variant="outlined"
             color="success"
@@ -296,6 +376,26 @@ onMounted(() => {
             @click="exportExcel"
           >
             Download Excel
+          </VBtn>
+
+          <VBtn
+            variant="outlined"
+            color="success"
+            prepend-icon="ri-bank-card-line"
+            :loading="isLoadingBsiExcel"
+            @click="exportBsiExcel"
+          >
+            Download CUS BSI
+          </VBtn>
+
+          <VBtn
+            variant="outlined"
+            color="primary"
+            prepend-icon="ri-file-copy-line"
+            :loading="isLoadingBsiCopy"
+            @click="copyBsiData"
+          >
+            Salin untuk CUS BSI
           </VBtn>
 
           <VBtn

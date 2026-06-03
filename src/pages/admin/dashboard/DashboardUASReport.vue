@@ -254,13 +254,14 @@ onMounted(async () => {
         </VCardSubtitle>
         <template #append>
           <VBtn
+            icon
             variant="tonal"
             color="error"
             size="small"
-            prepend-icon="ri-eye-line"
+            aria-label="Lihat detail pembayaran UAS"
             @click="openDetail()"
           >
-            Lihat Detail
+            <VIcon icon="ri-eye-line" size="18" />
           </VBtn>
         </template>
       </VCardItem>
@@ -318,20 +319,33 @@ onMounted(async () => {
               <VCardText class="pa-3">
                 <VSkeletonLoader v-if="isLoading" type="text, text" />
                 <template v-else>
-                  <div class="d-flex align-center gap-2 mb-1">
-                    <VAvatar
-                      :color="card.color"
-                      variant="flat"
-                      size="36"
-                      rounded="lg"
-                    >
-                      <VIcon :icon="card.icon" size="20" color="white" />
-                    </VAvatar>
-                    <div class="stat-value-wrap">
-                      <div class="text-subtitle-1 font-weight-bold">
-                        {{ card.value }}
+                  <div class="d-flex align-center justify-space-between gap-2 mb-1">
+                    <div class="uas-stat-content d-flex align-center gap-2 min-w-0">
+                      <VAvatar
+                        :color="card.color"
+                        variant="flat"
+                        size="36"
+                        rounded="lg"
+                      >
+                        <VIcon :icon="card.icon" size="20" color="white" />
+                      </VAvatar>
+                      <div class="stat-value-wrap">
+                        <div class="text-subtitle-1 font-weight-bold">
+                          {{ card.value }}
+                        </div>
                       </div>
                     </div>
+                    <VBtn
+                      icon
+                      size="small"
+                      variant="tonal"
+                      :color="card.color"
+                      aria-label="Lihat detail pembayaran UAS"
+                      class="uas-stat-link"
+                      @click="openDetail()"
+                    >
+                      <VIcon icon="ri-arrow-right-up-line" size="18" />
+                    </VBtn>
                   </div>
                   <div class="text-body-2 font-weight-medium">
                     {{ card.title }}
@@ -462,6 +476,21 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .uas-stat-card {
   transition: all 0.2s ease;
+}
+
+.uas-stat-content {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+}
+
+.uas-stat-content .v-avatar,
+.uas-stat-link {
+  flex: 0 0 auto;
+}
+
+.uas-stat-link {
+  margin-inline-start: auto;
 }
 
 .stat-value-wrap {
