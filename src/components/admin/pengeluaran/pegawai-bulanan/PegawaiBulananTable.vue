@@ -292,18 +292,18 @@ onMounted(() => {
 
     <VRow
       v-if="showPeriod"
-      class="mb-3"
+      class="mb-3 filter-controls-row"
     >
       <VCol
         cols="12"
         sm="6"
         :md="filterMode === 'harian' ? 3 : 2"
+        class="filter-control-col"
       >
         <VSelect
           v-model="filterMode"
           :items="filterModeOptions"
           label="Filter Hari"
-          class="filter-day-select"
           hide-details
         />
       </VCol>
@@ -313,11 +313,13 @@ onMounted(() => {
         cols="12"
         sm="6"
         md="3"
+        class="filter-control-col"
       >
         <AppDateTimePicker
           v-model="tanggalHarian"
           label="Tanggal"
           placeholder="Pilih tanggal"
+          hide-details
           :config="{
             altInput: true,
             altFormat: 'F j, Y',
@@ -327,11 +329,12 @@ onMounted(() => {
       </VCol>
 
       <template v-else>
-        <VCol cols="12" sm="6" md="3">
+        <VCol cols="12" sm="6" md="3" class="filter-control-col">
           <AppDateTimePicker
             v-model="tanggalMulai"
             label="Dari Tanggal"
             placeholder="Pilih tanggal awal"
+            hide-details
             :config="{
               altInput: true,
               altFormat: 'F j, Y',
@@ -340,11 +343,12 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" sm="6" md="3">
+        <VCol cols="12" sm="6" md="3" class="filter-control-col">
           <AppDateTimePicker
             v-model="tanggalAkhir"
             label="Sampai Tanggal"
             placeholder="Pilih tanggal akhir"
+            hide-details
             :config="{
               altInput: true,
               altFormat: 'F j, Y',
@@ -358,11 +362,13 @@ onMounted(() => {
         cols="12"
         sm="6"
         :md="filterMode === 'harian' ? 3 : 2"
+        class="filter-control-col"
       >
         <AppDateTimePicker
           v-model="periodeBulanTahun"
           label="Bulan/Tahun"
           placeholder="Pilih bulan dan tahun"
+          hide-details
           :config="monthYearPickerConfig"
         />
       </VCol>
@@ -371,11 +377,11 @@ onMounted(() => {
         cols="12"
         sm="6"
         :md="filterMode === 'harian' ? 3 : 2"
-        class="d-flex align-end"
+        class="filter-control-col"
       >
         <VBtn
           color="primary"
-          class="w-100"
+          class="w-100 filter-reset-btn"
           height="56"
           prepend-icon="ri-refresh-line"
           @click="clearFilter"
@@ -582,12 +588,29 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.filter-day-select :deep(.v-field) {
-  min-height: 56px;
+.filter-controls-row :deep(.v-input) {
+  --v-input-control-height: 56px;
 }
 
-.filter-day-select :deep(.v-field__input) {
-  min-height: 56px;
+.filter-controls-row :deep(.v-field) {
+  block-size: 56px;
+  min-block-size: 56px;
+}
+
+.filter-controls-row :deep(.v-field__input) {
+  block-size: 56px;
+  min-block-size: 56px;
   padding-block: 16px 8px;
+}
+
+.filter-controls-row :deep(.flat-picker-custom-style) {
+  block-size: 56px;
+  line-height: 56px;
+  padding-block: 0;
+}
+
+.filter-reset-btn {
+  block-size: 56px !important;
+  min-block-size: 56px;
 }
 </style>
