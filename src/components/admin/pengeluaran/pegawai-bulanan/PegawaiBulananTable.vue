@@ -1,5 +1,8 @@
 <script setup>
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
+import "flatpickr/dist/plugins/monthSelect/style.css";
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
+import { downloadFileExport } from "@/composables/exportFile";
 import { formatRupiah } from "@/composables/formatRupiah";
 
 const props = defineProps({
@@ -31,6 +34,76 @@ const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
 const stats = ref({});
+const filterMode = ref("harian");
+const tanggalHarian = ref(null);
+const tanggalMulai = ref(null);
+const tanggalAkhir = ref(null);
+const periodeBulanTahun = ref(null);
+const isLoadingExcel = ref(false);
+
+const filterModeOptions = [
+  { title: "Harian", value: "harian" },
+  { title: "Rentang Tanggal", value: "rentang" },
+];
+
+const monthYearPickerConfig = {
+  altInput: true,
+  altFormat: "F Y",
+  dateFormat: "Y-m",
+  plugins: [
+    monthSelectPlugin({
+      shorthand: false,
+      dateFormat: "Y-m",
+      altFormat: "F Y",
+    }),
+  ],
+};
+
+const dateFilterPayload = computed(() => {
+  if (!props.showPeriod) return {};
+
+  if (filterMode.value === "harian") {
+    return tanggalHarian.value
+      ? {
+          tanggal_mulai: tanggalHarian.value,
+          tanggal_akhir: tanggalHarian.value,
+        }
+      : {};
+  }
+
+  return {
+    ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
+    ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
+  };
+});
+
+const periodFilterPayload = computed(() => {
+  if (!props.showPeriod || !periodeBulanTahun.value) return {};
+
+  const period = String(periodeBulanTahun.value);
+  const match = period.match(/^(\d{4})-(\d{1,2})/);
+
+  if (match) {
+    return {
+      tahun: Number(match[1]),
+      bulan: Number(match[2]),
+    };
+  }
+
+  const date = new Date(period);
+
+  if (Number.isNaN(date.getTime())) return {};
+
+  return {
+    tahun: date.getFullYear(),
+    bulan: date.getMonth() + 1,
+  };
+});
+
+const requestFilterPayload = computed(() => ({
+  ...dateFilterPayload.value,
+  ...periodFilterPayload.value,
+}));
 
 const fetchData = async () => {
   try {
@@ -44,6 +117,7 @@ const fetchData = async () => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         search: search.value,
+        ...requestFilterPayload.value,
       },
     });
 
@@ -118,6 +192,50 @@ const deleteDataSubmit = async (id) => {
   }
 };
 
+const clearFilter = () => {
+  tanggalHarian.value = null;
+  tanggalMulai.value = null;
+  tanggalAkhir.value = null;
+  periodeBulanTahun.value = null;
+  page.value = 1;
+  fetchData();
+};
+
+const exportExcel = async () => {
+  try {
+    isLoadingExcel.value = true;
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    });
+
+    const response = await $api(`${props.endpoint}/export-excel`, {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        search: search.value,
+        ...requestFilterPayload.value,
+      },
+    });
+
+    downloadFileExport(response, `Laporan ${props.title}.xlsx`);
+    showSnackbar({
+      text: "Laporan berhasil di download.",
+      color: "success",
+    });
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    isLoadingExcel.value = false;
+  }
+};
+
 const unitLabel = item => item.tipe_pegawai === "staff"
   ? item.jabatan_staff
   : item.nama_prodi_dosen;
@@ -147,6 +265,19 @@ watch(search, () => {
   fetchData();
 });
 
+watch(filterMode, () => {
+  tanggalHarian.value = null;
+  tanggalMulai.value = null;
+  tanggalAkhir.value = null;
+  page.value = 1;
+  fetchData();
+});
+
+watch([tanggalHarian, tanggalMulai, tanggalAkhir, periodeBulanTahun], () => {
+  page.value = 1;
+  fetchData();
+});
+
 onMounted(() => {
   document.title = `${props.title} - SIMKEU`;
 });
@@ -158,6 +289,88 @@ onMounted(() => {
       :stats="stats"
       :loading="initialLoading"
     />
+
+    <VRow
+      v-if="showPeriod"
+      class="mb-3"
+    >
+      <VCol cols="12" sm="6" md="2">
+        <VSelect
+          v-model="filterMode"
+          :items="filterModeOptions"
+          label="Filter Hari"
+          density="compact"
+          hide-details
+        />
+      </VCol>
+
+      <VCol
+        v-if="filterMode === 'harian'"
+        cols="12"
+        sm="6"
+        md="3"
+      >
+        <AppDateTimePicker
+          v-model="tanggalHarian"
+          label="Tanggal"
+          placeholder="Pilih tanggal"
+          :config="{
+            altInput: true,
+            altFormat: 'F j, Y',
+            dateFormat: 'Y-m-d',
+          }"
+        />
+      </VCol>
+
+      <template v-else>
+        <VCol cols="12" sm="6" md="2">
+          <AppDateTimePicker
+            v-model="tanggalMulai"
+            label="Dari Tanggal"
+            placeholder="Pilih tanggal awal"
+            :config="{
+              altInput: true,
+              altFormat: 'F j, Y',
+              dateFormat: 'Y-m-d',
+            }"
+          />
+        </VCol>
+
+        <VCol cols="12" sm="6" md="2">
+          <AppDateTimePicker
+            v-model="tanggalAkhir"
+            label="Sampai Tanggal"
+            placeholder="Pilih tanggal akhir"
+            :config="{
+              altInput: true,
+              altFormat: 'F j, Y',
+              dateFormat: 'Y-m-d',
+            }"
+          />
+        </VCol>
+      </template>
+
+      <VCol cols="12" sm="6" md="3">
+        <AppDateTimePicker
+          v-model="periodeBulanTahun"
+          label="Bulan/Tahun"
+          placeholder="Pilih bulan dan tahun"
+          :config="monthYearPickerConfig"
+        />
+      </VCol>
+
+      <VCol cols="12" sm="6" md="2" class="d-flex align-end">
+        <VBtn
+          color="primary"
+          class="w-100"
+          height="40"
+          prepend-icon="ri-refresh-line"
+          @click="clearFilter"
+        >
+          Reset
+        </VBtn>
+      </VCol>
+    </VRow>
 
     <VCard>
       <VCardItem class="pb-4">
@@ -182,6 +395,17 @@ onMounted(() => {
         <VSpacer />
 
         <div class="d-flex gap-x-4 align-center">
+          <VBtn
+            v-if="showPeriod"
+            variant="outlined"
+            color="success"
+            prepend-icon="ri-file-excel-2-line"
+            :loading="isLoadingExcel"
+            @click="exportExcel"
+          >
+            Download Excel
+          </VBtn>
+
           <VBtn
             color="primary"
             prepend-icon="ri-add-line"

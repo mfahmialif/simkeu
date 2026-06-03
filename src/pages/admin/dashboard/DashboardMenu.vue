@@ -1,9 +1,17 @@
 <script setup>
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-const shortcuts = [
+const props = defineProps({
+  items: {
+    type: Array,
+    default: null,
+  },
+});
+
+const defaultShortcuts = [
   { title: "Saldo", icon: 'ri-wallet-3-line', route: "/admin/saldo/kategori" },
   {
     title: "Pembayaran",
@@ -21,6 +29,10 @@ const shortcuts = [
     route: "/admin/pemasukan/mahasiswa/laporan",
   },
 ];
+
+const shortcuts = computed(() =>
+  props.items?.length ? props.items : defaultShortcuts,
+);
 
 const goTo = (path) => router.push(path);
 </script>

@@ -21,6 +21,7 @@ declare module 'vue-router/auto-routes' {
     '$error': RouteRecordInfo<'$error', '/:error(.*)', { error: ParamValue<true> }, { error: ParamValue<false> }>,
     'access-control': RouteRecordInfo<'access-control', '/access-control', Record<never, never>, Record<never, never>>,
     'admin-dashboard': RouteRecordInfo<'admin-dashboard', '/admin/dashboard', Record<never, never>, Record<never, never>>,
+    'admin-dashboard-dashboard-barokah-role': RouteRecordInfo<'admin-dashboard-dashboard-barokah-role', '/admin/dashboard/DashboardBarokahRole', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-card-statistics': RouteRecordInfo<'admin-dashboard-dashboard-card-statistics', '/admin/dashboard/DashboardCardStatistics', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-delivery-exceptions': RouteRecordInfo<'admin-dashboard-dashboard-delivery-exceptions', '/admin/dashboard/DashboardDeliveryExceptions', Record<never, never>, Record<never, never>>,
     'admin-dashboard-dashboard-delivery-performance': RouteRecordInfo<'admin-dashboard-dashboard-delivery-performance', '/admin/dashboard/DashboardDeliveryPerformance', Record<never, never>, Record<never, never>>,

@@ -1,8 +1,16 @@
 <script setup>
 import { showSnackbar } from "@/composables/snackbar";
 
+const props = defineProps({
+  visibleCards: {
+    type: Array,
+    default: () => ["saldo", "pemasukan", "pengeluaran", "user"],
+  },
+});
+
 const logisticData = ref([
   {
+    key: "saldo",
     icon: "ri-money-dollar-box-line",
     color: "primary",
     title: "Saldo",
@@ -11,6 +19,7 @@ const logisticData = ref([
     isHover: false,
   },
   {
+    key: "pemasukan",
     icon: "ri-arrow-left-down-line",
     color: "success",
     title: "Pemasukan",
@@ -19,6 +28,7 @@ const logisticData = ref([
     isHover: false,
   },
   {
+    key: "pengeluaran",
     icon: "ri-arrow-right-up-line",
     color: "error",
     title: "Pengeluaran",
@@ -27,6 +37,7 @@ const logisticData = ref([
     isHover: false,
   },
   {
+    key: "user",
     icon: "ri-user-line",
     color: "info",
     title: "User",
@@ -36,6 +47,10 @@ const logisticData = ref([
   },
 ]);
 
+const filteredLogisticData = computed(() =>
+  logisticData.value.filter((item) => props.visibleCards.includes(item.key)),
+);
+
 const isLoading = ref(false);
 const fetchData = async () => {
   isLoading.value = true;
@@ -44,6 +59,7 @@ const fetchData = async () => {
   if (response.status) {
     logisticData.value = [
       {
+        key: "saldo",
         icon: "ri-money-dollar-box-line",
         color: "primary",
         title: "Saldo",
@@ -52,6 +68,7 @@ const fetchData = async () => {
         isHover: false,
       },
       {
+        key: "pemasukan",
         icon: "ri-arrow-left-down-line",
         color: "success",
         title: "Pemasukan",
@@ -77,6 +94,7 @@ const fetchData = async () => {
         })(),
       },
       {
+        key: "pengeluaran",
         icon: "ri-arrow-right-up-line",
         color: "error",
         title: "Pengeluaran",
@@ -85,6 +103,7 @@ const fetchData = async () => {
         isHover: false,
       },
       {
+        key: "user",
         icon: "ri-user-line",
         color: "info",
         title: "User",
@@ -117,8 +136,8 @@ onMounted(() => {
 <template>
   <VRow>
     <VCol
-      v-for="(data, index) in logisticData"
-      :key="index"
+      v-for="data in filteredLogisticData"
+      :key="data.key"
       cols="12"
       md="3"
       sm="6"
