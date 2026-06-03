@@ -13,6 +13,7 @@ import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
 import {
   pengeluaranDosenBulanan,
   pengeluaranDosenKegiatan,
+  pengeluaranStaffBulanan,
   pengeluaranDosenTatapmuka,
 } from "./barokahdosen/pengeluaranBarokahDosen";
 import laporan from "./laporan";
@@ -67,7 +68,7 @@ const routesByRole = {
   ],
 
   barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...setting],
-  barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...setting],
+  barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...pengeluaranStaffBulanan, ...setting],
   barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...setting],
 };
 

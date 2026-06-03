@@ -1,4 +1,5 @@
 <script setup>
+import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import { formatRupiah } from "@/composables/formatRupiah";
 
 const page = ref(1);
@@ -10,6 +11,7 @@ const dataTable = ref([]);
 const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
+const stats = ref({});
 
 const numberValue = (value) => Number(value ?? 0);
 const amountValue = (value, fallback = 0) => value ?? fallback ?? 0;
@@ -37,7 +39,7 @@ const fetchData = async () => {
   try {
     loading.value = true;
 
-    const { data } = await $api("/admin/pengeluaran/dosen", {
+    const response = await $api("/admin/pengeluaran/dosen", {
       method: "GET",
       body: {
         page: page.value,
@@ -50,8 +52,9 @@ const fetchData = async () => {
       },
     });
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = response.data.data;
+    totalItems.value = response.data.total;
+    stats.value = response.stats || stats.value;
   } catch (err) {
     console.error(err);
   } finally {
@@ -211,6 +214,11 @@ const printSlip = async (id) => {
 
 <template>
   <div>
+    <PengeluaranStatCards
+      :stats="stats"
+      :loading="initialLoading"
+    />
+
     <VRow class="mb-3">
       <VCol cols="12" md="5">
         <AppDateTimePicker

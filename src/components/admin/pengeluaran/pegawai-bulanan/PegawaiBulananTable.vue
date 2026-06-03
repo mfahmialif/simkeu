@@ -1,0 +1,345 @@
+<script setup>
+import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
+import { formatRupiah } from "@/composables/formatRupiah";
+
+const props = defineProps({
+  title: {
+    type: String,
+    required: true,
+  },
+  endpoint: {
+    type: String,
+    required: true,
+  },
+  basePath: {
+    type: String,
+    required: true,
+  },
+  showPeriod: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const page = ref(1);
+const itemsPerPage = ref(5);
+const sortBy = ref({ key: "id", order: "desc" });
+const search = ref("");
+const selectedRows = ref([]);
+const dataTable = ref([]);
+const totalItems = ref(0);
+const loading = ref(true);
+const initialLoading = ref(true);
+const stats = ref({});
+
+const fetchData = async () => {
+  try {
+    loading.value = true;
+
+    const response = await $api(props.endpoint, {
+      method: "GET",
+      body: {
+        page: page.value,
+        limit: itemsPerPage.value,
+        sort_key: sortBy.value.key,
+        sort_order: sortBy.value.order,
+        search: search.value,
+      },
+    });
+
+    dataTable.value = response.data.data;
+    totalItems.value = response.data.total;
+    stats.value = response.stats || stats.value;
+  } catch (err) {
+    console.error(err);
+  } finally {
+    loading.value = false;
+    if (initialLoading.value) initialLoading.value = false;
+  }
+};
+
+const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
+  page.value = p;
+  itemsPerPage.value = ipp;
+  if (sb.length) sortBy.value = sb[0];
+  fetchData();
+};
+
+const isDialogDeleteVisible = ref(false);
+const deleteData = ref({});
+
+const showDialogDelete = (id, name) => {
+  deleteData.value = {
+    id,
+    name,
+  };
+  isDialogDeleteVisible.value = true;
+};
+
+const errorMessage = (err) => {
+  const message =
+    err?.data?.message ||
+    err?.response?._data?.message ||
+    err?.response?.data?.message ||
+    err?.message;
+
+  if (typeof message === "object") {
+    return Object.values(message).flat().join("; ");
+  }
+
+  return message || "Terjadi kesalahan.";
+};
+
+const deleteDataSubmit = async (id) => {
+  try {
+    const response = await $api(`${props.endpoint}/${id}`, {
+      method: "DELETE",
+    });
+
+    if (response.status === true) {
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      });
+      fetchData();
+    } else {
+      showSnackbar({
+        text: response.message,
+        color: "error",
+      });
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    isDialogDeleteVisible.value = false;
+  }
+};
+
+const unitLabel = item => item.tipe_pegawai === "staff"
+  ? item.jabatan_staff
+  : item.nama_prodi_dosen;
+
+const subtotalHarian = item => Number(item.barokah_harian || 0) * Number(item.hari || 0);
+const monthName = (value) => {
+  const months = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
+
+  return months[Number(value) - 1] || "-";
+};
+
+watch(search, () => {
+  page.value = 1;
+  fetchData();
+});
+
+onMounted(() => {
+  document.title = `${props.title} - SIMKEU`;
+});
+</script>
+
+<template>
+  <div>
+    <PengeluaranStatCards
+      :stats="stats"
+      :loading="initialLoading"
+    />
+
+    <VCard>
+      <VCardItem class="pb-4">
+        <VCardTitle>{{ title }}</VCardTitle>
+      </VCardItem>
+
+      <VDivider />
+
+      <VCardText class="d-flex flex-wrap gap-4">
+        <div class="d-flex align-center w-100 w-sm-auto">
+          <VTextField
+            v-model="search"
+            placeholder="Search Data"
+            style="inline-size: 200px"
+            density="compact"
+            class="me-3"
+            clearable
+            clear-icon="ri-close-line"
+          />
+        </div>
+
+        <VSpacer />
+
+        <div class="d-flex gap-x-4 align-center">
+          <VBtn
+            color="primary"
+            prepend-icon="ri-add-line"
+            @click="$router.push(`${basePath}/add`)"
+          >
+            Add Data
+          </VBtn>
+        </div>
+      </VCardText>
+
+      <VDataTableServer
+        :headers="[
+          { title: 'No', key: 'id' },
+          { title: 'Tanggal', key: 'tanggal' },
+          ...(showPeriod ? [{ title: 'Periode', key: 'periode', sortable: false }] : []),
+          { title: 'Pegawai', key: 'nama_pegawai' },
+          { title: showPeriod ? 'Total Hari' : 'Hari', key: 'hari' },
+          { title: 'Barokah Harian', key: 'barokah_harian' },
+          { title: 'Subtotal Harian', key: 'subtotal_harian', sortable: false },
+          { title: 'Barokah Bulanan', key: 'barokah_bulanan' },
+          { title: 'Total', key: 'total' },
+          { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
+          { title: 'Keterangan', key: 'keterangan' },
+          { title: 'Actions', key: 'actions', sortable: false },
+        ]"
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
+        :items="dataTable"
+        :items-length="totalItems"
+        :loading="loading"
+        :search="search"
+        item-value="id"
+        @update:options="loadItems"
+      >
+        <template v-if="initialLoading" #loading>
+          <div class="text-center pa-4">
+            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <div>Memuat data...</div>
+          </div>
+        </template>
+
+        <template v-else #no-data>
+          <div class="text-center pa-4">Tidak ada data.</div>
+        </template>
+
+        <template #item.id="{ index }">
+          {{ itemsPerPage * (page - 1) + index + 1 }}
+        </template>
+
+        <template #item.nama_pegawai="{ item }">
+          <div class="font-weight-medium">
+            {{ item.nama_pegawai || "-" }}
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            {{ item.kode_pegawai || "-" }}
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            {{ item.tipe_pegawai === "staff" ? "Staff" : "Dosen" }}
+            <span v-if="unitLabel(item)"> - {{ unitLabel(item) }}</span>
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            {{ item.jenis_kelamin_pegawai || "-" }}
+          </div>
+        </template>
+
+        <template #item.periode="{ item }">
+          {{ monthName(item.bulan) }} {{ item.tahun || "" }}
+        </template>
+
+        <template #item.barokah_harian="{ item }">
+          {{ formatRupiah(item.barokah_harian) }}
+        </template>
+
+        <template #item.subtotal_harian="{ item }">
+          {{ formatRupiah(subtotalHarian(item)) }}
+        </template>
+
+        <template #item.barokah_bulanan="{ item }">
+          {{ formatRupiah(item.barokah_bulanan) }}
+        </template>
+
+        <template #item.total="{ item }">
+          {{ formatRupiah(item.total) }}
+        </template>
+
+        <template #item.jenis_pembayaran="{ item }">
+          <VChip
+            :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
+            size="small"
+            label
+          >
+            {{ item.jenis_pembayaran }}
+          </VChip>
+        </template>
+
+        <template #item.keterangan="{ item }">
+          {{ item.keterangan || "-" }}
+        </template>
+
+        <template #item.actions="{ item }">
+          <IconBtn size="small">
+            <VIcon icon="ri-more-2-fill" />
+
+            <VMenu activator="parent">
+              <VList>
+                <VListItem
+                  value="edit"
+                  prepend-icon="ri-edit-box-line"
+                  @click="$router.push(`${basePath}/edit/${item.id}`)"
+                >
+                  Edit
+                </VListItem>
+
+                <VListItem
+                  value="delete"
+                  prepend-icon="ri-delete-bin-line"
+                  @click="showDialogDelete(item.id, item.tanggal)"
+                >
+                  Delete
+                </VListItem>
+              </VList>
+            </VMenu>
+          </IconBtn>
+        </template>
+      </VDataTableServer>
+    </VCard>
+
+    <VDialog v-model="isDialogDeleteVisible" width="500">
+      <VCard :title="'Hapus Data: ' + deleteData.name">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="isDialogDeleteVisible = false"
+        />
+
+        <VCardText class="d-flex align-center">
+          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <span>
+            Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
+            dibatalkan.
+          </span>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end flex-wrap gap-4">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isDialogDeleteVisible = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
+            <VIcon icon="ri-delete-bin-line" class="me-1" />
+            Hapus
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+  </div>
+</template>

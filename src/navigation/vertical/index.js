@@ -5,6 +5,7 @@ import pengeluaran from "./pengeluaran";
 import pengeluaranDosen, {
   pengeluaranDosenBulanan,
   pengeluaranDosenKegiatan,
+  pengeluaranStaffBulanan,
   pengeluaranDosenTatapmuka,
 } from "./pengeluaran-dosen";
 import pengeluaranHeading from "./pengeluaran-heading";
@@ -87,6 +88,7 @@ const routesByRole = {
     ...mahasiswa,
     ...pengeluaranHeading,
     ...pengeluaranDosenKegiatan,
+    ...pengeluaranStaffBulanan,
     ...settingHeading,
     ...setting,
   ],

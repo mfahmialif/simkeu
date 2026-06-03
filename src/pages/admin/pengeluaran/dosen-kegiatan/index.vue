@@ -1,4 +1,5 @@
 <script setup>
+import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import { formatRupiah } from "@/composables/formatRupiah";
 
 const page = ref(1);
@@ -10,12 +11,13 @@ const dataTable = ref([]);
 const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
+const stats = ref({});
 
 const fetchData = async () => {
   try {
     loading.value = true;
 
-    const { data } = await $api("/admin/pengeluaran/dosen-kegiatan", {
+    const response = await $api("/admin/pengeluaran/dosen-kegiatan", {
       method: "GET",
       body: {
         page: page.value,
@@ -26,8 +28,9 @@ const fetchData = async () => {
       },
     });
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = response.data.data;
+    totalItems.value = response.data.total;
+    stats.value = response.stats || stats.value;
   } catch (err) {
     console.error(err);
   } finally {
@@ -93,6 +96,11 @@ onMounted(() => {
 
 <template>
   <div>
+    <PengeluaranStatCards
+      :stats="stats"
+      :loading="initialLoading"
+    />
+
     <VCard>
       <VCardItem class="pb-4">
         <VCardTitle>Barokah Pegawai Kegiatan</VCardTitle>

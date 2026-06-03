@@ -16,6 +16,48 @@ const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
 
+const firstAvailableValue = (item, keys) => {
+  for (const key of keys) {
+    const value = item?.[key];
+    if (value !== null && value !== undefined && value !== "") return value;
+  }
+
+  return "-";
+};
+
+const formatTime = value => {
+  if (value === null || value === undefined || value === "") return "-";
+
+  const rawValue = String(value);
+  const timeMatch = rawValue.match(/(\d{1,2}:\d{2})(?::\d{2})?/);
+
+  return timeMatch ? timeMatch[0] : rawValue;
+};
+
+const jamDatang = item => formatTime(firstAvailableValue(item, [
+  "pagi",
+  "datang",
+  "jam_datang",
+  "jam_masuk",
+  "masuk",
+  "check_in",
+  "checkin",
+  "jam_in",
+  "waktu_datang",
+]));
+
+const jamPulang = item => formatTime(firstAvailableValue(item, [
+  "sore",
+  "pulang",
+  "jam_pulang",
+  "jam_keluar",
+  "keluar",
+  "check_out",
+  "checkout",
+  "jam_out",
+  "waktu_pulang",
+]));
+
 const fetchData = async () => {
   if (props.refDataDosen.dosen.kode == "") {
     loading.value = false;
@@ -86,7 +128,8 @@ defineExpose({
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tgl_absen' },
-          { title: 'Jam', key: 'pagi' },
+          { title: 'Jam Datang', key: 'jam_datang', sortable: false },
+          { title: 'Jam Pulang', key: 'jam_pulang', sortable: false },
           { title: 'Lokasi', key: 'device_name' },
         ]"
         v-model:model-value="selectedRows"
@@ -112,6 +155,14 @@ defineExpose({
 
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
+        </template>
+
+        <template #item.jam_datang="{ item }">
+          {{ jamDatang(item) }}
+        </template>
+
+        <template #item.jam_pulang="{ item }">
+          {{ jamPulang(item) }}
         </template>
       </VDataTableServer>
     </VCard>
