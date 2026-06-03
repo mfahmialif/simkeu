@@ -14,6 +14,7 @@ export function useLogout() {
 
     // Remove "userData" from cookie
     userData.value = null;
+    useCookie("simkeuJkScope").value = null;
 
     // Redirect to login page
     await router.push("/login");

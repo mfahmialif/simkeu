@@ -13,10 +13,15 @@ import UserProfile from '@/layouts/components/UserProfile.vue'
 import NavBarI18n from '@core/components/I18n.vue'
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
+
+const userData = useCookie("userData")
+const navKey = computed(() =>
+  `${userData.value?.id || "guest"}-${userData.value?.role?.name || "none"}`,
+)
 </script>
 
 <template>
-  <HorizontalNavLayout :nav-items="navItems">
+  <HorizontalNavLayout :key="navKey" :nav-items="navItems">
     <!-- 👉 navbar -->
     <template #navbar>
       <RouterLink

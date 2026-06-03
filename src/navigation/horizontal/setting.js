@@ -1,7 +1,4 @@
-const userData = useCookie("userData").value ?? {};
-const isAdmin = String(userData.role?.name || "").toLowerCase() === "admin";
-
-const settingMenu = {
+export const settingMenu = {
   title: "Pengaturan",
   icon: { icon: "ri-settings-3-line" },
   children: [
@@ -12,7 +9,7 @@ const settingMenu = {
   ],
 };
 
-const accountMenu = [
+export const accountMenu = [
   {
     title: "Profile",
     icon: { icon: "ri-user-line" },
@@ -25,7 +22,9 @@ const accountMenu = [
   },
 ];
 
-export default [
-  ...(isAdmin ? [settingMenu] : []),
+export const settingItemsForRole = roleName => [
+  ...(String(roleName || "").toLowerCase() === "admin" ? [settingMenu] : []),
   ...accountMenu,
 ];
+
+export default settingItemsForRole();

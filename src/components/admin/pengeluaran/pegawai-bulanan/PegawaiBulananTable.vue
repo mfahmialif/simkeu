@@ -294,12 +294,16 @@ onMounted(() => {
       v-if="showPeriod"
       class="mb-3"
     >
-      <VCol cols="12" sm="6" md="2">
+      <VCol
+        cols="12"
+        sm="6"
+        :md="filterMode === 'harian' ? 3 : 2"
+      >
         <VSelect
           v-model="filterMode"
           :items="filterModeOptions"
           label="Filter Hari"
-          density="compact"
+          class="filter-day-select"
           hide-details
         />
       </VCol>
@@ -323,7 +327,7 @@ onMounted(() => {
       </VCol>
 
       <template v-else>
-        <VCol cols="12" sm="6" md="2">
+        <VCol cols="12" sm="6" md="3">
           <AppDateTimePicker
             v-model="tanggalMulai"
             label="Dari Tanggal"
@@ -336,7 +340,7 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" sm="6" md="2">
+        <VCol cols="12" sm="6" md="3">
           <AppDateTimePicker
             v-model="tanggalAkhir"
             label="Sampai Tanggal"
@@ -350,7 +354,11 @@ onMounted(() => {
         </VCol>
       </template>
 
-      <VCol cols="12" sm="6" md="3">
+      <VCol
+        cols="12"
+        sm="6"
+        :md="filterMode === 'harian' ? 3 : 2"
+      >
         <AppDateTimePicker
           v-model="periodeBulanTahun"
           label="Bulan/Tahun"
@@ -359,11 +367,16 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" sm="6" md="2" class="d-flex align-end">
+      <VCol
+        cols="12"
+        sm="6"
+        :md="filterMode === 'harian' ? 3 : 2"
+        class="d-flex align-end"
+      >
         <VBtn
           color="primary"
           class="w-100"
-          height="40"
+          height="56"
           prepend-icon="ri-refresh-line"
           @click="clearFilter"
         >
@@ -567,3 +580,14 @@ onMounted(() => {
     </VDialog>
   </div>
 </template>
+
+<style scoped>
+.filter-day-select :deep(.v-field) {
+  min-height: 56px;
+}
+
+.filter-day-select :deep(.v-field__input) {
+  min-height: 56px;
+  padding-block: 16px 8px;
+}
+</style>

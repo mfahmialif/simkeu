@@ -34,18 +34,35 @@ const shortcuts = computed(() =>
   props.items?.length ? props.items : defaultShortcuts,
 );
 
+const shortcutColumn = computed(() => {
+  const count = shortcuts.value.length;
+
+  if (count <= 1) return 12;
+  if (count === 2) return 6;
+  if (count === 3) return 4;
+
+  return 3;
+});
+
 const goTo = (path) => router.push(path);
 </script>
 
 <template>
   <VRow dense>
-    <VCol v-for="item in shortcuts" :key="item.title" cols="12" sm="6" md="3">
+    <VCol
+      v-for="item in shortcuts"
+      :key="item.title"
+      cols="12"
+      sm="6"
+      :md="shortcutColumn"
+    >
       <VBtn
         block
         color="primary"
-        size="small"
+        size="default"
         variant="flat"
-        class="d-flex align-center justify-center"
+        height="44"
+        class="d-flex align-center justify-center dashboard-shortcut-btn"
         @click="goTo(item.route)"
       >
         <VIcon :icon="item.icon" />
@@ -54,3 +71,9 @@ const goTo = (path) => router.push(path);
     </VCol>
   </VRow>
 </template>
+
+<style scoped>
+.dashboard-shortcut-btn {
+  letter-spacing: 0;
+}
+</style>

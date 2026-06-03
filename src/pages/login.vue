@@ -60,6 +60,7 @@ const login = async () => {
     ability.update(userAbilityRules)
     
     user.avatar = user.avatar ? import.meta.env.VITE_BASE_URL + '/avatar/' + user.avatar : null
+    useCookie('simkeuJkScope').value = null
     useCookie('userData').value = user
     useCookie('accessToken').value = token
 

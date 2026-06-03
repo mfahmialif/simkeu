@@ -57,6 +57,7 @@ const login = async () => {
 
     useCookie('userAbilityRules').value = userAbilityRules
     ability.update(userAbilityRules)
+    useCookie('simkeuJkScope').value = null
     useCookie('userData').value = user
     useCookie('accessToken').value = token
 

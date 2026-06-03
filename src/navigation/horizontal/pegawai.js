@@ -1,7 +1,4 @@
-const userData = useCookie("userData").value ?? {};
-const isAdmin = String(userData.role?.name || "").toLowerCase() === "admin";
-
-const pegawaiMenu = {
+export const pegawaiMenu = {
   title: "PEGAWAI",
   icon: { icon: "ri-team-line" },
   children: [
@@ -11,4 +8,4 @@ const pegawaiMenu = {
   ],
 };
 
-export default isAdmin ? [pegawaiMenu] : [];
+export default [pegawaiMenu];

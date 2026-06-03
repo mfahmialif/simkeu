@@ -1,10 +1,11 @@
+import { computed } from "vue";
 import dashboard from "./dashboard";
 import mahasiswa from "./mahasiswa";
 import pemasukan from "./pemasukan";
 import pengeluaran from "./pengeluaran";
 import pegawai from "./pegawai";
 import saldo from "./saldo";
-import setting from "./setting";
+import { settingItemsForRole } from "./setting";
 import dashboardStaff from "./staff/dashboardStaff";
 import pemasukanStaff from "./staff/pemasukanStaff";
 import user from "./user";
@@ -18,58 +19,65 @@ import {
 } from "./barokahdosen/pengeluaranBarokahDosen";
 import laporan from "./laporan";
 
-const userData = useCookie("userData").value ?? {};
-const role = String(userData.role?.name || "").toLowerCase();
+const userData = useCookie("userData");
 
-const routesByRole = {
-  admin: [
-    ...dashboard,
-    ...mahasiswa,
-    ...pegawai,
-    ...saldo,
-    ...pemasukan,
-    ...pengeluaran,
-    ...laporan,
-    ...user,
-    ...setting,
-  ],
+const currentRole = computed(() =>
+  String(userData.value?.role?.name || "").toLowerCase(),
+);
 
-  pimpinan: [
-    ...dashboard,
-    ...mahasiswa,
-    ...saldo,
-    ...pemasukan,
-    ...pengeluaran,
-    ...laporan,
-    ...user,
-    ...setting,
-  ],
+const routesByRole = roleName => {
+  const setting = settingItemsForRole(roleName);
 
-  keuangan: [
-    ...dashboard,
-    ...mahasiswa,
-    ...saldo,
-    ...pemasukan,
-    ...pengeluaran,
-    ...laporan,
-    ...user,
-    ...setting,
-  ],
+  return {
+    admin: [
+      ...dashboard,
+      ...mahasiswa,
+      ...pegawai,
+      ...saldo,
+      ...pemasukan,
+      ...pengeluaran,
+      ...laporan,
+      ...user,
+      ...setting,
+    ],
 
-  staff: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
-  kabag: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
+    pimpinan: [
+      ...dashboard,
+      ...mahasiswa,
+      ...saldo,
+      ...pemasukan,
+      ...pengeluaran,
+      ...laporan,
+      ...user,
+      ...setting,
+    ],
 
-  rumahtangga: [
-    ...dashboard,
-    ...mahasiswa,
-    ...pemasukanRumahTangga,
-    ...pengeluaranRumahTangga,
-    ...setting,
-  ],
+    keuangan: [
+      ...dashboard,
+      ...mahasiswa,
+      ...saldo,
+      ...pemasukan,
+      ...pengeluaran,
+      ...laporan,
+      ...user,
+      ...setting,
+    ],
 
-  barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...setting],
-  barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...pengeluaranStaffBulanan, ...setting],
-  barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...setting],
+    staff: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
+    kabag: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
+
+    rumahtangga: [
+      ...dashboard,
+      ...mahasiswa,
+      ...pemasukanRumahTangga,
+      ...pengeluaranRumahTangga,
+      ...setting,
+    ],
+
+    barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...setting],
+    barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...pengeluaranStaffBulanan, ...setting],
+    barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...setting],
+  };
 };
 
-export default routesByRole[role] ?? [];
+export default computed(() => routesByRole(currentRole.value)[currentRole.value] ?? []);

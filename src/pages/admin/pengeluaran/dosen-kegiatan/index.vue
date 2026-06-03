@@ -201,7 +201,7 @@ onMounted(() => {
           v-model="filterMode"
           :items="filterModeOptions"
           label="Filter Hari"
-          density="compact"
+          class="filter-day-select"
           hide-details
         />
       </VCol>
@@ -209,7 +209,7 @@ onMounted(() => {
       <VCol
         v-if="filterMode === 'harian'"
         cols="12"
-        md="4"
+        md="6"
       >
         <AppDateTimePicker
           v-model="tanggalHarian"
@@ -251,11 +251,11 @@ onMounted(() => {
         </VCol>
       </template>
 
-      <VCol cols="12" md="2" class="d-flex align-end">
+      <VCol cols="12" md="3" class="d-flex align-end">
         <VBtn
           color="primary"
           class="w-100"
-          height="40"
+          height="56"
           prepend-icon="ri-refresh-line"
           @click="clearFilter"
         >
@@ -474,3 +474,14 @@ onMounted(() => {
     </VDialog>
   </div>
 </template>
+
+<style scoped>
+.filter-day-select :deep(.v-field) {
+  min-height: 56px;
+}
+
+.filter-day-select :deep(.v-field__input) {
+  min-height: 56px;
+  padding-block: 16px 8px;
+}
+</style>
