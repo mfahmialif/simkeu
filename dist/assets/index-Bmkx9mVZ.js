@@ -1,0 +1,1 @@
+import{P as t}from"./PegawaiTable-CmxRm6hm.js";import{j as r,k as e}from"./vuetify-52YUcx6A.js";import"./DialogCloseBtn-5hCPAwdG.js";import"./exportFile-BPUisuyI.js";import"./index-C6UMdXCe.js";import"./api-B0eEO2Uh.js";import"./_plugin-vue_export-helper-DlAUqK2U.js";const f={__name:"index",setup(o){return(a,i)=>(e(),r(t,{title:"Pegawai"}))}};export{f as default};

@@ -111,6 +111,17 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 5000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Bundle all Vuetify components into a single chunk
+          // This prevents 100+ separate HTTP requests for individual Vuetify components
+          if (id.includes('node_modules/vuetify')) {
+            return 'vuetify'
+          }
+        },
+      },
+    },
   },
   optimizeDeps: {
     exclude: ['vuetify'],
