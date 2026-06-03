@@ -1,1 +1,0 @@
-import{s as y}from"./index-tAmIDFo1.js";import{f as b,ba as e}from"./vuetify-52YUcx6A.js";const s=(c,r)=>b(()=>{if(!(r!=null&&r.query))return e(c);const a=e(c),t=e(r==null?void 0:r.query),u=Object.fromEntries(Object.entries(t).map(([m,f])=>[m,e(f)]));return`${a}${u?`?${y(u)}`:""}`});export{s as c};

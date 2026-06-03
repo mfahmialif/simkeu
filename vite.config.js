@@ -114,10 +114,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Bundle all Vuetify components into a single chunk
-          // This prevents 100+ separate HTTP requests for individual Vuetify components
+          // Bundle Vuetify, @core and @layouts into a single vendor chunk
+          // This prevents many separate HTTP requests that cause 522 timeout
           if (id.includes('node_modules/vuetify')) {
             return 'vuetify'
+          }
+          if (id.includes('/@core/') || id.includes('/@layouts/')) {
+            return 'app-core'
           }
         },
       },
