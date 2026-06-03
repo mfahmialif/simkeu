@@ -9,22 +9,14 @@ const CookieDefaults = {
   encode: val => encodeURIComponent(typeof val === 'string' ? val : JSON.stringify(val)),
 }
 
-const cookieRefs = new Map()
-
 export const useCookie = (name, _opts) => {
   const opts = { ...CookieDefaults, ..._opts || {} }
-
-  if (cookieRefs.has(name))
-    return cookieRefs.get(name)
-
   const cookies = parse(document.cookie, opts)
   const cookie = ref(cookies[name] ?? opts.default?.())
 
   watch(cookie, () => {
     document.cookie = serializeCookie(name, cookie.value, opts)
   })
-
-  cookieRefs.set(name, cookie)
   
   return cookie
 }
