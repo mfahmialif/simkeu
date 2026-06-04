@@ -20,7 +20,7 @@ const router = useRouter();
 
 const menuList = [
   {
-    title: "Kembali",
+    title: "Batalkan",
     value: "back",
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
