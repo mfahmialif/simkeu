@@ -1,4 +1,5 @@
 <script setup>
+import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
 
 const props = defineProps({
@@ -9,6 +10,26 @@ const props = defineProps({
 });
 
 const router = useRouter();
+
+const currencyRows = (groups = [], fallbackValue = null) => {
+  if (Array.isArray(groups) && groups.length) {
+    return groups.map((group) => ({
+      key: group.key || `kode:${group.mata_uang?.kode || "IDR"}`,
+      kode: String(group.mata_uang?.kode || "IDR").toUpperCase(),
+      amount: formatMoney(group.total, group.mata_uang),
+    }));
+  }
+
+  if (fallbackValue !== null) {
+    return [{
+      key: "kode:IDR",
+      kode: "IDR",
+      amount: formatMoney(fallbackValue),
+    }];
+  }
+
+  return [];
+};
 
 const detailRoutes = {
   saldo: "/admin/saldo/kategori",
@@ -24,6 +45,7 @@ const logisticData = ref([
     color: "primary",
     title: "Saldo",
     value: 0,
+    currencies: [],
     change: 0,
     isHover: false,
   },
@@ -33,6 +55,7 @@ const logisticData = ref([
     color: "success",
     title: "Pemasukan",
     value: 0,
+    currencies: [],
     change: 0,
     isHover: false,
   },
@@ -42,6 +65,7 @@ const logisticData = ref([
     color: "error",
     title: "Pengeluaran",
     value: 0,
+    currencies: [],
     change: 0,
     isHover: false,
   },
@@ -72,7 +96,8 @@ const fetchData = async () => {
         icon: "ri-money-dollar-box-line",
         color: "primary",
         title: "Saldo",
-        value: formatRupiah(response.data.saldo),
+        value: formatCurrencyTotals(response.data.saldoByCurrency, response.data.saldo),
+        currencies: currencyRows(response.data.saldoByCurrency, response.data.saldo),
         change: response.data.jumlahSaldo,
         isHover: false,
       },
@@ -81,7 +106,14 @@ const fetchData = async () => {
         icon: "ri-arrow-left-down-line",
         color: "success",
         title: "Pemasukan",
-        value: formatRupiah(response.data.pemasukanHarian || 0),
+        value: formatCurrencyTotals(
+          response.data.pemasukanHarianByCurrency,
+          response.data.pemasukanHarian || 0,
+        ),
+        currencies: currencyRows(
+          response.data.pemasukanHarianByCurrency,
+          response.data.pemasukanHarian || 0,
+        ),
         change: response.data.jumlahPemasukanHarian || 0,
         isHover: false,
         isPemasukan: true,
@@ -92,7 +124,7 @@ const fetchData = async () => {
               breakdown[period] = {};
               for (const [gender, item] of Object.entries(genders)) {
                 breakdown[period][gender] = {
-                  value: formatRupiah(item.value || 0),
+                  value: formatCurrencyTotals(item.by_currency, item.value || 0),
                   change: item.change || 0,
                   hideIfZero: item.hideIfZero || false
                 };
@@ -107,7 +139,14 @@ const fetchData = async () => {
         icon: "ri-arrow-right-up-line",
         color: "error",
         title: "Pengeluaran",
-        value: formatRupiah(response.data.pengeluaran),
+        value: formatCurrencyTotals(
+          response.data.pengeluaranByCurrency,
+          response.data.pengeluaran,
+        ),
+        currencies: currencyRows(
+          response.data.pengeluaranByCurrency,
+          response.data.pengeluaran,
+        ),
         change: response.data.jumlahPengeluaran,
         isHover: false,
       },
@@ -171,7 +210,21 @@ onMounted(() => {
                   <VIcon :icon="data.icon" size="24" />
                 </VAvatar>
                 <div class="dashboard-stat-value">
-                  <h4 class="text-h4 text-truncate" :title="data.value">
+                  <div
+                    v-if="data.currencies?.length"
+                    class="dashboard-currency-list"
+                    :title="data.value"
+                  >
+                    <div
+                      v-for="currency in data.currencies"
+                      :key="currency.key"
+                      class="dashboard-currency-row"
+                    >
+                      <span class="dashboard-currency-code">{{ currency.kode }}</span>
+                      <strong class="dashboard-currency-amount">{{ currency.amount }}</strong>
+                    </div>
+                  </div>
+                  <h4 v-else class="text-h4 text-truncate" :title="data.value">
                     {{ data.value }}
                   </h4>
                 </div>
@@ -199,6 +252,7 @@ onMounted(() => {
 .logistics-card-statistics {
   border-block-end-style: solid;
   border-block-end-width: 2px;
+  min-block-size: 154px;
 
   &:hover {
     border-block-end-width: 3px;
@@ -220,8 +274,34 @@ onMounted(() => {
 }
 
 .dashboard-stat-value {
+  flex: 1 1 auto;
   min-inline-size: 0;
   overflow: hidden;
+}
+
+.dashboard-currency-list {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.dashboard-currency-row {
+  display: grid;
+  align-items: baseline;
+  gap: 8px;
+  grid-template-columns: 34px minmax(0, 1fr);
+}
+
+.dashboard-currency-code {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.dashboard-currency-amount {
+  font-size: clamp(0.86rem, 1.12vw, 1.15rem);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .skin--bordered {

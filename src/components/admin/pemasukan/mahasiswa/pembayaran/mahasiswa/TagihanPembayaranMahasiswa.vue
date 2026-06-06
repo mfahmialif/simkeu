@@ -1,4 +1,6 @@
 <script setup>
+import { formatMoney, formatRupiah } from "@/composables/formatRupiah";
+
 const props = defineProps({
   mahasiswa: { type: Object, required: true, default: () => ({}) },
 });
@@ -224,8 +226,8 @@ const loadingTagihan = ref(false);
 
 /** ──── Payment Mode Toggle ──── */
 const paymentMode = ref("tagihan"); // 'nominal' | 'tagihan'
-const nominalInput = ref(0);
-const sisaNominal = ref(0);
+const nominalInput = ref({});
+const sisaNominal = ref({});
 const showDetailTagihan = ref(false);
 const useDeposit = ref(false);
 const depositUsed = ref(0);
@@ -271,8 +273,33 @@ const isPayableTagihan = (item) =>
 const hasDispensasiTagihan = (item) =>
   Boolean(item?.status_dispensasi) && Number(item?.jumlah_dispensasi || 0) > 0;
 
-const formatTagihanRupiah = (value) =>
-  `Rp.${Number(value || 0).toLocaleString("id-ID")}`;
+const defaultMataUang = {
+  id: null,
+  kode: "IDR",
+  nama: "Rupiah",
+  simbol: "Rp",
+};
+
+const normalizeMataUang = (item = {}) => {
+  const mataUang = item?.mata_uang || {};
+
+  return {
+    id: mataUang.id ?? item.mata_uang_id ?? null,
+    kode: String(mataUang.kode ?? item.mata_uang_kode ?? defaultMataUang.kode).toUpperCase(),
+    nama: mataUang.nama ?? item.mata_uang_nama ?? defaultMataUang.nama,
+    simbol: mataUang.simbol ?? item.mata_uang_simbol ?? defaultMataUang.simbol,
+  };
+};
+
+const getCurrencyKey = (item = {}) => {
+  const mataUang = normalizeMataUang(item);
+
+  return mataUang.id ? `id:${mataUang.id}` : `kode:${mataUang.kode}`;
+};
+
+const isIdrCurrency = (item = {}) => normalizeMataUang(item).kode === "IDR";
+
+const formatTagihanMoney = (item, value) => formatMoney(value, normalizeMataUang(item));
 
 const formatBatasDispensasi = (value) => {
   if (!value) return "-";
@@ -289,13 +316,13 @@ const formatBatasDispensasi = (value) => {
 
 const getTagihanDisplay = (item) => {
   const dibayarText = Number(item?.dibayar || 0) > 0
-    ? ` (Dibayar: ${formatTagihanRupiah(item.dibayar)})`
+    ? ` (Dibayar: ${formatTagihanMoney(item, item.dibayar)})`
     : "";
   const dispensasiText = hasDispensasiTagihan(item)
-    ? ` (Dispensasi: ${formatTagihanRupiah(item.jumlah_dispensasi)}, Batas: ${formatBatasDispensasi(item.batas_dispensasi)})`
+    ? ` (Dispensasi: ${formatTagihanMoney(item, item.jumlah_dispensasi)}, Batas: ${formatBatasDispensasi(item.batas_dispensasi)})`
     : "";
 
-  return `${item.nama} - ${formatTagihanRupiah(item.sisa)}${dibayarText}${dispensasiText}`;
+  return `${item.nama} - ${formatTagihanMoney(item, item.sisa)}${dibayarText}${dispensasiText}`;
 };
 
 const getRawTagihanItem = (item) => item?.raw || item;
@@ -444,8 +471,8 @@ const fetchTagihan = async (nim) => {
 const clearTagihan = () => {
   rows.value = [];
   selectedTagihan.value = [];
-  nominalInput.value = 0;
-  sisaNominal.value = 0;
+  nominalInput.value = {};
+  sisaNominal.value = {};
   depositUsed.value = 0;
   lastPaymentScope.value = "semua";
   props.mahasiswa.dipakai = 0;
@@ -470,12 +497,90 @@ const eligibleSemesterIniTagihan = computed(() => {
   return eligibleTagihan.value.filter((item) => semesterIniIds.has(item.id));
 });
 
+const groupAmountsByCurrency = (items, field = "sisa") => {
+  const map = new Map();
+
+  for (const item of items || []) {
+    const key = getCurrencyKey(item);
+    const mataUang = normalizeMataUang(item);
+    const current = map.get(key) || {
+      key,
+      mata_uang: mataUang,
+      total: 0,
+      count: 0,
+      items: [],
+    };
+
+    current.total += Number(item?.[field] || 0);
+    current.count += 1;
+    current.items.push(item);
+    map.set(key, current);
+  }
+
+  return Array.from(map.values());
+};
+
 const totalSisaTagihan = computed(() =>
   eligibleTagihan.value.reduce((sum, t) => sum + (Number(t.sisa) || 0), 0)
 );
 
 const totalSisaSemesterIni = computed(() =>
   eligibleSemesterIniTagihan.value.reduce((sum, t) => sum + (Number(t.sisa) || 0), 0)
+);
+
+const totalSisaTagihanByCurrency = computed(() =>
+  groupAmountsByCurrency(eligibleTagihan.value)
+);
+
+const totalSisaSemesterIniByCurrency = computed(() =>
+  groupAmountsByCurrency(eligibleSemesterIniTagihan.value)
+);
+
+const activePaymentCurrencyGroups = computed(() => {
+  const scope = lastPaymentScope.value === "semester_ini" && totalSisaSemesterIniByCurrency.value.length
+    ? totalSisaSemesterIniByCurrency.value
+    : totalSisaTagihanByCurrency.value;
+
+  return scope;
+});
+
+const idrCurrencyKey = computed(() =>
+  totalSisaTagihanByCurrency.value.find((group) => group.mata_uang.kode === "IDR")?.key
+  || rows.value.find((row) => row.mata_uang_kode === "IDR")?.currency_key
+  || "kode:IDR"
+);
+
+const formatCurrencyTotals = (groups) =>
+  (groups || [])
+    .filter((group) => Number(group.total || 0) > 0)
+    .map((group) => `${group.mata_uang.kode}: ${formatMoney(group.total, group.mata_uang)}`)
+    .join(" | ");
+
+const getNominalInput = (currencyKey) => Number(nominalInput.value?.[currencyKey] || 0);
+
+const setNominalInput = (currencyKey, value) => {
+  nominalInput.value = {
+    ...nominalInput.value,
+    [currencyKey]: Math.max(0, Number(value) || 0),
+  };
+};
+
+const hasProcessableNominal = computed(() =>
+  activePaymentCurrencyGroups.value.some((group) => getNominalInput(group.key) > 0)
+  || (
+    useDeposit.value
+    && Number(props.mahasiswa?.deposit || 0) > 0
+    && activePaymentCurrencyGroups.value.some((group) => group.mata_uang.kode === "IDR")
+  )
+);
+
+const sisaNominalGroups = computed(() =>
+  activePaymentCurrencyGroups.value
+    .map((group) => ({
+      ...group,
+      total: Number(sisaNominal.value?.[group.key] || 0),
+    }))
+    .filter((group) => group.total > 0)
 );
 
 const hasEligibleSemesterIniTagihan = computed(() =>
@@ -509,16 +614,26 @@ const normalizeKeringananJenis = (value) => {
   return ["samahah", "dhomin"].includes(jenis) ? jenis : "";
 };
 
-const createPaymentRow = (item, dibayar, deposit = 0) => ({
-  id: item.id,
-  display: item.display,
-  nominal: Number(item.sisa) || 0,
-  dibayar: Number(dibayar) || 0,
-  deposit: Number(deposit) || 0,
-  keringanan_jenis: "",
-  keringanan_jumlah: 0,
-  keringanan_batas: null,
-});
+const createPaymentRow = (item, dibayar, deposit = 0) => {
+  const mataUang = normalizeMataUang(item);
+
+  return {
+    id: item.id,
+    display: item.display,
+    nominal: Number(item.sisa) || 0,
+    dibayar: Number(dibayar) || 0,
+    deposit: Number(deposit) || 0,
+    mata_uang: mataUang,
+    mata_uang_id: mataUang.id,
+    mata_uang_kode: mataUang.kode,
+    mata_uang_nama: mataUang.nama,
+    mata_uang_simbol: mataUang.simbol,
+    currency_key: getCurrencyKey(item),
+    keringanan_jenis: "",
+    keringanan_jumlah: 0,
+    keringanan_batas: null,
+  };
+};
 
 const isDhominRow = (row) => normalizeKeringananJenis(row?.keringanan_jenis) === "dhomin";
 const isSamahahRow = (row) => normalizeKeringananJenis(row?.keringanan_jenis) === "samahah";
@@ -547,12 +662,18 @@ function syncPaymentTotalsState() {
 
   if (paymentMode.value === "nominal") {
     depositUsed.value = totalDepositRows;
-    const totalCashRows = rows.value.reduce(
-      (sum, row) => sum + (Number(row.dibayar) || 0),
-      0
-    );
-    sisaNominal.value = Math.max(0, (Number(nominalInput.value) || 0) - totalCashRows);
-    props.mahasiswa.autoSimpanDeposit = sisaNominal.value;
+    const nextSisa = {};
+
+    for (const group of activePaymentCurrencyGroups.value) {
+      const totalCashRows = rows.value
+        .filter((row) => row.currency_key === group.key)
+        .reduce((sum, row) => sum + (Number(row.dibayar) || 0), 0);
+
+      nextSisa[group.key] = Math.max(0, getNominalInput(group.key) - totalCashRows);
+    }
+
+    sisaNominal.value = nextSisa;
+    props.mahasiswa.autoSimpanDeposit = nextSisa[idrCurrencyKey.value] || 0;
   } else {
     props.mahasiswa.autoSimpanDeposit = 0;
   }
@@ -858,6 +979,9 @@ const normalizePaymentScope = (scope) =>
 const getPaymentTargetItems = (scope = "semua") =>
   scope === "semester_ini" ? eligibleSemesterIniTagihan.value : eligibleTagihan.value;
 
+const getPaymentTargetGroups = (scope = "semua") =>
+  groupAmountsByCurrency(getPaymentTargetItems(scope));
+
 /** ──── MODE NOMINAL: Distribusi otomatis FIFO ──── */
 function distributePayment(scope = "semua") {
   const paymentScope = normalizePaymentScope(scope);
@@ -865,33 +989,40 @@ function distributePayment(scope = "semua") {
   depositUsed.value = 0;
   lastPaymentScope.value = paymentScope;
 
-  let cashRemaining = Number(nominalInput.value) || 0;
-  let depoRemaining = useDeposit.value ? Number(props.mahasiswa?.deposit || 0) : 0;
+  const targetGroups = getPaymentTargetGroups(paymentScope);
+  const hasNominal = targetGroups.some((group) => getNominalInput(group.key) > 0);
+  const hasDeposit = useDeposit.value
+    && Number(props.mahasiswa?.deposit || 0) > 0
+    && targetGroups.some((group) => group.mata_uang.kode === "IDR");
 
-  const totalAvailable = cashRemaining + depoRemaining;
-
-  if (totalAvailable <= 0) {
+  if (!hasNominal && !hasDeposit) {
     showSnackbar({ text: "Nominal harus lebih dari 0", color: "error" });
     return;
   }
 
-  for (const item of getPaymentTargetItems(paymentScope)) {
-    if (cashRemaining <= 0 && depoRemaining <= 0) break;
+  let depoRemaining = hasDeposit ? Number(props.mahasiswa?.deposit || 0) : 0;
 
-    const sisa = Number(item.sisa) || 0;
-    if (sisa <= 0) continue;
+  for (const group of targetGroups) {
+    let cashRemaining = getNominalInput(group.key);
+    const allowDeposit = group.mata_uang.kode === "IDR";
 
-    // Alokasi: deposit dulu, sisanya cash
-    const fromDepo = Math.min(depoRemaining, sisa);
-    const sisaAfterDepo = sisa - fromDepo;
-    const fromCash = Math.min(cashRemaining, sisaAfterDepo);
+    for (const item of group.items) {
+      if (cashRemaining <= 0 && (!allowDeposit || depoRemaining <= 0)) break;
 
-    if (fromCash + fromDepo <= 0) continue;
+      const sisa = Number(item.sisa) || 0;
+      if (sisa <= 0) continue;
 
-    rows.value.push(createPaymentRow(item, fromCash, fromDepo));
+      const fromDepo = allowDeposit ? Math.min(depoRemaining, sisa) : 0;
+      const sisaAfterDepo = sisa - fromDepo;
+      const fromCash = Math.min(cashRemaining, sisaAfterDepo);
 
-    depoRemaining -= fromDepo;
-    cashRemaining -= fromCash;
+      if (fromCash + fromDepo <= 0) continue;
+
+      rows.value.push(createPaymentRow(item, fromCash, fromDepo));
+
+      if (allowDeposit) depoRemaining -= fromDepo;
+      cashRemaining -= fromCash;
+    }
   }
 
   syncPaymentTotalsState();
@@ -905,11 +1036,16 @@ function distributePayment(scope = "semua") {
 function bayarLunas(scope = "semua") {
   const paymentScope = normalizePaymentScope(scope);
   const depositBalance = useDeposit.value ? Number(props.mahasiswa?.deposit || 0) : 0;
-  const totalSisa = paymentScope === "semester_ini"
-    ? totalSisaSemesterIni.value
-    : totalSisaTagihan.value;
-  const needed = Math.max(0, totalSisa - depositBalance);
-  nominalInput.value = needed;
+  let depositRemaining = depositBalance;
+  const nextNominal = {};
+
+  for (const group of getPaymentTargetGroups(paymentScope)) {
+    const useDepositForGroup = group.mata_uang.kode === "IDR" ? Math.min(depositRemaining, group.total) : 0;
+    depositRemaining -= useDepositForGroup;
+    nextNominal[group.key] = Math.max(0, group.total - useDepositForGroup);
+  }
+
+  nominalInput.value = nextNominal;
   distributePayment(paymentScope);
 }
 
@@ -917,8 +1053,8 @@ function bayarLunas(scope = "semua") {
 watch(paymentMode, () => {
   rows.value = [];
   selectedTagihan.value = [];
-  nominalInput.value = 0;
-  sisaNominal.value = 0;
+  nominalInput.value = {};
+  sisaNominal.value = {};
   syncPaymentTotalsState();
 });
 
@@ -935,12 +1071,13 @@ watch(scopedTagihan, (newArr) => {
 watch(useDeposit, (enabled) => {
   if (paymentMode.value === "nominal" && rows.value.length > 0) {
     const depositBalance = Number(props.mahasiswa?.deposit || 0);
+    const key = idrCurrencyKey.value;
     if (enabled) {
       // Kurangi nominal karena deposit membantu
-      nominalInput.value = Math.max(0, nominalInput.value - depositBalance);
+      setNominalInput(key, Math.max(0, getNominalInput(key) - depositBalance));
     } else {
       // Kembalikan nominal karena deposit tidak dipakai
-      nominalInput.value = nominalInput.value + depositUsed.value;
+      setNominalInput(key, getNominalInput(key) + depositUsed.value);
     }
     distributePayment(lastPaymentScope.value);
   }
@@ -1015,6 +1152,16 @@ function recalcDibayar(idx) {
 /** Recalc saat admin ubah field DEPOSIT */
 function recalcDeposit(idx) {
   const r = rows.value[idx];
+  if (!isIdrCurrency(r)) {
+    r.deposit = 0;
+    showSnackbar({
+      text: "Deposit hanya bisa dipakai untuk tagihan mata uang IDR.",
+      color: "warning",
+    });
+    syncPaymentTotalsState();
+    return;
+  }
+
   if (isDhominRow(r)) {
     syncDhominKeringanan(r);
     syncPaymentTotalsState();
@@ -1096,13 +1243,28 @@ function onKeringananChange(idx) {
 }
 
 /** Ringkasan */
-const totalDibayar = computed(() =>
-  rows.value.reduce((sum, r) => sum + (Number(r.dibayar) || 0), 0)
-);
-const totalDeposit = computed(() =>
-  rows.value.reduce((sum, r) => sum + (Number(r.deposit) || 0), 0)
-);
-const totalSemua = computed(() => totalDibayar.value + totalDeposit.value);
+const totalRowsByCurrency = computed(() => {
+  const map = new Map();
+
+  for (const row of rows.value) {
+    const key = row.currency_key || getCurrencyKey(row);
+    const mataUang = normalizeMataUang(row);
+    const current = map.get(key) || {
+      key,
+      mata_uang: mataUang,
+      dibayar: 0,
+      deposit: 0,
+      total: 0,
+    };
+
+    current.dibayar += Number(row.dibayar) || 0;
+    current.deposit += Number(row.deposit) || 0;
+    current.total = current.dibayar + current.deposit;
+    map.set(key, current);
+  }
+
+  return Array.from(map.values());
+});
 
 /** Propagate ke parent */
 watch(
@@ -1158,7 +1320,7 @@ watch(
         >
           <div class="d-flex align-center justify-space-between w-100">
             <span>
-              Total sisa tagihan: <strong>{{ formatRupiah(totalSisaTagihan) }}</strong>
+              Total sisa tagihan: <strong>{{ formatCurrencyTotals(totalSisaTagihanByCurrency) }}</strong>
               ({{ eligibleTagihan.length }} tagihan)
             </span>
             <VIcon
@@ -1196,15 +1358,15 @@ watch(
                       {{ t.nama }}
                       <VChip v-if="isTagihanBlocked(t)" size="x-small" color="warning" class="ms-2">Belum memenuhi syarat</VChip>
                     </td>
-                    <td class="text-end">{{ formatRupiah(t.jumlah) }}</td>
-                    <td class="text-end">{{ formatRupiah(t.dibayar) }}</td>
+                    <td class="text-end">{{ formatTagihanMoney(t, t.jumlah) }}</td>
+                    <td class="text-end">{{ formatTagihanMoney(t, t.dibayar) }}</td>
                     <td class="text-end font-weight-medium">
-                      <div>{{ formatRupiah(t.sisa) }}</div>
+                      <div>{{ formatTagihanMoney(t, t.sisa) }}</div>
                       <div
                         v-if="hasDispensasiTagihan(t)"
                         class="text-caption text-success"
                       >
-                        Dispensasi: {{ formatRupiah(t.jumlah_dispensasi) }}
+                        Dispensasi: {{ formatTagihanMoney(t, t.jumlah_dispensasi) }}
                       </div>
                       <div
                         v-if="hasDispensasiTagihan(t)"
@@ -1242,17 +1404,23 @@ watch(
       </div>
 
       <VRow v-else class="align-center">
-        <VCol cols="12">
+        <VCol
+          v-for="group in activePaymentCurrencyGroups"
+          :key="group.key"
+          cols="12"
+          md="6"
+        >
           <VTextField
-            v-model.number="nominalInput"
-            label="Nominal Pembayaran (Rp)"
+            :model-value="getNominalInput(group.key)"
+            :label="`Nominal Pembayaran (${group.mata_uang.kode})`"
             type="number"
             min="0"
             variant="outlined"
             density="comfortable"
-            :hint="formatRupiah(nominalInput)"
+            :hint="formatMoney(getNominalInput(group.key), group.mata_uang)"
             persistent-hint
-            placeholder="Masukkan nominal yang dibayarkan"
+            :placeholder="`Masukkan nominal ${group.mata_uang.kode}`"
+            @update:modelValue="setNominalInput(group.key, $event)"
             @keyup.enter="distributePayment"
           />
         </VCol>
@@ -1262,7 +1430,7 @@ watch(
           <VAlert type="success" variant="tonal" density="compact">
             <div class="d-flex align-center justify-space-between w-100">
               <span>
-                Saldo deposit: <strong>{{ formatRupiah(props.mahasiswa.deposit) }}</strong>
+                Saldo deposit IDR: <strong>{{ formatRupiah(props.mahasiswa.deposit) }}</strong>
               </span>
               <VSwitch
                 v-model="useDeposit"
@@ -1305,7 +1473,7 @@ watch(
             color="primary"
             variant="elevated"
             class="w-100"
-            :disabled="!eligibleTagihan.length || nominalInput <= 0"
+            :disabled="!eligibleTagihan.length || !hasProcessableNominal"
             @click="distributePayment"
           >
             <VIcon icon="ri-arrow-right-line" class="me-2" />
@@ -1327,13 +1495,18 @@ watch(
 
       <!-- Info kelebihan nominal masuk catatan deposit -->
       <VAlert
-        v-if="sisaNominal > 0 && rows.length > 0"
+        v-if="sisaNominalGroups.length > 0 && rows.length > 0"
         type="info"
         variant="tonal"
         density="compact"
         class="mt-4"
       >
-        Kelebihan nominal <strong>{{ formatRupiah(sisaNominal) }}</strong> akan otomatis masuk ke catatan deposit mahasiswa.
+        <div v-for="group in sisaNominalGroups" :key="group.key">
+          Kelebihan {{ group.mata_uang.kode }}:
+          <strong>{{ formatMoney(group.total, group.mata_uang) }}</strong>
+          <span v-if="group.mata_uang.kode === 'IDR'">akan otomatis masuk ke catatan deposit mahasiswa.</span>
+          <span v-else>tidak otomatis masuk ke deposit.</span>
+        </div>
       </VAlert>
     </VCardText>
 
@@ -1405,14 +1578,14 @@ watch(
               min="0"
               variant="outlined"
               density="comfortable"
-              :hint="formatRupiah(row.dibayar)"
+              :hint="formatMoney(row.dibayar, row.mata_uang)"
               persistent-hint
               :readonly="paymentMode === 'nominal'"
               @update:modelValue="recalcDibayar(idx)"
             />
           </VCol>
 
-          <VCol v-if="paymentMode === 'tagihan' || row.deposit > 0" cols="12" md="2">
+          <VCol v-if="(paymentMode === 'tagihan' && row.mata_uang_kode === 'IDR') || row.deposit > 0" cols="12" md="2">
             <VTextField
               v-model.number="row.deposit"
               label="Deposit"
@@ -1420,7 +1593,7 @@ watch(
               min="0"
               variant="outlined"
               density="comfortable"
-              :hint="formatRupiah(row.deposit)"
+              :hint="formatMoney(row.deposit, row.mata_uang)"
               persistent-hint
               :readonly="paymentMode === 'nominal' || isDhominRow(row)"
               @update:modelValue="recalcDeposit(idx)"
@@ -1455,7 +1628,7 @@ watch(
                   min="0"
                   variant="outlined"
                   density="comfortable"
-                  :hint="formatRupiah(row.keringanan_jumlah)"
+                  :hint="formatMoney(row.keringanan_jumlah, row.mata_uang)"
                   persistent-hint
                   :readonly="isDhominRow(row)"
                   @update:modelValue="recalcKeringanan(idx)"
@@ -1691,32 +1864,31 @@ watch(
   <!-- Total -->
   <VCard class="mt-4" title="Total">
     <VCardText>
-      <VRow>
-        <VCol cols="12" md="6">
-          <VTextField
-            :model-value="formatRupiah(totalDibayar)"
-            label="Total Dibayar"
-            variant="outlined"
-            readonly
-          />
-        </VCol>
-        <VCol cols="12" md="6">
-          <VTextField
-            :model-value="formatRupiah(totalDeposit)"
-            label="Total Deposit"
-            variant="outlined"
-            readonly
-          />
-        </VCol>
-        <VCol cols="12">
-          <VTextField
-            :model-value="formatRupiah(totalSemua)"
-            label="Total Dibayar + Deposit"
-            variant="outlined"
-            readonly
-          />
-        </VCol>
-      </VRow>
+      <VTable v-if="totalRowsByCurrency.length" density="compact" class="border rounded">
+        <thead>
+          <tr>
+            <th>Mata Uang</th>
+            <th class="text-end">Total Dibayar</th>
+            <th class="text-end">Total Deposit</th>
+            <th class="text-end">Total Dibayar + Deposit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="group in totalRowsByCurrency" :key="group.key">
+            <td>
+              <VChip size="small" color="primary" variant="tonal">
+                {{ group.mata_uang.kode }}
+              </VChip>
+            </td>
+            <td class="text-end">{{ formatMoney(group.dibayar, group.mata_uang) }}</td>
+            <td class="text-end">{{ formatMoney(group.deposit, group.mata_uang) }}</td>
+            <td class="text-end font-weight-medium">{{ formatMoney(group.total, group.mata_uang) }}</td>
+          </tr>
+        </tbody>
+      </VTable>
+      <div v-else class="text-medium-emphasis text-center py-4">
+        Belum ada total pembayaran.
+      </div>
     </VCardText>
   </VCard>
 </template>

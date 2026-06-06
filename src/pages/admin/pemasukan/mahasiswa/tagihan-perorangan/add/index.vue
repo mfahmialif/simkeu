@@ -47,6 +47,7 @@ onMounted(() => {
             :default-double-degree="route.query.double_degree"
             :default-kelas-id="route.query.kelas_id"
             use-active-th-akademik
+            multiple-tagihan
             submit-redirect="/admin/pemasukan/mahasiswa/tagihan-perorangan"
           />
         </VCardText>

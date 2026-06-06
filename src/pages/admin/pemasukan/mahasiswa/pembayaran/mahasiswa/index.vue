@@ -1,5 +1,6 @@
 <script setup>
 import { formatDate } from "@vueuse/core";
+import { formatMoney } from "@/composables/formatRupiah";
 
 const selectedThAkademik = ref();
 const thAkademik = ref([]);
@@ -23,6 +24,13 @@ const dataTable = ref([]);
 const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
+
+const getItemMataUang = (item = {}) => ({
+  id: item.mata_uang_id ?? null,
+  kode: String(item.mata_uang_kode ?? "IDR").toUpperCase(),
+  nama: item.mata_uang_nama ?? "Rupiah",
+  simbol: item.mata_uang_simbol ?? "Rp",
+});
 
 const fetchData = async () => {
   loading.value = true;
@@ -457,6 +465,7 @@ const refreshData = () => {
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Pembayaran', key: 'keuangan_tagihan_nama' },
+          { title: 'Mata Uang', key: 'mata_uang_kode' },
           { title: 'Jumlah', key: 'jumlah' },
           { title: 'Tahun', key: 'th_akademik_kode' },
           { title: 'Tanggal Pelayanan', key: 'created_at' },
@@ -547,7 +556,12 @@ const refreshData = () => {
               {{ item.keuangan_jenis_pembayaran_nama }}
             </VChip>
           </div>
-          <div>{{ formatRupiah(item.jumlah) }}</div>
+          <div>{{ formatMoney(item.jumlah, getItemMataUang(item)) }}</div>
+        </template>
+        <template #item.mata_uang_kode="{ item }">
+          <VChip size="x-small" color="primary" variant="tonal">
+            {{ item.mata_uang_kode || 'IDR' }}
+          </VChip>
         </template>
 
         <template #item.username="{ item }">

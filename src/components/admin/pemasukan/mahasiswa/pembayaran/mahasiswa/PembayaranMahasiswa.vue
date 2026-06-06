@@ -1,4 +1,5 @@
 <script setup>
+import { formatMoney } from "@/composables/formatRupiah";
 import { watch } from "vue";
 
 const props = defineProps({
@@ -19,15 +20,29 @@ const nominalInput = ref(0);
 
 const rows = ref([]);
 
+const normalizeMataUang = (item = {}) => {
+  const mataUang = item?.tagihan?.mata_uang || item?.mata_uang || {};
+
+  return {
+    id: mataUang.id ?? item.mata_uang_id ?? null,
+    kode: String(mataUang.kode ?? item.mata_uang_kode ?? "IDR").toUpperCase(),
+    nama: mataUang.nama ?? item.mata_uang_nama ?? "Rupiah",
+    simbol: mataUang.simbol ?? item.mata_uang_simbol ?? "Rp",
+  };
+};
+
 watch(
   () => props.dataForm,
   (newVal) => {
     if (props.typeForm === "edit" && newVal) {
+      const mataUang = normalizeMataUang(newVal);
+
       rows.value.push({
         id: newVal.id,
         display: `${newVal.tagihan.nama}`,
         nominal: newVal.jumlah ?? 0,
         dibayar: newVal.jumlah ?? 0, // default isi penuh
+        mata_uang: mataUang,
       });
 
       // Pre-fill nominal input with current value
@@ -99,12 +114,12 @@ defineExpose({
           <VCol cols="12" md="8">
             <VTextField
               v-model.number="nominalInput"
-              label="Nominal Pembayaran (Rp)"
+              :label="`Nominal Pembayaran (${rows[0]?.mata_uang?.kode || 'IDR'})`"
               type="number"
               min="0"
               variant="outlined"
               density="comfortable"
-              :hint="formatRupiah(nominalInput)"
+              :hint="formatMoney(nominalInput, rows[0]?.mata_uang)"
               persistent-hint
               placeholder="Masukkan nominal yang dibayarkan"
               @keyup.enter="applyNominal"
@@ -147,7 +162,7 @@ defineExpose({
             min="0"
             variant="outlined"
             density="comfortable"
-            :hint="formatRupiah(row.dibayar)"
+            :hint="formatMoney(row.dibayar, row.mata_uang)"
             persistent-hint
             :readonly="paymentMode === 'nominal'"
           />

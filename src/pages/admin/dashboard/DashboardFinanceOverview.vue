@@ -1,4 +1,5 @@
 <script setup>
+import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
 import { computed, onMounted, ref, watch } from "vue";
 
@@ -22,6 +23,8 @@ const iconPalette = [
 ];
 
 const rawFinanceData = ref([]);
+const totalsByCurrency = ref([]);
+const selectedCurrency = ref("IDR");
 
 // ===== FILTER =====
 const thAkademikList = ref([]);
@@ -30,6 +33,27 @@ const prodiList = ref([]);
 const selectedThAkademik = ref(null);
 const selectedProdi = ref(null);
 const selectedJk = ref(null);
+
+const currencyOptions = computed(() =>
+  totalsByCurrency.value.map((item) => ({
+    title: `${item.mata_uang?.kode || "IDR"} - ${item.mata_uang?.nama || "Rupiah"}`,
+    value: String(item.mata_uang?.kode || "IDR").toUpperCase(),
+  })),
+);
+
+const selectedCurrencyTotal = computed(() =>
+  totalsByCurrency.value.find(
+    (item) =>
+      String(item.mata_uang?.kode || "IDR").toUpperCase() === selectedCurrency.value,
+  ),
+);
+
+const selectedMataUang = computed(
+  () => selectedCurrencyTotal.value?.mata_uang || {
+    kode: selectedCurrency.value,
+    simbol: selectedCurrency.value === "IDR" ? "Rp" : selectedCurrency.value,
+  },
+);
 
 const fetchThAkademik = async () => {
   try {
@@ -72,24 +96,37 @@ watch([selectedThAkademik, selectedProdi, selectedJk], () => {
 });
 
 // ===== DATA =====
-const totalAmount = computed(() =>
-  rawFinanceData.value.reduce((s, i) => s + i.amount, 0)
-);
-const totalLakiLaki = computed(() =>
-  rawFinanceData.value.reduce((s, i) => s + (i.laki_laki || 0), 0)
-);
-const totalPerempuan = computed(() =>
-  rawFinanceData.value.reduce((s, i) => s + (i.perempuan || 0), 0)
-);
+const totalAmount = computed(() => Number(selectedCurrencyTotal.value?.total || 0));
+const totalLakiLaki = computed(() => Number(selectedCurrencyTotal.value?.laki_laki || 0));
+const totalPerempuan = computed(() => Number(selectedCurrencyTotal.value?.perempuan || 0));
+const totalSummary = computed(() => formatCurrencyTotals(totalsByCurrency.value));
+const money = (amount) => formatMoney(amount, selectedMataUang.value);
 
 const allFinanceData = computed(() => {
   const total = totalAmount.value || 1;
-  return rawFinanceData.value.map((i, index) => ({
-    ...i,
-    icon: iconPalette[index % iconPalette.length],
-    color: colorPalette[Math.min(index, colorPalette.length - 1)],
-    percentage: +((i.amount / total) * 100).toFixed(1),
-  }));
+  return rawFinanceData.value
+    .map((item) => {
+      const currency = item.by_currency.find(
+        (row) =>
+          String(row.mata_uang?.kode || "IDR").toUpperCase() === selectedCurrency.value,
+      );
+
+      return {
+        name: item.name,
+        amount: Number(currency?.amount || 0),
+        laki_laki: Number(currency?.laki_laki || 0),
+        perempuan: Number(currency?.perempuan || 0),
+        percentage: Number(currency?.percent ?? 0),
+      };
+    })
+    .filter((item) => item.amount > 0)
+    .sort((left, right) => right.amount - left.amount)
+    .map((item, index) => ({
+      ...item,
+      icon: iconPalette[index % iconPalette.length],
+      color: colorPalette[Math.min(index, colorPalette.length - 1)],
+      percentage: item.percentage || +((item.amount / total) * 100).toFixed(1),
+    }));
 });
 
 // Data untuk card: top 2 + Lainnya
@@ -120,14 +157,6 @@ const financeData = computed(() => {
 
 const lainnyaDetails = computed(() => allFinanceData.value.slice(2));
 
-// Format Rupiah
-const toIDR = (n) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(n);
-
 // Modal state
 const showLainnyaModal = ref(false);
 
@@ -140,6 +169,7 @@ const goToDetail = (category = null) => {
   if (selectedThAkademik.value) query.th_akademik_id = selectedThAkademik.value;
   if (selectedProdi.value) query.prodi_id = selectedProdi.value;
   if (selectedJk.value) query.jk_id = selectedJk.value;
+  query.mata_uang_kode = selectedCurrency.value;
   router.push({ path: '/admin/dashboard/finance-detail', query });
 };
 
@@ -179,12 +209,29 @@ const fetchData = async () => {
     return;
   }
 
-  rawFinanceData.value = (response.data || []).map((item) => ({
-    name: item.name,
-    amount: Number(item.amount || 0),
+  totalsByCurrency.value = (response.totals_by_currency || []).map((item) => ({
+    ...item,
+    total: Number(item.total || 0),
     laki_laki: Number(item.laki_laki || 0),
     perempuan: Number(item.perempuan || 0),
   }));
+  rawFinanceData.value = (response.data || []).map((item) => ({
+    name: item.name,
+    by_currency: (item.by_currency || []).map((currency) => ({
+      ...currency,
+      amount: Number(currency.amount || 0),
+      laki_laki: Number(currency.laki_laki || 0),
+      perempuan: Number(currency.perempuan || 0),
+      percent: Number(currency.percent || 0),
+    })),
+  }));
+
+  if (!currencyOptions.value.some((item) => item.value === selectedCurrency.value)) {
+    selectedCurrency.value =
+      currencyOptions.value.find((item) => item.value === "IDR")?.value
+      || currencyOptions.value[0]?.value
+      || "IDR";
+  }
 };
 
 onMounted(() => {
@@ -202,7 +249,7 @@ onMounted(() => {
     <template v-else>
       <VCardItem
         :title="`Distribusi Pemasukan Keuangan UII Dalwa`"
-        :subtitle="`Total: ${toIDR(totalAmount)} | Laki-laki: ${toIDR(totalLakiLaki)} | Perempuan: ${toIDR(totalPerempuan)}`"
+        :subtitle="`Total semua mata uang: ${totalSummary}`"
       >
         <template #append>
           <VBtn
@@ -221,7 +268,7 @@ onMounted(() => {
       <VCardText>
         <!-- Filter -->
         <VRow class="mb-4">
-          <VCol cols="12" sm="4">
+          <VCol cols="12" sm="6" lg="3">
             <VSelect
               v-model="selectedThAkademik"
               :items="thAkademikList"
@@ -232,7 +279,7 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" sm="4">
+          <VCol cols="12" sm="6" lg="3">
             <VSelect
               v-model="selectedProdi"
               :items="prodiList"
@@ -243,7 +290,7 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" sm="4">
+          <VCol cols="12" sm="6" lg="3">
             <VSelect
               v-model="selectedJk"
               :items="jkList"
@@ -254,7 +301,23 @@ onMounted(() => {
               hide-details
             />
           </VCol>
+          <VCol cols="12" sm="6" lg="3">
+            <VSelect
+              v-model="selectedCurrency"
+              :items="currencyOptions"
+              label="Mata Uang"
+              density="compact"
+              hide-details
+              :disabled="currencyOptions.length <= 1"
+            />
+          </VCol>
         </VRow>
+
+        <div class="text-body-2 text-medium-emphasis mb-4">
+          Perhitungan {{ selectedCurrency }}:
+          Laki-laki <strong>{{ money(totalLakiLaki) }}</strong>,
+          Perempuan <strong>{{ money(totalPerempuan) }}</strong>
+        </div>
 
         <!-- Progress gabungan per kategori -->
         <div class="finance-progress-wrapper mb-6">
@@ -341,13 +404,13 @@ onMounted(() => {
                 </div>
               </td>
               <td width="15%">
-                <span class="text-body-2">{{ toIDR(row.laki_laki || 0) }}</span>
+                <span class="text-body-2">{{ money(row.laki_laki || 0) }}</span>
               </td>
               <td width="15%">
-                <span class="text-body-2">{{ toIDR(row.perempuan || 0) }}</span>
+                <span class="text-body-2">{{ money(row.perempuan || 0) }}</span>
               </td>
               <td width="20%">
-                <h6 class="text-h6">{{ toIDR(row.amount) }}</h6>
+                <h6 class="text-h6">{{ money(row.amount) }}</h6>
               </td>
               <td width="10%">
                 <span class="text-body-1">{{ row.percentage }}%</span>
@@ -375,13 +438,13 @@ onMounted(() => {
                 <strong>Total</strong>
               </td>
               <td>
-                <strong>{{ toIDR(totalLakiLaki) }}</strong>
+                <strong>{{ money(totalLakiLaki) }}</strong>
               </td>
               <td>
-                <strong>{{ toIDR(totalPerempuan) }}</strong>
+                <strong>{{ money(totalPerempuan) }}</strong>
               </td>
               <td>
-                <strong>{{ toIDR(totalAmount) }}</strong>
+                <strong>{{ money(totalAmount) }}</strong>
               </td>
               <td>
                 <strong>100%</strong>
@@ -430,13 +493,13 @@ onMounted(() => {
                 </div>
               </td>
               <td>
-                <span class="text-body-1 font-weight-medium">{{ toIDR(row.laki_laki || 0) }}</span>
+                <span class="text-body-1 font-weight-medium">{{ money(row.laki_laki || 0) }}</span>
               </td>
               <td>
-                <span class="text-body-1 font-weight-medium">{{ toIDR(row.perempuan || 0) }}</span>
+                <span class="text-body-1 font-weight-medium">{{ money(row.perempuan || 0) }}</span>
               </td>
               <td>
-                <span class="text-body-1 font-weight-medium">{{ toIDR(row.amount) }}</span>
+                <span class="text-body-1 font-weight-medium">{{ money(row.amount) }}</span>
               </td>
               <td>
                 <span class="text-body-1">{{ row.percentage }}%</span>
@@ -461,13 +524,13 @@ onMounted(() => {
                 <strong>Total Lainnya</strong>
               </td>
               <td>
-                <strong>{{ toIDR(lainnyaDetails.reduce((s, i) => s + (i.laki_laki || 0), 0)) }}</strong>
+                <strong>{{ money(lainnyaDetails.reduce((s, i) => s + (i.laki_laki || 0), 0)) }}</strong>
               </td>
               <td>
-                <strong>{{ toIDR(lainnyaDetails.reduce((s, i) => s + (i.perempuan || 0), 0)) }}</strong>
+                <strong>{{ money(lainnyaDetails.reduce((s, i) => s + (i.perempuan || 0), 0)) }}</strong>
               </td>
               <td>
-                <strong>{{ toIDR(lainnyaDetails.reduce((s, i) => s + i.amount, 0)) }}</strong>
+                <strong>{{ money(lainnyaDetails.reduce((s, i) => s + i.amount, 0)) }}</strong>
               </td>
               <td>
                 <strong>{{ lainnyaDetails.reduce((s, i) => s + i.percentage, 0).toFixed(1) }}%</strong>

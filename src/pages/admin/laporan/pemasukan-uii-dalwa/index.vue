@@ -5,6 +5,7 @@ import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js'
 import 'flatpickr/dist/plugins/monthSelect/style.css'
 import { downloadFileExport } from "@/composables/exportFile";
 import { useCookie } from '@/@core/composable/useCookie';
+import { formatCurrencyTotals } from "@/composables/formatRupiah";
 
 const theme = useTheme();
 
@@ -73,11 +74,6 @@ const totals = ref({});
 const hasData = ref(false);
 const jkInfo = ref("");
 
-const formatRupiah = (val) => {
-  if (!val || val === 0) return "-";
-  return "Rp " + new Intl.NumberFormat("id-ID").format(val);
-};
-
 const normalizeKategoriText = (value) => String(value || "")
   .toUpperCase()
   .replace(/[^A-Z0-9]+/g, " ")
@@ -113,6 +109,31 @@ const getKategoriRowGroup = (kategori) => {
 
 const toNumber = (value) => Number(value) || 0;
 
+const mergeCurrencyTotals = (...groups) => {
+  const totals = new Map();
+
+  groups.flat().forEach((group) => {
+    const mataUang = group?.mata_uang || {};
+    const kode = String(mataUang.kode || "IDR").toUpperCase();
+    const key = `kode:${kode}`;
+    const current = totals.get(key) || {
+      key,
+      mata_uang: {
+        id: mataUang.id ?? null,
+        kode,
+        nama: mataUang.nama || kode,
+        simbol: mataUang.simbol || (kode === "IDR" ? "Rp" : kode),
+      },
+      total: 0,
+    };
+
+    current.total += toNumber(group?.total);
+    totals.set(key, current);
+  });
+
+  return [...totals.values()];
+};
+
 const groupKategoriRows = (rows = []) => {
   const groupRows = new Map();
   const groupedRows = [];
@@ -133,6 +154,10 @@ const groupKategoriRows = (rows = []) => {
         transfer: 0,
         yayasan: 0,
         total: 0,
+        tunai_by_currency: [],
+        transfer_by_currency: [],
+        yayasan_by_currency: [],
+        total_by_currency: [],
       };
 
       groupRows.set(group.key, groupedRow);
@@ -144,6 +169,22 @@ const groupKategoriRows = (rows = []) => {
     groupedRow.transfer += toNumber(row.transfer);
     groupedRow.yayasan += toNumber(row.yayasan);
     groupedRow.total += toNumber(row.total);
+    groupedRow.tunai_by_currency = mergeCurrencyTotals(
+      groupedRow.tunai_by_currency,
+      row.tunai_by_currency || [],
+    );
+    groupedRow.transfer_by_currency = mergeCurrencyTotals(
+      groupedRow.transfer_by_currency,
+      row.transfer_by_currency || [],
+    );
+    groupedRow.yayasan_by_currency = mergeCurrencyTotals(
+      groupedRow.yayasan_by_currency,
+      row.yayasan_by_currency || [],
+    );
+    groupedRow.total_by_currency = mergeCurrencyTotals(
+      groupedRow.total_by_currency,
+      row.total_by_currency || [],
+    );
   });
 
   return groupedRows.map((row, index) => ({
@@ -470,19 +511,19 @@ onMounted(() => {
               >
                 <td class="col-no text-center border-cell">{{ row.no }}</td>
                 <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">{{ row.kategori }}</td>
-                <td class="col-amount text-right border-cell">{{ formatRupiah(row.tunai) }}</td>
-                <td class="col-amount text-right border-cell">{{ formatRupiah(row.transfer) }}</td>
-                <td class="col-amount text-right border-cell">{{ formatRupiah(row.yayasan) }}</td>
-                <td class="col-amount text-right border-cell font-weight-bold">{{ formatRupiah(row.total) }}</td>
+                <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}</td>
+                <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}</td>
+                <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}</td>
+                <td class="col-amount text-right border-cell font-weight-bold">{{ formatCurrencyTotals(row.total_by_currency, row.total) }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="total-row">
                 <td colspan="2" class="text-center text-uppercase font-weight-black border-cell font-italic">TOTAL</td>
-                <td class="text-right font-weight-black border-cell">{{ formatRupiah(totals.tunai) }}</td>
-                <td class="text-right font-weight-black border-cell">{{ formatRupiah(totals.transfer) }}</td>
-                <td class="text-right font-weight-black border-cell">{{ formatRupiah(totals.yayasan) }}</td>
-                <td class="text-right font-weight-black border-cell">{{ formatRupiah(totals.total) }}</td>
+                <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(totals.tunai_by_currency, totals.tunai) }}</td>
+                <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(totals.transfer_by_currency, totals.transfer) }}</td>
+                <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(totals.yayasan_by_currency, totals.yayasan) }}</td>
+                <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(totals.total_by_currency, totals.total) }}</td>
               </tr>
             </tfoot>
           </table>
@@ -518,19 +559,19 @@ onMounted(() => {
                 >
                   <td class="col-no text-center border-cell">{{ row.no }}</td>
                   <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">{{ row.kategori }}</td>
-                  <td class="col-amount text-right border-cell">{{ formatRupiah(row.tunai) }}</td>
-                  <td class="col-amount text-right border-cell">{{ formatRupiah(row.transfer) }}</td>
-                  <td class="col-amount text-right border-cell">{{ formatRupiah(row.yayasan) }}</td>
-                  <td class="col-amount text-right border-cell font-weight-bold">{{ formatRupiah(row.total) }}</td>
+                  <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}</td>
+                  <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}</td>
+                  <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}</td>
+                  <td class="col-amount text-right border-cell font-weight-bold">{{ formatCurrencyTotals(row.total_by_currency, row.total) }}</td>
                 </tr>
               </tbody>
               <tfoot>
                 <tr class="total-row">
                   <td colspan="2" class="text-center text-uppercase font-weight-black border-cell font-italic">TOTAL</td>
-                  <td class="text-right font-weight-black border-cell">{{ formatRupiah(monthInfo.totals.tunai) }}</td>
-                  <td class="text-right font-weight-black border-cell">{{ formatRupiah(monthInfo.totals.transfer) }}</td>
-                  <td class="text-right font-weight-black border-cell">{{ formatRupiah(monthInfo.totals.yayasan) }}</td>
-                  <td class="text-right font-weight-black border-cell">{{ formatRupiah(monthInfo.totals.total) }}</td>
+                  <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(monthInfo.totals.tunai_by_currency, monthInfo.totals.tunai) }}</td>
+                  <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(monthInfo.totals.transfer_by_currency, monthInfo.totals.transfer) }}</td>
+                  <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(monthInfo.totals.yayasan_by_currency, monthInfo.totals.yayasan) }}</td>
+                  <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(monthInfo.totals.total_by_currency, monthInfo.totals.total) }}</td>
                 </tr>
               </tfoot>
             </table>

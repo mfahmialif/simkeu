@@ -52,8 +52,10 @@ declare global {
   const emailValidator: typeof import('./src/@core/utils/validators.js')['emailValidator']
   const extendRef: typeof import('@vueuse/core')['extendRef']
   const fDate: typeof import('./src/composables/fDate.js')['fDate']
+  const formatCurrencyTotals: typeof import('./src/composables/formatRupiah.js')['formatCurrencyTotals']
   const formatDate: typeof import('./src/@core/utils/formatters.js')['formatDate']
   const formatDateToMonthShort: typeof import('./src/@core/utils/formatters.js')['formatDateToMonthShort']
+  const formatMoney: typeof import('./src/composables/formatRupiah.js')['formatMoney']
   const formatRupiah: typeof import('./src/composables/formatRupiah.js')['formatRupiah']
   const getActivePinia: typeof import('pinia')['getActivePinia']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
@@ -427,8 +429,10 @@ declare module 'vue' {
     readonly emailValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['emailValidator']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly fDate: UnwrapRef<typeof import('./src/composables/fDate.js')['fDate']>
+    readonly formatCurrencyTotals: UnwrapRef<typeof import('./src/composables/formatRupiah.js')['formatCurrencyTotals']>
     readonly formatDate: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['formatDate']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['formatDateToMonthShort']>
+    readonly formatMoney: UnwrapRef<typeof import('./src/composables/formatRupiah.js')['formatMoney']>
     readonly formatRupiah: UnwrapRef<typeof import('./src/composables/formatRupiah.js')['formatRupiah']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>

@@ -372,6 +372,7 @@ declare module 'vue' {
     FormFormSchadule: typeof import('./src/components/admin/form-schadule/FormFormSchadule.vue')['default']
     FormJenisPembayaran: typeof import('./src/components/admin/pemasukan/mahasiswa/master/jenis-pembayaran/FormJenisPembayaran.vue')['default']
     FormKategori: typeof import('./src/components/admin/saldo/kategori/FormKategori.vue')['default']
+    FormMataUang: typeof import('./src/components/admin/mata-uang/FormMataUang.vue')['default']
     FormPegawai: typeof import('./src/components/admin/pegawai/FormPegawai.vue')['default']
     FormPembayaranTagihan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/FormPembayaranTagihan.vue')['default']
     FormPengeluaran: typeof import('./src/components/admin/pengeluaran/FormPengeluaran.vue')['default']

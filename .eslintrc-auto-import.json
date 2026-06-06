@@ -375,6 +375,8 @@
     "openFileExport": true,
     "openPdfInNewTabWithName": true,
     "fDate": true,
-    "copyTextToClipboard": true
+    "copyTextToClipboard": true,
+    "formatMoney": true,
+    "formatCurrencyTotals": true
   }
 }

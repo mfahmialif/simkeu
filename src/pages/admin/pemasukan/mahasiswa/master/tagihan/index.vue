@@ -1,4 +1,6 @@
 <script setup>
+import { downloadFileExport } from "@/composables/exportFile";
+
 const selectedThAkademik = ref();
 const thAkademik = ref([]);
 const selectedThAngkatan = ref();
@@ -27,6 +29,23 @@ const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
 const allYearsLimit = 1000;
+const isLoadingExcel = ref(false);
+
+const hasFilterValue = (value) =>
+  value !== undefined && value !== null && value !== "";
+
+const filterPayload = () => ({
+  ...(hasFilterValue(selectedThAkademik.value) && {
+    th_akademik_id: selectedThAkademik.value,
+  }),
+  ...(hasFilterValue(selectedThAngkatan.value) && {
+    th_angkatan_id: selectedThAngkatan.value,
+  }),
+  ...(hasFilterValue(selectedProdi.value) && { prodi_id: selectedProdi.value }),
+  ...(hasFilterValue(selectedDoubleDegree.value) && {
+    double_degree: selectedDoubleDegree.value,
+  }),
+});
 
 const fetchData = async () => {
   try {
@@ -39,16 +58,7 @@ const fetchData = async () => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         search: search.value,
-        ...(selectedThAkademik.value && {
-          th_akademik_id: selectedThAkademik.value,
-        }),
-        ...(selectedThAngkatan.value && {
-          th_angkatan_id: selectedThAngkatan.value,
-        }),
-        ...(selectedProdi.value && { prodi_id: selectedProdi.value }),
-        ...(selectedDoubleDegree.value && {
-          double_degree: selectedDoubleDegree.value,
-        }),
+        ...filterPayload(),
       },
     });
 
@@ -133,6 +143,46 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   itemsPerPage.value = ipp;
   if (sb.length) sortBy.value = sb[0];
   fetchData();
+};
+
+const exportExcel = async () => {
+  try {
+    isLoadingExcel.value = true;
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    });
+
+    const response = await $api("/admin/pemasukan/mahasiswa/tagihan/export-excel", {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        search: search.value,
+        ...filterPayload(),
+      },
+    });
+
+    downloadFileExport(response, "Tagihan Mahasiswa.xlsx");
+    showSnackbar({
+      text: "Laporan berhasil di download.",
+      color: "success",
+    });
+  } catch (err) {
+    const message =
+      typeof err.data?.message === "object"
+        ? Object.values(err.data.message).flat().join("; ")
+        : err.data?.message || "Gagal export data.";
+
+    showSnackbar({
+      text: message,
+      color: "error",
+    });
+  } finally {
+    isLoadingExcel.value = false;
+  }
 };
 
 // Import dialog state
@@ -387,6 +437,8 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
             variant="outlined"
             color="secondary"
             prepend-icon="ri-upload-2-line"
+            :loading="isLoadingExcel"
+            @click="exportExcel"
           >
             Export
           </VBtn>
@@ -421,6 +473,7 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
           { title: 'Tahun Angkatan', key: 'th_angkatan_kode' },
           { title: 'Prodi', key: 'prodi_nama' },
           { title: 'Nama', key: 'nama' },
+          { title: 'Mata Uang', key: 'mata_uang_id' },
           { title: 'Jumlah', key: 'jumlah' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
@@ -463,6 +516,11 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
               <b>{{ item.nama }}</b>
             </div>
           </div>
+        </template>
+
+        <template #item.mata_uang_id="{ item }">
+          {{ item.mata_uang_kode || item.mata_uang_id || '-' }}
+          <span v-if="item.mata_uang_simbol">({{ item.mata_uang_simbol }})</span>
         </template>
 
         <!-- Actions -->
@@ -544,7 +602,7 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
           <p class="mb-4">
             Upload file Excel (.xlsx, .xls) atau CSV. Satu file Excel boleh
             berisi beberapa sheet, dengan urutan kolom di setiap sheet:
-            aliasprodi, tahun, namatagihan, smt, jumlahtagihan.
+            aliasprodi, tahun, namatagihan, smt, jumlahtagihan, mata_uang_id.
           </p>
 
           <VBtn

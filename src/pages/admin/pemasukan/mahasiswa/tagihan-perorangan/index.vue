@@ -1,4 +1,6 @@
 <script setup>
+import { downloadFileExport } from "@/composables/exportFile";
+
 const selectedThAkademik = ref();
 const thAkademik = ref([]);
 const selectedThAngkatan = ref();
@@ -27,6 +29,7 @@ const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
 const allYearsLimit = 1000;
+const isLoadingExcel = ref(false);
 
 const hasFilterValue = (value) =>
   value !== undefined && value !== null && value !== "";
@@ -64,6 +67,64 @@ const fetchData = async () => {
   } finally {
     loading.value = false;
     if (initialLoading.value) initialLoading.value = false;
+  }
+};
+
+const filterPayload = () => ({
+  ...(hasFilterValue(selectedThAkademik.value) && {
+    th_akademik_id: selectedThAkademik.value,
+  }),
+  ...(hasFilterValue(selectedThAngkatan.value) && {
+    th_angkatan_id: selectedThAngkatan.value,
+  }),
+  ...(hasFilterValue(selectedProdi.value) && {
+    prodi_id: selectedProdi.value,
+  }),
+  ...(hasFilterValue(selectedDoubleDegree.value) && {
+    double_degree: selectedDoubleDegree.value,
+  }),
+});
+
+const exportExcel = async () => {
+  try {
+    isLoadingExcel.value = true;
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    });
+
+    const response = await $api(
+      "/admin/pemasukan/mahasiswa/tagihan-perorangan/export-excel",
+      {
+        method: "GET",
+        headers: {
+          Accept:
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+        body: {
+          search: search.value,
+          ...filterPayload(),
+        },
+      }
+    );
+
+    downloadFileExport(response, "Tagihan Perorangan.xlsx");
+    showSnackbar({
+      text: "Laporan berhasil di download.",
+      color: "success",
+    });
+  } catch (err) {
+    const message =
+      typeof err.data?.message === "object"
+        ? Object.values(err.data.message).flat().join("; ")
+        : err.data?.message || "Gagal export data.";
+
+    showSnackbar({
+      text: message,
+      color: "error",
+    });
+  } finally {
+    isLoadingExcel.value = false;
   }
 };
 
@@ -284,6 +345,8 @@ watch(
             variant="outlined"
             color="secondary"
             prepend-icon="ri-upload-2-line"
+            :loading="isLoadingExcel"
+            @click="exportExcel"
           >
             Export
           </VBtn>
@@ -311,6 +374,7 @@ watch(
           { title: 'Tahun Angkatan', key: 'th_angkatan_kode' },
           { title: 'Prodi', key: 'prodi_nama' },
           { title: 'Nama', key: 'nama' },
+          { title: 'Mata Uang', key: 'mata_uang_id' },
           { title: 'Jumlah', key: 'jumlah' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
@@ -338,6 +402,11 @@ watch(
 
         <template #item.jumlah="{ item }">
           {{ formatRupiah(item.jumlah) }}
+        </template>
+
+        <template #item.mata_uang_id="{ item }">
+          {{ item.mata_uang_kode || item.mata_uang_id || '-' }}
+          <span v-if="item.mata_uang_simbol">({{ item.mata_uang_simbol }})</span>
         </template>
 
         <template #item.nama="{ item }">

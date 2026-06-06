@@ -56,6 +56,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  multipleTagihan: {
+    type: Boolean,
+    default: false,
+  },
   isRoleVisible: {
     type: Boolean,
     required: false,
@@ -83,6 +87,17 @@ const selectedProdi = ref();
 const prodi = ref([]);
 const selectedFormSchadule = ref();
 const formSchadule = ref([]);
+const selectedMataUangId = ref();
+const mataUang = ref([]);
+const isMultipleTagihan = computed(
+  () => props.multipleTagihan && props.typeForm !== "edit"
+);
+const createEmptyTagihanItem = () => ({
+  nama: "",
+  mata_uang_id: selectedMataUangId.value,
+  jumlah: "",
+});
+const tagihanItems = ref([createEmptyTagihanItem()]);
 const doubleDegree = ref([
   {
     title: "Tidak",
@@ -117,6 +132,11 @@ const nama = ref("");
 const jumlah = ref("");
 
 const disabled = ref(false);
+const submitButtonText = computed(() => {
+  if (!isMultipleTagihan.value) return "Submit";
+
+  return `Simpan ${tagihanItems.value.length} Tagihan`;
+});
 
 const passwordRules = ref([requiredValidator, passwordValidator]);
 
@@ -313,11 +333,45 @@ const fetchFormSchadule = async () => {
   }
 };
 
+const fetchMataUang = async () => {
+  try {
+    const { data } = await $api("/admin/mata-uang", {
+      method: "GET",
+      params: {
+        limit: 0,
+        sort_key: "kode",
+        sort_order: "asc",
+      },
+    });
+
+    mataUang.value = data.data.map((item) => {
+      return {
+        title: `${item.kode} - ${item.nama}${item.simbol ? ` (${item.simbol})` : ""}`,
+        value: item.id,
+      };
+    });
+
+    if (!selectedMataUangId.value && mataUang.value.length > 0) {
+      selectedMataUangId.value =
+        data.data.find((item) => item.kode === "IDR")?.id ??
+        mataUang.value[0].value;
+    }
+
+    tagihanItems.value = tagihanItems.value.map((item) => ({
+      ...item,
+      mata_uang_id: item.mata_uang_id || selectedMataUangId.value,
+    }));
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 onMounted(async () => {
   await fetchThAkademik();
   fetchThAngkatan();
   fetchProdi();
   fetchFormSchadule();
+  fetchMataUang();
 
   nim.value = props.nim || "";
   setSelectedMahasiswaFromNim(nim.value);
@@ -330,6 +384,8 @@ onMounted(async () => {
     selectedProdi.value = props.dataForm.prodi_id;
     selectedDoubleDegree.value = props.dataForm.double_degree;
     selectedKelasId.value = props.dataForm.kelas_id ?? selectedKelasId.value;
+    selectedMataUangId.value =
+      props.dataForm.mata_uang_id || props.dataForm.mata_uang?.id || selectedMataUangId.value;
     nim.value = props.dataForm.nim ?? nim.value;
     setSelectedMahasiswaFromNim(nim.value);
     nama.value = props.dataForm.nama;
@@ -399,6 +455,44 @@ onBeforeUnmount(() => {
   clearTimeout(typingMahasiswaTimeout);
 });
 
+const addTagihanItem = () => {
+  if (tagihanItems.value.length >= 50) {
+    showSnackbar({
+      text: "Maksimal 50 tagihan dalam satu kali simpan",
+      color: "error",
+    });
+    return;
+  }
+
+  tagihanItems.value.push(createEmptyTagihanItem());
+};
+
+const removeTagihanItem = (index) => {
+  if (tagihanItems.value.length === 1) return;
+
+  tagihanItems.value.splice(index, 1);
+};
+
+const resetTagihanItems = () => {
+  if (isMultipleTagihan.value) {
+    tagihanItems.value = [createEmptyTagihanItem()];
+    return;
+  }
+
+  nama.value = "";
+  jumlah.value = "";
+};
+
+const getApiErrorMessage = (err) => {
+  const message = err.data?.message;
+
+  if (Array.isArray(message)) return message.join("; ");
+  if (message && typeof message === "object")
+    return Object.values(message).flat().join("; ");
+
+  return message || "Gagal menyimpan tagihan";
+};
+
 const onSubmit = async () => {
   const valid = await refForm.value.validate();
   if (!valid.valid) return;
@@ -431,8 +525,21 @@ const onSubmit = async () => {
   formData.append("form_schadule_id", selectedFormSchadule.value);
   formData.append("kelas_id", selectedKelasId.value);
   if (props.showNim) formData.append("nim", nim.value);
-  formData.append("nama", nama.value);
-  formData.append("jumlah", jumlah.value);
+
+  if (isMultipleTagihan.value) {
+    tagihanItems.value.forEach((item, index) => {
+      formData.append(`tagihan[${index}][nama]`, item.nama.trim());
+      formData.append(
+        `tagihan[${index}][mata_uang_id]`,
+        item.mata_uang_id
+      );
+      formData.append(`tagihan[${index}][jumlah]`, item.jumlah);
+    });
+  } else {
+    formData.append("mata_uang_id", selectedMataUangId.value);
+    formData.append("nama", nama.value);
+    formData.append("jumlah", jumlah.value);
+  }
 
   formData.append("_method", method);
 
@@ -459,11 +566,8 @@ const onSubmit = async () => {
       });
     }
   } catch (err) {
-    const message = Array.isArray(err.data.message)
-      ? err.data.message.join("; ")
-      : err.data.message;
     showSnackbar({
-      text: message,
+      text: getApiErrorMessage(err),
       color: "error",
     });
   } finally {
@@ -625,26 +729,126 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12">
-        <VTextField
-          v-model="nama"
-          :rules="[requiredValidator]"
-          label="Nama"
-          placeholder="KRS ...."
-        />
+      <VCol v-if="isMultipleTagihan" cols="12">
+        <VCard variant="outlined">
+          <VCardText
+            class="d-flex align-center justify-space-between flex-wrap gap-3"
+          >
+            <div>
+              <div class="text-h6">
+                Daftar Tagihan
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                Tambahkan beberapa tagihan untuk mahasiswa yang sama.
+              </div>
+            </div>
+            <VBtn
+              color="primary"
+              variant="tonal"
+              prepend-icon="ri-add-line"
+              :disabled="tagihanItems.length >= 50"
+              @click="addTagihanItem"
+            >
+              Tambah Tagihan
+            </VBtn>
+          </VCardText>
+
+          <VDivider />
+
+          <VCardText>
+            <VRow
+              v-for="(item, index) in tagihanItems"
+              :key="index"
+              align="center"
+            >
+              <VCol cols="12" md="4">
+                <VTextField
+                  v-model="item.nama"
+                  :rules="[requiredValidator]"
+                  :label="`Nama Tagihan ${index + 1}`"
+                  placeholder="KRS ...."
+                />
+              </VCol>
+              <VCol cols="12" md="3">
+                <VSelect
+                  v-model="item.mata_uang_id"
+                  label="Mata Uang"
+                  placeholder="Pilih Mata Uang"
+                  :items="mataUang"
+                  :rules="[requiredValidator]"
+                  clear-icon="ri-close-line"
+                />
+              </VCol>
+              <VCol cols="12" md="4">
+                <VTextField
+                  v-model="item.jumlah"
+                  :rules="[requiredValidator]"
+                  label="Jumlah"
+                  placeholder="10000..."
+                  type="number"
+                  min="0"
+                />
+              </VCol>
+              <VCol cols="12" md="1" class="d-flex justify-end">
+                <VBtn
+                  icon
+                  color="error"
+                  variant="text"
+                  :disabled="tagihanItems.length === 1"
+                  aria-label="Hapus tagihan"
+                  @click="removeTagihanItem(index)"
+                >
+                  <VIcon icon="ri-delete-bin-line" />
+                </VBtn>
+              </VCol>
+              <VCol
+                v-if="index < tagihanItems.length - 1"
+                cols="12"
+                class="py-0"
+              >
+                <VDivider />
+              </VCol>
+            </VRow>
+          </VCardText>
+        </VCard>
       </VCol>
-      <VCol cols="12">
-        <VTextField
-          v-model="jumlah"
-          :rules="[requiredValidator, noSpaceValidator]"
-          label="Jumlah"
-          placeholder="10000..."
-          type="number"
-        />
-      </VCol>
+      <template v-else>
+        <VCol cols="12">
+          <VTextField
+            v-model="nama"
+            :rules="[requiredValidator]"
+            label="Nama"
+            placeholder="KRS ...."
+          />
+        </VCol>
+        <VCol cols="12">
+          <VSelect
+            v-model="selectedMataUangId"
+            label="Mata Uang"
+            placeholder="Select Mata Uang"
+            :items="mataUang"
+            :rules="[requiredValidator]"
+            clear-icon="ri-close-line"
+          />
+        </VCol>
+        <VCol cols="12">
+          <VTextField
+            v-model="jumlah"
+            :rules="[requiredValidator, noSpaceValidator]"
+            label="Jumlah"
+            placeholder="10000..."
+            type="number"
+          />
+        </VCol>
+      </template>
       <VCol cols="12" class="d-flex gap-4">
-        <VBtn type="submit" :disabled @click="refForm?.validate()">
-          Submit
+        <VBtn
+          type="submit"
+          :disabled
+          :loading="disabled"
+          @click="refForm?.validate()"
+        >
+          {{ submitButtonText }}
         </VBtn>
 
         <VBtn
@@ -652,6 +856,7 @@ const onSubmit = async () => {
           v-if="typeForm !== 'edit'"
           color="secondary"
           variant="tonal"
+          @click="resetTagihanItems"
         >
           Reset
         </VBtn>

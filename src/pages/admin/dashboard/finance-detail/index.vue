@@ -1,4 +1,5 @@
 <script setup>
+import { formatMoney } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
 import { computed, onMounted, ref, watch } from "vue";
 
@@ -11,10 +12,16 @@ const category = computed(() => route.query.category || "SPP");
 // ===== FILTER =====
 const thAkademikList = ref([]);
 const prodiList = ref([]);
+const mataUangList = ref([]);
 
 const selectedThAkademik = ref(route.query.th_akademik_id ? Number(route.query.th_akademik_id) : null);
 const selectedProdi = ref(route.query.prodi_id ? Number(route.query.prodi_id) : null);
 const selectedJk = ref(route.query.jk_id ? Number(route.query.jk_id) : null);
+const selectedCurrency = ref(String(route.query.mata_uang_kode || "IDR").toUpperCase());
+const activeMataUang = ref({
+  kode: selectedCurrency.value,
+  simbol: selectedCurrency.value === "IDR" ? "Rp" : selectedCurrency.value,
+});
 
 const fetchThAkademik = async () => {
   try {
@@ -46,13 +53,26 @@ const fetchProdi = async () => {
   }
 };
 
+const fetchMataUang = async () => {
+  try {
+    const response = await $api("/admin/mata-uang?limit=0&aktif=1&sort_key=kode&sort_order=asc");
+    const items = response.data?.data || [];
+    mataUangList.value = items.map((item) => ({
+      title: `${item.kode} - ${item.nama}`,
+      value: String(item.kode).toUpperCase(),
+    }));
+  } catch (e) {
+    console.error(e);
+  }
+};
+
 const jkList = [
   { title: "Laki-laki", value: 8 },
   { title: "Perempuan", value: 9 },
 ];
 
 // Watch filter changes -> refetch
-watch([selectedThAkademik, selectedProdi, selectedJk], () => {
+watch([selectedThAkademik, selectedProdi, selectedJk, selectedCurrency], () => {
   fetchDetail();
 });
 
@@ -73,12 +93,7 @@ const totalAmount = ref(0);
 const totalLakiLaki = ref(0);
 const totalPerempuan = ref(0);
 
-const toIDR = (n) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(n);
+const money = (amount) => formatMoney(amount, activeMataUang.value);
 
 const paymentMethodColor = (jenisKelamin) => {
   const value = String(jenisKelamin || "").toLowerCase();
@@ -93,6 +108,7 @@ const fetchDetail = async () => {
   const params = {
     category: category.value,
     group_by: activeTab.value,
+    mata_uang_kode: selectedCurrency.value,
   };
   if (selectedThAkademik.value) params.th_akademik_id = selectedThAkademik.value;
   if (selectedProdi.value) params.prodi_id = selectedProdi.value;
@@ -125,6 +141,7 @@ const fetchDetail = async () => {
     totalAmount.value = Number(response.total || 0);
     totalLakiLaki.value = Number(response.total_laki_laki || 0);
     totalPerempuan.value = Number(response.total_perempuan || 0);
+    activeMataUang.value = response.mata_uang || activeMataUang.value;
   } catch (err) {
     isLoading.value = false;
     showSnackbar({ text: "Gagal memuat data", color: "error" });
@@ -137,6 +154,7 @@ onMounted(() => {
   document.title = `Detail ${category.value} - SIMKEU`;
   fetchThAkademik();
   fetchProdi();
+  fetchMataUang();
   fetchDetail();
 });
 </script>
@@ -161,16 +179,17 @@ onMounted(() => {
             Detail Pemasukan: {{ category }}
           </VCardTitle>
           <VCardSubtitle>
-            Total: {{ toIDR(totalAmount) }} |
-            Laki-laki: {{ toIDR(totalLakiLaki) }} |
-            Perempuan: {{ toIDR(totalPerempuan) }}
+            {{ selectedCurrency }}:
+            Total {{ money(totalAmount) }} |
+            Laki-laki {{ money(totalLakiLaki) }} |
+            Perempuan {{ money(totalPerempuan) }}
           </VCardSubtitle>
         </VCardItem>
 
         <VCardText>
           <!-- Filter -->
           <VRow class="mb-4">
-            <VCol cols="12" sm="4">
+            <VCol cols="12" sm="6" lg="3">
               <VSelect
                 v-model="selectedThAkademik"
                 :items="thAkademikList"
@@ -181,7 +200,7 @@ onMounted(() => {
                 hide-details
               />
             </VCol>
-            <VCol cols="12" sm="4">
+            <VCol cols="12" sm="6" lg="3">
               <VSelect
                 v-model="selectedProdi"
                 :items="prodiList"
@@ -192,13 +211,22 @@ onMounted(() => {
                 hide-details
               />
             </VCol>
-            <VCol cols="12" sm="4">
+            <VCol cols="12" sm="6" lg="3">
               <VSelect
                 v-model="selectedJk"
                 :items="jkList"
                 label="Jenis Kelamin"
                 placeholder="Semua"
                 clearable
+                density="compact"
+                hide-details
+              />
+            </VCol>
+            <VCol cols="12" sm="6" lg="3">
+              <VSelect
+                v-model="selectedCurrency"
+                :items="mataUangList"
+                label="Mata Uang"
                 density="compact"
                 hide-details
               />
@@ -247,10 +275,10 @@ onMounted(() => {
                   <span class="font-weight-medium">{{ row.label }}</span>
                 </td>
                 <td>
-                  <span class="font-weight-medium">{{ toIDR(row.laki_laki || 0) }}</span>
+                  <span class="font-weight-medium">{{ money(row.laki_laki || 0) }}</span>
                 </td>
                 <td>
-                  <span class="font-weight-medium">{{ toIDR(row.perempuan || 0) }}</span>
+                  <span class="font-weight-medium">{{ money(row.perempuan || 0) }}</span>
                 </td>
                 <td style="min-inline-size: 280px;">
                   <div v-if="row.payment_methods?.length" class="d-flex flex-column gap-y-1">
@@ -272,14 +300,14 @@ onMounted(() => {
                         </span>
                       </div>
                       <span class="text-body-2 font-weight-medium">
-                        {{ toIDR(method.amount || 0) }}
+                        {{ money(method.amount || 0) }}
                       </span>
                     </div>
                   </div>
                   <span v-else class="text-disabled">-</span>
                 </td>
                 <td>
-                  <span class="font-weight-medium">{{ toIDR(row.amount) }}</span>
+                  <span class="font-weight-medium">{{ money(row.amount) }}</span>
                 </td>
                 <td>
                   <div class="d-flex align-center gap-2">
@@ -299,10 +327,10 @@ onMounted(() => {
               <tr v-if="detailData.length > 0">
                 <td></td>
                 <td><strong>Total</strong></td>
-                <td><strong>{{ toIDR(totalLakiLaki) }}</strong></td>
-                <td><strong>{{ toIDR(totalPerempuan) }}</strong></td>
+                <td><strong>{{ money(totalLakiLaki) }}</strong></td>
+                <td><strong>{{ money(totalPerempuan) }}</strong></td>
                 <td></td>
-                <td><strong>{{ toIDR(totalAmount) }}</strong></td>
+                <td><strong>{{ money(totalAmount) }}</strong></td>
                 <td><strong>100%</strong></td>
               </tr>
             </tbody>

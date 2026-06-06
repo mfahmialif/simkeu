@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { downloadFileExport, openFileExport } from "@/composables/exportFile";
+import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah";
 
 const selectedJenjang = ref("sarjana");
 const jenjangOptions = [
@@ -21,6 +22,7 @@ const isLoading = ref(false);
 const hasData = ref(false);
 const reportRows = ref([]);
 const total = ref(0);
+const totalByCurrency = ref([]);
 const jkInfo = ref("");
 const kategori = ref("");
 
@@ -34,7 +36,7 @@ const headers = [
   { title: "L/P", key: "jenis_kelamin", width: 80 },
   { title: "Prodi", key: "prodi" },
   { title: "Pembayaran", key: "pembayaran" },
-  { title: "Nominal (Rp)", key: "nominal", align: "end" },
+  { title: "Nominal", key: "nominal", align: "end" },
   { title: "Metode", key: "metode" },
   { title: "Petugas", key: "petugas" },
 ];
@@ -47,11 +49,6 @@ const filterBody = computed(() => ({
   }),
   ...(selectedUser.value && { user_id: selectedUser.value }),
 }));
-
-const formatRupiah = (value) => {
-  if (!value) return "-";
-  return "Rp " + new Intl.NumberFormat("id-ID").format(value);
-};
 
 const formatTanggal = (value) => {
   if (!value) return "-";
@@ -72,6 +69,7 @@ const fetchData = async () => {
     if (response.status) {
       reportRows.value = Object.freeze(response.data || []);
       total.value = response.total || 0;
+      totalByCurrency.value = Object.freeze(response.total_by_currency || []);
       jkInfo.value = response.jenis_kelamin === "%" ? "Semua" : response.jenis_kelamin;
       kategori.value = response.kategori || "";
       hasData.value = true;
@@ -322,12 +320,12 @@ onMounted(() => {
           {{ formatTanggal(item.tanggal_transaksi) }}
         </template>
         <template #item.nominal="{ item }">
-          <span class="font-weight-bold">{{ formatRupiah(item.nominal) }}</span>
+          <span class="font-weight-bold">{{ formatMoney(item.nominal, item.mata_uang) }}</span>
         </template>
         <template #bottom>
           <VDivider />
           <div class="d-flex justify-end pa-4 text-h6">
-            TOTAL: {{ formatRupiah(total) }}
+            TOTAL: {{ formatCurrencyTotals(totalByCurrency, total) }}
           </div>
         </template>
         <template #no-data>

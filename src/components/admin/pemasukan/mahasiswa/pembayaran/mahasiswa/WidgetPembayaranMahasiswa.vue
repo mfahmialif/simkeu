@@ -1,5 +1,5 @@
 <script setup>
-import { formatRupiah } from "@/composables/formatRupiah";
+import { formatMoney, formatRupiah } from "@/composables/formatRupiah";
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 
@@ -49,9 +49,77 @@ const selectedPaymentMethod = ref(null);
 const detailProdiData = ref([]);
 const loadingDetailProdi = ref(false);
 
+const defaultMataUang = { kode: "IDR", nama: "Rupiah", simbol: "Rp" };
+
+const normalizeMataUang = (item = {}) => ({
+  kode: String(item?.mata_uang?.kode ?? item?.mata_uang_kode ?? defaultMataUang.kode).toUpperCase(),
+  nama: item?.mata_uang?.nama ?? item?.mata_uang_nama ?? defaultMataUang.nama,
+  simbol: item?.mata_uang?.simbol ?? item?.mata_uang_simbol ?? defaultMataUang.simbol,
+});
+
+const formatByCurrency = (rows, fallbackValue = 0) => {
+  const data = Array.isArray(rows) ? rows : [];
+  const filtered = data.filter((row) => Number(row.total || 0) > 0);
+
+  if (!filtered.length) {
+    return formatRupiah(fallbackValue || 0);
+  }
+
+  return filtered
+    .map((row) => {
+      const mataUang = normalizeMataUang(row);
+      return `${mataUang.kode}: ${formatMoney(row.total, mataUang)}`;
+    })
+    .join(" | ");
+};
+
+const getCurrencyRows = (rows, fallbackValue = 0) => {
+  const data = Array.isArray(rows) ? rows : [];
+  const filtered = data.filter(row => Number(row.total || 0) > 0);
+  const source = filtered.length
+    ? filtered
+    : [{ mata_uang: defaultMataUang, total: fallbackValue || 0 }];
+
+  return source
+    .map(row => {
+      const mataUang = normalizeMataUang(row);
+
+      return {
+        key: mataUang.kode,
+        kode: mataUang.kode,
+        amount: formatMoney(row.total, mataUang),
+      };
+    })
+    .sort((left, right) => {
+      if (left.kode === right.kode) return 0;
+      if (left.kode === "IDR") return -1;
+      if (right.kode === "IDR") return 1;
+
+      return left.kode.localeCompare(right.kode);
+    });
+};
+
+const formatRowMoney = (row, field) =>
+  formatMoney(row?.[field] || 0, normalizeMataUang(row));
+
+const sumRowsByCurrency = (rows, field) => {
+  const map = new Map();
+
+  for (const row of rows || []) {
+    const mataUang = normalizeMataUang(row);
+    const key = mataUang.kode;
+    const current = map.get(key) || { mata_uang: mataUang, total: 0 };
+    current.total += Number(row?.[field] || 0);
+    map.set(key, current);
+  }
+
+  return Array.from(map.values());
+};
+
 const openDetailProdi = async (row) => {
   const category = typeof row === 'string' ? row : row?.tagihan_nama;
   const paymentMethod = typeof row === 'string' ? null : row?.jp_nama;
+  const mataUangKode = typeof row === 'string' ? null : row?.mata_uang?.kode;
 
   selectedCategory.value = category;
   selectedPaymentMethod.value = paymentMethod;
@@ -65,6 +133,7 @@ const openDetailProdi = async (row) => {
       ...(props.jenisPembayaranId && props.jenisPembayaranId !== 'all' && { jenis_pembayaran_id: props.jenisPembayaranId }),
       ...((!props.jenisPembayaranId || props.jenisPembayaranId === 'all') && paymentMethod && { payment_method: paymentMethod }),
       ...(props.userId && props.userId !== 'all' && { user_id: props.userId }),
+      ...(mataUangKode && { mata_uang_kode: mataUangKode }),
       ...(props.tanggalMulai && { tanggal_mulai: props.tanggalMulai }),
       ...(props.tanggalAkhir && { tanggal_akhir: props.tanggalAkhir }),
       period: selectedData.value?.title || 'Harian'
@@ -109,6 +178,7 @@ const widgetData = ref([
     icon: "ri-calendar-event-line",
     change: 0,
     breakdown: {},
+    currencies: [],
   },
   {
     title: "Mingguan",
@@ -116,6 +186,7 @@ const widgetData = ref([
     icon: "ri-calendar-todo-line",
     change: 0,
     breakdown: {},
+    currencies: [],
   },
   {
     title: "Bulanan",
@@ -123,6 +194,7 @@ const widgetData = ref([
     icon: "ri-calendar-2-line",
     change: 0,
     breakdown: {},
+    currencies: [],
   },
   {
     title: "Keseluruhan",
@@ -130,6 +202,7 @@ const widgetData = ref([
     icon: "ri-wallet-3-line",
     change: 0,
     breakdown: {},
+    currencies: [],
   },
 ]);
 
@@ -155,13 +228,21 @@ const fetchStatistics = async () => {
       const mapPeriod = (periodName, index) => {
         const periodData = response.data[periodName];
         if (periodData) {
-          widgetData.value[index].value = formatRupiah(periodData.Keseluruhan?.value || 0);
+          widgetData.value[index].currencies = getCurrencyRows(
+            periodData.Keseluruhan?.by_currency,
+            periodData.Keseluruhan?.value || 0
+          );
+          widgetData.value[index].value = formatByCurrency(
+            periodData.Keseluruhan?.by_currency,
+            periodData.Keseluruhan?.value || 0
+          );
           widgetData.value[index].change = periodData.Keseluruhan?.change || 0;
           widgetData.value[index].breakdown = {};
           
           for (const [gender, item] of Object.entries(periodData)) {
             widgetData.value[index].breakdown[gender] = {
-              value: formatRupiah(item.value || 0),
+              value: formatByCurrency(item.by_currency, item.value || 0),
+              by_currency: item.by_currency || [],
               change: item.change || 0
             };
           }
@@ -305,9 +386,9 @@ const getDateInfo = (title) => {
         </VRow>
         <VRow v-else>
           <template v-for="(data, index) in filteredWidgetData" :key="index">
-            <VCol cols="12" sm="6" :md="widgetColSize" class="px-6">
+            <VCol cols="12" sm="6" :md="widgetColSize" class="stat-widget-col px-3 px-lg-4">
               <div
-                class="d-flex justify-space-between cursor-pointer"
+                class="stat-widget d-flex justify-space-between cursor-pointer"
                 @click="openDetail(data)"
                 :class="
                   $vuetify.display.xs
@@ -321,22 +402,27 @@ const getDateInfo = (title) => {
                     : ''
                 "
               >
-                <div class="d-flex flex-column gap-y-1">
-                  <p class="text-capitalize mb-0">
+                <div class="stat-widget-content d-flex flex-column gap-y-1">
+                  <p class="stat-widget-title text-capitalize mb-0">
                     Pemasukan {{ data.title }}
                   </p>
 
-                  <div class="text-caption text-disabled" style="font-size: 11px !important;">
+                  <div class="stat-widget-date text-caption text-disabled">
                     {{ getDateInfo(data.title) }}
                   </div>
 
-                  <div style="min-width: 0;">
-                    <h5 class="text-h5 text-primary font-weight-bold text-truncate" :title="data.value">
-                      {{ data.value }}
-                    </h5>
+                  <div class="stat-currency-list" :title="data.value">
+                    <div
+                      v-for="currency in data.currencies"
+                      :key="currency.key"
+                      class="stat-currency-row"
+                    >
+                      <span class="stat-currency-code">{{ currency.kode }}</span>
+                      <span class="stat-currency-amount">{{ currency.amount }}</span>
+                    </div>
                   </div>
 
-                  <div class="d-flex align-center">
+                  <div class="stat-widget-footer d-flex align-center">
                     <div class="text-no-wrap me-2 text-body-2 text-disabled">
                       Total Data
                     </div>
@@ -350,7 +436,7 @@ const getDateInfo = (title) => {
                   </div>
                 </div>
 
-                <VAvatar variant="tonal" rounded="lg" size="44" color="primary">
+                <VAvatar class="stat-widget-icon" variant="tonal" rounded="lg" size="44" color="primary">
                   <VIcon :icon="data.icon" size="28" />
                 </VAvatar>
               </div>
@@ -365,7 +451,7 @@ const getDateInfo = (title) => {
               "
               vertical
               inset
-              length="92"
+              length="128"
             />
           </template>
         </VRow>
@@ -428,15 +514,15 @@ const getDateInfo = (title) => {
                   <td>
                     <span class="text-body-1">{{ row.jp_nama }}</span>
                   </td>
-                  <td>{{ formatRupiah(row.laki_laki) }}</td>
-                  <td>{{ formatRupiah(row.perempuan) }}</td>
-                  <td class="text-primary font-weight-bold">{{ formatRupiah(row.keseluruhan) }}</td>
+                  <td>{{ formatRowMoney(row, "laki_laki") }}</td>
+                  <td>{{ formatRowMoney(row, "perempuan") }}</td>
+                  <td class="text-primary font-weight-bold">{{ formatRowMoney(row, "keseluruhan") }}</td>
                 </tr>
                 <tr style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
                   <td class="ps-4" colspan="2"><strong>Total</strong></td>
-                  <td><strong>{{ formatRupiah(harianDetailData.reduce((sum, row) => sum + Number(row.laki_laki), 0)) }}</strong></td>
-                  <td><strong>{{ formatRupiah(harianDetailData.reduce((sum, row) => sum + Number(row.perempuan), 0)) }}</strong></td>
-                  <td class="text-primary"><strong>{{ formatRupiah(harianDetailData.reduce((sum, row) => sum + Number(row.keseluruhan), 0)) }}</strong></td>
+                  <td><strong>{{ formatByCurrency(sumRowsByCurrency(harianDetailData, "laki_laki")) }}</strong></td>
+                  <td><strong>{{ formatByCurrency(sumRowsByCurrency(harianDetailData, "perempuan")) }}</strong></td>
+                  <td class="text-primary"><strong>{{ formatByCurrency(sumRowsByCurrency(harianDetailData, "keseluruhan")) }}</strong></td>
                 </tr>
               </tbody>
             </VTable>
@@ -469,15 +555,15 @@ const getDateInfo = (title) => {
                   <td>
                     <span class="text-body-1">{{ row.jp_nama }}</span>
                   </td>
-                  <td>{{ formatRupiah(row.laki_laki) }}</td>
-                  <td>{{ formatRupiah(row.perempuan) }}</td>
-                  <td class="text-primary font-weight-bold">{{ formatRupiah(row.keseluruhan) }}</td>
+                  <td>{{ formatRowMoney(row, "laki_laki") }}</td>
+                  <td>{{ formatRowMoney(row, "perempuan") }}</td>
+                  <td class="text-primary font-weight-bold">{{ formatRowMoney(row, "keseluruhan") }}</td>
                 </tr>
                 <tr style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
                   <td class="ps-4" colspan="2"><strong>Total</strong></td>
-                  <td><strong>{{ formatRupiah(semuaDetailData.reduce((sum, row) => sum + Number(row.laki_laki), 0)) }}</strong></td>
-                  <td><strong>{{ formatRupiah(semuaDetailData.reduce((sum, row) => sum + Number(row.perempuan), 0)) }}</strong></td>
-                  <td class="text-primary"><strong>{{ formatRupiah(semuaDetailData.reduce((sum, row) => sum + Number(row.keseluruhan), 0)) }}</strong></td>
+                  <td><strong>{{ formatByCurrency(sumRowsByCurrency(semuaDetailData, "laki_laki")) }}</strong></td>
+                  <td><strong>{{ formatByCurrency(sumRowsByCurrency(semuaDetailData, "perempuan")) }}</strong></td>
+                  <td class="text-primary"><strong>{{ formatByCurrency(sumRowsByCurrency(semuaDetailData, "keseluruhan")) }}</strong></td>
                 </tr>
               </tbody>
             </VTable>
@@ -514,18 +600,18 @@ const getDateInfo = (title) => {
                   <td class="ps-4">
                     <span class="text-body-1 font-weight-medium">{{ row.prodi_nama }}</span>
                   </td>
-                  <td>{{ formatRupiah(row.laki_laki) }}</td>
-                  <td>{{ formatRupiah(row.perempuan) }}</td>
-                  <td class="text-primary font-weight-bold">{{ formatRupiah(row.keseluruhan) }}</td>
+                  <td>{{ formatRowMoney(row, "laki_laki") }}</td>
+                  <td>{{ formatRowMoney(row, "perempuan") }}</td>
+                  <td class="text-primary font-weight-bold">{{ formatRowMoney(row, "keseluruhan") }}</td>
                 </tr>
                 <tr v-if="detailProdiData.length === 0">
                   <td colspan="4" class="text-center text-disabled py-4">Tidak ada data.</td>
                 </tr>
                 <tr v-else style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
                   <td class="ps-4"><strong>Total</strong></td>
-                  <td><strong>{{ formatRupiah(detailProdiData.reduce((sum, row) => sum + Number(row.laki_laki), 0)) }}</strong></td>
-                  <td><strong>{{ formatRupiah(detailProdiData.reduce((sum, row) => sum + Number(row.perempuan), 0)) }}</strong></td>
-                  <td class="text-primary"><strong>{{ formatRupiah(detailProdiData.reduce((sum, row) => sum + Number(row.keseluruhan), 0)) }}</strong></td>
+                  <td><strong>{{ formatByCurrency(sumRowsByCurrency(detailProdiData, "laki_laki")) }}</strong></td>
+                  <td><strong>{{ formatByCurrency(sumRowsByCurrency(detailProdiData, "perempuan")) }}</strong></td>
+                  <td class="text-primary"><strong>{{ formatByCurrency(sumRowsByCurrency(detailProdiData, "keseluruhan")) }}</strong></td>
                 </tr>
               </tbody>
             </VTable>
@@ -555,11 +641,100 @@ const getDateInfo = (title) => {
   }
 }
 
+.stat-widget-col {
+  min-width: 0;
+}
+
+.stat-widget {
+  min-width: 0;
+  min-height: 144px;
+  gap: 12px;
+}
+
+.stat-widget-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.stat-widget-title {
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.stat-widget-date {
+  min-height: 18px;
+  font-size: 11px !important;
+  line-height: 1.35;
+}
+
+.stat-currency-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-block: 6px;
+  gap: 4px;
+}
+
+.stat-currency-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: baseline;
+  min-width: 0;
+  gap: 6px;
+}
+
+.stat-currency-code {
+  color: rgba(var(--v-theme-primary), 0.78);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.stat-currency-amount {
+  min-width: 0;
+  color: rgb(var(--v-theme-primary));
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.stat-widget-footer {
+  margin-block-start: auto;
+  padding-block-start: 4px;
+}
+
+.stat-widget-icon {
+  flex: 0 0 auto;
+  margin-block-start: 4px;
+}
+
 .hover-row {
   transition: background-color 0.2s ease;
   
   &:hover {
     background-color: rgba(var(--v-theme-primary), 0.08);
+  }
+}
+
+@media (max-width: 1279px) {
+  .stat-widget {
+    min-height: 136px;
+  }
+
+  .stat-currency-amount {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 959px) {
+  .stat-widget {
+    min-height: 132px;
+  }
+
+  .stat-currency-amount {
+    font-size: 1.1rem;
   }
 }
 </style>

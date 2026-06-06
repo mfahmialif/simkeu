@@ -1,4 +1,5 @@
 <script setup>
+import { formatMoney } from "@/composables/formatRupiah";
 import { ref, reactive, computed, watch, onMounted } from "vue";
 
 const chartColors = {
@@ -14,22 +15,37 @@ const borderColor = "rgba(var(--v-border-color), var(--v-border-opacity))";
 
 // ==== STATE REAKTIF DARI API ====
 const categories = ref([]);
-const penerimaan = ref([]);
-const pengeluaran = ref([]);
+const seriesByCurrency = ref([]);
+const selectedCurrency = ref("IDR");
+
+const currencyOptions = computed(() =>
+  seriesByCurrency.value.map((item) => ({
+    title: `${item.mata_uang?.kode || "IDR"} - ${item.mata_uang?.nama || "Rupiah"}`,
+    value: String(item.mata_uang?.kode || "IDR").toUpperCase(),
+  })),
+);
+
+const activeCurrency = computed(() =>
+  seriesByCurrency.value.find(
+    (item) =>
+      String(item.mata_uang?.kode || "IDR").toUpperCase() === selectedCurrency.value,
+  ) || {
+    mata_uang: { kode: "IDR", simbol: "Rp" },
+    penerimaan: [],
+    pengeluaran: [],
+  },
+);
+
+const penerimaan = computed(() => activeCurrency.value.penerimaan || []);
+const pengeluaran = computed(() => activeCurrency.value.pengeluaran || []);
 
 // Series mengikuti state di atas
 const series = computed(() => [
-  { name: "Pemasukan (Rp)", type: "column", data: penerimaan.value },
-  { name: "Pengeluaran (Rp)", type: "line", data: pengeluaran.value },
+  { name: `Pemasukan (${selectedCurrency.value})`, type: "column", data: penerimaan.value },
+  { name: `Pengeluaran (${selectedCurrency.value})`, type: "line", data: pengeluaran.value },
 ]);
 
-// Formatter Rupiah
-const fmtIDR = (v) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(v);
+const fmtMoney = (value) => formatMoney(value, activeCurrency.value.mata_uang);
 
 // Opsi chart reactive
 const shipmentConfig = reactive({
@@ -87,7 +103,7 @@ const shipmentConfig = reactive({
   },
   yaxis: [
     {
-      seriesName: "Penerimaan (Rp)",
+      seriesName: "Pemasukan (IDR)",
       labels: {
         style: {
           colors: labelColor,
@@ -95,13 +111,13 @@ const shipmentConfig = reactive({
           fontFamily: "Inter",
           fontWeight: 400,
         },
-        formatter: (val) => fmtIDR(val),
+        formatter: (val) => fmtMoney(val),
       },
       tooltip: { enabled: true },
     },
     {
       opposite: true,
-      seriesName: "Pengeluaran (Rp)",
+      seriesName: "Pengeluaran (IDR)",
       labels: {
         style: {
           colors: labelColor,
@@ -109,14 +125,14 @@ const shipmentConfig = reactive({
           fontFamily: "Inter",
           fontWeight: 400,
         },
-        formatter: (val) => fmtIDR(val),
+        formatter: (val) => fmtMoney(val),
       },
     },
   ],
   tooltip: {
     shared: true,
     intersect: false,
-    y: { formatter: (val) => fmtIDR(val) },
+    y: { formatter: (val) => fmtMoney(val) },
   },
   responsive: [
     {
@@ -143,6 +159,11 @@ watch(categories, (cats) => {
   shipmentConfig.xaxis.tickAmount = (cats?.length || 10);
 });
 
+watch(selectedCurrency, (kode) => {
+  shipmentConfig.yaxis[0].seriesName = `Pemasukan (${kode})`;
+  shipmentConfig.yaxis[1].seriesName = `Pengeluaran (${kode})`;
+});
+
 // FETCH DATA DARI API
 const isLoading = ref(false);
 const fetchData = async () => {
@@ -155,15 +176,28 @@ const fetchData = async () => {
       return;
     }
 
-    const len = Math.min(
-      response.categories?.length ?? 0,
-      response.penerimaan?.length ?? 0,
-      response.pengeluaran?.length ?? 0
-    );
+    categories.value = response.categories || [];
+    seriesByCurrency.value = (response.series_by_currency || []).map((item) => ({
+      ...item,
+      penerimaan: (item.penerimaan || []).map(Number),
+      pengeluaran: (item.pengeluaran || []).map(Number),
+    }));
 
-    categories.value  = (response.categories || []).slice(0, len);
-    penerimaan.value  = (response.penerimaan || []).slice(0, len);
-    pengeluaran.value = (response.pengeluaran || []).slice(0, len);
+    if (!seriesByCurrency.value.length) {
+      seriesByCurrency.value = [{
+        key: "kode:IDR",
+        mata_uang: { kode: "IDR", nama: "Rupiah", simbol: "Rp" },
+        penerimaan: (response.penerimaan || []).map(Number),
+        pengeluaran: (response.pengeluaran || []).map(Number),
+      }];
+    }
+
+    if (!currencyOptions.value.some((item) => item.value === selectedCurrency.value)) {
+      selectedCurrency.value =
+        currencyOptions.value.find((item) => item.value === "IDR")?.value
+        || currencyOptions.value[0]?.value
+        || "IDR";
+    }
   } catch (e) {
     console.error(e);
     showSnackbar({ text: "Terjadi kesalahan jaringan", color: "error" });
@@ -189,9 +223,18 @@ onMounted(fetchData);
         subtitle="Data Statistik Pemasukan harian UII Dalwa"
       >
         <template #append>
-          <VBtnGroup density="compact" variant="outlined" divided>
-            <VBtn color="primary">{{ month }}</VBtn>
-          </VBtnGroup>
+          <div class="d-flex align-center gap-2">
+            <VSelect
+              v-model="selectedCurrency"
+              :items="currencyOptions"
+              density="compact"
+              hide-details
+              label="Mata Uang"
+              style="inline-size: 150px"
+              :disabled="currencyOptions.length <= 1"
+            />
+            <VChip color="primary" variant="tonal">{{ month }}</VChip>
+          </div>
         </template>
       </VCardItem>
 

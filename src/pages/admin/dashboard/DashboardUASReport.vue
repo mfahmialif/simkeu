@@ -1,4 +1,5 @@
 <script setup>
+import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
 import { ref, watch, onMounted, computed } from "vue";
 
@@ -49,16 +50,10 @@ const isLoading = ref(false);
 const summaryData = ref({
   total_mahasiswa_bayar: 0,
   total_amount: 0,
+  total_amount_by_currency: [],
   total_lunas: 0,
   total_belum_lunas: 0,
 });
-
-const toIDR = (n) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(n);
 
 const fetchSummary = async () => {
   if (!selectedThAkademik.value) return;
@@ -82,6 +77,7 @@ const fetchSummary = async () => {
     summaryData.value = response.data ?? {
       total_mahasiswa_bayar: 0,
       total_amount: 0,
+      total_amount_by_currency: [],
       total_lunas: 0,
       total_belum_lunas: 0,
     };
@@ -209,7 +205,10 @@ const statCards = computed(() => [
   },
   {
     title: "Total Pembayaran",
-    value: toIDR(summaryData.value.total_amount),
+    value: formatCurrencyTotals(
+      summaryData.value.total_amount_by_currency,
+      summaryData.value.total_amount,
+    ),
     icon: "ri-money-dollar-circle-line",
     color: "primary",
     isAmount: true,
@@ -435,9 +434,9 @@ onMounted(async () => {
                 </td>
                 <td><span class="text-caption">{{ row.prodi_nama }}</span></td>
                 <td><span class="text-caption">{{ row.tagihan_nama }}</span></td>
-                <td>{{ toIDR(row.tagihan_amount) }}</td>
-                <td>{{ toIDR(row.total_paid) }}</td>
-                <td>{{ toIDR(row.sisa) }}</td>
+                <td>{{ formatMoney(row.tagihan_amount, row.mata_uang) }}</td>
+                <td>{{ formatMoney(row.total_paid, row.mata_uang) }}</td>
+                <td>{{ formatMoney(row.sisa, row.mata_uang) }}</td>
                 <td>
                   <VChip
                     :color="row.is_lunas ? 'success' : 'warning'"
@@ -498,9 +497,8 @@ onMounted(async () => {
   overflow: hidden;
 
   .text-subtitle-1 {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
   }
 }
 </style>

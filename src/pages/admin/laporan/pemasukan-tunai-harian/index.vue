@@ -4,6 +4,7 @@ import { useTheme } from "vuetify";
 import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js'
 import 'flatpickr/dist/plugins/monthSelect/style.css'
 import { downloadFileExport } from "@/composables/exportFile";
+import { formatCurrencyTotals } from "@/composables/formatRupiah";
 
 const theme = useTheme();
 
@@ -58,11 +59,6 @@ const hasData = ref(false);
 const jkInfo = ref("");
 
 
-const formatRupiah = (val) => {
-  if (!val || val === 0) return "-";
-  return "Rp " + new Intl.NumberFormat("id-ID").format(val);
-};
-
 const formatTanggal = (dateStr) => {
   const d = new Date(dateStr);
   return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
@@ -106,6 +102,31 @@ const getReportColumnGroup = (column) => {
 
 const toNumber = (value) => Number(value) || 0;
 
+const mergeCurrencyTotals = (...groups) => {
+  const totals = new Map();
+
+  groups.flat().forEach((group) => {
+    const mataUang = group?.mata_uang || {};
+    const kode = String(mataUang.kode || "IDR").toUpperCase();
+    const key = `kode:${kode}`;
+    const current = totals.get(key) || {
+      key,
+      mata_uang: {
+        id: mataUang.id ?? null,
+        kode,
+        nama: mataUang.nama || kode,
+        simbol: mataUang.simbol || (kode === "IDR" ? "Rp" : kode),
+      },
+      total: 0,
+    };
+
+    current.total += toNumber(group?.total);
+    totals.set(key, current);
+  });
+
+  return [...totals.values()];
+};
+
 const groupReportColumns = (rawColumns = []) => {
   const groupedKeys = Object.fromEntries(
     REPORT_COLUMN_GROUPS.map((group) => [group.key, []])
@@ -144,11 +165,15 @@ const groupReportRow = (row = {}, groupedKeys = {}) => {
     if (!keys.length) return;
 
     groupedRow[groupKey] = keys.reduce((sum, key) => sum + toNumber(row[key]), 0);
+    groupedRow[`${groupKey}_by_currency`] = mergeCurrencyTotals(
+      keys.flatMap(key => row[`${key}_by_currency`] || []),
+    );
 
     keys
       .filter(key => key !== groupKey)
       .forEach((key) => {
         delete groupedRow[key];
+        delete groupedRow[`${key}_by_currency`];
       });
   });
 
@@ -164,11 +189,15 @@ const groupReportTotals = (rawTotals = {}, groupedKeys = {}) => {
     if (!keys.length) return;
 
     groupedTotals[groupKey] = keys.reduce((sum, key) => sum + toNumber(rawTotals[key]), 0);
+    groupedTotals[`${groupKey}_by_currency`] = mergeCurrencyTotals(
+      keys.flatMap(key => rawTotals[`${key}_by_currency`] || []),
+    );
 
     keys
       .filter(key => key !== groupKey)
       .forEach((key) => {
         delete groupedTotals[key];
+        delete groupedTotals[`${key}_by_currency`];
       });
   });
 
@@ -583,10 +612,10 @@ onMounted(() => {
                   class="col-amount text-right"
                   :class="{ 'has-value': row[col.key] > 0 }"
                 >
-                  {{ formatRupiah(row[col.key]) }}
+                  {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
                 </td>
                 <td class="col-total text-right" :class="{ 'has-value-total': row.jumlah > 0 }">
-                  {{ formatRupiah(row.jumlah) }}
+                  {{ formatCurrencyTotals(row.jumlah_by_currency, row.jumlah) }}
                 </td>
               </tr>
             </tbody>
@@ -598,10 +627,10 @@ onMounted(() => {
                   :key="col.key"
                   class="col-amount text-right"
                 >
-                  {{ formatRupiah(totals[col.key]) }}
+                  {{ formatCurrencyTotals(totals[`${col.key}_by_currency`], totals[col.key]) }}
                 </td>
                 <td class="col-total text-right">
-                  {{ formatRupiah(totals.jumlah) }}
+                  {{ formatCurrencyTotals(totals.jumlah_by_currency, totals.jumlah) }}
                 </td>
               </tr>
             </tfoot>
@@ -618,7 +647,7 @@ onMounted(() => {
                 </div>
                 <div>
                   <span class="summary-label">Total Pemasukan</span>
-                  <span class="summary-value">{{ formatRupiah(totals.jumlah) }}</span>
+                  <span class="summary-value">{{ formatCurrencyTotals(totals.jumlah_by_currency, totals.jumlah) }}</span>
                 </div>
               </div>
             </VCol>
@@ -691,10 +720,10 @@ onMounted(() => {
                   class="col-amount text-right"
                   :class="{ 'has-value': row[col.key] > 0 }"
                 >
-                  {{ formatRupiah(row[col.key]) }}
+                  {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
                 </td>
                 <td class="col-total text-right" :class="{ 'has-value-total': row.jumlah > 0 }">
-                  {{ formatRupiah(row.jumlah) }}
+                  {{ formatCurrencyTotals(row.jumlah_by_currency, row.jumlah) }}
                 </td>
               </tr>
             </tbody>
@@ -706,10 +735,10 @@ onMounted(() => {
                   :key="col.key"
                   class="col-amount text-right"
                 >
-                  {{ formatRupiah(monthInfo.totals[col.key]) }}
+                  {{ formatCurrencyTotals(monthInfo.totals[`${col.key}_by_currency`], monthInfo.totals[col.key]) }}
                 </td>
                 <td class="col-total text-right">
-                  {{ formatRupiah(monthInfo.totals.jumlah) }}
+                  {{ formatCurrencyTotals(monthInfo.totals.jumlah_by_currency, monthInfo.totals.jumlah) }}
                 </td>
               </tr>
             </tfoot>
