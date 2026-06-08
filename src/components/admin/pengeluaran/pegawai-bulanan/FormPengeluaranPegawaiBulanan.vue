@@ -1,4 +1,5 @@
 <script setup>
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { formatRupiah } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
@@ -67,6 +68,7 @@ const hari = ref(null);
 const barokahHarian = ref(null);
 const barokahBulanan = ref(null);
 const jenisPembayaran = ref("CUS BSI");
+const rekapId = ref(null);
 const keterangan = ref("");
 const disabled = ref(false);
 
@@ -144,6 +146,7 @@ const fillFormFromData = (data) => {
   barokahHarian.value = data.barokah_harian ?? 0;
   barokahBulanan.value = data.barokah_bulanan ?? 0;
   jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI";
+  rekapId.value = data.rekap_id ?? null;
   keterangan.value = data.keterangan ?? "";
 };
 
@@ -222,6 +225,7 @@ const onSubmit = async () => {
   formData.append("barokah_bulanan", barokahBulanan.value ?? 0);
   formData.append("total", total.value);
   formData.append("jenis_pembayaran", jenisPembayaran.value);
+  formData.append("rekap_id", rekapId.value ?? "");
   formData.append("keterangan", keterangan.value ?? "");
   formData.append("_method", method);
 
@@ -289,6 +293,14 @@ defineExpose({
     <VCardText>
       <VForm ref="refForm" @submit.prevent="onSubmit">
         <VRow>
+          <VCol cols="12">
+            <PengeluaranRekapSelect
+              v-model="rekapId"
+              :endpoint="endpoint"
+              label="Rekap"
+            />
+          </VCol>
+
           <VCol v-if="showMainDataInForm" cols="12" :md="showPeriod ? 4 : 6">
             <AppDateTimePicker
               v-model="tanggal"

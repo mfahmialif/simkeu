@@ -1,4 +1,5 @@
 <script setup>
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { showSnackbar } from "@/composables/snackbar";
 
 const props = defineProps({
@@ -50,6 +51,7 @@ const barokahSempro = ref(0);
 const jamSempro = ref(0);
 const keteranganSempro = ref("");
 const jenisPembayaran = ref("CUS BSI");
+const rekapId = ref(null);
 const buktiTransfer = ref(null);
 const existingBuktiTransferUrl = ref(null);
 const keterangan = ref("");
@@ -158,6 +160,7 @@ const resetFormValues = () => {
   jamSempro.value = 0;
   keteranganSempro.value = "";
   jenisPembayaran.value = "CUS BSI";
+  rekapId.value = null;
   buktiTransfer.value = null;
   existingBuktiTransferUrl.value = null;
   keterangan.value = "";
@@ -179,6 +182,7 @@ const fillFormFromData = (data) => {
   jamSempro.value = data.jam_sempro ?? (numberValue(data.barokah_sempro) > 0 ? 1 : 0);
   keteranganSempro.value = data.keterangan_sempro ?? "";
   jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI";
+  rekapId.value = data.rekap_id ?? null;
   buktiTransfer.value = null;
   existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null;
   keterangan.value = data.keterangan ?? "";
@@ -340,6 +344,7 @@ const onSubmit = async () => {
   formData.append("jam_sempro", jamSempro.value ?? 0);
   formData.append("keterangan_sempro", keteranganSempro.value ?? "");
   formData.append("jenis_pembayaran", jenisPembayaran.value);
+  formData.append("rekap_id", rekapId.value ?? "");
   formData.append("keterangan", keterangan.value ?? "");
   formData.append("total", total.value);
   formData.append("_method", method);
@@ -445,6 +450,16 @@ defineExpose({
           >
             Data sudah pernah diinputkan, silahkan mengisi untuk memperbarui data.
           </VAlert>
+
+          <VRow>
+            <VCol cols="12">
+              <PengeluaranRekapSelect
+                v-model="rekapId"
+                endpoint="/admin/pengeluaran/dosen"
+                label="Rekap"
+              />
+            </VCol>
+          </VRow>
 
           <section v-if="showTanggalInForm" class="form-section">
             <div class="section-heading">

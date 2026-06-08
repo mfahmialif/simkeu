@@ -1,5 +1,8 @@
 <script setup>
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
+import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
+import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { downloadFileExport } from "@/composables/exportFile";
 import { formatRupiah } from "@/composables/formatRupiah";
 import { copyTextToClipboard } from "@/utils/clipboard";
@@ -18,9 +21,23 @@ const filterMode = ref("harian");
 const tanggalHarian = ref(null);
 const tanggalMulai = ref(null);
 const tanggalAkhir = ref(null);
+const selectedRekapId = ref(null);
+const selectAllPages = ref(false);
 const isLoadingExcel = ref(false);
 const isLoadingBsiExcel = ref(false);
 const isLoadingBsiCopy = ref(false);
+const hasDateFilter = computed(() => !!(
+  tanggalHarian.value
+  || tanggalMulai.value
+  || tanggalAkhir.value
+));
+const hasContextFilter = computed(() => !!selectedRekapId.value || hasDateFilter.value);
+const contextFilterTitle = computed(() => {
+  if (selectedRekapId.value) return "Pengeluaran Sesuai Data Rekap";
+  if (tanggalHarian.value) return "Pengeluaran Sesuai Tanggal";
+
+  return "Pengeluaran Sesuai Rentang Tanggal";
+});
 
 const filterModeOptions = [
   { title: "Harian", value: "harian" },
@@ -42,6 +59,17 @@ const dateFilterPayload = computed(() => {
     ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
   };
 });
+const requestFilterPayload = computed(() => ({
+  ...dateFilterPayload.value,
+  ...(selectedRekapId.value && { rekap_id: selectedRekapId.value }),
+}));
+const batchFilterPayload = computed(() => ({
+  search: search.value,
+  ...requestFilterPayload.value,
+}));
+const selectedIds = computed(() => selectedRows.value
+  .map(row => (typeof row === "object" ? row.id : row))
+  .filter(Boolean));
 
 const fetchData = async () => {
   try {
@@ -55,7 +83,7 @@ const fetchData = async () => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         search: search.value,
-        ...dateFilterPayload.value,
+        ...requestFilterPayload.value,
       },
     });
 
@@ -134,7 +162,16 @@ const clearFilter = () => {
   tanggalHarian.value = null;
   tanggalMulai.value = null;
   tanggalAkhir.value = null;
+  selectedRekapId.value = null;
+  selectedRows.value = [];
+  selectAllPages.value = false;
   page.value = 1;
+  fetchData();
+};
+
+const clearBatchSelection = () => {
+  selectedRows.value = [];
+  selectAllPages.value = false;
   fetchData();
 };
 
@@ -154,7 +191,7 @@ const exportExcel = async () => {
       },
       body: {
         search: search.value,
-        ...dateFilterPayload.value,
+        ...requestFilterPayload.value,
       },
     });
 
@@ -189,7 +226,7 @@ const exportBsiExcel = async () => {
       },
       body: {
         search: search.value,
-        ...dateFilterPayload.value,
+        ...requestFilterPayload.value,
       },
     });
 
@@ -220,7 +257,7 @@ const copyBsiData = async () => {
       method: "GET",
       body: {
         search: search.value,
-        ...dateFilterPayload.value,
+        ...requestFilterPayload.value,
       },
     });
 
@@ -254,13 +291,27 @@ watch(filterMode, () => {
   tanggalHarian.value = null;
   tanggalMulai.value = null;
   tanggalAkhir.value = null;
+  selectedRows.value = [];
+  selectAllPages.value = false;
   page.value = 1;
   fetchData();
 });
 
-watch([tanggalHarian, tanggalMulai, tanggalAkhir, search], () => {
+watch([tanggalHarian, tanggalMulai, tanggalAkhir, selectedRekapId, search], () => {
+  selectedRows.value = [];
+  selectAllPages.value = false;
   page.value = 1;
   fetchData();
+});
+
+watch(selectAllPages, (enabled) => {
+  selectedRows.value = enabled ? dataTable.value.map(item => item.id) : [];
+});
+
+watch(dataTable, () => {
+  if (selectAllPages.value) {
+    selectedRows.value = dataTable.value.map(item => item.id);
+  }
 });
 
 onMounted(() => {
@@ -273,10 +324,18 @@ onMounted(() => {
     <PengeluaranStatCards
       :stats="stats"
       :loading="initialLoading"
+      :filter-active="hasContextFilter"
+      :filter-title="contextFilterTitle"
+    />
+
+    <PengeluaranRekapList
+      title="Barokah Pegawai Kegiatan"
+      endpoint="/admin/pengeluaran/dosen-kegiatan"
+      base-path="/admin/pengeluaran/dosen-kegiatan"
     />
 
     <VRow class="mb-3 filter-controls-row">
-      <VCol cols="12" md="3" class="filter-control-col">
+      <VCol cols="12" md="2" class="filter-control-col">
         <VSelect
           v-model="filterMode"
           :items="filterModeOptions"
@@ -288,7 +347,7 @@ onMounted(() => {
       <VCol
         v-if="filterMode === 'harian'"
         cols="12"
-        md="6"
+        md="3"
         class="filter-control-col"
       >
         <AppDateTimePicker
@@ -305,7 +364,7 @@ onMounted(() => {
       </VCol>
 
       <template v-else>
-        <VCol cols="12" md="3" class="filter-control-col">
+        <VCol cols="12" md="2" class="filter-control-col">
           <AppDateTimePicker
             v-model="tanggalMulai"
             label="Dari Tanggal"
@@ -319,7 +378,7 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" md="3" class="filter-control-col">
+        <VCol cols="12" md="2" class="filter-control-col">
           <AppDateTimePicker
             v-model="tanggalAkhir"
             label="Sampai Tanggal"
@@ -334,7 +393,20 @@ onMounted(() => {
         </VCol>
       </template>
 
-      <VCol cols="12" md="3" class="filter-control-col">
+      <VCol
+        cols="12"
+        :md="filterMode === 'harian' ? 5 : 4"
+        class="filter-control-col filter-rekap-col"
+      >
+        <PengeluaranRekapSelect
+          v-model="selectedRekapId"
+          endpoint="/admin/pengeluaran/dosen-kegiatan"
+          label="Filter Rekap"
+          :allow-create="false"
+        />
+      </VCol>
+
+      <VCol cols="12" md="2" class="filter-control-col">
         <VBtn
           color="primary"
           class="w-100 filter-reset-btn"
@@ -346,6 +418,15 @@ onMounted(() => {
         </VBtn>
       </VCol>
     </VRow>
+
+    <PengeluaranRekapBulkUpdate
+      v-model:all-pages="selectAllPages"
+      endpoint="/admin/pengeluaran/dosen-kegiatan"
+      :selected-ids="selectedIds"
+      :total-items="totalItems"
+      :filters="batchFilterPayload"
+      @updated="clearBatchSelection"
+    />
 
     <VCard>
       <VCardItem class="pb-4">
@@ -409,10 +490,12 @@ onMounted(() => {
       </VCardText>
 
       <VDataTableServer
+        show-select
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
           { title: 'Pegawai', key: 'nama_pegawai' },
+          { title: 'Rekap', key: 'nama_rekap' },
           { title: 'Nama Kegiatan', key: 'nama_kegiatan' },
           { title: 'Transport', key: 'transport' },
           { title: 'Barokah', key: 'barokah' },
@@ -470,6 +553,10 @@ onMounted(() => {
               - {{ item.jabatan_staff || item.nama_prodi_dosen }}
             </span>
           </div>
+        </template>
+
+        <template #item.nama_rekap="{ item }">
+          {{ item.nama_rekap || "-" }}
         </template>
 
         <template #item.transport="{ item }">

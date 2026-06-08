@@ -1,4 +1,11 @@
 <script setup>
+const props = defineProps({
+  includeWisudaSemesterPendek: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const tahun = ref("");
 const bulan = ref([
   { value: "JANUARI;FEBRUARI;MARET-1", title: "Januari - Maret" },
@@ -32,6 +39,7 @@ const download = async (accept, filename) => {
       body: {
         tahun_rekap: tahun.value,
         bulan_rekap: selectedBulan.value.value,
+        include_wisuda_semester_pendek: props.includeWisudaSemesterPendek,
       },
     });
 

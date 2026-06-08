@@ -377,6 +377,8 @@
     "fDate": true,
     "copyTextToClipboard": true,
     "formatMoney": true,
-    "formatCurrencyTotals": true
+    "formatCurrencyTotals": true,
+    "listenPengeluaranRekapUpdated": true,
+    "notifyPengeluaranRekapUpdated": true
   }
 }

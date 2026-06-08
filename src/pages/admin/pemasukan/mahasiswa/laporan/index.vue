@@ -25,6 +25,7 @@ const isLoadingProdi = ref(false);
 const isLoadingTahunAkademik = ref(false);
 const isLoadingJenisPembayaran = ref(false);
 const isLoadingJenisKelamin = ref(false);
+const includeWisudaSemesterPendek = ref(false);
 
 const fetchProdi = async () => {
   try {
@@ -121,9 +122,22 @@ onMounted(() => {
   <div>
     <VCardTitle>Laporan Pembayaran Mahasiswa</VCardTitle>
 
-    <LaporanHarian :prodi="prodi" :tahunAkademik="tahunAkademik" :jenisPembayaran="jenisPembayaran"
-      :isLoadingProdi="isLoadingProdi" :isLoadingTahunAkademik="isLoadingTahunAkademik"
-      :isLoadingJenisPembayaran="isLoadingJenisPembayaran" />
+    <VCheckbox
+      v-model="includeWisudaSemesterPendek"
+      class="mt-2"
+      label="Sertakan tagihan Wisuda dan Semester Pendek"
+      hide-details
+    />
+
+    <LaporanHarian
+      :prodi="prodi"
+      :tahunAkademik="tahunAkademik"
+      :jenisPembayaran="jenisPembayaran"
+      :isLoadingProdi="isLoadingProdi"
+      :isLoadingTahunAkademik="isLoadingTahunAkademik"
+      :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
+      :includeWisudaSemesterPendek="includeWisudaSemesterPendek"
+    />
 
     <LaporanBulanan
       :prodi="prodi"
@@ -132,6 +146,7 @@ onMounted(() => {
       :isLoadingProdi="isLoadingProdi"
       :isLoadingTahunAkademik="isLoadingTahunAkademik"
       :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
+      :includeWisudaSemesterPendek="includeWisudaSemesterPendek"
     />
 
     <LaporanTahunan
@@ -141,11 +156,12 @@ onMounted(() => {
       :isLoadingProdi="isLoadingProdi"
       :isLoadingTahunAkademik="isLoadingTahunAkademik"
       :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
+      :includeWisudaSemesterPendek="includeWisudaSemesterPendek"
     />
 
-    <LaporanRekap />
+    <LaporanRekap :includeWisudaSemesterPendek="includeWisudaSemesterPendek" />
 
-    <LaporanRekapTahun />
+    <LaporanRekapTahun :includeWisudaSemesterPendek="includeWisudaSemesterPendek" />
 
     <LaporanBayarMahasiswa
       :prodi="prodi"

@@ -1,5 +1,8 @@
 <script setup>
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
+import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
+import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { formatRupiah } from "@/composables/formatRupiah";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
@@ -13,6 +16,15 @@ const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
 const stats = ref({});
+const selectedRekapId = ref(null);
+const selectAllPages = ref(false);
+const hasDateFilter = computed(() => !!(tanggalMulai.value || tanggalAkhir.value));
+const hasContextFilter = computed(() => !!selectedRekapId.value || hasDateFilter.value);
+const contextFilterTitle = computed(() => (
+  selectedRekapId.value
+    ? "Pengeluaran Sesuai Data Rekap"
+    : "Pengeluaran Sesuai Rentang Tanggal"
+));
 
 const numberValue = (value) => Number(value ?? 0);
 const amountValue = (value, fallback = 0) => value ?? fallback ?? 0;
@@ -35,6 +47,18 @@ const subtotalMengajar = (item) => {
 };
 const subtotalSempro = (item) => numberValue(item.barokah_sempro) * numberValue(amountValue(item.jam_sempro, item.barokah_sempro ? 1 : 0));
 const subtotalUas = (item) => numberValue(item.barokah_uas) * numberValue(item.jumlah_mahasiswa_uas);
+const requestFilterPayload = () => ({
+  ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
+  ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
+  ...(selectedRekapId.value && { rekap_id: selectedRekapId.value }),
+});
+const batchFilterPayload = computed(() => ({
+  search: search.value,
+  ...requestFilterPayload(),
+}));
+const selectedIds = computed(() => selectedRows.value
+  .map(row => (typeof row === "object" ? row.id : row))
+  .filter(Boolean));
 
 const fetchData = async () => {
   try {
@@ -48,8 +72,7 @@ const fetchData = async () => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         search: search.value,
-        ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
-        ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
+        ...requestFilterPayload(),
       },
     });
 
@@ -121,6 +144,9 @@ const tanggalAkhir = ref(null);
 const clearFilter = () => {
   tanggalMulai.value = null;
   tanggalAkhir.value = null;
+  selectedRekapId.value = null;
+  selectedRows.value = [];
+  selectAllPages.value = false;
   fetchData();
 };
 
@@ -128,23 +154,31 @@ onMounted(() => {
   document.title = "Barokah Dosen Tatapmuka - SIMKEU";
 });
 
-watch(
-  selectedRows,
-  (newValue) => {
-    newValue.forEach((row, index) => {
-      console.log(`${index + 1}.`, row);
-    });
-  },
-  { deep: true }
-);
+const clearBatchSelection = () => {
+  selectedRows.value = [];
+  selectAllPages.value = false;
+  fetchData();
+};
 
 watch(
-  [tanggalMulai, tanggalAkhir],
+  [tanggalMulai, tanggalAkhir, selectedRekapId, search],
   () => {
+    selectedRows.value = [];
+    selectAllPages.value = false;
     fetchData();
   },
   { deep: true }
 );
+
+watch(selectAllPages, (enabled) => {
+  selectedRows.value = enabled ? dataTable.value.map(item => item.id) : [];
+});
+
+watch(dataTable, () => {
+  if (selectAllPages.value) {
+    selectedRows.value = dataTable.value.map(item => item.id);
+  }
+});
 
 const isLoadingExcel = ref(false);
 const isLoadingBsiExcel = ref(false);
@@ -164,8 +198,7 @@ const exportExcel = async () => {
       },
       body: {
         search: search.value,
-        ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
-        ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
+        ...requestFilterPayload(),
       },
     });
 
@@ -200,8 +233,7 @@ const exportBsiExcel = async () => {
       },
       body: {
         search: search.value,
-        ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
-        ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
+        ...requestFilterPayload(),
       },
     });
 
@@ -232,8 +264,7 @@ const copyBsiData = async () => {
       method: "GET",
       body: {
         search: search.value,
-        ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
-        ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
+        ...requestFilterPayload(),
       },
     });
 
@@ -299,10 +330,18 @@ const printSlip = async (id) => {
     <PengeluaranStatCards
       :stats="stats"
       :loading="initialLoading"
+      :filter-active="hasContextFilter"
+      :filter-title="contextFilterTitle"
     />
 
-    <VRow class="mb-3">
-      <VCol cols="12" md="5">
+    <PengeluaranRekapList
+      title="Barokah Dosen Tatapmuka"
+      endpoint="/admin/pengeluaran/dosen"
+      base-path="/admin/pengeluaran/dosen-tatapmuka"
+    />
+
+    <VRow class="mb-3 filter-controls-row">
+      <VCol cols="12" md="2" class="filter-control-col">
         <AppDateTimePicker
           v-model="tanggalMulai"
           label="Dari Tanggal"
@@ -314,7 +353,7 @@ const printSlip = async (id) => {
           }"
         />
       </VCol>
-      <VCol cols="12" md="5">
+      <VCol cols="12" md="2" class="filter-control-col">
         <AppDateTimePicker
           v-model="tanggalAkhir"
           label="Sampai Tanggal"
@@ -326,11 +365,19 @@ const printSlip = async (id) => {
           }"
         />
       </VCol>
-      <VCol cols="12" md="2" class="d-flex align-end">
+      <VCol cols="12" md="6" class="filter-control-col filter-rekap-col">
+        <PengeluaranRekapSelect
+          v-model="selectedRekapId"
+          endpoint="/admin/pengeluaran/dosen"
+          label="Filter Rekap"
+          :allow-create="false"
+        />
+      </VCol>
+      <VCol cols="12" md="2" class="d-flex align-end filter-control-col">
         <VBtn
           color="primary"
-          class="w-100"
-          height="48"
+          class="w-100 filter-reset-btn"
+          height="56"
           prepend-icon="ri-refresh-line"
           @click="clearFilter"
         >
@@ -338,6 +385,15 @@ const printSlip = async (id) => {
         </VBtn>
       </VCol>
     </VRow>
+
+    <PengeluaranRekapBulkUpdate
+      v-model:all-pages="selectAllPages"
+      endpoint="/admin/pengeluaran/dosen"
+      :selected-ids="selectedIds"
+      :total-items="totalItems"
+      :filters="batchFilterPayload"
+      @updated="clearBatchSelection"
+    />
 
     <VCard>
       <VCardItem class="pb-4">
@@ -401,10 +457,12 @@ const printSlip = async (id) => {
       </VCardText>
 
       <VDataTableServer
+        show-select
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
           { title: 'Dosen', key: 'nama_dosen' },
+          { title: 'Rekap', key: 'nama_rekap' },
           { title: 'Transport', key: 'subtotal_transport', sortable: false },
           { title: 'Mengajar', key: 'subtotal_mengajar', sortable: false },
           { title: 'Sempro', key: 'subtotal_sempro', sortable: false },
@@ -482,6 +540,10 @@ const printSlip = async (id) => {
               {{ item.nama_prodi_dosen }}
             </div>
           </div>
+        </template>
+
+        <template #item.nama_rekap="{ item }">
+          {{ item.nama_rekap || "-" }}
         </template>
 
         <template #item.actions="{ item }">

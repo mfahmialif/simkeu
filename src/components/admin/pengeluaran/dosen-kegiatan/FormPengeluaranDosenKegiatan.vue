@@ -1,4 +1,5 @@
 <script setup>
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { showSnackbar } from "@/composables/snackbar";
 
 const props = defineProps({
@@ -42,6 +43,7 @@ const namaKegiatan = ref("");
 const transport = ref(null);
 const barokah = ref(null);
 const jenisPembayaran = ref("CUS BSI");
+const rekapId = ref(null);
 const buktiTransfer = ref(null);
 const existingBuktiTransferUrl = ref(null);
 const keterangan = ref("");
@@ -81,6 +83,7 @@ const fillFormFromData = (data) => {
   transport.value = data.transport ?? 0;
   barokah.value = data.barokah ?? 0;
   jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI";
+  rekapId.value = data.rekap_id ?? null;
   buktiTransfer.value = null;
   existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null;
   keterangan.value = data.keterangan ?? "";
@@ -146,6 +149,7 @@ const onSubmit = async () => {
   formData.append("barokah", barokah.value ?? 0);
   formData.append("total", total.value);
   formData.append("jenis_pembayaran", jenisPembayaran.value);
+  formData.append("rekap_id", rekapId.value ?? "");
   formData.append("keterangan", keterangan.value ?? "");
   formData.append("_method", method);
 
@@ -218,6 +222,14 @@ defineExpose({
     <VCardText>
       <VForm ref="refForm" @submit.prevent="onSubmit">
         <VRow>
+          <VCol cols="12">
+            <PengeluaranRekapSelect
+              v-model="rekapId"
+              endpoint="/admin/pengeluaran/dosen-kegiatan"
+              label="Rekap"
+            />
+          </VCol>
+
           <VCol v-if="showMainDataInForm" cols="12" md="6">
             <AppDateTimePicker
               v-model="tanggal"

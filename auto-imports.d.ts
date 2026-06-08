@@ -78,6 +78,7 @@ declare global {
   const isToday: typeof import('./src/@core/utils/helpers.js')['isToday']
   const kFormatter: typeof import('./src/@core/utils/formatters.js')['kFormatter']
   const lengthValidator: typeof import('./src/@core/utils/validators.js')['lengthValidator']
+  const listenPengeluaranRekapUpdated: typeof import('./src/composables/pengeluaranRekap.js')['listenPengeluaranRekapUpdated']
   const logicAnd: typeof import('@vueuse/math')['logicAnd']
   const logicNot: typeof import('@vueuse/math')['logicNot']
   const logicOr: typeof import('@vueuse/math')['logicOr']
@@ -90,6 +91,7 @@ declare global {
   const mapWritableState: typeof import('pinia')['mapWritableState']
   const markRaw: typeof import('vue')['markRaw']
   const nextTick: typeof import('vue')['nextTick']
+  const notifyPengeluaranRekapUpdated: typeof import('./src/composables/pengeluaranRekap.js')['notifyPengeluaranRekapUpdated']
   const onActivated: typeof import('vue')['onActivated']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
   const onBeforeRouteLeave: typeof import('vue-router/auto')['onBeforeRouteLeave']
@@ -455,6 +457,7 @@ declare module 'vue' {
     readonly isToday: UnwrapRef<typeof import('./src/@core/utils/helpers.js')['isToday']>
     readonly kFormatter: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['kFormatter']>
     readonly lengthValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['lengthValidator']>
+    readonly listenPengeluaranRekapUpdated: UnwrapRef<typeof import('./src/composables/pengeluaranRekap.js')['listenPengeluaranRekapUpdated']>
     readonly logicAnd: UnwrapRef<typeof import('@vueuse/math')['logicAnd']>
     readonly logicNot: UnwrapRef<typeof import('@vueuse/math')['logicNot']>
     readonly logicOr: UnwrapRef<typeof import('@vueuse/math')['logicOr']>
@@ -466,6 +469,7 @@ declare module 'vue' {
     readonly mapWritableState: UnwrapRef<typeof import('pinia')['mapWritableState']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly notifyPengeluaranRekapUpdated: UnwrapRef<typeof import('./src/composables/pengeluaranRekap.js')['notifyPengeluaranRekapUpdated']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router/auto')['onBeforeRouteLeave']>

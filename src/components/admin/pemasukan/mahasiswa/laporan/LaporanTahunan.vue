@@ -24,6 +24,10 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
+  includeWisudaSemesterPendek: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const tahun = ref("");
@@ -61,6 +65,7 @@ const download = async (type, accept, filename) => {
         tahun: tahun.value,
         action: type,
         kategori: "Tahunan",
+        include_wisuda_semester_pendek: props.includeWisudaSemesterPendek,
         ...(selectedProdi.value && { prodi: selectedProdi.value.value }),
         ...(selectedTahunAkademik.value && {
           tahun_akademik: selectedTahunAkademik.value.value,

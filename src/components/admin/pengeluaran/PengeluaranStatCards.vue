@@ -10,11 +10,19 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  filterActive: {
+    type: Boolean,
+    default: false,
+  },
+  filterTitle: {
+    type: String,
+    default: "Pengeluaran Sesuai Filter",
+  },
 });
 
 const statNumber = (key, field) => Number(props.stats?.[key]?.[field] ?? 0);
 
-const statCards = computed(() => [
+const defaultStatCards = computed(() => [
   {
     key: "hari_ini",
     title: "Pengeluaran Hari Ini",
@@ -48,10 +56,28 @@ const statCards = computed(() => [
     color: "primary",
   },
 ]);
+
+const statCards = computed(() => {
+  if (!props.filterActive) return defaultStatCards.value;
+
+  return [
+    {
+      key: "filter",
+      title: props.filterTitle,
+      amount: statNumber("keseluruhan", "total"),
+      count: statNumber("keseluruhan", "jumlah"),
+      icon: "ri-filter-3-line",
+      color: "primary",
+    },
+  ];
+});
 </script>
 
 <template>
-  <div class="pengeluaran-stat-grid mb-4">
+  <div
+    class="pengeluaran-stat-grid mb-4"
+    :class="{ 'pengeluaran-stat-grid--filtered': filterActive }"
+  >
     <VCard
       v-for="item in statCards"
       :key="item.key"
@@ -105,6 +131,10 @@ const statCards = computed(() => [
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+}
+
+.pengeluaran-stat-grid--filtered {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .stat-content {

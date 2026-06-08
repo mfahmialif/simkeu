@@ -1,4 +1,11 @@
 <script setup>
+const props = defineProps({
+  includeWisudaSemesterPendek: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const tahun = ref("");
 
 const downloadExcel = async () => {
@@ -25,6 +32,7 @@ const download = async (accept, filename) => {
       },
       body: {
         tahun_rekap: tahun.value,
+        include_wisuda_semester_pendek: props.includeWisudaSemesterPendek,
       },
     });
 
