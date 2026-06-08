@@ -1,5 +1,6 @@
 <script setup>
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
+import { notifyPengeluaranRekapUpdated } from "@/composables/pengeluaranRekap";
 import { showSnackbar } from "@/composables/snackbar";
 
 const props = defineProps({
@@ -28,7 +29,7 @@ const props = defineProps({
 const emit = defineEmits(["update:allPages", "updated"]);
 
 const targetRekapId = ref(null);
-const loading = ref(false);
+const loadingAction = ref(null);
 
 const allPagesModel = computed({
   get: () => props.allPages,
@@ -42,6 +43,7 @@ const selectedCount = computed(() => (
 ));
 
 const canSubmit = computed(() => !!targetRekapId.value && selectedCount.value > 0);
+const canCancel = computed(() => selectedCount.value > 0);
 
 const errorMessage = (err) => {
   const message =
@@ -57,8 +59,10 @@ const errorMessage = (err) => {
   return message || "Terjadi kesalahan.";
 };
 
-const updateRekap = async () => {
-  if (!targetRekapId.value) {
+const submitRekap = async (rekapId) => {
+  const isCancel = rekapId === null;
+
+  if (!isCancel && !rekapId) {
     showSnackbar({
       text: "Pilih rekap tujuan terlebih dahulu.",
       color: "warning",
@@ -75,11 +79,11 @@ const updateRekap = async () => {
   }
 
   try {
-    loading.value = true;
+    loadingAction.value = isCancel ? "cancel" : "update";
     const response = await $api(`${props.endpoint}/rekap/bulk-update`, {
       method: "POST",
       body: {
-        rekap_id: targetRekapId.value,
+        rekap_id: rekapId,
         all_pages: allPagesModel.value,
         ids: props.selectedIds,
         filters: props.filters,
@@ -92,6 +96,7 @@ const updateRekap = async () => {
         color: "success",
       });
       targetRekapId.value = null;
+      notifyPengeluaranRekapUpdated(props.endpoint);
       emit("updated");
     }
   } catch (err) {
@@ -100,16 +105,19 @@ const updateRekap = async () => {
       color: "error",
     });
   } finally {
-    loading.value = false;
+    loadingAction.value = null;
   }
 };
+
+const updateRekap = () => submitRekap(targetRekapId.value);
+const cancelRekap = () => submitRekap(null);
 </script>
 
 <template>
   <VCard class="mb-4">
     <VCardText>
       <VRow class="align-center">
-        <VCol cols="12" md="4">
+        <VCol cols="12" md="3">
           <VCheckbox
             v-model="allPagesModel"
             :label="`Centang semua data sesuai filter (${totalItems} data, semua halaman)`"
@@ -118,7 +126,7 @@ const updateRekap = async () => {
           />
         </VCol>
 
-        <VCol cols="12" md="4">
+        <VCol cols="12" md="3">
           <PengeluaranRekapSelect
             v-model="targetRekapId"
             :endpoint="endpoint"
@@ -141,11 +149,26 @@ const updateRekap = async () => {
             class="w-100"
             height="48"
             prepend-icon="ri-check-double-line"
-            :loading="loading"
-            :disabled="!canSubmit || loading"
+            :loading="loadingAction === 'update'"
+            :disabled="!canSubmit || !!loadingAction"
             @click="updateRekap"
           >
             Update Rekap
+          </VBtn>
+        </VCol>
+
+        <VCol cols="12" md="2">
+          <VBtn
+            color="warning"
+            variant="outlined"
+            class="w-100"
+            height="48"
+            prepend-icon="ri-link-unlink-m"
+            :loading="loadingAction === 'cancel'"
+            :disabled="!canCancel || !!loadingAction"
+            @click="cancelRekap"
+          >
+            Batalkan Rekap
           </VBtn>
         </VCol>
       </VRow>

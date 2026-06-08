@@ -332,6 +332,7 @@ onMounted(() => {
       title="Barokah Pegawai Kegiatan"
       endpoint="/admin/pengeluaran/dosen-kegiatan"
       base-path="/admin/pengeluaran/dosen-kegiatan"
+      @updated="clearBatchSelection"
     />
 
     <VRow class="mb-3 filter-controls-row">

@@ -21,6 +21,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["updated"]);
+
 const router = useRouter();
 const page = ref(1);
 const itemsPerPage = ref(5);
@@ -34,6 +36,10 @@ const saving = ref(false);
 const namaInput = ref(null);
 const nama = ref("");
 const keterangan = ref("");
+const actionDialog = ref(false);
+const actionItem = ref(null);
+const actionType = ref(null);
+const actionLoading = ref(false);
 let searchTimer = null;
 let stopListeningRekapUpdates = null;
 
@@ -48,6 +54,20 @@ const firstItem = computed(() =>
 const lastItem = computed(() =>
   Math.min(page.value * itemsPerPage.value, totalItems.value),
 );
+
+const actionDialogTitle = computed(() => (
+  actionType.value === "release"
+    ? "Batalkan Rekap"
+    : "Hapus Rekap"
+));
+
+const actionDialogMessage = computed(() => {
+  if (actionType.value === "release") {
+    return `Semua data dalam rekap "${actionItem.value?.nama || ""}" akan dikeluarkan dari rekap.`;
+  }
+
+  return `Rekap "${actionItem.value?.nama || ""}" akan dihapus permanen.`;
+});
 
 const openDetail = item => router.push(`${props.basePath}/rekap/${item.id}`);
 
@@ -137,6 +157,46 @@ const createRekap = async () => {
     });
   } finally {
     saving.value = false;
+  }
+};
+
+const requestAction = (type, item) => {
+  actionType.value = type;
+  actionItem.value = item;
+  actionDialog.value = true;
+};
+
+const confirmAction = async () => {
+  if (!actionItem.value || actionLoading.value) return;
+
+  try {
+    actionLoading.value = true;
+    const isRelease = actionType.value === "release";
+    const response = await $api(
+      isRelease
+        ? `${props.endpoint}/rekap/${actionItem.value.id}/release`
+        : `${props.endpoint}/rekap/${actionItem.value.id}`,
+      {
+        method: isRelease ? "POST" : "DELETE",
+      },
+    );
+
+    if (response.status === true) {
+      actionDialog.value = false;
+      notifyPengeluaranRekapUpdated(props.endpoint);
+      emit("updated");
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      });
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    actionLoading.value = false;
   }
 };
 
@@ -259,13 +319,15 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-else class="rekap-list" role="list">
-            <button
+            <div
               v-for="item in dataTable"
               :key="item.id"
-              type="button"
               class="rekap-list-item"
               role="listitem"
+              tabindex="0"
+              :aria-label="`Lihat detail rekap ${item.nama}`"
               @click="openDetail(item)"
+              @keydown.enter.prevent="openDetail(item)"
             >
               <div class="rekap-item-icon">
                 <VIcon icon="ri-file-list-3-line" size="22" />
@@ -292,17 +354,53 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
-              <VTooltip text="Lihat detail rekap" location="top">
-                <template #activator="{ props: tooltipProps }">
-                  <VIcon
-                    v-bind="tooltipProps"
-                    class="rekap-item-arrow"
-                    icon="ri-arrow-right-s-line"
-                    size="24"
-                  />
-                </template>
-              </VTooltip>
-            </button>
+              <div class="rekap-item-actions" @click.stop @keydown.stop>
+                <VTooltip text="Batalkan semua data dari rekap" location="top">
+                  <template #activator="{ props: tooltipProps }">
+                    <VBtn
+                      v-bind="tooltipProps"
+                      icon="ri-link-unlink-m"
+                      size="small"
+                      variant="text"
+                      color="warning"
+                      :disabled="Number(item.jumlah_data || 0) === 0"
+                      @click="requestAction('release', item)"
+                    />
+                  </template>
+                </VTooltip>
+
+                <VTooltip
+                  :text="Number(item.jumlah_data || 0) === 0
+                    ? 'Hapus rekap'
+                    : 'Rekap hanya dapat dihapus ketika jumlah data 0'"
+                  location="top"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <span v-bind="tooltipProps">
+                      <VBtn
+                        icon="ri-delete-bin-line"
+                        size="small"
+                        variant="text"
+                        color="error"
+                        :disabled="Number(item.jumlah_data || 0) > 0"
+                        @click="requestAction('delete', item)"
+                      />
+                    </span>
+                  </template>
+                </VTooltip>
+
+                <VTooltip text="Lihat detail rekap" location="top">
+                  <template #activator="{ props: tooltipProps }">
+                    <VIcon
+                      v-bind="tooltipProps"
+                      class="rekap-item-arrow"
+                      icon="ri-arrow-right-s-line"
+                      size="24"
+                    />
+                  </template>
+                </VTooltip>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -394,6 +492,40 @@ onBeforeUnmount(() => {
         </VCardText>
       </VCard>
     </VDialog>
+
+    <VDialog v-model="actionDialog" width="500">
+      <VCard :title="actionDialogTitle">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="actionDialog = false"
+        />
+
+        <VCardText>
+          {{ actionDialogMessage }}
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="actionLoading"
+            @click="actionDialog = false"
+          >
+            Kembali
+          </VBtn>
+          <VBtn
+            :color="actionType === 'release' ? 'warning' : 'error'"
+            :prepend-icon="actionType === 'release' ? 'ri-link-unlink-m' : 'ri-delete-bin-line'"
+            :loading="actionLoading"
+            :disabled="actionLoading"
+            @click="confirmAction"
+          >
+            {{ actionType === "release" ? "Batalkan Rekap" : "Hapus Rekap" }}
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
   </VCard>
 </template>
 
@@ -447,7 +579,7 @@ onBeforeUnmount(() => {
   display: grid;
   inline-size: 100%;
   min-block-size: 92px;
-  grid-template-columns: 46px minmax(0, 1fr) auto 32px;
+  grid-template-columns: 46px minmax(0, 1fr) auto auto;
   align-items: center;
   border: 0;
   border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
@@ -548,6 +680,12 @@ onBeforeUnmount(() => {
   transition: color 160ms ease, transform 160ms ease;
 }
 
+.rekap-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .rekap-empty {
   display: grid;
   min-block-size: 210px;
@@ -592,11 +730,11 @@ onBeforeUnmount(() => {
 
 @media (max-width: 959px) {
   .rekap-list-item {
-    grid-template-columns: 44px minmax(0, 1fr) 28px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
   }
 
   .rekap-item-stats {
-    grid-column: 2 / -1;
+    grid-column: 2 / 3;
     grid-template-columns: 70px minmax(140px, 1fr);
     margin-block-start: 12px;
   }
@@ -605,7 +743,7 @@ onBeforeUnmount(() => {
     text-align: start;
   }
 
-  .rekap-item-arrow {
+  .rekap-item-actions {
     grid-column: 3;
     grid-row: 1;
   }

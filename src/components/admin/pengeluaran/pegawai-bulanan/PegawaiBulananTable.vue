@@ -434,6 +434,7 @@ onMounted(() => {
       :title="title"
       :endpoint="endpoint"
       :base-path="basePath"
+      @updated="clearBatchSelection"
     />
 
     <VRow

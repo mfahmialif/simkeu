@@ -55,6 +55,14 @@ const defaultStatCards = computed(() => [
     icon: "ri-wallet-3-line",
     color: "primary",
   },
+  {
+    key: "belum_rekap",
+    title: "Belum Masuk Rekap",
+    amount: statNumber("belum_rekap", "total"),
+    count: statNumber("belum_rekap", "jumlah"),
+    icon: "ri-file-warning-line",
+    color: "secondary",
+  },
 ]);
 
 const statCards = computed(() => {
@@ -129,7 +137,7 @@ const statCards = computed(() => {
 <style scoped>
 .pengeluaran-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 

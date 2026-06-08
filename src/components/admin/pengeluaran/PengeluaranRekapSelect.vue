@@ -75,6 +75,13 @@ const fetchRekap = async () => {
     });
 
     items.value = response.data?.data || [];
+
+    if (
+      selectedValue.value
+      && !items.value.some(item => String(item.id) === String(selectedValue.value))
+    ) {
+      selectedValue.value = null;
+    }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),

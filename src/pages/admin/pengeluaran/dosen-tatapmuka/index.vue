@@ -18,6 +18,8 @@ const initialLoading = ref(true);
 const stats = ref({});
 const selectedRekapId = ref(null);
 const selectAllPages = ref(false);
+const tanggalMulai = ref(null);
+const tanggalAkhir = ref(null);
 const hasDateFilter = computed(() => !!(tanggalMulai.value || tanggalAkhir.value));
 const hasContextFilter = computed(() => !!selectedRekapId.value || hasDateFilter.value);
 const contextFilterTitle = computed(() => (
@@ -137,9 +139,6 @@ const deleteDataSubmit = async (id) => {
     isDialogDeleteVisible.value = false;
   }
 };
-
-const tanggalMulai = ref(null);
-const tanggalAkhir = ref(null);
 
 const clearFilter = () => {
   tanggalMulai.value = null;
@@ -338,6 +337,7 @@ const printSlip = async (id) => {
       title="Barokah Dosen Tatapmuka"
       endpoint="/admin/pengeluaran/dosen"
       base-path="/admin/pengeluaran/dosen-tatapmuka"
+      @updated="clearBatchSelection"
     />
 
     <VRow class="mb-3 filter-controls-row">
