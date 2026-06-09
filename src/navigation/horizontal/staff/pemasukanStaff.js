@@ -4,6 +4,10 @@ export default [
     icon: { icon: "ri-user-3-line" },
     children: [
       {
+        title: "Data Mahasiswa",
+        to: "admin-pemasukan-mahasiswa-master-data-mahasiswa",
+      },
+      {
         title: "Jenis Pembayaran",
         to: "admin-pemasukan-mahasiswa-master-jenis-pembayaran",
       },

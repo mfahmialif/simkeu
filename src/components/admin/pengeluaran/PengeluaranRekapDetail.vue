@@ -24,6 +24,18 @@ const props = defineProps({
 const route = useRoute();
 const router = useRouter();
 const rekapId = computed(() => route.params.id);
+const returnPath = computed(() => {
+  const path = route.query.return_to;
+
+  if (
+    typeof path === "string"
+    && (path === "/admin/laporan/rab" || path.startsWith("/admin/laporan/rab?"))
+  ) {
+    return path;
+  }
+
+  return props.basePath;
+});
 const rekap = ref(null);
 const page = ref(1);
 const itemsPerPage = ref(10);
@@ -164,7 +176,7 @@ onMounted(async () => {
       color="secondary"
       prepend-icon="ri-arrow-left-line"
       class="mb-4"
-      @click="router.push(basePath)"
+      @click="router.push(returnPath)"
     >
       Kembali
     </VBtn>

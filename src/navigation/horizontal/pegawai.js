@@ -1,8 +1,8 @@
 export const pegawaiMenu = {
-  title: "PEGAWAI",
+  title: "Pegawai",
   icon: { icon: "ri-team-line" },
   children: [
-    { title: "Pegawai", to: "admin-pegawai" },
+    { title: "Data Pegawai", to: "admin-pegawai" },
     { title: "Dosen", to: "admin-pegawai-dosen" },
     { title: "Staff", to: "admin-pegawai-staff" },
   ],

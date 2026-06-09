@@ -3,6 +3,7 @@ import { formatRupiah } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
 
 const router = useRouter();
+const route = useRoute();
 const currentDate = new Date();
 const page = ref(1);
 const itemsPerPage = ref(10);
@@ -155,7 +156,12 @@ const resetFilters = () => {
   fetchData();
 };
 
-const openDetail = item => router.push(`${item.detail_path}${item.id}`);
+const openDetail = item => router.push({
+  path: `${item.detail_path}${item.id}`,
+  query: {
+    return_to: route.fullPath,
+  },
+});
 
 watch([selectedBulan, selectedTahun, selectedModule], () => {
   page.value = 1;
@@ -170,7 +176,6 @@ watch(search, () => {
 
 onMounted(() => {
   document.title = "RAB - SIMKEU";
-  fetchData();
 });
 
 onBeforeUnmount(() => clearTimeout(searchTimer));

@@ -1,6 +1,6 @@
 const barokahDosenMenu = (children) => [
   {
-    title: "Barokah Dosen",
+    title: "Barokah",
     icon: { icon: "ri-hand-heart-line" },
     children,
   },
@@ -37,6 +37,6 @@ export const pengeluaranStaffBulanan = barokahDosenSingleMenu(
 export default barokahDosenMenu([
   { title: "Tatapmuka", to: "admin-pengeluaran-dosen-tatapmuka" },
   { title: "Kegiatan", to: "admin-pengeluaran-dosen-kegiatan" },
-  { title: "Bulanan", to: "admin-pengeluaran-dosen-bulanan" },
+  { title: "Dosen Bulanan", to: "admin-pengeluaran-dosen-bulanan" },
   { title: "Staff Bulanan", to: "admin-pengeluaran-staff-bulanan" },
 ]);

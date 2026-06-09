@@ -32,11 +32,10 @@ const routesByRole = roleName => {
   return {
     admin: [
       ...dashboard,
-      ...mahasiswa,
-      ...pegawai,
       ...saldo,
       ...pemasukan,
       ...pengeluaran,
+      ...pegawai,
       ...rab,
       ...laporan,
       ...user,
@@ -45,7 +44,6 @@ const routesByRole = roleName => {
 
     pimpinan: [
       ...dashboard,
-      ...mahasiswa,
       ...saldo,
       ...pemasukan,
       ...pengeluaran,
@@ -57,7 +55,6 @@ const routesByRole = roleName => {
 
     keuangan: [
       ...dashboard,
-      ...mahasiswa,
       ...saldo,
       ...pemasukan,
       ...pengeluaran,
@@ -67,8 +64,8 @@ const routesByRole = roleName => {
       ...setting,
     ],
 
-    staff: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
-    kabag: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...rab, ...setting],
+    staff: [...dashboardStaff, ...pemasukanStaff, ...setting],
+    kabag: [...dashboardStaff, ...pemasukanStaff, ...rab, ...setting],
 
     rumahtangga: [
       ...dashboard,
