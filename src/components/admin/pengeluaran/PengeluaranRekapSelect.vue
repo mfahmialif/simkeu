@@ -4,6 +4,8 @@ import {
   listenPengeluaranRekapUpdated,
   notifyPengeluaranRekapUpdated,
 } from "@/composables/pengeluaranRekap";
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
+import "flatpickr/dist/plugins/monthSelect/style.css";
 
 const props = defineProps({
   modelValue: {
@@ -41,7 +43,41 @@ const saving = ref(false);
 const namaInput = ref(null);
 const nama = ref("");
 const keterangan = ref("");
+const currentMonthValue = () => {
+  const date = new Date();
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+};
+const bulanTahun = ref(currentMonthValue());
 let stopListeningRekapUpdates = null;
+
+const monthYearPickerConfig = {
+  altInput: true,
+  altFormat: "F Y",
+  dateFormat: "Y-m",
+  disableMobile: true,
+  plugins: [
+    monthSelectPlugin({
+      shorthand: false,
+      dateFormat: "Y-m",
+      altFormat: "F Y",
+    }),
+  ],
+};
+const formatMonthYear = (value) => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})/);
+
+  if (!match) return "Periode belum diisi";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
+};
+const rekapSubtitle = item => [
+  formatMonthYear(item.bulan_tahun),
+  item.keterangan,
+].filter(Boolean).join(" · ");
 
 const selectedValue = computed({
   get: () => props.modelValue,
@@ -95,6 +131,7 @@ const fetchRekap = async () => {
 const resetForm = () => {
   nama.value = "";
   keterangan.value = "";
+  bulanTahun.value = currentMonthValue();
 };
 
 const createRekap = async () => {
@@ -117,6 +154,7 @@ const createRekap = async () => {
       method: "POST",
       body: {
         nama: trimmedNama,
+        bulan_tahun: bulanTahun.value,
         keterangan: keterangan.value,
       },
     });
@@ -169,8 +207,8 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.());
     >
       <template #item="{ props: itemProps, item }">
         <VListItem v-bind="itemProps">
-          <template v-if="item.raw.keterangan" #subtitle>
-            {{ item.raw.keterangan }}
+          <template #subtitle>
+            {{ rekapSubtitle(item.raw) }}
           </template>
         </VListItem>
       </template>
@@ -213,6 +251,17 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.());
                 hint="Wajib diisi"
                 persistent-hint
                 @keydown.enter.prevent="createRekap"
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <AppDateTimePicker
+                v-model="bulanTahun"
+                label="Bulan dan Tahun *"
+                placeholder="Pilih bulan dan tahun"
+                prepend-inner-icon="ri-calendar-line"
+                :config="monthYearPickerConfig"
+                :rules="[requiredValidator]"
               />
             </VCol>
 

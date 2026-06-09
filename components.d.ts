@@ -377,6 +377,7 @@ declare module 'vue' {
     FormPembayaranTagihan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/FormPembayaranTagihan.vue')['default']
     FormPengeluaran: typeof import('./src/components/admin/pengeluaran/FormPengeluaran.vue')['default']
     FormPengeluaranDosen: typeof import('./src/components/admin/pengeluaran/dosen-tatapmuka/FormPengeluaranDosen.vue')['default']
+    FormPengeluaranDosenBulananBatch: typeof import('./src/components/admin/pengeluaran/pegawai-bulanan/FormPengeluaranDosenBulananBatch.vue')['default']
     FormPengeluaranDosenKegiatan: typeof import('./src/components/admin/pengeluaran/dosen-kegiatan/FormPengeluaranDosenKegiatan.vue')['default']
     FormPengeluaranPegawaiBulanan: typeof import('./src/components/admin/pengeluaran/pegawai-bulanan/FormPengeluaranPegawaiBulanan.vue')['default']
     FormProdi: typeof import('./src/components/admin/prodi/FormProdi.vue')['default']

@@ -7,6 +7,6 @@ import PengeluaranRekapDetail from "@/components/admin/pengeluaran/PengeluaranRe
     title="Barokah Dosen Bulanan"
     endpoint="/admin/pengeluaran/dosen-bulanan"
     base-path="/admin/pengeluaran/dosen-bulanan"
-    module-type="bulanan"
+    module-type="dosen-bulanan"
   />
 </template>

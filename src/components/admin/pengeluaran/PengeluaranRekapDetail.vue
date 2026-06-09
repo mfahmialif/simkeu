@@ -34,6 +34,16 @@ const loading = ref(true);
 
 const numberValue = value => Number(value ?? 0);
 const amountValue = (value, fallback = 0) => value ?? fallback ?? 0;
+const formatMonthYear = (value) => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})/);
+
+  if (!match) return "";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
+};
 const subtotalTransport = (item) => {
   const transportMotor = numberValue(amountValue(item.transport_motor, item.transport));
   const hariMotor = numberValue(amountValue(item.hari_transport_motor, item.hari));
@@ -124,6 +134,10 @@ const uraian = (item) => {
     return `${numberValue(item.hari)} hari, harian ${formatRupiah(item.barokah_harian)}, bulanan ${formatRupiah(item.barokah_bulanan)}`;
   }
 
+  if (props.moduleType === "dosen-bulanan") {
+    return `Dosen Tetap ${formatRupiah(item.barokah_dosen_tetap)}, Struktural ${formatRupiah(item.barokah_struktural)}`;
+  }
+
   return `Transport ${formatRupiah(subtotalTransport(item))}, mengajar ${formatRupiah(subtotalMengajar(item))}, sempro ${formatRupiah(subtotalSempro(item))}, UAS ${formatRupiah(subtotalUas(item))}`;
 };
 
@@ -164,6 +178,9 @@ onMounted(async () => {
             </div>
             <div v-if="rekap?.keterangan" class="text-body-2 mt-1">
               {{ rekap.keterangan }}
+            </div>
+            <div v-if="rekap?.bulan_tahun" class="text-caption text-medium-emphasis mt-1">
+              Periode {{ formatMonthYear(rekap.bulan_tahun) }}
             </div>
           </div>
 

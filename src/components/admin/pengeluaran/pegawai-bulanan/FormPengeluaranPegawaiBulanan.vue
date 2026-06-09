@@ -67,6 +67,8 @@ const tahun = ref(null);
 const hari = ref(null);
 const barokahHarian = ref(null);
 const barokahBulanan = ref(null);
+const barokahDosenTetap = ref(null);
+const barokahStruktural = ref(null);
 const jenisPembayaran = ref("CUS BSI");
 const rekapId = ref(null);
 const keterangan = ref("");
@@ -75,6 +77,7 @@ const disabled = ref(false);
 const jenisPembayaranList = ["CUS BSI", "Transfer"];
 const showMainDataInForm = computed(() => props.typeForm === "edit");
 const isStaffForm = computed(() => props.pegawaiTitle.toLowerCase() === "staff");
+const isDosenForm = computed(() => !isStaffForm.value);
 const identifierLabel = computed(() => isStaffForm.value ? "Kode Staff" : `NIY ${props.pegawaiTitle}`);
 const dayLabel = computed(() => props.showPeriod ? "Total Hari" : "Hari");
 const periodeConfig = {
@@ -98,6 +101,10 @@ const formTitle = computed(() => {
 });
 
 const total = computed(() => {
+  if (isDosenForm.value) {
+    return Math.round(Number(barokahDosenTetap.value || 0) + Number(barokahStruktural.value || 0));
+  }
+
   return Math.round((Number(barokahHarian.value || 0) * Number(hari.value || 0)) + Number(barokahBulanan.value || 0));
 });
 
@@ -145,6 +152,8 @@ const fillFormFromData = (data) => {
   hari.value = data.hari ?? 0;
   barokahHarian.value = data.barokah_harian ?? 0;
   barokahBulanan.value = data.barokah_bulanan ?? 0;
+  barokahDosenTetap.value = data.barokah_dosen_tetap ?? data.total ?? 0;
+  barokahStruktural.value = data.barokah_struktural ?? 0;
   jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI";
   rekapId.value = data.rekap_id ?? null;
   keterangan.value = data.keterangan ?? "";
@@ -223,6 +232,8 @@ const onSubmit = async () => {
   formData.append("hari", hari.value ?? 0);
   formData.append("barokah_harian", barokahHarian.value ?? 0);
   formData.append("barokah_bulanan", barokahBulanan.value ?? 0);
+  formData.append("barokah_dosen_tetap", barokahDosenTetap.value ?? 0);
+  formData.append("barokah_struktural", barokahStruktural.value ?? 0);
   formData.append("total", total.value);
   formData.append("jenis_pembayaran", jenisPembayaran.value);
   formData.append("rekap_id", rekapId.value ?? "");
@@ -334,7 +345,7 @@ defineExpose({
             />
           </VCol>
 
-          <VCol cols="12" md="4">
+          <VCol v-if="!isDosenForm" cols="12" md="4">
             <VTextField
               v-model="hari"
               type="number"
@@ -343,7 +354,7 @@ defineExpose({
             />
           </VCol>
 
-          <VCol cols="12" md="4">
+          <VCol v-if="!isDosenForm" cols="12" md="4">
             <VTextField
               v-model="barokahHarian"
               type="number"
@@ -354,7 +365,7 @@ defineExpose({
             />
           </VCol>
 
-          <VCol cols="12" md="4">
+          <VCol v-if="!isDosenForm" cols="12" md="4">
             <VTextField
               :model-value="formatRupiah(Number(barokahHarian || 0) * Number(hari || 0))"
               label="Subtotal Barokah Harian"
@@ -362,13 +373,35 @@ defineExpose({
             />
           </VCol>
 
-          <VCol cols="12" :md="showPeriod ? 4 : 6">
+          <VCol v-if="!isDosenForm" cols="12" :md="showPeriod ? 4 : 6">
             <VTextField
               v-model="barokahBulanan"
               type="number"
               label="Barokah Bulanan"
               :rules="[requiredValidator]"
               :hint="formatRupiah(barokahBulanan)"
+              persistent-hint
+            />
+          </VCol>
+
+          <VCol v-if="isDosenForm" cols="12" md="6">
+            <VTextField
+              v-model="barokahDosenTetap"
+              type="number"
+              label="Barokah Dosen Tetap"
+              :rules="[requiredValidator]"
+              :hint="formatRupiah(barokahDosenTetap)"
+              persistent-hint
+            />
+          </VCol>
+
+          <VCol v-if="isDosenForm" cols="12" md="6">
+            <VTextField
+              v-model="barokahStruktural"
+              type="number"
+              label="Barokah Struktural"
+              :rules="[requiredValidator]"
+              :hint="formatRupiah(barokahStruktural)"
               persistent-hint
             />
           </VCol>
@@ -382,7 +415,7 @@ defineExpose({
             />
           </VCol>
 
-          <VCol cols="12" :md="showPeriod ? 4 : 12">
+          <VCol cols="12" :md="isDosenForm ? 6 : (showPeriod ? 4 : 12)">
             <VTextField
               :model-value="formatRupiah(total)"
               label="Total"

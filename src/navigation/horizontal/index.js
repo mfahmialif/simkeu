@@ -18,6 +18,7 @@ import {
   pengeluaranDosenTatapmuka,
 } from "./barokahdosen/pengeluaranBarokahDosen";
 import laporan from "./laporan";
+import rab from "./rab";
 
 const userData = useCookie("userData");
 
@@ -36,6 +37,7 @@ const routesByRole = roleName => {
       ...saldo,
       ...pemasukan,
       ...pengeluaran,
+      ...rab,
       ...laporan,
       ...user,
       ...setting,
@@ -47,6 +49,7 @@ const routesByRole = roleName => {
       ...saldo,
       ...pemasukan,
       ...pengeluaran,
+      ...rab,
       ...laporan,
       ...user,
       ...setting,
@@ -58,13 +61,14 @@ const routesByRole = roleName => {
       ...saldo,
       ...pemasukan,
       ...pengeluaran,
+      ...rab,
       ...laporan,
       ...user,
       ...setting,
     ],
 
     staff: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
-    kabag: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...setting],
+    kabag: [...dashboardStaff, ...mahasiswa, ...pemasukanStaff, ...rab, ...setting],
 
     rumahtangga: [
       ...dashboard,

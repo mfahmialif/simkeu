@@ -27,6 +27,7 @@ const props = defineProps({
     default: false,
   },
 });
+const isDosenBulanan = computed(() => props.endpoint.includes("dosen-bulanan"));
 
 const page = ref(1);
 const itemsPerPage = ref(5);
@@ -659,10 +660,17 @@ onMounted(() => {
           ...(showPeriod ? [{ title: 'Periode', key: 'periode', sortable: false }] : []),
           { title: 'Pegawai', key: 'nama_pegawai' },
           { title: 'Rekap', key: 'nama_rekap' },
-          { title: showPeriod ? 'Total Hari' : 'Hari', key: 'hari' },
-          { title: 'Barokah Harian', key: 'barokah_harian' },
-          { title: 'Subtotal Harian', key: 'subtotal_harian', sortable: false },
-          { title: 'Barokah Bulanan', key: 'barokah_bulanan' },
+          ...(isDosenBulanan
+            ? [
+                { title: 'Dosen Tetap', key: 'barokah_dosen_tetap' },
+                { title: 'Struktural', key: 'barokah_struktural' },
+              ]
+            : [
+                { title: showPeriod ? 'Total Hari' : 'Hari', key: 'hari' },
+                { title: 'Barokah Harian', key: 'barokah_harian' },
+                { title: 'Subtotal Harian', key: 'subtotal_harian', sortable: false },
+                { title: 'Barokah Bulanan', key: 'barokah_bulanan' },
+              ]),
           { title: 'Total', key: 'total' },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
           { title: 'Keterangan', key: 'keterangan' },
@@ -727,6 +735,14 @@ onMounted(() => {
 
         <template #item.barokah_bulanan="{ item }">
           {{ formatRupiah(item.barokah_bulanan) }}
+        </template>
+
+        <template #item.barokah_dosen_tetap="{ item }">
+          {{ formatRupiah(item.barokah_dosen_tetap) }}
+        </template>
+
+        <template #item.barokah_struktural="{ item }">
+          {{ formatRupiah(item.barokah_struktural) }}
         </template>
 
         <template #item.total="{ item }">
