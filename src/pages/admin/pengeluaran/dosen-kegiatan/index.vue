@@ -329,108 +329,130 @@ onMounted(() => {
       :filter-title="contextFilterTitle"
     />
 
-    <PengeluaranRekapList
-      title="Barokah Pegawai Kegiatan"
-      endpoint="/admin/pengeluaran/dosen-kegiatan"
-      base-path="/admin/pengeluaran/dosen-kegiatan"
-      @updated="clearBatchSelection"
-    />
+    <section class="numbered-section">
+      <div class="section-heading">
+        <span class="section-number">1</span>
+        <div>
+          <div class="text-h6 font-weight-semibold">Rekap Pengeluaran</div>
+          <div class="text-body-2 text-medium-emphasis">Kelompok rekap barokah pegawai kegiatan.</div>
+        </div>
+      </div>
 
-    <VRow class="mb-3 filter-controls-row">
-      <VCol cols="12" md="2" class="filter-control-col">
-        <VSelect
-          v-model="filterMode"
-          :items="filterModeOptions"
-          label="Filter Hari"
-          hide-details
-        />
-      </VCol>
+      <PengeluaranRekapList
+        title="Barokah Pegawai Kegiatan"
+        endpoint="/admin/pengeluaran/dosen-kegiatan"
+        base-path="/admin/pengeluaran/dosen-kegiatan"
+        default-expanded
+        :allow-release="false"
+        @updated="clearBatchSelection"
+      />
+    </section>
 
-      <VCol
-        v-if="filterMode === 'harian'"
-        cols="12"
-        md="3"
-        class="filter-control-col"
-      >
-        <AppDateTimePicker
-          v-model="tanggalHarian"
-          label="Tanggal"
-          placeholder="Pilih tanggal"
-          hide-details
-          :config="{
-            altInput: true,
-            altFormat: 'F j, Y',
-            dateFormat: 'Y-m-d',
-          }"
-        />
-      </VCol>
+    <section class="numbered-section">
+      <div class="section-heading">
+        <span class="section-number">2</span>
+        <div>
+          <div class="text-h6 font-weight-semibold">Data Pengeluaran</div>
+          <div class="text-body-2 text-medium-emphasis">Detail pengeluaran pegawai dan nonpegawai.</div>
+        </div>
+      </div>
 
-      <template v-else>
+      <VRow class="mb-3 filter-controls-row">
         <VCol cols="12" md="2" class="filter-control-col">
-          <AppDateTimePicker
-            v-model="tanggalMulai"
-            label="Dari Tanggal"
-            placeholder="Pilih tanggal awal"
+          <VSelect
+            v-model="filterMode"
+            :items="filterModeOptions"
+            label="Filter Hari"
             hide-details
-            :config="{
-              altInput: true,
-              altFormat: 'F j, Y',
-              dateFormat: 'Y-m-d',
-            }"
           />
         </VCol>
 
-        <VCol cols="12" md="2" class="filter-control-col">
-          <AppDateTimePicker
-            v-model="tanggalAkhir"
-            label="Sampai Tanggal"
-            placeholder="Pilih tanggal akhir"
-            hide-details
-            :config="{
-              altInput: true,
-              altFormat: 'F j, Y',
-              dateFormat: 'Y-m-d',
-            }"
-          />
-        </VCol>
-      </template>
-
-      <VCol
-        cols="12"
-        :md="filterMode === 'harian' ? 5 : 4"
-        class="filter-control-col filter-rekap-col"
-      >
-        <PengeluaranRekapSelect
-          v-model="selectedRekapId"
-          endpoint="/admin/pengeluaran/dosen-kegiatan"
-          label="Filter Rekap"
-          :allow-create="false"
-        />
-      </VCol>
-
-      <VCol cols="12" md="2" class="filter-control-col">
-        <VBtn
-          color="primary"
-          class="w-100 filter-reset-btn"
-          height="56"
-          prepend-icon="ri-refresh-line"
-          @click="clearFilter"
+        <VCol
+          v-if="filterMode === 'harian'"
+          cols="12"
+          md="3"
+          class="filter-control-col"
         >
-          Reset
-        </VBtn>
-      </VCol>
-    </VRow>
+          <AppDateTimePicker
+            v-model="tanggalHarian"
+            label="Tanggal"
+            placeholder="Pilih tanggal"
+            hide-details
+            :config="{
+              altInput: true,
+              altFormat: 'F j, Y',
+              dateFormat: 'Y-m-d',
+            }"
+          />
+        </VCol>
 
-    <PengeluaranRekapBulkUpdate
-      v-model:all-pages="selectAllPages"
-      endpoint="/admin/pengeluaran/dosen-kegiatan"
-      :selected-ids="selectedIds"
-      :total-items="totalItems"
-      :filters="batchFilterPayload"
-      @updated="clearBatchSelection"
-    />
+        <template v-else>
+          <VCol cols="12" md="2" class="filter-control-col">
+            <AppDateTimePicker
+              v-model="tanggalMulai"
+              label="Dari Tanggal"
+              placeholder="Pilih tanggal awal"
+              hide-details
+              :config="{
+                altInput: true,
+                altFormat: 'F j, Y',
+                dateFormat: 'Y-m-d',
+              }"
+            />
+          </VCol>
 
-    <VCard>
+          <VCol cols="12" md="2" class="filter-control-col">
+            <AppDateTimePicker
+              v-model="tanggalAkhir"
+              label="Sampai Tanggal"
+              placeholder="Pilih tanggal akhir"
+              hide-details
+              :config="{
+                altInput: true,
+                altFormat: 'F j, Y',
+                dateFormat: 'Y-m-d',
+              }"
+            />
+          </VCol>
+        </template>
+
+        <VCol
+          cols="12"
+          :md="filterMode === 'harian' ? 5 : 4"
+          class="filter-control-col filter-rekap-col"
+        >
+          <PengeluaranRekapSelect
+            v-model="selectedRekapId"
+            endpoint="/admin/pengeluaran/dosen-kegiatan"
+            label="Filter Rekap"
+            :allow-create="false"
+          />
+        </VCol>
+
+        <VCol cols="12" md="2" class="filter-control-col">
+          <VBtn
+            color="primary"
+            class="w-100 filter-reset-btn"
+            height="56"
+            prepend-icon="ri-refresh-line"
+            @click="clearFilter"
+          >
+            Reset
+          </VBtn>
+        </VCol>
+      </VRow>
+
+      <PengeluaranRekapBulkUpdate
+        v-model:all-pages="selectAllPages"
+        endpoint="/admin/pengeluaran/dosen-kegiatan"
+        :selected-ids="selectedIds"
+        :total-items="totalItems"
+        :filters="batchFilterPayload"
+        :allow-cancel="false"
+        @updated="clearBatchSelection"
+      />
+
+      <VCard>
       <VCardItem class="pb-4">
         <VCardTitle>Barokah Pegawai Kegiatan</VCardTitle>
       </VCardItem>
@@ -496,11 +518,12 @@ onMounted(() => {
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
+          { title: 'Kategori', key: 'kategori_detail' },
           { title: 'Pegawai', key: 'nama_pegawai' },
           { title: 'Rekap', key: 'nama_rekap' },
-          { title: 'Nama Kegiatan', key: 'nama_kegiatan' },
           { title: 'Transport', key: 'transport' },
           { title: 'Barokah', key: 'barokah' },
+          { title: 'Nominal', key: 'nominal' },
           { title: 'Total', key: 'total' },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
           { title: 'Bukti', key: 'bukti_transfer', sortable: false },
@@ -539,12 +562,20 @@ onMounted(() => {
 
         <template #item.nama_pegawai="{ item }">
           <div class="font-weight-medium">
-            {{ item.nama_pegawai || item.nama_dosen || "-" }}
+            {{
+              item.kategori_detail === "non_pegawai"
+                ? "Nonpegawai"
+                : item.nama_pegawai || item.nama_dosen || "-"
+            }}
           </div>
           <div class="text-caption text-medium-emphasis">
-            {{ item.kode_pegawai || item.kode_dosen || "-" }}
+            {{
+              item.kategori_detail === "non_pegawai"
+                ? "Tanpa pegawai"
+                : item.kode_pegawai || item.kode_dosen || "-"
+            }}
           </div>
-          <div class="text-caption text-medium-emphasis">
+          <div v-if="item.kategori_detail !== 'non_pegawai'" class="text-caption text-medium-emphasis">
             {{
               item.tipe_pegawai === "staff"
                 ? "Staff"
@@ -558,6 +589,16 @@ onMounted(() => {
           </div>
         </template>
 
+        <template #item.kategori_detail="{ item }">
+          <VChip
+            :color="item.kategori_detail === 'non_pegawai' ? 'secondary' : 'primary'"
+            size="small"
+            label
+          >
+            {{ item.kategori_detail === "non_pegawai" ? "Nonpegawai" : "Pegawai" }}
+          </VChip>
+        </template>
+
         <template #item.nama_rekap="{ item }">
           {{ item.nama_rekap || "-" }}
         </template>
@@ -568,6 +609,10 @@ onMounted(() => {
 
         <template #item.barokah="{ item }">
           {{ formatRupiah(item.barokah) }}
+        </template>
+
+        <template #item.nominal="{ item }">
+          {{ item.kategori_detail === "non_pegawai" ? formatRupiah(item.nominal) : "-" }}
         </template>
 
         <template #item.total="{ item }">
@@ -627,7 +672,7 @@ onMounted(() => {
                 <VListItem
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.nama_kegiatan)"
+                  @click="showDialogDelete(item.id, item.nama_rekap || item.tanggal)"
                 >
                   Delete
                 </VListItem>
@@ -636,7 +681,8 @@ onMounted(() => {
           </IconBtn>
         </template>
       </VDataTableServer>
-    </VCard>
+      </VCard>
+    </section>
 
     <VDialog v-model="isDialogDeleteVisible" width="500">
       <VCard :title="'Hapus Data: ' + deleteData.name">
@@ -673,6 +719,29 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.numbered-section {
+  margin-block-end: 24px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-block-end: 12px;
+}
+
+.section-number {
+  display: grid;
+  flex: 0 0 auto;
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: 10px;
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
+  font-weight: 700;
+  place-items: center;
+}
+
 .filter-controls-row :deep(.v-input) {
   --v-input-control-height: 56px;
 }

@@ -8,5 +8,6 @@ import PengeluaranRekapDetail from "@/components/admin/pengeluaran/PengeluaranRe
     endpoint="/admin/pengeluaran/dosen-kegiatan"
     base-path="/admin/pengeluaran/dosen-kegiatan"
     module-type="kegiatan"
+    allow-create
   />
 </template>

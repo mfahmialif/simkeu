@@ -1,6 +1,9 @@
 <script setup>
 import { formatRupiah } from "@/composables/formatRupiah";
+import { notifyPengeluaranRekapUpdated } from "@/composables/pengeluaranRekap";
 import { showSnackbar } from "@/composables/snackbar";
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
+import "flatpickr/dist/plugins/monthSelect/style.css";
 
 const props = defineProps({
   title: {
@@ -18,6 +21,10 @@ const props = defineProps({
   moduleType: {
     type: String,
     required: true,
+  },
+  allowCreate: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -43,6 +50,64 @@ const sortBy = ref({ key: "id", order: "desc" });
 const dataTable = ref([]);
 const totalItems = ref(0);
 const loading = ref(true);
+const dialog = ref(false);
+const saving = ref(false);
+const actionDialog = ref(false);
+const actionLoading = ref(false);
+const namaInput = ref(null);
+const nama = ref("");
+const keterangan = ref("");
+const jumlahSementara = ref(0);
+const tanggalRekap = ref("");
+const bulanTahun = ref("");
+const tableHeaders = computed(() => {
+  const headers = [
+    { title: "No", key: "id" },
+    { title: "Tanggal", key: "tanggal" },
+  ];
+
+  if (props.moduleType === "kegiatan") {
+    headers.push({ title: "Kategori", key: "kategori_detail" });
+  }
+
+  return [
+    ...headers,
+    { title: "Pegawai", key: "pegawai", sortable: false },
+    { title: "Uraian", key: "uraian", sortable: false },
+    { title: "Jenis Pembayaran", key: "jenis_pembayaran" },
+    { title: "Total", key: "total" },
+    { title: "Keterangan", key: "keterangan" },
+    { title: "Actions", key: "actions", sortable: false },
+  ];
+});
+const editingHasDetails = computed(() => Number(rekap.value?.jumlah_data || 0) > 0);
+const canDeleteRekapWithDetails = computed(() => props.moduleType === "kegiatan");
+const deleteRekapMessage = computed(() => {
+  if (canDeleteRekapWithDetails.value && Number(rekap.value?.jumlah_data || 0) > 0) {
+    return `Rekap "${rekap.value?.nama || ""}" beserta ${rekap.value?.jumlah_data || 0} data pengeluaran di dalamnya akan dihapus permanen.`;
+  }
+
+  return `Rekap "${rekap.value?.nama || ""}" akan dihapus permanen.`;
+});
+const monthYearPickerConfig = {
+  altInput: true,
+  altFormat: "F Y",
+  dateFormat: "Y-m",
+  disableMobile: true,
+  plugins: [
+    monthSelectPlugin({
+      shorthand: false,
+      dateFormat: "Y-m",
+      altFormat: "F Y",
+    }),
+  ],
+};
+const datePickerConfig = {
+  altInput: true,
+  altFormat: "d F Y",
+  dateFormat: "Y-m-d",
+  disableMobile: true,
+};
 
 const numberValue = value => Number(value ?? 0);
 const amountValue = (value, fallback = 0) => value ?? fallback ?? 0;
@@ -55,6 +120,17 @@ const formatMonthYear = (value) => {
     month: "long",
     year: "numeric",
   }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
+};
+const formatDate = (value) => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (!match) return "";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
 };
 const subtotalTransport = (item) => {
   const transportMotor = numberValue(amountValue(item.transport_motor, item.transport));
@@ -130,12 +206,17 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
   fetchData();
 };
 
-const pegawaiLabel = item => item.nama_pegawai || item.nama_dosen || "-";
-const pegawaiMeta = item => [
-  item.kode_pegawai || item.kode_dosen,
-  item.tipe_pegawai === "staff" ? "Staff" : item.tipe_pegawai === "dosen" ? "Dosen" : null,
-  item.jabatan_staff || item.nama_prodi_dosen,
-].filter(Boolean).join(" - ");
+const isNonPegawai = item => item.kategori_detail === "non_pegawai";
+const pegawaiLabel = item => isNonPegawai(item)
+  ? "Nonpegawai"
+  : item.nama_pegawai || item.nama_dosen || "-";
+const pegawaiMeta = item => isNonPegawai(item)
+  ? "Tanpa pegawai"
+  : [
+      item.kode_pegawai || item.kode_dosen,
+      item.tipe_pegawai === "staff" ? "Staff" : item.tipe_pegawai === "dosen" ? "Dosen" : null,
+      item.jabatan_staff || item.nama_prodi_dosen,
+    ].filter(Boolean).join(" - ");
 
 const uraian = (item) => {
   if (props.moduleType === "kegiatan") {
@@ -153,7 +234,114 @@ const uraian = (item) => {
   return `Transport ${formatRupiah(subtotalTransport(item))}, mengajar ${formatRupiah(subtotalMengajar(item))}, sempro ${formatRupiah(subtotalSempro(item))}, UAS ${formatRupiah(subtotalUas(item))}`;
 };
 
-const editPath = item => `${props.basePath}/edit/${item.id}`;
+const currentDetailPath = computed(() => route.fullPath);
+const createPath = () => ({
+  path: `${props.basePath}/add`,
+  query: {
+    rekap_id: rekapId.value,
+    return_to: currentDetailPath.value,
+  },
+});
+const editBatchPath = () => ({
+  path: `${props.basePath}/add`,
+  query: {
+    rekap_id: rekapId.value,
+    return_to: currentDetailPath.value,
+    edit_batch: "1",
+  },
+});
+const editPath = item => ({
+  path: `${props.basePath}/edit/${item.id}`,
+  query: {
+    return_to: currentDetailPath.value,
+  },
+});
+const paymentColor = value => {
+  if (value === "Transfer") return "info";
+  if (value === "Tunai") return "secondary";
+
+  return "success";
+};
+const openEditRekapDialog = () => {
+  nama.value = rekap.value?.nama || "";
+  bulanTahun.value = String(rekap.value?.bulan_tahun || "").slice(0, 7);
+  tanggalRekap.value = String(rekap.value?.tanggal_rekap || "").slice(0, 10);
+  jumlahSementara.value = Number(rekap.value?.jumlah_sementara ?? rekap.value?.jumlah ?? 0);
+  keterangan.value = rekap.value?.keterangan || "";
+  dialog.value = true;
+};
+const saveRekap = async () => {
+  if (saving.value) return;
+
+  const trimmedNama = nama.value.trim();
+
+  if (!trimmedNama) {
+    showSnackbar({
+      text: "Nama rekap harus diisi.",
+      color: "warning",
+    });
+    namaInput.value?.focus();
+    return;
+  }
+
+  try {
+    saving.value = true;
+    const response = await $api(`${props.endpoint}/rekap/${rekapId.value}`, {
+      method: "PUT",
+      body: {
+        nama: trimmedNama,
+        bulan_tahun: bulanTahun.value,
+        tanggal_rekap: tanggalRekap.value,
+        jumlah_sementara: editingHasDetails.value ? null : Number(jumlahSementara.value || 0),
+        keterangan: keterangan.value,
+      },
+    });
+
+    if (response.status === true) {
+      dialog.value = false;
+      await fetchRekap();
+      notifyPengeluaranRekapUpdated(props.endpoint);
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      });
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    saving.value = false;
+  }
+};
+const confirmDeleteRekap = async () => {
+  if (actionLoading.value) return;
+
+  try {
+    actionLoading.value = true;
+    const response = await $api(`${props.endpoint}/rekap/${rekapId.value}`, {
+      method: "DELETE",
+    });
+
+    if (response.status === true) {
+      actionDialog.value = false;
+      notifyPengeluaranRekapUpdated(props.endpoint);
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      });
+      router.push(returnPath.value);
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    actionLoading.value = false;
+  }
+};
 
 onMounted(async () => {
   document.title = `Detail Rekap ${props.title} - SIMKEU`;
@@ -183,8 +371,8 @@ onMounted(async () => {
 
     <VCard class="mb-6">
       <VCardText>
-        <div class="d-flex flex-wrap align-center gap-4">
-          <div class="min-w-0">
+        <div class="detail-summary">
+          <div class="detail-main min-w-0">
             <div class="text-h5 font-weight-semibold">
               {{ rekap?.nama || "Detail Rekap" }}
             </div>
@@ -194,41 +382,94 @@ onMounted(async () => {
             <div v-if="rekap?.bulan_tahun" class="text-caption text-medium-emphasis mt-1">
               Periode {{ formatMonthYear(rekap.bulan_tahun) }}
             </div>
+            <div v-if="rekap?.tanggal_rekap" class="text-caption text-medium-emphasis mt-1">
+              Tanggal rekap {{ formatDate(rekap.tanggal_rekap) }}
+            </div>
           </div>
 
-          <VSpacer />
+          <div class="detail-side">
+            <div class="detail-stats">
+              <div class="detail-stat">
+                <span>Jumlah Data</span>
+                <strong>{{ rekap?.jumlah_data || 0 }}</strong>
+              </div>
 
-          <div class="detail-stat">
-            <span>Jumlah Data</span>
-            <strong>{{ rekap?.jumlah_data || 0 }}</strong>
+              <div class="detail-stat">
+                <span>Jumlah RAB</span>
+                <strong>{{ formatRupiah(rekap?.jumlah || 0) }}</strong>
+                <small>
+                  {{ rekap?.is_jumlah_sementara ? "Jumlah sementara" : "Total detail aktual" }}
+                </small>
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <VBtn
+                variant="outlined"
+                color="primary"
+                prepend-icon="ri-edit-line"
+                @click="openEditRekapDialog"
+              >
+                Edit
+              </VBtn>
+              <VBtn
+                variant="outlined"
+                color="error"
+                prepend-icon="ri-delete-bin-line"
+                :disabled="!canDeleteRekapWithDetails && Number(rekap?.jumlah_data || 0) > 0"
+                @click="actionDialog = true"
+              >
+                Delete
+              </VBtn>
+            </div>
           </div>
 
-          <div class="detail-stat">
-            <span>Total</span>
-            <strong>{{ formatRupiah(rekap?.total_pengeluaran || 0) }}</strong>
-          </div>
         </div>
+
+        <VAlert
+          v-if="rekap?.jumlah_sementara !== null && Number(rekap?.jumlah_data || 0) > 0"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mt-4"
+        >
+          Total detail masih kurang {{ formatRupiah(rekap?.selisih_sementara || 0) }}
+          dari target sementara {{ formatRupiah(rekap?.jumlah_sementara || 0) }}.
+          Target akan dikosongkan otomatis setelah total detail sama.
+        </VAlert>
       </VCardText>
     </VCard>
 
     <VCard>
-      <VCardItem class="pb-4">
+      <VCardItem class="detail-data-header pb-4">
         <VCardTitle>Data {{ title }}</VCardTitle>
+
+        <template v-if="allowCreate" #append>
+          <div class="detail-data-actions">
+            <VBtn
+              v-if="moduleType === 'kegiatan'"
+              variant="outlined"
+              color="primary"
+              prepend-icon="ri-edit-line"
+              @click="router.push(editBatchPath())"
+            >
+              Edit Batch
+            </VBtn>
+            <VBtn
+              color="primary"
+              prepend-icon="ri-add-line"
+              @click="router.push(createPath())"
+            >
+              Tambah Data
+            </VBtn>
+          </div>
+        </template>
       </VCardItem>
 
       <VDivider />
 
       <VDataTableServer
-        :headers="[
-          { title: 'No', key: 'id' },
-          { title: 'Tanggal', key: 'tanggal' },
-          { title: 'Pegawai', key: 'pegawai', sortable: false },
-          { title: 'Uraian', key: 'uraian', sortable: false },
-          { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
-          { title: 'Total', key: 'total' },
-          { title: 'Keterangan', key: 'keterangan' },
-          { title: 'Actions', key: 'actions', sortable: false },
-        ]"
+        :headers="tableHeaders"
         v-model:items-per-page="itemsPerPage"
         v-model:page="page"
         :items="dataTable"
@@ -254,6 +495,16 @@ onMounted(async () => {
           </div>
         </template>
 
+        <template #item.kategori_detail="{ item }">
+          <VChip
+            :color="isNonPegawai(item) ? 'secondary' : 'primary'"
+            size="small"
+            label
+          >
+            {{ isNonPegawai(item) ? "Nonpegawai" : "Pegawai" }}
+          </VChip>
+        </template>
+
         <template #item.uraian="{ item }">
           {{ uraian(item) }}
         </template>
@@ -261,7 +512,7 @@ onMounted(async () => {
         <template #item.jenis_pembayaran="{ item }">
           <VChip
             v-if="item.jenis_pembayaran"
-            :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
+            :color="paymentColor(item.jenis_pembayaran)"
             size="small"
             label
           >
@@ -291,13 +542,159 @@ onMounted(async () => {
         </template>
       </VDataTableServer>
     </VCard>
+
+    <VDialog
+      v-model="dialog"
+      width="640"
+      @after-enter="namaInput?.focus()"
+    >
+      <VCard title="Edit Rekap">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="dialog = false"
+        />
+
+        <VCardText>
+          <VRow>
+            <VCol cols="12">
+              <VTextField
+                ref="namaInput"
+                v-model="nama"
+                label="Nama Rekap *"
+                :rules="[requiredValidator]"
+                @keydown.enter.prevent="saveRekap"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <AppDateTimePicker
+                v-model="tanggalRekap"
+                label="Tanggal Rekap *"
+                prepend-inner-icon="ri-calendar-event-line"
+                :config="datePickerConfig"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <VTextField
+                v-model="jumlahSementara"
+                :label="editingHasDetails ? 'Jumlah RAB dari Detail' : 'Jumlah Sementara *'"
+                type="number"
+                min="0"
+                prefix="Rp"
+                :disabled="editingHasDetails"
+                :hint="editingHasDetails
+                  ? 'Jumlah dihitung otomatis dari total data pengeluaran.'
+                  : `${formatRupiah(jumlahSementara)} - dipakai sampai detail tersedia`"
+                persistent-hint
+                :rules="editingHasDetails ? [] : [requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <AppDateTimePicker
+                v-model="bulanTahun"
+                label="Bulan dan Tahun *"
+                prepend-inner-icon="ri-calendar-line"
+                :config="monthYearPickerConfig"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <VTextarea
+                v-model="keterangan"
+                label="Keterangan (Opsional)"
+                auto-grow
+              />
+            </VCol>
+          </VRow>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="dialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="saving"
+            :disabled="saving"
+            @click="saveRekap"
+          >
+            Simpan Perubahan
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <VDialog v-model="actionDialog" width="500">
+      <VCard title="Hapus Rekap">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="actionDialog = false"
+        />
+
+        <VCardText>
+          {{ deleteRekapMessage }}
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="actionLoading"
+            @click="actionDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="error"
+            prepend-icon="ri-delete-bin-line"
+            :loading="actionLoading"
+            :disabled="actionLoading"
+            @click="confirmDeleteRekap"
+          >
+            Hapus Rekap
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 
 <style scoped>
+.detail-summary {
+  display: grid;
+  align-items: center;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.detail-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detail-stats {
+  display: grid;
+  align-items: stretch;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+}
+
 .detail-stat {
   display: grid;
+  min-block-size: 82px;
   min-inline-size: 150px;
+  align-content: center;
   border: 1px solid rgba(var(--v-border-color), 0.16);
   border-radius: 8px;
   padding: 10px 14px;
@@ -312,5 +709,88 @@ onMounted(async () => {
 .detail-stat strong {
   color: rgba(var(--v-theme-on-surface), 0.92);
   font-size: 1rem;
+}
+
+.detail-stat small {
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-size: 0.7rem;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.detail-data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 959px) {
+  .detail-summary {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .detail-side {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .detail-actions :deep(.v-btn) {
+    flex: 1 1 0;
+  }
+}
+
+@media (max-width: 599px) {
+  .detail-data-header {
+    display: grid;
+    align-items: stretch;
+    gap: 12px;
+    grid-template-areas:
+      "content"
+      "append";
+    grid-template-columns: 1fr;
+  }
+
+  .detail-data-header :deep(.v-card-item__content) {
+    min-inline-size: 0;
+  }
+
+  .detail-data-header :deep(.v-card-title) {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .detail-data-header :deep(.v-card-item__append) {
+    margin-inline-start: 0;
+    padding-inline-start: 0;
+  }
+
+  .detail-data-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    inline-size: 100%;
+  }
+
+  .detail-data-actions :deep(.v-btn) {
+    inline-size: 100%;
+  }
+
+  .detail-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .detail-stat {
+    min-inline-size: 0;
+    padding: 12px;
+  }
+
+  .detail-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

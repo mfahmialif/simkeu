@@ -5,6 +5,19 @@ import { useRoute, useRouter } from "vue-router";
 const route = useRoute();
 const router = useRouter();
 const id = route.params.id;
+const returnPath = computed(() => {
+  const value = route.query.return_to;
+  const path = Array.isArray(value) ? value[0] : value;
+
+  if (
+    typeof path === "string"
+    && path.startsWith("/admin/pengeluaran/dosen-kegiatan")
+  ) {
+    return path;
+  }
+
+  return "/admin/pengeluaran/dosen-kegiatan";
+});
 
 const dataForm = ref(null);
 const isLoading = ref(false);
@@ -28,7 +41,7 @@ const fetchDataForm = async () => {
 };
 
 onMounted(() => {
-  document.title = "Edit Barokah Pegawai Kegiatan - SIMKEU";
+  document.title = "Edit Pengeluaran Kegiatan - SIMKEU";
   fetchDataForm();
 });
 </script>
@@ -40,7 +53,7 @@ onMounted(() => {
         variant="outlined"
         color="secondary"
         prepend-icon="ri-arrow-left-line"
-        @click="router.push('/admin/pengeluaran/dosen-kegiatan')"
+        @click="router.push(returnPath)"
       >
         Kembali
       </VBtn>
@@ -54,6 +67,7 @@ onMounted(() => {
         v-else
         :data-form="dataForm"
         type-form="edit"
+        :return-path="returnPath"
       />
     </VCol>
   </VRow>

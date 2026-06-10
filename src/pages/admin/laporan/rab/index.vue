@@ -7,7 +7,7 @@ const route = useRoute();
 const currentDate = new Date();
 const page = ref(1);
 const itemsPerPage = ref(10);
-const sortBy = ref([{ key: "bulan_tahun", order: "desc" }]);
+const sortBy = ref([{ key: "tanggal_rekap", order: "desc" }]);
 const search = ref("");
 const selectedBulan = ref(currentDate.getMonth() + 1);
 const selectedTahun = ref(currentDate.getFullYear());
@@ -45,6 +45,17 @@ const formatMonthYear = (value) => {
     year: "numeric",
   }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
 };
+const formatDate = (value) => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (!match) return "-";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+};
 const yearItems = computed(() => [...new Set([
   currentDate.getFullYear(),
   ...years.value,
@@ -81,7 +92,7 @@ const statCards = computed(() => [
     value: Number(stats.value.total_modul || 0).toLocaleString("id-ID"),
     note: "Jenis Barokah",
     icon: "ri-layout-grid-line",
-    color: "success",
+    color: "secondary",
   },
 ]);
 
@@ -109,7 +120,7 @@ const errorMessage = (err) => {
 const fetchData = async () => {
   try {
     loading.value = true;
-    const activeSort = sortBy.value?.[0] || { key: "bulan_tahun", order: "desc" };
+    const activeSort = sortBy.value?.[0] || { key: "tanggal_rekap", order: "desc" };
     const response = await $api("/admin/laporan/rab", {
       method: "GET",
       body: {
@@ -143,7 +154,7 @@ const fetchData = async () => {
 const loadItems = ({ page: nextPage, itemsPerPage: nextLimit, sortBy: nextSort }) => {
   page.value = nextPage;
   itemsPerPage.value = nextLimit;
-  sortBy.value = nextSort.length ? nextSort : [{ key: "bulan_tahun", order: "desc" }];
+  sortBy.value = nextSort.length ? nextSort : [{ key: "tanggal_rekap", order: "desc" }];
   fetchData();
 };
 
@@ -285,11 +296,12 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
         v-model:sort-by="sortBy"
         :headers="[
           { title: 'No', key: 'nomor', sortable: false },
+          { title: 'Tanggal Rekap', key: 'tanggal_rekap' },
           { title: 'Periode', key: 'bulan_tahun' },
           { title: 'Nama Rekap', key: 'nama' },
           { title: 'Jenis', key: 'module_name' },
           { title: 'Jumlah Data', key: 'jumlah_data', align: 'end' },
-          { title: 'Total', key: 'total_pengeluaran', align: 'end' },
+          { title: 'Jumlah RAB', key: 'jumlah', align: 'end' },
           { title: 'Keterangan', key: 'keterangan', sortable: false },
           { title: '', key: 'actions', sortable: false, align: 'end' },
         ]"
@@ -316,6 +328,12 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
 
+        <template #item.tanggal_rekap="{ item }">
+          <div class="font-weight-medium">
+            {{ formatDate(item.tanggal_rekap) }}
+          </div>
+        </template>
+
         <template #item.bulan_tahun="{ item }">
           <div class="font-weight-medium">
             {{ formatMonthYear(item.bulan_tahun) }}
@@ -338,8 +356,22 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
           {{ Number(item.jumlah_data || 0).toLocaleString("id-ID") }}
         </template>
 
-        <template #item.total_pengeluaran="{ item }">
-          <strong>{{ formatRupiah(item.total_pengeluaran) }}</strong>
+        <template #item.jumlah="{ item }">
+          <div class="rab-amount">
+            <strong>{{ formatRupiah(item.jumlah) }}</strong>
+            <VChip
+              :color="item.jumlah_sementara !== null && Number(item.jumlah_data || 0) > 0
+                ? 'warning'
+                : item.is_jumlah_sementara ? 'secondary' : 'success'"
+              size="x-small"
+              variant="tonal"
+              label
+            >
+              {{ item.jumlah_sementara !== null && Number(item.jumlah_data || 0) > 0
+                ? 'Belum sinkron'
+                : item.is_jumlah_sementara ? 'Sementara' : 'Detail' }}
+            </VChip>
+          </div>
         </template>
 
         <template #item.keterangan="{ item }">
@@ -391,6 +423,12 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
 
 .rab-name:hover {
   text-decoration: underline;
+}
+
+.rab-amount {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
 }
 
 @media (max-width: 1199px) {

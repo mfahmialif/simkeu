@@ -125,7 +125,6 @@ defineExpose({
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
-          { title: 'Nama Kegiatan', key: 'nama_kegiatan' },
           { title: 'Transport', key: 'transport' },
           { title: 'Barokah', key: 'barokah' },
           { title: 'Total', key: 'total' },
@@ -219,7 +218,7 @@ defineExpose({
                 <VListItem
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.nama_kegiatan)"
+                  @click="showDialogDelete(item.id, item.tanggal)"
                 >
                   Delete
                 </VListItem>

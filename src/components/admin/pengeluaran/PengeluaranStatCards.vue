@@ -104,7 +104,7 @@ const statCards = computed(() => {
           />
           <div
             v-else
-            class="text-h5 font-weight-medium text-truncate"
+            class="stat-amount text-h5 font-weight-medium"
             :title="formatRupiah(item.amount)"
           >
             {{ formatRupiah(item.amount) }}
@@ -137,7 +137,7 @@ const statCards = computed(() => {
 <style scoped>
 .pengeluaran-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -149,7 +149,12 @@ const statCards = computed(() => {
   min-inline-size: 0;
 }
 
-@media (max-width: 959px) {
+.stat-amount {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (max-width: 1199px) {
   .pengeluaran-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

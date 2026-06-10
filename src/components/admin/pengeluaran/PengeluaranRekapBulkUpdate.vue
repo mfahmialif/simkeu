@@ -24,6 +24,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  allowCancel: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(["update:allPages", "updated"]);
@@ -143,7 +147,7 @@ const cancelRekap = () => submitRekap(null);
           />
         </VCol>
 
-        <VCol cols="12" md="2">
+        <VCol cols="12" :md="allowCancel ? 2 : 4">
           <VBtn
             color="primary"
             class="w-100"
@@ -157,7 +161,7 @@ const cancelRekap = () => submitRekap(null);
           </VBtn>
         </VCol>
 
-        <VCol cols="12" md="2">
+        <VCol v-if="allowCancel" cols="12" md="2">
           <VBtn
             color="warning"
             variant="outlined"

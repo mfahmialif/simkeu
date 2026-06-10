@@ -1,0 +1,1 @@
+const n="pengeluaran-rekap-updated",o=e=>{typeof window>"u"||window.dispatchEvent(new CustomEvent(n,{detail:{endpoint:e}}))},r=(e,i)=>{if(typeof window>"u")return()=>{};const t=a=>{var d;((d=a.detail)==null?void 0:d.endpoint)===e&&i()};return window.addEventListener(n,t),()=>window.removeEventListener(n,t)};export{r as l,o as n};

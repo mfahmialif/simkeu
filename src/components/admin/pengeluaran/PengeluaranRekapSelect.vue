@@ -1,4 +1,5 @@
 <script setup>
+import { formatRupiah } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
 import {
   listenPengeluaranRekapUpdated,
@@ -34,7 +35,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "created"]);
+const emit = defineEmits(["update:modelValue", "created", "selected"]);
 
 const items = ref([]);
 const loading = ref(false);
@@ -43,6 +44,17 @@ const saving = ref(false);
 const namaInput = ref(null);
 const nama = ref("");
 const keterangan = ref("");
+const jumlahSementara = ref(0);
+const currentDateValue = () => {
+  const date = new Date();
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+};
+const tanggalRekap = ref(currentDateValue());
 const currentMonthValue = () => {
   const date = new Date();
 
@@ -64,6 +76,12 @@ const monthYearPickerConfig = {
     }),
   ],
 };
+const datePickerConfig = {
+  altInput: true,
+  altFormat: "d F Y",
+  dateFormat: "Y-m-d",
+  disableMobile: true,
+};
 const formatMonthYear = (value) => {
   const match = String(value || "").match(/^(\d{4})-(\d{2})/);
 
@@ -74,8 +92,24 @@ const formatMonthYear = (value) => {
     year: "numeric",
   }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
 };
+const formatDate = (value) => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (!match) return null;
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+};
 const rekapSubtitle = item => [
   formatMonthYear(item.bulan_tahun),
+  item.tanggal_rekap ? `Tanggal ${formatDate(item.tanggal_rekap)}` : null,
+  `${item.is_jumlah_sementara ? "Sementara" : "Detail"} ${formatRupiah(item.jumlah || 0)}`,
+  item.jumlah_sementara !== null && Number(item.jumlah_data || 0) > 0
+    ? `Target ${formatRupiah(item.jumlah_sementara)}`
+    : null,
   item.keterangan,
 ].filter(Boolean).join(" · ");
 
@@ -83,6 +117,9 @@ const selectedValue = computed({
   get: () => props.modelValue,
   set: value => emit("update:modelValue", value || null),
 });
+const selectedItem = computed(() =>
+  items.value.find(item => String(item.id) === String(selectedValue.value)) || null,
+);
 
 const errorMessage = (err) => {
   const message =
@@ -131,7 +168,14 @@ const fetchRekap = async () => {
 const resetForm = () => {
   nama.value = "";
   keterangan.value = "";
+  jumlahSementara.value = 0;
+  tanggalRekap.value = currentDateValue();
   bulanTahun.value = currentMonthValue();
+};
+
+const openCreateDialog = () => {
+  resetForm();
+  dialog.value = true;
 };
 
 const createRekap = async () => {
@@ -148,6 +192,29 @@ const createRekap = async () => {
     return;
   }
 
+  if (!tanggalRekap.value) {
+    showSnackbar({
+      text: "Tanggal rekap harus diisi.",
+      color: "warning",
+    });
+    return;
+  }
+
+  const temporaryAmount = Number(jumlahSementara.value);
+
+  if (
+    jumlahSementara.value === ""
+    || jumlahSementara.value === null
+    || !Number.isFinite(temporaryAmount)
+    || temporaryAmount < 0
+  ) {
+    showSnackbar({
+      text: "Jumlah sementara harus diisi dengan nilai yang valid.",
+      color: "warning",
+    });
+    return;
+  }
+
   try {
     saving.value = true;
     const response = await $api(`${props.endpoint}/rekap`, {
@@ -155,6 +222,8 @@ const createRekap = async () => {
       body: {
         nama: trimmedNama,
         bulan_tahun: bulanTahun.value,
+        tanggal_rekap: tanggalRekap.value,
+        jumlah_sementara: temporaryAmount,
         keterangan: keterangan.value,
       },
     });
@@ -189,6 +258,8 @@ onMounted(() => {
   );
 });
 
+watch(selectedItem, item => emit("selected", item), { immediate: true });
+
 onBeforeUnmount(() => stopListeningRekapUpdates?.());
 </script>
 
@@ -220,7 +291,7 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.());
           variant="tonal"
           color="primary"
           :disabled="disabled"
-          @click="dialog = true"
+          @click="openCreateDialog"
         >
           <VIcon icon="ri-add-line" />
         </VBtn>
@@ -229,7 +300,7 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.());
 
     <VDialog
       v-model="dialog"
-      width="560"
+      width="640"
       @after-enter="namaInput?.focus()"
     >
       <VCard title="Tambah Rekap">
@@ -251,6 +322,30 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.());
                 hint="Wajib diisi"
                 persistent-hint
                 @keydown.enter.prevent="createRekap"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <AppDateTimePicker
+                v-model="tanggalRekap"
+                label="Tanggal Rekap *"
+                placeholder="Pilih tanggal rekap"
+                prepend-inner-icon="ri-calendar-event-line"
+                :config="datePickerConfig"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <VTextField
+                v-model="jumlahSementara"
+                label="Jumlah Sementara *"
+                type="number"
+                min="0"
+                prefix="Rp"
+                :hint="`${formatRupiah(jumlahSementara)} - dipakai sampai detail tersedia`"
+                persistent-hint
+                :rules="[requiredValidator]"
               />
             </VCol>
 
