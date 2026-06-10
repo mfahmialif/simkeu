@@ -1,5 +1,7 @@
 <script setup>
+import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue";
 import { showSnackbar } from "@/composables/snackbar";
+import { appendLampiranFormData } from "@/utils/lampiran";
 
 const router = useRouter();
 
@@ -23,6 +25,9 @@ const refForm = ref(null);
 const jumlah = ref(0);
 const keterangan = ref("");
 const tanggal = ref(fDate(new Date()));
+const lampiran = ref([]);
+const existingLampiran = ref([]);
+const removedLampiran = ref([]);
 const disabled = ref(false);
 
 const saldo = ref([]);
@@ -57,6 +62,7 @@ onMounted(async () => {
     jumlah.value = props.dataForm.jumlah;
     keterangan.value = props.dataForm.keterangan;
     tanggal.value = props.dataForm.tanggal;
+    existingLampiran.value = props.dataForm.lampiran ?? [];
   }
 });
 
@@ -73,6 +79,7 @@ const onSubmit = async () => {
   formData.append("jumlah", jumlah.value);
   formData.append("tanggal", tanggal.value);
   formData.append("keterangan", keterangan.value);
+  appendLampiranFormData(formData, lampiran.value, removedLampiran.value);
 
   formData.append("_method", method);
 
@@ -157,6 +164,14 @@ const onSubmit = async () => {
           placeholder="Type here..."
           auto-grow
           :rules="[requiredValidator]"
+        />
+      </VCol>
+
+      <VCol cols="12">
+        <PengeluaranLampiranInput
+          v-model="lampiran"
+          v-model:removed-lampiran="removedLampiran"
+          :existing-lampiran="existingLampiran"
         />
       </VCol>
 

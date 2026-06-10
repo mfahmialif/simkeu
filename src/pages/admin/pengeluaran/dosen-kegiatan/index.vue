@@ -1,4 +1,5 @@
 <script setup>
+import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue";
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
 import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
@@ -503,6 +504,7 @@ onMounted(() => {
           { title: 'Total', key: 'total' },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
           { title: 'Bukti', key: 'bukti_transfer', sortable: false },
+          { title: 'Lampiran', key: 'lampiran', sortable: false },
           { title: 'Keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
@@ -596,6 +598,10 @@ onMounted(() => {
             <VIcon icon="ri-file-paper-2-line" />
           </VBtn>
           <span v-else>-</span>
+        </template>
+
+        <template #item.lampiran="{ item }">
+          <PengeluaranLampiranList :items="item.lampiran" />
         </template>
 
         <template #item.keterangan="{ item }">

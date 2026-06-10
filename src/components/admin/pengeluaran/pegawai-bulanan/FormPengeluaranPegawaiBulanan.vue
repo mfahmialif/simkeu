@@ -1,7 +1,9 @@
 <script setup>
+import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue";
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { formatRupiah } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
+import { appendLampiranFormData } from "@/utils/lampiran";
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
 import "flatpickr/dist/plugins/monthSelect/style.css";
 
@@ -71,6 +73,11 @@ const barokahDosenTetap = ref(null);
 const barokahStruktural = ref(null);
 const jenisPembayaran = ref("CUS BSI");
 const rekapId = ref(null);
+const buktiTransfer = ref(null);
+const existingBuktiTransferUrl = ref(null);
+const lampiran = ref([]);
+const existingLampiran = ref([]);
+const removedLampiran = ref([]);
 const keterangan = ref("");
 const disabled = ref(false);
 
@@ -78,6 +85,21 @@ const jenisPembayaranList = ["CUS BSI", "Transfer"];
 const showMainDataInForm = computed(() => props.typeForm === "edit");
 const isStaffForm = computed(() => props.pegawaiTitle.toLowerCase() === "staff");
 const isDosenForm = computed(() => !isStaffForm.value);
+const selectedBuktiTransferFile = computed(() => {
+  if (Array.isArray(buktiTransfer.value)) return buktiTransfer.value[0] ?? null;
+  return buktiTransfer.value;
+});
+const buktiTransferRules = computed(() => {
+  if (
+    !isStaffForm.value
+    || jenisPembayaran.value !== "Transfer"
+    || existingBuktiTransferUrl.value
+  ) {
+    return [];
+  }
+
+  return [requiredValidator];
+});
 const identifierLabel = computed(() => isStaffForm.value ? "Kode Staff" : `NIY ${props.pegawaiTitle}`);
 const dayLabel = computed(() => props.showPeriod ? "Total Hari" : "Hari");
 const periodeConfig = {
@@ -156,6 +178,11 @@ const fillFormFromData = (data) => {
   barokahStruktural.value = data.barokah_struktural ?? 0;
   jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI";
   rekapId.value = data.rekap_id ?? null;
+  buktiTransfer.value = null;
+  existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null;
+  lampiran.value = [];
+  existingLampiran.value = data.lampiran ?? [];
+  removedLampiran.value = [];
   keterangan.value = data.keterangan ?? "";
 };
 
@@ -206,6 +233,19 @@ const onSubmit = async () => {
     return;
   }
 
+  if (
+    isStaffForm.value
+    && jenisPembayaran.value === "Transfer"
+    && !selectedBuktiTransferFile.value
+    && !existingBuktiTransferUrl.value
+  ) {
+    showSnackbar({
+      text: "Bukti transfer wajib diupload.",
+      color: "warning",
+    });
+    return;
+  }
+
   const editId = props.typeForm === "edit"
     ? props.dataForm.id
     : null;
@@ -239,6 +279,11 @@ const onSubmit = async () => {
   formData.append("rekap_id", rekapId.value ?? "");
   formData.append("keterangan", keterangan.value ?? "");
   formData.append("_method", method);
+
+  if (isStaffForm.value && selectedBuktiTransferFile.value instanceof File) {
+    formData.append("bukti_transfer", selectedBuktiTransferFile.value);
+  }
+  appendLampiranFormData(formData, lampiran.value, removedLampiran.value);
 
   try {
     const response = await $api(url, {
@@ -280,6 +325,12 @@ watch(
 
 watch(periode, (newVal) => {
   syncPeriodParts(newVal);
+});
+
+watch(jenisPembayaran, (newValue) => {
+  if (newValue !== "Transfer") {
+    buktiTransfer.value = null;
+  }
 });
 
 onMounted(() => {
@@ -415,6 +466,38 @@ defineExpose({
             />
           </VCol>
 
+          <VCol
+            v-if="isStaffForm && jenisPembayaran === 'Transfer'"
+            cols="12"
+            md="4"
+          >
+            <VFileInput
+              v-model="buktiTransfer"
+              :prepend-icon="null"
+              label="Bukti Transfer"
+              accept="image/png, image/jpeg, application/pdf"
+              :rules="buktiTransferRules"
+            />
+          </VCol>
+
+          <VCol
+            v-if="isStaffForm && existingBuktiTransferUrl && jenisPembayaran === 'Transfer'"
+            cols="12"
+            md="4"
+          >
+            <VBtn
+              :href="existingBuktiTransferUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="outlined"
+              color="primary"
+              prepend-icon="ri-file-paper-2-line"
+              class="w-100"
+            >
+              Lihat Bukti Transfer
+            </VBtn>
+          </VCol>
+
           <VCol cols="12" :md="isDosenForm ? 6 : (showPeriod ? 4 : 12)">
             <VTextField
               :model-value="formatRupiah(total)"
@@ -428,6 +511,14 @@ defineExpose({
               v-model="keterangan"
               label="Keterangan"
               auto-grow
+            />
+          </VCol>
+
+          <VCol cols="12">
+            <PengeluaranLampiranInput
+              v-model="lampiran"
+              v-model:removed-lampiran="removedLampiran"
+              :existing-lampiran="existingLampiran"
             />
           </VCol>
 

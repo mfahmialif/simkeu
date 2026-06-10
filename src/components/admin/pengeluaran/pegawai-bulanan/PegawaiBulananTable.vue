@@ -1,6 +1,7 @@
 <script setup>
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
 import "flatpickr/dist/plugins/monthSelect/style.css";
+import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue";
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
 import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
@@ -673,6 +674,7 @@ onMounted(() => {
               ]),
           { title: 'Total', key: 'total' },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
+          { title: 'Lampiran', key: 'lampiran', sortable: false },
           { title: 'Keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
@@ -750,17 +752,39 @@ onMounted(() => {
         </template>
 
         <template #item.jenis_pembayaran="{ item }">
-          <VChip
-            :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
-            size="small"
-            label
+          <div
+            class="d-flex flex-column align-start gap-1 py-1"
           >
-            {{ item.jenis_pembayaran }}
-          </VChip>
+            <VChip
+              :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
+              size="small"
+              label
+            >
+              {{ item.jenis_pembayaran }}
+            </VChip>
+
+            <VBtn
+              v-if="!isDosenBulanan && item.jenis_pembayaran === 'Transfer' && item.bukti_transfer_url"
+              :href="item.bukti_transfer_url"
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="text"
+              color="primary"
+              size="x-small"
+              prepend-icon="ri-file-paper-2-line"
+              class="px-0"
+            >
+              Lihat Bukti
+            </VBtn>
+          </div>
         </template>
 
         <template #item.keterangan="{ item }">
           {{ item.keterangan || "-" }}
+        </template>
+
+        <template #item.lampiran="{ item }">
+          <PengeluaranLampiranList :items="item.lampiran" />
         </template>
 
         <template #item.actions="{ item }">

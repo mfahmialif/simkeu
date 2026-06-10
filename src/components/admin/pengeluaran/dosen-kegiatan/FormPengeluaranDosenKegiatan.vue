@@ -1,6 +1,8 @@
 <script setup>
+import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue";
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { showSnackbar } from "@/composables/snackbar";
+import { appendLampiranFormData } from "@/utils/lampiran";
 
 const props = defineProps({
   refDataDosen: {
@@ -46,6 +48,9 @@ const jenisPembayaran = ref("CUS BSI");
 const rekapId = ref(null);
 const buktiTransfer = ref(null);
 const existingBuktiTransferUrl = ref(null);
+const lampiran = ref([]);
+const existingLampiran = ref([]);
+const removedLampiran = ref([]);
 const keterangan = ref("");
 const disabled = ref(false);
 
@@ -86,6 +91,9 @@ const fillFormFromData = (data) => {
   rekapId.value = data.rekap_id ?? null;
   buktiTransfer.value = null;
   existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null;
+  lampiran.value = [];
+  existingLampiran.value = data.lampiran ?? [];
+  removedLampiran.value = [];
   keterangan.value = data.keterangan ?? "";
 };
 
@@ -156,6 +164,7 @@ const onSubmit = async () => {
   if (selectedBuktiTransferFile.value instanceof File) {
     formData.append("bukti_transfer", selectedBuktiTransferFile.value);
   }
+  appendLampiranFormData(formData, lampiran.value, removedLampiran.value);
 
   try {
     const response = await $api(url, {
@@ -321,6 +330,14 @@ defineExpose({
               v-model="keterangan"
               label="Keterangan"
               auto-grow
+            />
+          </VCol>
+
+          <VCol cols="12">
+            <PengeluaranLampiranInput
+              v-model="lampiran"
+              v-model:removed-lampiran="removedLampiran"
+              :existing-lampiran="existingLampiran"
             />
           </VCol>
 

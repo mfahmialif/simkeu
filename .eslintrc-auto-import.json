@@ -379,6 +379,7 @@
     "formatMoney": true,
     "formatCurrencyTotals": true,
     "listenPengeluaranRekapUpdated": true,
-    "notifyPengeluaranRekapUpdated": true
+    "notifyPengeluaranRekapUpdated": true,
+    "appendLampiranFormData": true
   }
 }

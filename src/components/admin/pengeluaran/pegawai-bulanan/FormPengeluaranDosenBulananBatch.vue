@@ -1,7 +1,9 @@
 <script setup>
+import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue";
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { formatRupiah } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
+import { appendLampiranFormData } from "@/utils/lampiran";
 
 const props = defineProps({
   endpoint: {
@@ -19,6 +21,7 @@ const refForm = ref(null);
 const rekapId = ref(null);
 const tanggal = ref(fDate(new Date()));
 const jenisPembayaran = ref("CUS BSI");
+const lampiran = ref([]);
 const search = ref("");
 const rows = ref([]);
 const loading = ref(false);
@@ -97,18 +100,26 @@ const onSubmit = async () => {
 
   try {
     saving.value = true;
+    const formData = new FormData();
+    formData.append("rekap_id", rekapId.value);
+    formData.append("tanggal", tanggal.value);
+    formData.append("jenis_pembayaran", jenisPembayaran.value);
+    rows.value.forEach((item, index) => {
+      formData.append(`items[${index}][pegawai_id]`, item.pegawai_id);
+      formData.append(
+        `items[${index}][barokah_dosen_tetap]`,
+        Number(item.barokah_dosen_tetap || 0)
+      );
+      formData.append(
+        `items[${index}][barokah_struktural]`,
+        Number(item.barokah_struktural || 0)
+      );
+    });
+    appendLampiranFormData(formData, lampiran.value);
+
     const response = await $api(`${props.endpoint}/batch-store`, {
       method: "POST",
-      body: {
-        rekap_id: rekapId.value,
-        tanggal: tanggal.value,
-        jenis_pembayaran: jenisPembayaran.value,
-        items: rows.value.map(item => ({
-          pegawai_id: item.pegawai_id,
-          barokah_dosen_tetap: Number(item.barokah_dosen_tetap || 0),
-          barokah_struktural: Number(item.barokah_struktural || 0),
-        })),
-      },
+      body: formData,
     });
 
     showSnackbar({
@@ -172,6 +183,10 @@ watch(rekapId, () => {
               :items="jenisPembayaranList"
               :rules="[requiredValidator]"
             />
+          </VCol>
+
+          <VCol cols="12">
+            <PengeluaranLampiranInput v-model="lampiran" />
           </VCol>
         </VRow>
       </VCardText>

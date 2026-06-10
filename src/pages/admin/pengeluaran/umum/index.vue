@@ -1,4 +1,5 @@
 <script setup>
+import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue";
 
 const page = ref(1)
 const itemsPerPage = ref(5)
@@ -138,6 +139,7 @@ watch(selectedRows, (newValue) => {
         { title: 'Nama', key: 'saldo_nama' },
         { title: 'Jumlah', key: 'jumlah' },
         { title: 'Tanggal', key: 'tanggal' },
+        { title: 'Lampiran', key: 'lampiran', sortable: false },
         { title: 'Keterangan', key: 'keterangan' },
         { title: 'Actions', key: 'actions', sortable: false },
       ]" v-model:model-value="selectedRows" v-model:items-per-page="itemsPerPage" v-model:page="page"
@@ -160,6 +162,10 @@ watch(selectedRows, (newValue) => {
 
         <template #item.tanggal="{ item }">
           {{ new Date(item.tanggal).toLocaleDateString() }}
+        </template>
+
+        <template #item.lampiran="{ item }">
+          <PengeluaranLampiranList :items="item.lampiran" />
         </template>
 
         <!-- Actions -->

@@ -1,4 +1,5 @@
 <script setup>
+import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue";
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
 import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
@@ -469,6 +470,7 @@ const printSlip = async (id) => {
           { title: 'UAS', key: 'subtotal_uas', sortable: false },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
           { title: 'Total', key: 'total' },
+          { title: 'Lampiran', key: 'lampiran', sortable: false },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
         v-model:model-value="selectedRows"
@@ -517,14 +519,32 @@ const printSlip = async (id) => {
         </template>
 
         <template #item.jenis_pembayaran="{ item }">
-          <VChip
+          <div
             v-if="item.jenis_pembayaran"
-            :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
-            size="small"
-            label
+            class="d-flex flex-column align-start gap-1 py-1"
           >
-            {{ item.jenis_pembayaran }}
-          </VChip>
+            <VChip
+              :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
+              size="small"
+              label
+            >
+              {{ item.jenis_pembayaran }}
+            </VChip>
+
+            <VBtn
+              v-if="item.jenis_pembayaran === 'Transfer' && item.bukti_transfer_url"
+              :href="item.bukti_transfer_url"
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="text"
+              color="primary"
+              size="x-small"
+              prepend-icon="ri-file-paper-2-line"
+              class="px-0"
+            >
+              Lihat Bukti
+            </VBtn>
+          </div>
           <span v-else>-</span>
         </template>
 
@@ -544,6 +564,10 @@ const printSlip = async (id) => {
 
         <template #item.nama_rekap="{ item }">
           {{ item.nama_rekap || "-" }}
+        </template>
+
+        <template #item.lampiran="{ item }">
+          <PengeluaranLampiranList :items="item.lampiran" />
         </template>
 
         <template #item.actions="{ item }">
