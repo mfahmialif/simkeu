@@ -24,6 +24,7 @@ const dataTable = ref([]);
 const totalItems = ref(0);
 const loading = ref(true);
 const initialLoading = ref(true);
+const isBsiPayment = item => String(item?.sumber || '').toLowerCase() === 'bsi';
 
 const getItemMataUang = (item = {}) => ({
   id: item.mata_uang_id ?? null,
@@ -590,6 +591,7 @@ const refreshData = () => {
                   Kwitansi
                 </VListItem>
                 <VListItem
+                  v-if="!isBsiPayment(item)"
                   value="download"
                   prepend-icon="ri-edit-box-line"
                   @click="
@@ -602,12 +604,15 @@ const refreshData = () => {
                 </VListItem>
                 <VListItem
                   v-if="
-                    ['admin', 'kabag'].includes(
-                      (userData?.role?.name || '').toLowerCase()
-                    ) ||
-                    ((userData?.role?.name || '').toLowerCase() === 'staff' &&
-                      (userData?.jenis_kelamin || '').toLowerCase() ===
-                        'perempuan')
+                    !isBsiPayment(item) &&
+                    (
+                      ['admin', 'kabag'].includes(
+                        (userData?.role?.name || '').toLowerCase()
+                      ) ||
+                      ((userData?.role?.name || '').toLowerCase() === 'staff' &&
+                        (userData?.jenis_kelamin || '').toLowerCase() ===
+                          'perempuan')
+                    )
                   "
                   value="delete"
                   prepend-icon="ri-delete-bin-line"

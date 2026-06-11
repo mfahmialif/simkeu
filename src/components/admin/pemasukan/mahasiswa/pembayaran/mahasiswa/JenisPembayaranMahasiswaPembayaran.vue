@@ -23,6 +23,7 @@ const fetchJenisPembayaran = async () => {
       method: "GET",
       body: {
         limit: 0,
+        manual_only: 1,
       },
     });
 

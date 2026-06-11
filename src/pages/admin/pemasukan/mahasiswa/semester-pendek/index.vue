@@ -174,7 +174,7 @@ const fetchOptions = async () => {
   try {
     const [resPeriode, resJp, resPetugas] = await Promise.all([
       $api("/admin/pemasukan/mahasiswa/semester-pendek/get-periode", { method: "GET" }),
-      $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", { method: "GET", body: { limit: 100 } }),
+      $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", { method: "GET", body: { limit: 100, manual_only: 1 } }),
       $api("/helper/petugas-pembayaran", { method: "GET" }),
     ]);
     

@@ -29,7 +29,7 @@ const fetchJenisPembayaran = async () => {
   try {
     const res = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
       method: "GET",
-      params: { limit: 0 },
+      params: { limit: 0, manual_only: 1 },
     });
     const items = res?.data?.data ?? res?.data ?? [];
     listJenisPembayaran.value = items.map((jp) => ({
