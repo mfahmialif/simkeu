@@ -1,7 +1,9 @@
 <script setup>
+import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue";
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { formatRupiah } from "@/composables/formatRupiah";
 import { showSnackbar } from "@/composables/snackbar";
+import { appendLampiranFormData } from "@/utils/lampiran";
 
 const route = useRoute();
 const router = useRouter();
@@ -58,6 +60,9 @@ const newRow = () => ({
   jenis_pembayaran: "CUS BSI",
   bukti_transfer: null,
   existing_bukti_transfer_url: null,
+  lampiran: [],
+  existing_lampiran: [],
+  removed_lampiran: [],
   keterangan: "",
 });
 
@@ -68,11 +73,10 @@ const kategoriItems = [
 ];
 
 const isPegawai = row => row.kategori_detail === "pegawai";
-const keteranganLabel = row => (isPegawai(row) ? "Keterangan" : "Uraian Pengeluaran");
 const paymentItems = row => (
   isPegawai(row)
     ? ["CUS BSI", "Transfer"]
-    : ["Tunai", "Transfer"]
+    : ["Tunai", "CUS BSI", "Transfer"]
 );
 const rowTotal = row => Math.round(
   isPegawai(row)
@@ -184,6 +188,9 @@ const detailToRow = item => ({
   jenis_pembayaran: item.jenis_pembayaran || (item.kategori_detail === "non_pegawai" ? "Tunai" : "CUS BSI"),
   bukti_transfer: null,
   existing_bukti_transfer_url: item.bukti_transfer_url || null,
+  lampiran: [],
+  existing_lampiran: item.lampiran || [],
+  removed_lampiran: [],
   keterangan: item.keterangan || "",
 });
 const fetchBatchRows = async () => {
@@ -294,6 +301,13 @@ const appendRowFormData = (formData, row, prefix = null) => {
   if (file instanceof File) {
     formData.append(key("bukti_transfer"), file);
   }
+
+  appendLampiranFormData(
+    formData,
+    row.lampiran,
+    row.removed_lampiran,
+    prefix || "",
+  );
 };
 const submitBatchEdit = async () => {
   const formData = new FormData();
@@ -527,7 +541,7 @@ onMounted(() => {
                   </VCol>
                 </template>
 
-                <VCol v-else cols="12" md="4">
+                <VCol v-else cols="12" md="3">
                   <VTextField
                     v-model="row.nominal"
                     type="number"
@@ -536,6 +550,13 @@ onMounted(() => {
                     :rules="[requiredValidator]"
                     :hint="formatRupiah(row.nominal)"
                     persistent-hint
+                  />
+                </VCol>
+
+                <VCol v-if="!isPegawai(row)" cols="12" md="3">
+                  <VTextField
+                    v-model="row.keterangan"
+                    label="Uraian Pengeluaran"
                   />
                 </VCol>
 
@@ -577,10 +598,22 @@ onMounted(() => {
                   </VBtn>
                 </VCol>
 
-                <VCol cols="12" :md="row.jenis_pembayaran === 'Transfer' ? 3 : 6">
+                <VCol
+                  v-if="isPegawai(row)"
+                  cols="12"
+                  :md="row.jenis_pembayaran === 'Transfer' ? 3 : 6"
+                >
                   <VTextField
                     v-model="row.keterangan"
-                    :label="keteranganLabel(row)"
+                    label="Keterangan"
+                  />
+                </VCol>
+
+                <VCol cols="12" md="10">
+                  <PengeluaranLampiranInput
+                    v-model="row.lampiran"
+                    v-model:removed-lampiran="row.removed_lampiran"
+                    :existing-lampiran="row.existing_lampiran"
                   />
                 </VCol>
 

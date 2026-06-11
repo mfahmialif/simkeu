@@ -780,7 +780,7 @@ onBeforeUnmount(() => {
             color="primary"
             :loading="saving"
             :disabled="saving"
-            @click="saveRekap"
+            @click="saveRekap(false)"
           >
             {{ editingItem ? "Simpan Perubahan" : "Simpan" }}
           </VBtn>

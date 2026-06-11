@@ -1,4 +1,10 @@
-export const appendLampiranFormData = (formData, files, removedPaths = []) => {
+export const appendLampiranFormData = (
+  formData,
+  files,
+  removedPaths = [],
+  prefix = "",
+) => {
+  const field = name => (prefix ? `${prefix}[${name}][]` : `${name}[]`)
   const normalizedFiles = Array.isArray(files)
     ? files
     : files
@@ -7,11 +13,11 @@ export const appendLampiranFormData = (formData, files, removedPaths = []) => {
 
   normalizedFiles.forEach(file => {
     if (file instanceof File) {
-      formData.append("lampiran[]", file)
+      formData.append(field("lampiran"), file)
     }
   })
 
   removedPaths.forEach(path => {
-    formData.append("hapus_lampiran[]", path)
+    formData.append(field("hapus_lampiran"), path)
   })
 }
