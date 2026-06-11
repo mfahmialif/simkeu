@@ -4,7 +4,6 @@ import mahasiswa from "./mahasiswa";
 import pemasukan from "./pemasukan";
 import pengeluaran from "./pengeluaran";
 import pegawai from "./pegawai";
-import saldo from "./saldo";
 import { settingItemsForRole } from "./setting";
 import dashboardStaff from "./staff/dashboardStaff";
 import pemasukanStaff from "./staff/pemasukanStaff";
@@ -32,7 +31,6 @@ const routesByRole = roleName => {
   return {
     admin: [
       ...dashboard,
-      ...saldo,
       ...pemasukan,
       ...pengeluaran,
       ...pegawai,
@@ -44,7 +42,6 @@ const routesByRole = roleName => {
 
     pimpinan: [
       ...dashboard,
-      ...saldo,
       ...pemasukan,
       ...pengeluaran,
       ...rab,
@@ -55,7 +52,6 @@ const routesByRole = roleName => {
 
     keuangan: [
       ...dashboard,
-      ...saldo,
       ...pemasukan,
       ...pengeluaran,
       ...rab,
@@ -75,9 +71,9 @@ const routesByRole = roleName => {
       ...setting,
     ],
 
-    barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...setting],
-    barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...pengeluaranStaffBulanan, ...setting],
-    barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...setting],
+    barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...rab, ...setting],
+    barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...pengeluaranStaffBulanan, ...rab, ...setting],
+    barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...rab, ...setting],
   };
 };
 

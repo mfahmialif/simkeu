@@ -3,9 +3,11 @@ import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranL
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
 import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
+import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue";
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { downloadFileExport } from "@/composables/exportFile";
 import { formatRupiah } from "@/composables/formatRupiah";
+import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
 const page = ref(1);
@@ -23,6 +25,8 @@ const tanggalHarian = ref(null);
 const tanggalMulai = ref(null);
 const tanggalAkhir = ref(null);
 const selectedRekapId = ref(null);
+const selectedPetugasId = ref(null);
+const petugasList = ref([]);
 const selectAllPages = ref(false);
 const isLoadingExcel = ref(false);
 const isLoadingBsiExcel = ref(false);
@@ -63,6 +67,10 @@ const dateFilterPayload = computed(() => {
 const requestFilterPayload = computed(() => ({
   ...dateFilterPayload.value,
   ...(selectedRekapId.value && { rekap_id: selectedRekapId.value }),
+  ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
+}));
+const rekapFilterPayload = computed(() => ({
+  ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
 }));
 const batchFilterPayload = computed(() => ({
   search: search.value,
@@ -174,6 +182,19 @@ const clearBatchSelection = () => {
   selectedRows.value = [];
   selectAllPages.value = false;
   fetchData();
+};
+
+const fetchPetugas = async () => {
+  try {
+    const items = await fetchPetugasPengeluaranOptions("kegiatan");
+    petugasList.value = items;
+
+    if (!selectedPetugasId.value) {
+      selectedPetugasId.value = defaultPetugasPengeluaranId(items);
+    }
+  } catch (err) {
+    console.error("Failed to fetch petugas pengeluaran:", err);
+  }
 };
 
 const exportExcel = async () => {
@@ -298,7 +319,7 @@ watch(filterMode, () => {
   fetchData();
 });
 
-watch([tanggalHarian, tanggalMulai, tanggalAkhir, selectedRekapId, search], () => {
+watch([tanggalHarian, tanggalMulai, tanggalAkhir, selectedRekapId, selectedPetugasId, search], () => {
   selectedRows.value = [];
   selectAllPages.value = false;
   page.value = 1;
@@ -317,6 +338,7 @@ watch(dataTable, () => {
 
 onMounted(() => {
   document.title = "Barokah Pegawai Kegiatan - SIMKEU";
+  fetchPetugas();
 });
 </script>
 
@@ -327,6 +349,11 @@ onMounted(() => {
       :loading="initialLoading"
       :filter-active="hasContextFilter"
       :filter-title="contextFilterTitle"
+    />
+
+    <PengeluaranPetugasFilter
+      v-model="selectedPetugasId"
+      :items="petugasList"
     />
 
     <section class="numbered-section">
@@ -344,6 +371,7 @@ onMounted(() => {
         base-path="/admin/pengeluaran/dosen-kegiatan"
         default-expanded
         :allow-release="false"
+        :filters="rekapFilterPayload"
         @updated="clearBatchSelection"
       />
     </section>
@@ -370,7 +398,7 @@ onMounted(() => {
         <VCol
           v-if="filterMode === 'harian'"
           cols="12"
-          md="3"
+          md="2"
           class="filter-control-col"
         >
           <AppDateTimePicker
@@ -418,7 +446,7 @@ onMounted(() => {
 
         <VCol
           cols="12"
-          :md="filterMode === 'harian' ? 5 : 4"
+          :md="filterMode === 'harian' ? 6 : 4"
           class="filter-control-col filter-rekap-col"
         >
           <PengeluaranRekapSelect
@@ -426,6 +454,7 @@ onMounted(() => {
             endpoint="/admin/pengeluaran/dosen-kegiatan"
             label="Filter Rekap"
             :allow-create="false"
+            :filters="rekapFilterPayload"
           />
         </VCol>
 

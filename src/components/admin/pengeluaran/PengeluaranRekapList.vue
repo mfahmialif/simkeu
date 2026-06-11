@@ -29,6 +29,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  filters: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
 const emit = defineEmits(["updated"]);
@@ -72,6 +76,9 @@ const actionDialog = ref(false);
 const actionItem = ref(null);
 const actionType = ref(null);
 const actionLoading = ref(false);
+const lpjDialog = ref(false);
+const lpjItem = ref(null);
+const lpjLoading = ref(false);
 let searchTimer = null;
 let stopListeningRekapUpdates = null;
 
@@ -114,6 +121,26 @@ const formatDate = (value) => {
     month: "long",
     year: "numeric",
   }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+};
+
+const getSelisih = (item) => {
+  const rab = Number(item.jumlah || 0);
+  const lpj = Number(item.total_lpj || 0);
+  const selisih = rab - lpj;
+
+  return {
+    value: selisih,
+    hasLpj: lpj > 0 || item.lpj_sama_dengan_rab,
+  };
+};
+
+const selisihRowClass = (item) => {
+  const { value, hasLpj } = getSelisih(item);
+
+  if (!hasLpj) return '';
+  if (value > 0) return 'rekap-row-success';
+  if (value < 0) return 'rekap-row-danger';
+  return 'rekap-row-neutral';
 };
 
 const totalPages = computed(() =>
@@ -168,6 +195,40 @@ const actionDialogMessage = computed(() => {
 });
 
 const openDetail = item => router.push(`${props.basePath}/rekap/${item.id}`);
+const lpjDetailPath = item => ({
+  path: `${props.basePath}/rekap/${item.id}/lpj`,
+  query: {
+    return_to: props.basePath,
+  },
+});
+const hasExistingLpj = lpjSummary =>
+  Number(lpjSummary?.jumlah_data || 0) > 0 || lpjSummary?.sama_dengan_rab === true;
+const openLpjDialog = async (item) => {
+  if (lpjLoading.value) return;
+
+  try {
+    lpjLoading.value = true;
+    const response = await $api(`${props.endpoint}/rekap/${item.id}/lpj`, {
+      method: "GET",
+    });
+
+    if (hasExistingLpj(response.data?.lpj)) {
+      router.push(lpjDetailPath(item));
+      return;
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+    return;
+  } finally {
+    lpjLoading.value = false;
+  }
+
+  lpjItem.value = item;
+  lpjDialog.value = true;
+};
 
 const errorMessage = (err) => {
   const message =
@@ -194,6 +255,7 @@ const fetchData = async () => {
         sort_key: "id",
         sort_order: "desc",
         search: search.value,
+        ...props.filters,
         ...bulanTahunFilter.value,
         ...(filterTanggalMulai.value && { tanggal_mulai: filterTanggalMulai.value }),
         ...(filterTanggalAkhir.value && { tanggal_akhir: filterTanggalAkhir.value }),
@@ -232,7 +294,7 @@ const openEditDialog = (item) => {
   nama.value = item.nama || "";
   bulanTahun.value = String(item.bulan_tahun || "").slice(0, 7);
   tanggalRekap.value = String(item.tanggal_rekap || "").slice(0, 10) || currentDateValue();
-  jumlahSementara.value = Number(item.jumlah_sementara ?? item.jumlah ?? 0);
+  jumlahSementara.value = Number(item.jumlah_data > 0 ? item.jumlah : (item.jumlah_sementara ?? item.jumlah ?? 0));
   keterangan.value = item.keterangan || "";
   dialog.value = true;
 };
@@ -365,6 +427,42 @@ const confirmAction = async () => {
   }
 };
 
+const submitLpj = async (sameAsRab) => {
+  if (!lpjItem.value || lpjLoading.value) return;
+
+  try {
+    lpjLoading.value = true;
+    const response = await $api(`${props.endpoint}/rekap/${lpjItem.value.id}/lpj/copy`, {
+      method: "POST",
+      body: {
+        sama_dengan_rab: sameAsRab,
+      },
+    });
+
+    if (response.status === true) {
+      const rekapId = lpjItem.value.id;
+
+      lpjDialog.value = false;
+      notifyPengeluaranRekapUpdated(props.endpoint);
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      });
+
+      if (!sameAsRab) {
+        router.push(lpjDetailPath({ id: rekapId }));
+      }
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    lpjLoading.value = false;
+  }
+};
+
 watch(search, () => {
   clearTimeout(searchTimer);
   page.value = 1;
@@ -375,6 +473,11 @@ watch([filterTanggalMulai, filterTanggalAkhir, filterBulanTahun], () => {
   page.value = 1;
   fetchData();
 });
+
+watch(() => props.filters, () => {
+  page.value = 1;
+  fetchData();
+}, { deep: true });
 
 watch(page, fetchData);
 
@@ -532,6 +635,7 @@ onBeforeUnmount(() => {
               v-for="(item, index) in dataTable"
               :key="item.id"
               class="rekap-list-item"
+              :class="selisihRowClass(item)"
               role="listitem"
               tabindex="0"
               :aria-label="`Lihat detail rekap ${item.nama}`"
@@ -543,6 +647,17 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="rekap-item-main">
+                <VChip
+                  v-if="getSelisih(item).hasLpj"
+                  size="x-small"
+                  :color="getSelisih(item).value > 0 ? 'success' : getSelisih(item).value < 0 ? 'error' : 'secondary'"
+                  :variant="getSelisih(item).value === 0 ? 'tonal' : 'flat'"
+                  label
+                  class="rekap-selisih-chip"
+                >
+                  {{ getSelisih(item).value > 0 ? '+' : '' }}{{ formatRupiah(getSelisih(item).value) }}
+                </VChip>
+
                 <div class="rekap-item-heading">
                   <span class="rekap-item-name">{{ item.nama }}</span>
                   <VChip
@@ -586,6 +701,15 @@ onBeforeUnmount(() => {
                   <strong>{{ formatRupiah(item.jumlah || 0) }}</strong>
                   <small>{{ item.is_jumlah_sementara ? "Sementara" : "Dari detail" }}</small>
                 </div>
+                <div class="rekap-item-stat rekap-item-total">
+                  <span>Jumlah LPJ</span>
+                  <strong>{{ formatRupiah(item.total_lpj || 0) }}</strong>
+                  <small>
+                    {{ item.lpj_sama_dengan_rab && Number(item.jumlah_lpj || 0) === 0
+                      ? "Sama dengan RAB"
+                      : `${Number(item.jumlah_lpj || 0)} data LPJ` }}
+                  </small>
+                </div>
               </div>
 
               <div class="rekap-item-actions" @click.stop @keydown.stop>
@@ -598,6 +722,19 @@ onBeforeUnmount(() => {
                       variant="text"
                       color="primary"
                       @click="openEditDialog(item)"
+                    />
+                  </template>
+                </VTooltip>
+
+                <VTooltip text="Input/Lihat LPJ" location="top">
+                  <template #activator="{ props: tooltipProps }">
+                    <VBtn
+                      v-bind="tooltipProps"
+                      icon="ri-file-check-line"
+                      size="small"
+                      variant="text"
+                      color="success"
+                      @click="openLpjDialog(item)"
                     />
                   </template>
                 </VTooltip>
@@ -821,6 +958,56 @@ onBeforeUnmount(() => {
         </VCardText>
       </VCard>
     </VDialog>
+
+    <VDialog v-model="lpjDialog" width="560">
+      <VCard title="Input LPJ">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="lpjDialog = false"
+        />
+
+        <VCardText>
+          <div class="text-body-1 font-weight-medium mb-2">
+            Apakah dana LPJ sama dengan RAB?
+          </div>
+          <div class="text-body-2 text-medium-emphasis">
+            Data LPJ untuk rekap "{{ lpjItem?.nama || '' }}" akan disalin penuh dari detail RAB.
+            Jika nominal berbeda, sistem akan membuka halaman detail LPJ untuk penyesuaian.
+          </div>
+        </VCardText>
+
+        <VCardText class="lpj-dialog-actions">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="lpjLoading"
+            @click="lpjDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            variant="tonal"
+            color="warning"
+            prepend-icon="ri-edit-box-line"
+            :loading="lpjLoading"
+            :disabled="lpjLoading"
+            @click="submitLpj(false)"
+          >
+            Tidak, Edit Detail
+          </VBtn>
+          <VBtn
+            color="success"
+            prepend-icon="ri-check-line"
+            :loading="lpjLoading"
+            :disabled="lpjLoading"
+            @click="submitLpj(true)"
+          >
+            Ya, Sama
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
   </VCard>
 </template>
 
@@ -840,6 +1027,13 @@ onBeforeUnmount(() => {
 }
 
 .rekap-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.lpj-dialog-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -886,6 +1080,10 @@ onBeforeUnmount(() => {
   .rekap-dialog-actions :deep(.v-btn) {
     flex: 1 1 100%;
   }
+
+  .lpj-dialog-actions :deep(.v-btn) {
+    flex: 1 1 100%;
+  }
 }
 
 .rekap-list-wrap {
@@ -928,16 +1126,52 @@ onBeforeUnmount(() => {
   transition: background-color 160ms ease;
 }
 
+.rekap-list-item.rekap-row-success {
+  background: rgba(var(--v-theme-success), 0.045);
+  border-inline-start: 3px solid rgba(var(--v-theme-success), 0.55);
+}
+
+.rekap-list-item.rekap-row-danger {
+  background: rgba(var(--v-theme-error), 0.045);
+  border-inline-start: 3px solid rgba(var(--v-theme-error), 0.55);
+}
+
+.rekap-list-item.rekap-row-neutral {
+  background: rgba(var(--v-theme-info), 0.03);
+  border-inline-start: 3px solid rgba(var(--v-theme-info), 0.35);
+}
+
 .rekap-list-item:hover,
 .rekap-list-item:focus-visible {
   background: rgba(var(--v-theme-primary), 0.045);
   outline: none;
 }
 
+.rekap-list-item.rekap-row-success:hover,
+.rekap-list-item.rekap-row-success:focus-visible {
+  background: rgba(var(--v-theme-success), 0.08);
+}
+
+.rekap-list-item.rekap-row-danger:hover,
+.rekap-list-item.rekap-row-danger:focus-visible {
+  background: rgba(var(--v-theme-error), 0.08);
+}
+
+.rekap-list-item.rekap-row-neutral:hover,
+.rekap-list-item.rekap-row-neutral:focus-visible {
+  background: rgba(var(--v-theme-info), 0.065);
+}
+
 .rekap-list-item:hover .rekap-item-arrow,
 .rekap-list-item:focus-visible .rekap-item-arrow {
   color: rgb(var(--v-theme-primary));
   transform: translateX(3px);
+}
+
+.rekap-selisih-chip {
+  margin-block-end: 6px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .rekap-item-number {
@@ -990,8 +1224,8 @@ onBeforeUnmount(() => {
 
 .rekap-item-stats {
   display: grid;
-  grid-template-columns: 60px minmax(135px, auto);
-  gap: 20px;
+  grid-template-columns: 60px repeat(2, minmax(135px, auto));
+  gap: 18px;
 }
 
 .rekap-item-stat {

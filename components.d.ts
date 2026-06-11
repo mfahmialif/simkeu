@@ -419,6 +419,8 @@ declare module 'vue' {
     PembayaranMahasiswaTambahan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/PembayaranMahasiswaTambahan.vue')['default']
     PengeluaranLampiranInput: typeof import('./src/components/admin/pengeluaran/PengeluaranLampiranInput.vue')['default']
     PengeluaranLampiranList: typeof import('./src/components/admin/pengeluaran/PengeluaranLampiranList.vue')['default']
+    PengeluaranLpjDetail: typeof import('./src/components/admin/pengeluaran/PengeluaranLpjDetail.vue')['default']
+    PengeluaranPetugasFilter: typeof import('./src/components/admin/pengeluaran/PengeluaranPetugasFilter.vue')['default']
     PengeluaranRekapBulkUpdate: typeof import('./src/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue')['default']
     PengeluaranRekapDetail: typeof import('./src/components/admin/pengeluaran/PengeluaranRekapDetail.vue')['default']
     PengeluaranRekapList: typeof import('./src/components/admin/pengeluaran/PengeluaranRekapList.vue')['default']

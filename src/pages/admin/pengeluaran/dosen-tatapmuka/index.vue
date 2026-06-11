@@ -3,7 +3,9 @@ import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranL
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
 import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
+import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue";
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
+import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran";
 import { formatRupiah } from "@/composables/formatRupiah";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
@@ -18,6 +20,8 @@ const loading = ref(true);
 const initialLoading = ref(true);
 const stats = ref({});
 const selectedRekapId = ref(null);
+const selectedPetugasId = ref(null);
+const petugasList = ref([]);
 const selectAllPages = ref(false);
 const tanggalMulai = ref(null);
 const tanggalAkhir = ref(null);
@@ -26,7 +30,9 @@ const hasContextFilter = computed(() => !!selectedRekapId.value || hasDateFilter
 const contextFilterTitle = computed(() => (
   selectedRekapId.value
     ? "Pengeluaran Sesuai Data Rekap"
-    : "Pengeluaran Sesuai Rentang Tanggal"
+    : hasDateFilter.value
+      ? "Pengeluaran Sesuai Rentang Tanggal"
+      : "Pengeluaran Sesuai Filter"
 ));
 
 const numberValue = (value) => Number(value ?? 0);
@@ -54,7 +60,11 @@ const requestFilterPayload = () => ({
   ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
   ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
   ...(selectedRekapId.value && { rekap_id: selectedRekapId.value }),
+  ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
 });
+const rekapFilterPayload = computed(() => ({
+  ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
+}));
 const batchFilterPayload = computed(() => ({
   search: search.value,
   ...requestFilterPayload(),
@@ -152,7 +162,21 @@ const clearFilter = () => {
 
 onMounted(() => {
   document.title = "Barokah Dosen Tatapmuka - SIMKEU";
+  fetchPetugas();
 });
+
+const fetchPetugas = async () => {
+  try {
+    const items = await fetchPetugasPengeluaranOptions("tatap_muka");
+    petugasList.value = items;
+
+    if (!selectedPetugasId.value) {
+      selectedPetugasId.value = defaultPetugasPengeluaranId(items);
+    }
+  } catch (err) {
+    console.error("Failed to fetch petugas pengeluaran:", err);
+  }
+};
 
 const clearBatchSelection = () => {
   selectedRows.value = [];
@@ -161,7 +185,7 @@ const clearBatchSelection = () => {
 };
 
 watch(
-  [tanggalMulai, tanggalAkhir, selectedRekapId, search],
+  [tanggalMulai, tanggalAkhir, selectedRekapId, selectedPetugasId, search],
   () => {
     selectedRows.value = [];
     selectAllPages.value = false;
@@ -334,10 +358,16 @@ const printSlip = async (id) => {
       :filter-title="contextFilterTitle"
     />
 
+    <PengeluaranPetugasFilter
+      v-model="selectedPetugasId"
+      :items="petugasList"
+    />
+
     <PengeluaranRekapList
       title="Barokah Dosen Tatapmuka"
       endpoint="/admin/pengeluaran/dosen"
       base-path="/admin/pengeluaran/dosen-tatapmuka"
+      :filters="rekapFilterPayload"
       @updated="clearBatchSelection"
     />
 
@@ -372,6 +402,7 @@ const printSlip = async (id) => {
           endpoint="/admin/pengeluaran/dosen"
           label="Filter Rekap"
           :allow-create="false"
+          :filters="rekapFilterPayload"
         />
       </VCol>
       <VCol cols="12" md="2" class="d-flex align-end filter-control-col">

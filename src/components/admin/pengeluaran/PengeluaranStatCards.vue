@@ -66,25 +66,13 @@ const defaultStatCards = computed(() => [
 ]);
 
 const statCards = computed(() => {
-  if (!props.filterActive) return defaultStatCards.value;
-
-  return [
-    {
-      key: "filter",
-      title: props.filterTitle,
-      amount: statNumber("keseluruhan", "total"),
-      count: statNumber("keseluruhan", "jumlah"),
-      icon: "ri-filter-3-line",
-      color: "primary",
-    },
-  ];
+  return defaultStatCards.value;
 });
 </script>
 
 <template>
   <div
     class="pengeluaran-stat-grid mb-4"
-    :class="{ 'pengeluaran-stat-grid--filtered': filterActive }"
   >
     <VCard
       v-for="item in statCards"
@@ -139,10 +127,6 @@ const statCards = computed(() => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-}
-
-.pengeluaran-stat-grid--filtered {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .stat-content {

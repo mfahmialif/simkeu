@@ -1,5 +1,7 @@
 <script setup>
 import { formatRupiah } from "@/composables/formatRupiah";
+import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue";
+import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran";
 import { showSnackbar } from "@/composables/snackbar";
 
 const router = useRouter();
@@ -12,6 +14,8 @@ const search = ref("");
 const selectedBulan = ref(currentDate.getMonth() + 1);
 const selectedTahun = ref(currentDate.getFullYear());
 const selectedModule = ref(null);
+const selectedPetugasId = ref(null);
+const petugasList = ref([]);
 const dataTable = ref([]);
 const totalItems = ref(0);
 const stats = ref({});
@@ -19,6 +23,27 @@ const years = ref([currentDate.getFullYear()]);
 const modules = ref([]);
 const loading = ref(false);
 const initialLoading = ref(true);
+const kasLoading = ref(false);
+const kasSummary = ref([]);
+const kasTotals = ref({});
+const kasManualRows = ref([]);
+const kasPetugas = ref(null);
+const kasDetailDialog = ref(false);
+const kasFormDialog = ref(false);
+const kasEditingId = ref(null);
+const kasSaving = ref(false);
+const kasForm = ref({
+  petugas_id: null,
+  module_key: null,
+  tanggal: [
+    currentDate.getFullYear(),
+    String(currentDate.getMonth() + 1).padStart(2, "0"),
+    String(currentDate.getDate()).padStart(2, "0"),
+  ].join("-"),
+  tipe: "masuk",
+  nominal: 0,
+  keterangan: "",
+});
 let searchTimer = null;
 
 const bulanItems = [
@@ -60,6 +85,24 @@ const yearItems = computed(() => [...new Set([
   currentDate.getFullYear(),
   ...years.value,
 ])].sort((a, b) => b - a));
+const saldoAdjustmentTotal = computed(() =>
+  Number(kasTotals.value.manual_masuk || 0) - Number(kasTotals.value.manual_keluar || 0)
+);
+const selectedPetugasName = computed(() => {
+  if (kasPetugas.value?.name) return kasPetugas.value.name;
+
+  const petugas = petugasList.value.find(item => String(item.value) === String(selectedPetugasId.value));
+
+  if (!petugas?.title) return "";
+
+  return String(petugas.title)
+    .replace(/\s*\([^)]*\)/g, "")
+    .replace(/\s*-\s*.+$/, "")
+    .trim();
+});
+const saldoCardTitle = computed(() => (
+  selectedPetugasName.value ? `Saldo ${selectedPetugasName.value}` : "Saldo"
+));
 
 const statCards = computed(() => [
   {
@@ -102,6 +145,17 @@ const moduleColor = key => ({
   dosen_bulanan: "info",
   staff_bulanan: "success",
 }[key] || "secondary");
+const kasTipeItems = [
+  { title: "Saldo Awal / Penyesuaian Masuk", value: "masuk" },
+  { title: "Penyesuaian Keluar", value: "keluar" },
+];
+const activeFilterPayload = () => ({
+  search: search.value,
+  ...(selectedBulan.value && { bulan: selectedBulan.value }),
+  ...(selectedTahun.value && { tahun: selectedTahun.value }),
+  ...(selectedModule.value && { module_key: selectedModule.value }),
+  ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
+});
 
 const errorMessage = (err) => {
   const message =
@@ -117,6 +171,28 @@ const errorMessage = (err) => {
   return message || "Terjadi kesalahan.";
 };
 
+const fetchKas = async () => {
+  try {
+    kasLoading.value = true;
+    const response = await $api("/admin/laporan/rab/kas", {
+      method: "GET",
+      body: activeFilterPayload(),
+    });
+
+    kasSummary.value = response.data?.summary || [];
+    kasTotals.value = response.data?.totals || {};
+    kasManualRows.value = response.data?.manual || [];
+    kasPetugas.value = response.data?.petugas || null;
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    kasLoading.value = false;
+  }
+};
+
 const fetchData = async () => {
   try {
     loading.value = true;
@@ -128,10 +204,7 @@ const fetchData = async () => {
         limit: itemsPerPage.value,
         sort_key: activeSort.key,
         sort_order: activeSort.order,
-        search: search.value,
-        ...(selectedBulan.value && { bulan: selectedBulan.value }),
-        ...(selectedTahun.value && { tahun: selectedTahun.value }),
-        ...(selectedModule.value && { module_key: selectedModule.value }),
+        ...activeFilterPayload(),
       },
     });
 
@@ -140,6 +213,7 @@ const fetchData = async () => {
     stats.value = response.stats || {};
     years.value = response.filters?.years || years.value;
     modules.value = response.filters?.modules || modules.value;
+    fetchKas();
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -167,17 +241,123 @@ const resetFilters = () => {
   fetchData();
 };
 
+const fetchPetugas = async () => {
+  try {
+    const items = await fetchPetugasPengeluaranOptions(selectedModule.value || "rab");
+    petugasList.value = items;
+
+    const hasSelectedPetugas = selectedPetugasId.value
+      && items.some(item => String(item.value) === String(selectedPetugasId.value));
+    const nextPetugasId = hasSelectedPetugas
+      ? selectedPetugasId.value
+      : defaultPetugasPengeluaranId(items);
+
+    if (String(selectedPetugasId.value ?? "") !== String(nextPetugasId ?? "")) {
+      selectedPetugasId.value = nextPetugasId;
+    }
+  } catch (err) {
+    console.error("Failed to fetch petugas pengeluaran:", err);
+  }
+};
+
 const openDetail = item => router.push({
   path: `${item.detail_path}${item.id}`,
   query: {
     return_to: route.fullPath,
   },
 });
+const openKasDetailDialog = () => {
+  kasDetailDialog.value = true;
+  fetchKas();
+};
+const openKasForm = (item = null) => {
+  kasEditingId.value = item?.id || null;
+  kasForm.value = {
+    petugas_id: item?.petugas_id || selectedPetugasId.value || null,
+    module_key: item?.module_key || selectedModule.value || modules.value?.[0]?.value || "tatap_muka",
+    tanggal: item?.tanggal || [
+      currentDate.getFullYear(),
+      String(currentDate.getMonth() + 1).padStart(2, "0"),
+      String(currentDate.getDate()).padStart(2, "0"),
+    ].join("-"),
+    tipe: item?.tipe || "masuk",
+    nominal: item?.nominal || 0,
+    keterangan: item?.keterangan || "Saldo awal",
+  };
+  kasFormDialog.value = true;
+};
+const saveKasManual = async () => {
+  if (kasSaving.value) return;
 
-watch([selectedBulan, selectedTahun, selectedModule], () => {
+  if (
+    !kasForm.value.petugas_id
+    || !kasForm.value.module_key
+    || !kasForm.value.tanggal
+    || !String(kasForm.value.keterangan || "").trim()
+  ) {
+    showSnackbar({
+      text: "Petugas, kategori, tanggal, dan keterangan saldo wajib diisi.",
+      color: "warning",
+    });
+    return;
+  }
+
+  try {
+    kasSaving.value = true;
+    const response = await $api(
+      kasEditingId.value
+        ? `/admin/laporan/rab/kas/manual/${kasEditingId.value}`
+        : "/admin/laporan/rab/kas/manual",
+      {
+        method: kasEditingId.value ? "PUT" : "POST",
+        body: {
+          ...kasForm.value,
+          nominal: Number(kasForm.value.nominal || 0),
+        },
+      }
+    );
+
+    kasFormDialog.value = false;
+    kasEditingId.value = null;
+    showSnackbar({
+      text: response.message,
+      color: "success",
+    });
+    fetchKas();
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    kasSaving.value = false;
+  }
+};
+const deleteKasManual = async (item) => {
+  try {
+    const response = await $api(`/admin/laporan/rab/kas/manual/${item.id}`, {
+      method: "DELETE",
+    });
+
+    showSnackbar({
+      text: response.message,
+      color: "success",
+    });
+    fetchKas();
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  }
+};
+
+watch([selectedBulan, selectedTahun, selectedModule, selectedPetugasId], () => {
   page.value = 1;
   fetchData();
 });
+
+watch(selectedModule, fetchPetugas);
 
 watch(search, () => {
   clearTimeout(searchTimer);
@@ -187,6 +367,7 @@ watch(search, () => {
 
 onMounted(() => {
   document.title = "RAB - SIMKEU";
+  fetchPetugas();
 });
 
 onBeforeUnmount(() => clearTimeout(searchTimer));
@@ -204,7 +385,15 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
     </div>
 
     <div class="rab-stat-grid mb-5">
-      <VCard v-for="item in statCards" :key="item.key">
+      <VCard
+        v-for="item in statCards"
+        :key="item.key"
+        :class="{ 'rab-stat-card--clickable': item.clickable }"
+        :role="item.clickable ? 'button' : undefined"
+        :tabindex="item.clickable ? 0 : undefined"
+        @click="item.clickable && openKasDetailDialog()"
+        @keydown.enter="item.clickable && openKasDetailDialog()"
+      >
         <VCardText class="d-flex align-center gap-4">
           <VAvatar :color="item.color" variant="tonal" rounded size="48">
             <VIcon :icon="item.icon" size="24" />
@@ -212,7 +401,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
 
           <div class="min-w-0">
             <div class="text-body-2 text-medium-emphasis">{{ item.title }}</div>
-            <VSkeletonLoader v-if="initialLoading" type="text" width="120" />
+            <VSkeletonLoader v-if="initialLoading || item.loading" type="text" width="120" />
             <div v-else class="text-h5 font-weight-semibold rab-stat-value">
               {{ item.value }}
             </div>
@@ -222,10 +411,15 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
       </VCard>
     </div>
 
+    <PengeluaranPetugasFilter
+      v-model="selectedPetugasId"
+      :items="petugasList"
+    />
+
     <VCard class="mb-5">
       <VCardText>
         <VRow align="center">
-          <VCol cols="12" md="4">
+          <VCol cols="12" md="4" lg="3">
             <VTextField
               v-model="search"
               label="Cari Rekap"
@@ -236,7 +430,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             />
           </VCol>
 
-          <VCol cols="12" sm="6" md="2">
+          <VCol cols="12" sm="6" md="2" lg="2">
             <VSelect
               v-model="selectedBulan"
               label="Bulan"
@@ -246,7 +440,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             />
           </VCol>
 
-          <VCol cols="12" sm="6" md="2">
+          <VCol cols="12" sm="6" md="2" lg="2">
             <VSelect
               v-model="selectedTahun"
               label="Tahun"
@@ -256,7 +450,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             />
           </VCol>
 
-          <VCol cols="12" md="2">
+          <VCol cols="12" md="4" lg="2">
             <VSelect
               v-model="selectedModule"
               label="Jenis Rekap"
@@ -266,7 +460,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             />
           </VCol>
 
-          <VCol cols="12" md="2">
+          <VCol cols="12" md="4" lg="1">
             <VBtn
               class="w-100"
               height="56"
@@ -394,6 +588,278 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
         </template>
       </VDataTableServer>
     </VCard>
+
+    <VDialog v-model="kasDetailDialog" max-width="1120" scrollable>
+      <VCard>
+        <VCardItem>
+          <VCardTitle>{{ saldoCardTitle }}</VCardTitle>
+          <VCardSubtitle>
+            RAB menambah saldo, LPJ mengurangi saldo, dan saldo awal menyesuaikan saldo petugas.
+          </VCardSubtitle>
+
+          <template #append>
+            <VBtn
+              color="primary"
+              prepend-icon="ri-add-line"
+              @click="openKasForm()"
+            >
+              Tambah Saldo Awal
+            </VBtn>
+          </template>
+        </VCardItem>
+
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="kasDetailDialog = false"
+        />
+
+        <VDivider />
+
+        <VCardText>
+          <div class="kas-total-row mb-4">
+            <div>
+              <span>Total RAB</span>
+              <strong>{{ formatRupiah(kasTotals.total_rab || 0) }}</strong>
+            </div>
+            <div>
+              <span>Total LPJ</span>
+              <strong>{{ formatRupiah(kasTotals.total_lpj || 0) }}</strong>
+            </div>
+            <div>
+              <span>Saldo Awal / Penyesuaian</span>
+              <strong>{{ formatRupiah(saldoAdjustmentTotal) }}</strong>
+            </div>
+            <div>
+              <span>Saldo Akhir</span>
+              <strong class="text-primary">{{ formatRupiah(kasTotals.saldo_kas || 0) }}</strong>
+            </div>
+          </div>
+
+          <div v-if="kasLoading" class="text-center pa-4">
+            <VProgressCircular indeterminate color="primary" />
+          </div>
+
+          <div v-else class="kas-grid">
+            <div
+              v-for="item in kasSummary"
+              :key="item.module_key"
+              class="kas-item"
+            >
+              <div class="kas-item-header">
+                <VChip :color="moduleColor(item.module_key)" size="small" label>
+                  {{ item.module_name }}
+                </VChip>
+                <strong>{{ formatRupiah(item.saldo_kas) }}</strong>
+              </div>
+              <div class="kas-item-lines">
+                <span>RAB masuk {{ formatRupiah(item.total_rab) }}</span>
+                <span>LPJ keluar {{ formatRupiah(item.total_lpj) }}</span>
+                <span>Saldo awal +{{ formatRupiah(item.manual_masuk) }} / -{{ formatRupiah(item.manual_keluar) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <VDivider class="my-4" />
+
+          <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-3">
+            <div>
+              <div class="font-weight-semibold">Detail Saldo Awal / Penyesuaian</div>
+              <div class="text-caption text-medium-emphasis">{{ kasManualRows.length }} data</div>
+            </div>
+
+            <VBtn
+              variant="tonal"
+              color="primary"
+              prepend-icon="ri-add-line"
+              @click="openKasForm()"
+            >
+              Tambah
+            </VBtn>
+          </div>
+
+          <VDataTable
+            :headers="[
+              { title: 'Tanggal', key: 'tanggal' },
+              { title: 'Petugas', key: 'petugas_nama' },
+              { title: 'Kategori', key: 'module_name' },
+              { title: 'Tipe', key: 'tipe' },
+              { title: 'Nominal', key: 'nominal', align: 'end' },
+              { title: 'Keterangan', key: 'keterangan' },
+              { title: '', key: 'actions', sortable: false, align: 'end' },
+            ]"
+            :items="kasManualRows"
+            density="comfortable"
+            class="kas-manual-table"
+          >
+            <template #no-data>
+              <div class="text-center pa-6 text-medium-emphasis">
+                Belum ada saldo awal atau penyesuaian.
+              </div>
+            </template>
+
+            <template #item.tanggal="{ item }">
+              {{ formatDate(item.tanggal) }}
+            </template>
+
+            <template #item.petugas_nama="{ item }">
+              {{ item.petugas_nama || "-" }}
+            </template>
+
+            <template #item.module_name="{ item }">
+              <VChip :color="moduleColor(item.module_key)" size="small" label>
+                {{ item.module_name }}
+              </VChip>
+            </template>
+
+            <template #item.tipe="{ item }">
+              <VChip
+                :color="item.tipe === 'masuk' ? 'success' : 'error'"
+                size="small"
+                label
+              >
+                {{ item.tipe === "masuk" ? "Masuk" : "Keluar" }}
+              </VChip>
+            </template>
+
+            <template #item.nominal="{ item }">
+              <strong>{{ item.tipe === "masuk" ? "+" : "-" }}{{ formatRupiah(item.nominal) }}</strong>
+            </template>
+
+            <template #item.keterangan="{ item }">
+              <span class="text-medium-emphasis">{{ item.keterangan || "-" }}</span>
+            </template>
+
+            <template #item.actions="{ item }">
+              <div class="d-flex justify-end gap-1">
+                <VTooltip text="Edit saldo awal" location="top">
+                  <template #activator="{ props: tooltipProps }">
+                    <VBtn
+                      v-bind="tooltipProps"
+                      icon="ri-pencil-line"
+                      size="small"
+                      variant="text"
+                      color="primary"
+                      @click="openKasForm(item)"
+                    />
+                  </template>
+                </VTooltip>
+
+                <VTooltip text="Hapus saldo awal" location="top">
+                  <template #activator="{ props: tooltipProps }">
+                    <VBtn
+                      v-bind="tooltipProps"
+                      icon="ri-delete-bin-line"
+                      size="small"
+                      variant="text"
+                      color="error"
+                      @click="deleteKasManual(item)"
+                    />
+                  </template>
+                </VTooltip>
+              </div>
+            </template>
+          </VDataTable>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <VDialog v-model="kasFormDialog" width="680">
+      <VCard :title="kasEditingId ? 'Edit Saldo Awal' : 'Tambah Saldo Awal'">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="kasFormDialog = false"
+        />
+
+        <VCardText>
+          <VRow>
+            <VCol cols="12" md="6">
+              <VSelect
+                v-model="kasForm.petugas_id"
+                label="Petugas *"
+                :items="petugasList"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <VSelect
+                v-model="kasForm.module_key"
+                label="Kategori *"
+                :items="modules"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <AppDateTimePicker
+                v-model="kasForm.tanggal"
+                label="Tanggal *"
+                :config="{
+                  altInput: true,
+                  altFormat: 'd F Y',
+                  dateFormat: 'Y-m-d',
+                }"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <VSelect
+                v-model="kasForm.tipe"
+                label="Tipe Saldo *"
+                :items="kasTipeItems"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12" md="6">
+              <VTextField
+                v-model="kasForm.nominal"
+                label="Nominal *"
+                type="number"
+                min="1"
+                prefix="Rp"
+                :hint="formatRupiah(kasForm.nominal)"
+                persistent-hint
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <VTextarea
+                v-model="kasForm.keterangan"
+                label="Keterangan *"
+                placeholder="Saldo awal, hibah, koreksi saldo, dll."
+                auto-grow
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+          </VRow>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="kasSaving"
+            @click="kasFormDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="primary"
+            prepend-icon="ri-save-line"
+            :loading="kasSaving"
+            :disabled="kasSaving"
+            @click="saveKasManual"
+          >
+            Simpan
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 
@@ -406,12 +872,84 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
 
 .rab-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+.rab-stat-card--clickable {
+  cursor: pointer;
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+
+.rab-stat-card--clickable:hover {
+  border-color: rgba(var(--v-theme-primary), 0.44);
+  transform: translateY(-1px);
+}
+
+.rab-stat-card--clickable:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
 }
 
 .rab-stat-value {
   overflow-wrap: anywhere;
+}
+
+.kas-total-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.kas-total-row > div,
+.kas-item {
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.kas-total-row span,
+.kas-item-lines span {
+  color: rgba(var(--v-theme-on-surface), 0.64);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.kas-total-row strong {
+  display: block;
+  margin-block-start: 4px;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.kas-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kas-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kas-item-header strong {
+  color: rgb(var(--v-theme-primary));
+  overflow-wrap: anywhere;
+  text-align: end;
+}
+
+.kas-item-lines {
+  display: grid;
+  margin-block-start: 10px;
+  gap: 4px;
+}
+
+.kas-manual-table {
+  border: 1px solid rgba(var(--v-border-color), 0.16);
+  border-radius: 8px;
 }
 
 .rab-name {
@@ -435,10 +973,20 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
   .rab-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .kas-total-row,
+  .kas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 599px) {
   .rab-stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kas-total-row,
+  .kas-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

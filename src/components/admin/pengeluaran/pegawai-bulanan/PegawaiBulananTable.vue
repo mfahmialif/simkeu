@@ -5,9 +5,11 @@ import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranL
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
 import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
 import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
+import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue";
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
 import { downloadFileExport } from "@/composables/exportFile";
 import { formatRupiah } from "@/composables/formatRupiah";
+import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
 const props = defineProps({
@@ -46,6 +48,8 @@ const tanggalMulai = ref(null);
 const tanggalAkhir = ref(null);
 const periodeBulanTahun = ref(null);
 const selectedRekapId = ref(null);
+const selectedPetugasId = ref(null);
+const petugasList = ref([]);
 const selectAllPages = ref(false);
 const isLoadingExcel = ref(false);
 const isLoadingBsiExcel = ref(false);
@@ -134,6 +138,10 @@ const requestFilterPayload = computed(() => ({
   ...dateFilterPayload.value,
   ...periodFilterPayload.value,
   ...(selectedRekapId.value && { rekap_id: selectedRekapId.value }),
+  ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
+}));
+const rekapFilterPayload = computed(() => ({
+  ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
 }));
 const batchFilterPayload = computed(() => ({
   search: search.value,
@@ -246,6 +254,21 @@ const clearBatchSelection = () => {
   selectedRows.value = [];
   selectAllPages.value = false;
   fetchData();
+};
+
+const fetchPetugas = async () => {
+  try {
+    const items = await fetchPetugasPengeluaranOptions(
+      isDosenBulanan.value ? "dosen_bulanan" : "staff_bulanan"
+    );
+    petugasList.value = items;
+
+    if (!selectedPetugasId.value) {
+      selectedPetugasId.value = defaultPetugasPengeluaranId(items);
+    }
+  } catch (err) {
+    console.error("Failed to fetch petugas pengeluaran:", err);
+  }
 };
 
 const exportExcel = async () => {
@@ -401,7 +424,7 @@ watch(filterMode, () => {
   fetchData();
 });
 
-watch([tanggalHarian, tanggalMulai, tanggalAkhir, periodeBulanTahun, selectedRekapId], () => {
+watch([tanggalHarian, tanggalMulai, tanggalAkhir, periodeBulanTahun, selectedRekapId, selectedPetugasId], () => {
   selectedRows.value = [];
   selectAllPages.value = false;
   page.value = 1;
@@ -420,6 +443,7 @@ watch(dataTable, () => {
 
 onMounted(() => {
   document.title = `${props.title} - SIMKEU`;
+  fetchPetugas();
 });
 </script>
 
@@ -432,10 +456,16 @@ onMounted(() => {
       :filter-title="contextFilterTitle"
     />
 
+    <PengeluaranPetugasFilter
+      v-model="selectedPetugasId"
+      :items="petugasList"
+    />
+
     <PengeluaranRekapList
       :title="title"
       :endpoint="endpoint"
       :base-path="basePath"
+      :filters="rekapFilterPayload"
       @updated="clearBatchSelection"
     />
 
@@ -533,6 +563,7 @@ onMounted(() => {
           :endpoint="endpoint"
           label="Filter Rekap"
           :allow-create="false"
+          :filters="rekapFilterPayload"
         />
       </VCol>
 
@@ -564,6 +595,7 @@ onMounted(() => {
           :endpoint="endpoint"
           label="Filter Rekap"
           :allow-create="false"
+          :filters="rekapFilterPayload"
         />
       </VCol>
 

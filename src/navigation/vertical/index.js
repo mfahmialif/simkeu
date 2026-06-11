@@ -13,7 +13,6 @@ import pengeluaranHeading from "./pengeluaran-heading";
 import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
 import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
 import pegawai from "./pegawai";
-import saldo from "./saldo";
 import { settingItemsForRole } from "./setting";
 import settingHeading from "./setting-heading";
 import dashboardStaff from "./staff/dashboardStaff";
@@ -34,7 +33,6 @@ const routesByRole = roleName => {
   return {
     admin: [
       ...dashboard,
-      ...saldo,
       ...pemasukan,
       ...pengeluaranHeading,
       ...pegawai,
@@ -48,7 +46,6 @@ const routesByRole = roleName => {
 
     pimpinan: [
       ...dashboard,
-      ...saldo,
       ...pemasukan,
       ...pengeluaranHeading,
       ...pengeluaran,
@@ -61,7 +58,6 @@ const routesByRole = roleName => {
 
     keuangan: [
       ...dashboard,
-      ...saldo,
       ...pemasukan,
       ...pengeluaranHeading,
       ...pengeluaran,
@@ -87,6 +83,7 @@ const routesByRole = roleName => {
       ...mahasiswa,
       ...pengeluaranHeading,
       ...pengeluaranDosenTatapmuka,
+      ...rab,
       ...settingHeading,
       ...setting,
     ],
@@ -97,6 +94,7 @@ const routesByRole = roleName => {
       ...pengeluaranHeading,
       ...pengeluaranDosenKegiatan,
       ...pengeluaranStaffBulanan,
+      ...rab,
       ...settingHeading,
       ...setting,
     ],
@@ -106,6 +104,7 @@ const routesByRole = roleName => {
       ...mahasiswa,
       ...pengeluaranHeading,
       ...pengeluaranDosenBulanan,
+      ...rab,
       ...settingHeading,
       ...setting,
     ],

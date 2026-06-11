@@ -380,6 +380,8 @@
     "formatCurrencyTotals": true,
     "listenPengeluaranRekapUpdated": true,
     "notifyPengeluaranRekapUpdated": true,
-    "appendLampiranFormData": true
+    "appendLampiranFormData": true,
+    "fetchPetugasPengeluaranOptions": true,
+    "defaultPetugasPengeluaranId": true
   }
 }

@@ -43,6 +43,7 @@ declare global {
   const customRef: typeof import('vue')['customRef']
   const debouncedRef: typeof import('@vueuse/core')['debouncedRef']
   const debouncedWatch: typeof import('@vueuse/core')['debouncedWatch']
+  const defaultPetugasPengeluaranId: typeof import('./src/composables/petugasPengeluaran.js')['defaultPetugasPengeluaranId']
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
   const defineComponent: typeof import('vue')['defineComponent']
   const definePage: typeof import('unplugin-vue-router/runtime')['definePage']
@@ -53,6 +54,7 @@ declare global {
   const emailValidator: typeof import('./src/@core/utils/validators.js')['emailValidator']
   const extendRef: typeof import('@vueuse/core')['extendRef']
   const fDate: typeof import('./src/composables/fDate.js')['fDate']
+  const fetchPetugasPengeluaranOptions: typeof import('./src/composables/petugasPengeluaran.js')['fetchPetugasPengeluaranOptions']
   const formatCurrencyTotals: typeof import('./src/composables/formatRupiah.js')['formatCurrencyTotals']
   const formatDate: typeof import('./src/@core/utils/formatters.js')['formatDate']
   const formatDateToMonthShort: typeof import('./src/@core/utils/formatters.js')['formatDateToMonthShort']
@@ -423,6 +425,7 @@ declare module 'vue' {
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
+    readonly defaultPetugasPengeluaranId: UnwrapRef<typeof import('./src/composables/petugasPengeluaran.js')['defaultPetugasPengeluaranId']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly definePage: UnwrapRef<typeof import('unplugin-vue-router/runtime')['definePage']>
@@ -433,6 +436,7 @@ declare module 'vue' {
     readonly emailValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['emailValidator']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly fDate: UnwrapRef<typeof import('./src/composables/fDate.js')['fDate']>
+    readonly fetchPetugasPengeluaranOptions: UnwrapRef<typeof import('./src/composables/petugasPengeluaran.js')['fetchPetugasPengeluaranOptions']>
     readonly formatCurrencyTotals: UnwrapRef<typeof import('./src/composables/formatRupiah.js')['formatCurrencyTotals']>
     readonly formatDate: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['formatDate']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['formatDateToMonthShort']>

@@ -1,6 +1,7 @@
 import { useLogout } from "@/composables/logout";
 
 const emailRouteComponent = () => import("@/pages/apps/email/index.vue");
+const lpjRouteComponent = () => import("@/components/admin/pengeluaran/PengeluaranLpjDetail.vue");
 
 const { logout } = useLogout();
 
@@ -65,6 +66,51 @@ export const redirects = [
   },
 ];
 export const routes = [
+  {
+    path: "/admin/pengeluaran/dosen-tatapmuka/rekap/:id/lpj",
+    name: "admin-pengeluaran-dosen-tatapmuka-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Barokah Dosen Tatapmuka",
+      endpoint: "/admin/pengeluaran/dosen",
+      basePath: "/admin/pengeluaran/dosen-tatapmuka",
+      moduleType: "tatapmuka",
+    },
+  },
+  {
+    path: "/admin/pengeluaran/dosen-kegiatan/rekap/:id/lpj",
+    name: "admin-pengeluaran-dosen-kegiatan-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Barokah Dosen Kegiatan",
+      endpoint: "/admin/pengeluaran/dosen-kegiatan",
+      basePath: "/admin/pengeluaran/dosen-kegiatan",
+      moduleType: "kegiatan",
+    },
+  },
+  {
+    path: "/admin/pengeluaran/dosen-bulanan/rekap/:id/lpj",
+    name: "admin-pengeluaran-dosen-bulanan-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Barokah Dosen Bulanan",
+      endpoint: "/admin/pengeluaran/dosen-bulanan",
+      basePath: "/admin/pengeluaran/dosen-bulanan",
+      moduleType: "dosen-bulanan",
+    },
+  },
+  {
+    path: "/admin/pengeluaran/staff-bulanan/rekap/:id/lpj",
+    name: "admin-pengeluaran-staff-bulanan-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Barokah Staff Bulanan",
+      endpoint: "/admin/pengeluaran/staff-bulanan",
+      basePath: "/admin/pengeluaran/staff-bulanan",
+      moduleType: "bulanan",
+    },
+  },
+
   // Email filter
   {
     path: "/apps/email/filter/:filter",

@@ -71,16 +71,6 @@ const suggestionGroups = [
         url: { name: "admin-pemasukan-mahasiswa-dispensasi" },
       },
       {
-        icon: "ri-arrow-down-line",
-        title: "Pengeluaran",
-        url: { name: "admin-pengeluaran" },
-      },
-      {
-        icon: "ri-wallet-line",
-        title: "Kategori Saldo",
-        url: { name: "admin-saldo-kategori" },
-      },
-      {
         icon: "ri-user-line",
         title: "Profil",
         url: { name: "admin-profile" },
@@ -95,16 +85,6 @@ const noDataSuggestions = [
     title: "Mahasiswa",
     icon: "ri-bar-chart-line",
     url: { name: "admin-pemasukan-mahasiswa-master-data-mahasiswa" },
-  },
-  {
-    title: "Pemasukan",
-    icon: "ri-pie-chart-2-line",
-    url: { name: "admin-pemasukan-pemasukan-tambah" },
-  },
-  {
-    title: "Pengeluaran",
-    icon: "ri-shopping-bag-3-line",
-    url: { name: "admin-pengeluaran" },
   },
 ];
 

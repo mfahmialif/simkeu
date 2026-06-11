@@ -36,11 +36,4 @@ export default [
       { title: "Laporan", to: "admin-pemasukan-mahasiswa-laporan" },
     ],
   },
-  {
-    title: "Pemasukan Lain",
-    icon: { icon: "ri-money-dollar-circle-line" },
-    children: [
-      { title: "Tambah Data", to: "admin-pemasukan-pemasukan-tambah" },
-    ],
-  },
 ]

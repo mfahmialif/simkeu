@@ -33,6 +33,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  filters: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "created", "selected"]);
@@ -144,6 +148,7 @@ const fetchRekap = async () => {
         limit: 100,
         sort_key: "id",
         sort_order: "desc",
+        ...props.filters,
       },
     });
 
@@ -259,6 +264,8 @@ onMounted(() => {
 });
 
 watch(selectedItem, item => emit("selected", item), { immediate: true });
+
+watch(() => props.filters, fetchRekap, { deep: true });
 
 onBeforeUnmount(() => stopListeningRekapUpdates?.());
 </script>

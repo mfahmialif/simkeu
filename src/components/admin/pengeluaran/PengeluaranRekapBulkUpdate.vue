@@ -48,6 +48,9 @@ const selectedCount = computed(() => (
 
 const canSubmit = computed(() => !!targetRekapId.value && selectedCount.value > 0);
 const canCancel = computed(() => selectedCount.value > 0);
+const targetRekapFilters = computed(() => ({
+  ...(props.filters?.petugas_id && { petugas_id: props.filters.petugas_id }),
+}));
 
 const errorMessage = (err) => {
   const message =
@@ -135,6 +138,7 @@ const cancelRekap = () => submitRekap(null);
             v-model="targetRekapId"
             :endpoint="endpoint"
             label="Rekap Tujuan"
+            :filters="targetRekapFilters"
           />
         </VCol>
 

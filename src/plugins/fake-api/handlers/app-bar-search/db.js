@@ -82,38 +82,6 @@ export const db = {
       ],
     },
     {
-      title: "Pemasukan",
-      icon: "ri-money-dollar-circle-line",
-      children: [
-        {
-          url: { name: "admin-pemasukan-pemasukan-tambah" },
-          title: "Tambah Data",
-        },
-      ],
-    },
-    {
-      title: "Pengeluaran",
-      category: "pengeluaran",
-      children: [
-        {
-          url: { name: "admin-pengeluaran" },
-          icon: "ri-arrow-down-line",
-          title: "Pengeluaran",
-        },
-      ],
-    },
-    {
-      title: "Saldo",
-      category: "saldo",
-      children: [
-        {
-          url: { name: "admin-saldo-kategori" },
-          icon: "ri-wallet-line",
-          title: "Kategori",
-        },
-      ],
-    },
-    {
       title: "User",
       category: "user",
       children: [

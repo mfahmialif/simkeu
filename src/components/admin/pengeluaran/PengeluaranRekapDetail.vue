@@ -50,10 +50,15 @@ const sortBy = ref({ key: "id", order: "desc" });
 const dataTable = ref([]);
 const totalItems = ref(0);
 const loading = ref(true);
+const activeDataTab = ref("rab");
 const dialog = ref(false);
 const saving = ref(false);
 const actionDialog = ref(false);
 const actionLoading = ref(false);
+const lpjDialog = ref(false);
+const lpjLoading = ref(false);
+const lpj = ref(null);
+const lpjRows = ref([]);
 const namaInput = ref(null);
 const nama = ref("");
 const keterangan = ref("");
@@ -80,6 +85,7 @@ const tableHeaders = computed(() => {
     { title: "Actions", key: "actions", sortable: false },
   ];
 });
+const lpjTableHeaders = computed(() => tableHeaders.value.filter(header => header.key !== "actions"));
 const editingHasDetails = computed(() => Number(rekap.value?.jumlah_data || 0) > 0);
 const canDeleteRekapWithDetails = computed(() => props.moduleType === "kegiatan");
 const deleteRekapMessage = computed(() => {
@@ -88,6 +94,13 @@ const deleteRekapMessage = computed(() => {
   }
 
   return `Rekap "${rekap.value?.nama || ""}" akan dihapus permanen.`;
+});
+const lpjSelisihColor = computed(() => {
+  const value = Number(lpj.value?.selisih || 0);
+
+  if (value === 0) return "success";
+
+  return value > 0 ? "warning" : "error";
 });
 const monthYearPickerConfig = {
   altInput: true,
@@ -173,6 +186,20 @@ const fetchRekap = async () => {
   rekap.value = response.data;
 };
 
+const fetchLpj = async () => {
+  try {
+    const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
+      method: "GET",
+    });
+
+    lpj.value = response.data?.lpj || null;
+    lpjRows.value = response.data?.details || [];
+  } catch {
+    lpj.value = null;
+    lpjRows.value = [];
+  }
+};
+
 const fetchData = async () => {
   try {
     loading.value = true;
@@ -250,8 +277,19 @@ const editBatchPath = () => ({
     edit_batch: "1",
   },
 });
+const addRabPath = () => (
+  props.moduleType === "kegiatan"
+    ? editBatchPath()
+    : createPath()
+);
 const editPath = item => ({
   path: `${props.basePath}/edit/${item.id}`,
+  query: {
+    return_to: currentDetailPath.value,
+  },
+});
+const lpjDetailPath = () => ({
+  path: `${props.basePath}/rekap/${rekapId.value}/lpj`,
   query: {
     return_to: currentDetailPath.value,
   },
@@ -266,7 +304,7 @@ const openEditRekapDialog = () => {
   nama.value = rekap.value?.nama || "";
   bulanTahun.value = String(rekap.value?.bulan_tahun || "").slice(0, 7);
   tanggalRekap.value = String(rekap.value?.tanggal_rekap || "").slice(0, 10);
-  jumlahSementara.value = Number(rekap.value?.jumlah_sementara ?? rekap.value?.jumlah ?? 0);
+  jumlahSementara.value = Number(rekap.value?.jumlah_data > 0 ? rekap.value?.jumlah : (rekap.value?.jumlah_sementara ?? rekap.value?.jumlah ?? 0));
   keterangan.value = rekap.value?.keterangan || "";
   dialog.value = true;
 };
@@ -342,12 +380,50 @@ const confirmDeleteRekap = async () => {
     actionLoading.value = false;
   }
 };
+const openLpjDialog = () => {
+  lpjDialog.value = true;
+};
+const submitLpj = async (sameAsRab) => {
+  if (lpjLoading.value) return;
+
+  try {
+    lpjLoading.value = true;
+    const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj/copy`, {
+      method: "POST",
+      body: {
+        sama_dengan_rab: sameAsRab,
+      },
+    });
+
+    if (response.status === true) {
+      lpjDialog.value = false;
+      await fetchLpj();
+      notifyPengeluaranRekapUpdated(props.endpoint);
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      });
+
+      if (!sameAsRab) {
+        router.push(lpjDetailPath());
+      }
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    });
+  } finally {
+    lpjLoading.value = false;
+  }
+};
 
 onMounted(async () => {
   document.title = `Detail Rekap ${props.title} - SIMKEU`;
 
   try {
     await fetchRekap();
+    await fetchLpj();
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -373,7 +449,7 @@ onMounted(async () => {
       <VCardText>
         <div class="detail-summary">
           <div class="detail-main min-w-0">
-            <div class="text-h5 font-weight-semibold">
+            <div class="detail-title text-h5 font-weight-semibold">
               {{ rekap?.nama || "Detail Rekap" }}
             </div>
             <div v-if="rekap?.keterangan" class="text-body-2 mt-1">
@@ -400,6 +476,20 @@ onMounted(async () => {
                 <small>
                   {{ rekap?.is_jumlah_sementara ? "Jumlah sementara" : "Total detail aktual" }}
                 </small>
+              </div>
+
+              <div class="detail-stat">
+                <span>Total LPJ</span>
+                <strong>{{ formatRupiah(lpj?.total_lpj || 0) }}</strong>
+                <small>{{ lpj?.sama_dengan_rab ? "Sama dengan RAB" : `${lpj?.jumlah_data || 0} data LPJ` }}</small>
+              </div>
+
+              <div class="detail-stat">
+                <span>Selisih</span>
+                <strong :class="`text-${lpjSelisihColor}`">
+                  {{ formatRupiah(lpj?.selisih || 0) }}
+                </strong>
+                <small>RAB dikurangi LPJ</small>
               </div>
             </div>
 
@@ -443,24 +533,33 @@ onMounted(async () => {
     <VCard>
       <VCardItem class="detail-data-header pb-4">
         <VCardTitle>Data {{ title }}</VCardTitle>
+        <VCardSubtitle>
+          <template v-if="activeDataTab === 'rab'">
+            {{ loading ? "Memuat data RAB..." : `${totalItems} data RAB, total ${formatRupiah(rekap?.jumlah || 0)}` }}
+          </template>
+          <template v-else>
+            {{ `${lpjRows.length} data LPJ, total ${formatRupiah(lpj?.total_lpj || 0)}` }}
+          </template>
+        </VCardSubtitle>
 
-        <template v-if="allowCreate" #append>
+        <template v-if="allowCreate || activeDataTab === 'lpj'" #append>
           <div class="detail-data-actions">
+            <template v-if="activeDataTab === 'rab' && allowCreate">
+              <VBtn
+                color="primary"
+                prepend-icon="ri-add-line"
+                @click="router.push(addRabPath())"
+              >
+                Tambah Data
+              </VBtn>
+            </template>
             <VBtn
-              v-if="moduleType === 'kegiatan'"
-              variant="outlined"
-              color="primary"
-              prepend-icon="ri-edit-line"
-              @click="router.push(editBatchPath())"
+              v-else-if="activeDataTab === 'lpj'"
+              color="success"
+              prepend-icon="ri-file-edit-line"
+              @click="router.push(lpjDetailPath())"
             >
-              Edit Batch
-            </VBtn>
-            <VBtn
-              color="primary"
-              prepend-icon="ri-add-line"
-              @click="router.push(createPath())"
-            >
-              Tambah Data
+              Edit Detail LPJ
             </VBtn>
           </div>
         </template>
@@ -468,79 +567,173 @@ onMounted(async () => {
 
       <VDivider />
 
-      <VDataTableServer
-        :headers="tableHeaders"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
-        :items="dataTable"
-        :items-length="totalItems"
-        :loading="loading"
-        item-value="id"
-        @update:options="loadItems"
+      <VTabs
+        v-model="activeDataTab"
+        class="detail-tabs px-4"
+        color="primary"
       >
-        <template #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
-        </template>
+        <VTab
+          value="rab"
+          prepend-icon="ri-file-list-3-line"
+        >
+          RAB
+        </VTab>
+        <VTab
+          value="lpj"
+          prepend-icon="ri-file-check-line"
+        >
+          LPJ
+        </VTab>
+      </VTabs>
 
-        <template #item.id="{ index }">
-          {{ itemsPerPage * (page - 1) + index + 1 }}
-        </template>
+      <VDivider />
 
-        <template #item.pegawai="{ item }">
-          <div class="font-weight-medium">
-            {{ pegawaiLabel(item) }}
-          </div>
-          <div class="text-caption text-medium-emphasis">
-            {{ pegawaiMeta(item) || "-" }}
-          </div>
-        </template>
-
-        <template #item.kategori_detail="{ item }">
-          <VChip
-            :color="isNonPegawai(item) ? 'secondary' : 'primary'"
-            size="small"
-            label
+      <VWindow v-model="activeDataTab">
+        <VWindowItem value="rab">
+          <VDataTableServer
+            :headers="tableHeaders"
+            v-model:items-per-page="itemsPerPage"
+            v-model:page="page"
+            :items="dataTable"
+            :items-length="totalItems"
+            :loading="loading"
+            item-value="id"
+            @update:options="loadItems"
           >
-            {{ isNonPegawai(item) ? "Nonpegawai" : "Pegawai" }}
-          </VChip>
-        </template>
+            <template #no-data>
+              <div class="text-center pa-4">Tidak ada data RAB.</div>
+            </template>
 
-        <template #item.uraian="{ item }">
-          {{ uraian(item) }}
-        </template>
+            <template #item.id="{ index }">
+              {{ itemsPerPage * (page - 1) + index + 1 }}
+            </template>
 
-        <template #item.jenis_pembayaran="{ item }">
-          <VChip
-            v-if="item.jenis_pembayaran"
-            :color="paymentColor(item.jenis_pembayaran)"
-            size="small"
-            label
+            <template #item.pegawai="{ item }">
+              <div class="font-weight-medium">
+                {{ pegawaiLabel(item) }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {{ pegawaiMeta(item) || "-" }}
+              </div>
+            </template>
+
+            <template #item.kategori_detail="{ item }">
+              <VChip
+                :color="isNonPegawai(item) ? 'secondary' : 'primary'"
+                size="small"
+                label
+              >
+                {{ isNonPegawai(item) ? "Nonpegawai" : "Pegawai" }}
+              </VChip>
+            </template>
+
+            <template #item.uraian="{ item }">
+              {{ uraian(item) }}
+            </template>
+
+            <template #item.jenis_pembayaran="{ item }">
+              <VChip
+                v-if="item.jenis_pembayaran"
+                :color="paymentColor(item.jenis_pembayaran)"
+                size="small"
+                label
+              >
+                {{ item.jenis_pembayaran }}
+              </VChip>
+              <span v-else>-</span>
+            </template>
+
+            <template #item.total="{ item }">
+              {{ formatRupiah(item.total) }}
+            </template>
+
+            <template #item.keterangan="{ item }">
+              {{ item.keterangan || "-" }}
+            </template>
+
+            <template #item.actions="{ item }">
+              <VBtn
+                variant="text"
+                size="small"
+                color="primary"
+                prepend-icon="ri-edit-box-line"
+                @click="router.push(editPath(item))"
+              >
+                Edit
+              </VBtn>
+            </template>
+          </VDataTableServer>
+        </VWindowItem>
+
+        <VWindowItem value="lpj">
+          <VDataTable
+            :headers="lpjTableHeaders"
+            :items="lpjRows"
+            :items-per-page="itemsPerPage"
+            item-value="id"
           >
-            {{ item.jenis_pembayaran }}
-          </VChip>
-          <span v-else>-</span>
-        </template>
+            <template #no-data>
+              <div class="text-center pa-6">
+                <div class="text-body-2 text-medium-emphasis mb-3">Belum ada data LPJ.</div>
+                <VBtn
+                  color="success"
+                  prepend-icon="ri-file-check-line"
+                  @click="openLpjDialog"
+                >
+                  Input LPJ
+                </VBtn>
+              </div>
+            </template>
 
-        <template #item.total="{ item }">
-          {{ formatRupiah(item.total) }}
-        </template>
+            <template #item.id="{ index }">
+              {{ index + 1 }}
+            </template>
 
-        <template #item.keterangan="{ item }">
-          {{ item.keterangan || "-" }}
-        </template>
+            <template #item.pegawai="{ item }">
+              <div class="font-weight-medium">
+                {{ pegawaiLabel(item) }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {{ pegawaiMeta(item) || "-" }}
+              </div>
+            </template>
 
-        <template #item.actions="{ item }">
-          <VBtn
-            variant="text"
-            size="small"
-            color="primary"
-            prepend-icon="ri-edit-box-line"
-            @click="router.push(editPath(item))"
-          >
-            Edit
-          </VBtn>
-        </template>
-      </VDataTableServer>
+            <template #item.kategori_detail="{ item }">
+              <VChip
+                :color="isNonPegawai(item) ? 'secondary' : 'primary'"
+                size="small"
+                label
+              >
+                {{ isNonPegawai(item) ? "Nonpegawai" : "Pegawai" }}
+              </VChip>
+            </template>
+
+            <template #item.uraian="{ item }">
+              {{ uraian(item) }}
+            </template>
+
+            <template #item.jenis_pembayaran="{ item }">
+              <VChip
+                v-if="item.jenis_pembayaran"
+                :color="paymentColor(item.jenis_pembayaran)"
+                size="small"
+                label
+              >
+                {{ item.jenis_pembayaran }}
+              </VChip>
+              <span v-else>-</span>
+            </template>
+
+            <template #item.total="{ item }">
+              {{ formatRupiah(item.total) }}
+            </template>
+
+            <template #item.keterangan="{ item }">
+              {{ item.keterangan || "-" }}
+            </template>
+          </VDataTable>
+        </VWindowItem>
+      </VWindow>
     </VCard>
 
     <VDialog
@@ -666,34 +859,97 @@ onMounted(async () => {
         </VCardText>
       </VCard>
     </VDialog>
+
+    <VDialog v-model="lpjDialog" width="560">
+      <VCard title="Input LPJ">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="lpjDialog = false"
+        />
+
+        <VCardText>
+          <div class="text-body-1 font-weight-medium mb-2">
+            Apakah dana LPJ sama dengan RAB?
+          </div>
+          <div class="text-body-2 text-medium-emphasis">
+            Detail LPJ akan disalin penuh dari RAB. Pilih edit detail jika nominal LPJ perlu disesuaikan.
+          </div>
+        </VCardText>
+
+        <VCardText class="lpj-dialog-actions">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="lpjLoading"
+            @click="lpjDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            variant="tonal"
+            color="warning"
+            prepend-icon="ri-edit-box-line"
+            :loading="lpjLoading"
+            :disabled="lpjLoading"
+            @click="submitLpj(false)"
+          >
+            Tidak, Edit Detail
+          </VBtn>
+          <VBtn
+            color="success"
+            prepend-icon="ri-check-line"
+            :loading="lpjLoading"
+            :disabled="lpjLoading"
+            @click="submitLpj(true)"
+          >
+            Ya, Sama
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 
 <style scoped>
 .detail-summary {
   display: grid;
-  align-items: center;
-  gap: 18px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 18px 22px;
+  grid-template-areas:
+    "main actions"
+    "stats actions";
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
+.detail-main {
+  grid-area: main;
+  max-inline-size: 720px;
+  min-inline-size: 0;
+}
+
+.detail-title {
+  line-height: 1.24;
+  overflow-wrap: anywhere;
 }
 
 .detail-side {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: contents;
 }
 
 .detail-stats {
   display: grid;
+  grid-area: stats;
   align-items: stretch;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  min-inline-size: 0;
 }
 
 .detail-stat {
   display: grid;
-  min-block-size: 82px;
-  min-inline-size: 150px;
+  min-block-size: 96px;
+  min-inline-size: 0;
   align-content: center;
   border: 1px solid rgba(var(--v-border-color), 0.16);
   border-radius: 8px;
@@ -717,8 +973,17 @@ onMounted(async () => {
 }
 
 .detail-actions {
-  display: flex;
+  display: grid;
+  grid-area: actions;
+  grid-auto-columns: max-content;
+  grid-auto-flow: column;
+  justify-content: end;
   gap: 10px;
+  padding-block-start: 20px;
+}
+
+.detail-actions :deep(.v-btn) {
+  min-inline-size: 118px;
 }
 
 .detail-data-actions {
@@ -728,19 +993,49 @@ onMounted(async () => {
   gap: 12px;
 }
 
+.lpj-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 1199px) {
+  .detail-summary {
+    grid-template-areas:
+      "main actions"
+      "stats stats";
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+
+  .detail-actions {
+    padding-block-start: 0;
+  }
+
+  .detail-stats {
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+  }
+}
+
 @media (max-width: 959px) {
   .detail-summary {
     align-items: stretch;
+    grid-template-areas:
+      "main"
+      "stats"
+      "actions";
     grid-template-columns: 1fr;
   }
 
-  .detail-side {
-    align-items: stretch;
-    flex-direction: column;
+  .detail-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    padding-block-start: 0;
   }
 
   .detail-actions :deep(.v-btn) {
-    flex: 1 1 0;
+    inline-size: 100%;
+    min-inline-size: 0;
   }
 }
 
@@ -791,6 +1086,10 @@ onMounted(async () => {
   .detail-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lpj-dialog-actions :deep(.v-btn) {
+    flex: 1 1 100%;
   }
 }
 </style>
