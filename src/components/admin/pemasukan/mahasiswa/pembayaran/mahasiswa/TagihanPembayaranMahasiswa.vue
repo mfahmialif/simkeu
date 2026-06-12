@@ -275,7 +275,7 @@ const getTagihanSemester = item => {
 
 const isTagihanBlocked = item =>
   Boolean(item?.tidak_bisa_dibayar)
-  || (!cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi"))
+  && !String(item?.nama || "").toLowerCase().includes("skripsi")
 
 const isPayableTagihan = item =>
   !isGroupTagihanItem(item) && !isTagihanBlocked(item)
