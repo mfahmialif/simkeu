@@ -1,8 +1,8 @@
 <script setup>
-import FormDeposit from "@/components/admin/deposit/FormDeposit.vue";
-import { useRouter } from "vue-router";
+import FormDeposit from "@/components/admin/deposit/FormDeposit.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -11,6 +11,7 @@ const menuList = [
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -21,13 +22,13 @@ const menuList = [
     clickHandler: () =>
       router.push("/admin/pemasukan/mahasiswa/catatan-deposit"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Catatan Deposit Add - SIMKEU";
-});
+  document.title = "Catatan Deposit Add - SIMKEU"
+})
 
-onMounted(() => {});
+onMounted(() => {})
 </script>
 
 <template>
@@ -40,9 +41,9 @@ onMounted(() => {});
 
         <VCardText>
           <FormDeposit
-            typeForm="add"
-            :url="'/admin/pemasukan/mahasiswa/catatan-deposit'"
-            :isRoleVisible="true"
+            type-form="add"
+            url="/admin/pemasukan/mahasiswa/catatan-deposit"
+            :is-role-visible="true"
           />
         </VCardText>
       </VCard>

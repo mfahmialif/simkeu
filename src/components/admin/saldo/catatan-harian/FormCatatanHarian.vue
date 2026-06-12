@@ -1,8 +1,6 @@
 <script setup>
 import { showSnackbar } from '@/composables/snackbar'
 
-const router = useRouter()
-
 const props = defineProps({
   typeForm: {
     type: String,
@@ -17,6 +15,8 @@ const props = defineProps({
     required: false,
   },
 })
+
+const router = useRouter()
 
 const refForm = ref(null)
 
@@ -40,6 +40,7 @@ const fetchSaldoList = async () => {
       method: 'GET',
       body: { limit: 0, sort_key: 'nama', sort_order: 'asc' },
     })
+
     saldoList.value = (data.data || []).map(i => ({
       title: `${i.kode} - ${i.nama}`,
       value: i.id,
@@ -69,6 +70,7 @@ const onSubmit = async () => {
   disabled.value = true
 
   const formData = new FormData()
+
   formData.append('saldo_id', saldo_id.value)
   formData.append('tipe', tipe.value)
   formData.append('jumlah', jumlah.value)
@@ -102,7 +104,8 @@ const onSubmit = async () => {
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join('; ')
-      : err.data?.message || 'Terjadi kesalahan.';
+      : err.data?.message || 'Terjadi kesalahan.'
+
     showSnackbar({
       text: message,
       color: 'error',
@@ -114,9 +117,15 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VSelect
           v-model="saldo_id"
           :items="saldoList"
@@ -125,7 +134,10 @@ const onSubmit = async () => {
           placeholder="Pilih Kategori Saldo"
         />
       </VCol>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VSelect
           v-model="tipe"
           :items="tipeList"
@@ -134,7 +146,10 @@ const onSubmit = async () => {
           placeholder="Pilih Tipe"
         />
       </VCol>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="jumlah"
           :rules="[requiredValidator]"
@@ -143,7 +158,10 @@ const onSubmit = async () => {
           type="number"
         />
       </VCol>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="tanggal"
           :rules="[requiredValidator]"
@@ -160,12 +178,24 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" class="d-flex gap-4">
-        <VBtn type="submit" :disabled @click="refForm?.validate()">
+      <VCol
+        cols="12"
+        class="d-flex gap-4"
+      >
+        <VBtn
+          type="submit"
+          :disabled
+          @click="refForm?.validate()"
+        >
           Submit
         </VBtn>
 
-        <VBtn type="reset" v-if="typeForm !== 'edit'" color="secondary" variant="tonal">
+        <VBtn
+          v-if="typeForm !== 'edit'"
+          type="reset"
+          color="secondary"
+          variant="tonal"
+        >
           Reset
         </VBtn>
       </VCol>

@@ -1,39 +1,43 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useTheme } from "vuetify";
+import { ref, computed, onMounted } from "vue"
+import { useTheme } from "vuetify"
 import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js'
 import 'flatpickr/dist/plugins/monthSelect/style.css'
-import { downloadFileExport } from "@/composables/exportFile";
-import { formatCurrencyTotals } from "@/composables/formatRupiah";
+import { downloadFileExport } from "@/composables/exportFile"
+import { formatCurrencyTotals } from "@/composables/formatRupiah"
 
-const theme = useTheme();
+const theme = useTheme()
 
-const selectedMode = ref("bulanan");
+const selectedMode = ref("bulanan")
+
 const modeOptions = [
   { title: "Mode Bulanan", value: "bulanan" },
-  { title: "Mode Tahunan", value: "tahunan" }
-];
+  { title: "Mode Tahunan", value: "tahunan" },
+]
 
-const selectedJenjang = ref("sarjana");
+const selectedJenjang = ref("sarjana")
+
 const jenjangOptions = [
   { title: "Sarjana", value: "sarjana" },
-  { title: "Pascasarjana", value: "pascasarjana" }
-];
+  { title: "Pascasarjana", value: "pascasarjana" },
+]
 
-const selectedJenisPembayaran = ref(null);
-const jenisPembayaranList = ref([]);
-const selectedUser = ref(null);
-const userList = ref([]);
+const selectedJenisPembayaran = ref(null)
+const jenisPembayaranList = ref([])
+const selectedUser = ref(null)
+const userList = ref([])
 
-const selectedTahun = ref(new Date().getFullYear().toString());
+const selectedTahun = ref(new Date().getFullYear().toString())
+
 const tahunOptions = computed(() => {
-  const currentYear = new Date().getFullYear();
-  const years = [];
+  const currentYear = new Date().getFullYear()
+  const years = []
   for(let i = currentYear; i >= 2020; i--) {
-    years.push(i.toString());
+    years.push(i.toString())
   }
-  return years;
-});
+  
+  return years
+})
 
 const monthPickerConfig = computed(() => ({
   disableMobile: true,
@@ -46,28 +50,29 @@ const monthPickerConfig = computed(() => ({
     }),
   ],
   altInput: true,
-}));
+}))
 
-const selectedBulan = ref("");
-const isLoading = ref(false);
-const reportTitle = ref("");
-const columns = ref([]);
-const tableData = ref([]);
-const allData = ref({});
-const totals = ref({});
-const hasData = ref(false);
-const jkInfo = ref("");
+const selectedBulan = ref("")
+const isLoading = ref(false)
+const reportTitle = ref("")
+const columns = ref([])
+const tableData = ref([])
+const allData = ref({})
+const totals = ref({})
+const hasData = ref(false)
+const jkInfo = ref("")
 
 
-const formatTanggal = (dateStr) => {
-  const d = new Date(dateStr);
-  return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
-};
+const formatTanggal = dateStr => {
+  const d = new Date(dateStr)
+  
+  return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear()
+}
 
-const normalizeTagihanText = (value) => String(value || "")
+const normalizeTagihanText = value => String(value || "")
   .toUpperCase()
   .replace(/[^A-Z0-9]+/g, " ")
-  .trim();
+  .trim()
 
 const REPORT_COLUMN_GROUPS = [
   {
@@ -88,27 +93,28 @@ const REPORT_COLUMN_GROUPS = [
       || compactLabel.includes("UTSSEMESTER")
       || compactLabel.includes("UJIANTENGAHSEMESTER"),
   },
-];
+]
 
-const getReportColumnGroup = (column) => {
-  const normalizedLabel = normalizeTagihanText(column?.label);
-  const compactLabel = normalizedLabel.replace(/\s+/g, "");
-  const normalizedKey = normalizeTagihanText(column?.key);
+const getReportColumnGroup = column => {
+  const normalizedLabel = normalizeTagihanText(column?.label)
+  const compactLabel = normalizedLabel.replace(/\s+/g, "")
+  const normalizedKey = normalizeTagihanText(column?.key)
 
-  return REPORT_COLUMN_GROUPS.find((group) =>
-    group.match({ normalizedLabel, compactLabel, normalizedKey })
-  );
-};
+  return REPORT_COLUMN_GROUPS.find(group =>
+    group.match({ normalizedLabel, compactLabel, normalizedKey }),
+  )
+}
 
-const toNumber = (value) => Number(value) || 0;
+const toNumber = value => Number(value) || 0
 
 const mergeCurrencyTotals = (...groups) => {
-  const totals = new Map();
+  const totals = new Map()
 
-  groups.flat().forEach((group) => {
-    const mataUang = group?.mata_uang || {};
-    const kode = String(mataUang.kode || "IDR").toUpperCase();
-    const key = `kode:${kode}`;
+  groups.flat().forEach(group => {
+    const mataUang = group?.mata_uang || {}
+    const kode = String(mataUang.kode || "IDR").toUpperCase()
+    const key = `kode:${kode}`
+
     const current = totals.get(key) || {
       key,
       mata_uang: {
@@ -118,109 +124,110 @@ const mergeCurrencyTotals = (...groups) => {
         simbol: mataUang.simbol || (kode === "IDR" ? "Rp" : kode),
       },
       total: 0,
-    };
+    }
 
-    current.total += toNumber(group?.total);
-    totals.set(key, current);
-  });
+    current.total += toNumber(group?.total)
+    totals.set(key, current)
+  })
 
-  return [...totals.values()];
-};
+  return [...totals.values()]
+}
 
 const groupReportColumns = (rawColumns = []) => {
   const groupedKeys = Object.fromEntries(
-    REPORT_COLUMN_GROUPS.map((group) => [group.key, []])
-  );
-  const hasGroupColumn = new Set();
-  const groupedColumns = [];
+    REPORT_COLUMN_GROUPS.map(group => [group.key, []]),
+  )
 
-  rawColumns.forEach((column) => {
-    const group = getReportColumnGroup(column);
+  const hasGroupColumn = new Set()
+  const groupedColumns = []
+
+  rawColumns.forEach(column => {
+    const group = getReportColumnGroup(column)
 
     if (group) {
-      groupedKeys[group.key].push(column.key);
+      groupedKeys[group.key].push(column.key)
 
       if (!hasGroupColumn.has(group.key)) {
         groupedColumns.push({
           ...column,
           key: group.key,
           label: group.label,
-        });
-        hasGroupColumn.add(group.key);
+        })
+        hasGroupColumn.add(group.key)
       }
 
-      return;
+      return
     }
 
-    groupedColumns.push(column);
-  });
+    groupedColumns.push(column)
+  })
 
-  return { columns: groupedColumns, groupedKeys };
-};
+  return { columns: groupedColumns, groupedKeys }
+}
 
 const groupReportRow = (row = {}, groupedKeys = {}) => {
-  const groupedRow = { ...row };
+  const groupedRow = { ...row }
 
   Object.entries(groupedKeys).forEach(([groupKey, keys]) => {
-    if (!keys.length) return;
+    if (!keys.length) return
 
-    groupedRow[groupKey] = keys.reduce((sum, key) => sum + toNumber(row[key]), 0);
+    groupedRow[groupKey] = keys.reduce((sum, key) => sum + toNumber(row[key]), 0)
     groupedRow[`${groupKey}_by_currency`] = mergeCurrencyTotals(
       keys.flatMap(key => row[`${key}_by_currency`] || []),
-    );
+    )
 
     keys
       .filter(key => key !== groupKey)
-      .forEach((key) => {
-        delete groupedRow[key];
-        delete groupedRow[`${key}_by_currency`];
-      });
-  });
+      .forEach(key => {
+        delete groupedRow[key]
+        delete groupedRow[`${key}_by_currency`]
+      })
+  })
 
-  return groupedRow;
-};
+  return groupedRow
+}
 
-const groupReportRows = (rows = [], groupedKeys = {}) => rows.map(row => groupReportRow(row, groupedKeys));
+const groupReportRows = (rows = [], groupedKeys = {}) => rows.map(row => groupReportRow(row, groupedKeys))
 
 const groupReportTotals = (rawTotals = {}, groupedKeys = {}) => {
-  const groupedTotals = { ...rawTotals };
+  const groupedTotals = { ...rawTotals }
 
   Object.entries(groupedKeys).forEach(([groupKey, keys]) => {
-    if (!keys.length) return;
+    if (!keys.length) return
 
-    groupedTotals[groupKey] = keys.reduce((sum, key) => sum + toNumber(rawTotals[key]), 0);
+    groupedTotals[groupKey] = keys.reduce((sum, key) => sum + toNumber(rawTotals[key]), 0)
     groupedTotals[`${groupKey}_by_currency`] = mergeCurrencyTotals(
       keys.flatMap(key => rawTotals[`${key}_by_currency`] || []),
-    );
+    )
 
     keys
       .filter(key => key !== groupKey)
-      .forEach((key) => {
-        delete groupedTotals[key];
-        delete groupedTotals[`${key}_by_currency`];
-      });
-  });
+      .forEach(key => {
+        delete groupedTotals[key]
+        delete groupedTotals[`${key}_by_currency`]
+      })
+  })
 
-  return groupedTotals;
-};
+  return groupedTotals
+}
 
 const hasGroupedKeys = (groupedKeys = {}) =>
-  Object.values(groupedKeys).some((keys) => keys.length);
+  Object.values(groupedKeys).some(keys => keys.length)
 
 const groupReportMonthlyData = (monthData = {}, groupedKeys = {}) => ({
   ...monthData,
   data: groupReportRows(monthData.data || [], groupedKeys),
   totals: groupReportTotals(monthData.totals || {}, groupedKeys),
-});
+})
 
 const normalizeReportData = (response = {}) => {
-  const { columns: groupedColumns, groupedKeys } = groupReportColumns(response.columns || []);
+  const { columns: groupedColumns, groupedKeys } = groupReportColumns(response.columns || [])
 
   if (!hasGroupedKeys(groupedKeys)) {
     return {
       ...response,
       columns: groupedColumns,
-    };
+    }
   }
 
   return {
@@ -236,93 +243,97 @@ const normalizeReportData = (response = {}) => {
         ]),
       )
       : response.all_data,
-  };
-};
+  }
+}
 
 const fetchData = async () => {
-  if (selectedMode.value === 'bulanan' && !selectedBulan.value) return;
-  if (selectedMode.value === 'tahunan' && !selectedTahun.value) return;
+  if (selectedMode.value === 'bulanan' && !selectedBulan.value) return
+  if (selectedMode.value === 'tahunan' && !selectedTahun.value) return
   
   try {
-    isLoading.value = true;
+    isLoading.value = true
+
     const filterData = {
       jenjang: selectedJenjang.value,
       ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
       ...(selectedUser.value && { user_id: selectedUser.value }),
-    };
+    }
+
     const bodyData = selectedMode.value === 'tahunan' 
       ? { mode: 'tahunan', tahun: selectedTahun.value, ...filterData }
-      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData };
+      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData }
 
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/pemasukan-tunai-harian", {
       method: "GET",
       body: bodyData,
-    });
+    })
 
     if (response.status) {
-      const normalizedResponse = normalizeReportData(response);
+      const normalizedResponse = normalizeReportData(response)
 
       if (selectedMode.value === 'tahunan') {
-        reportTitle.value = "PEMASUKAN TUNAI TAHUN " + selectedTahun.value;
-        columns.value = Object.freeze(normalizedResponse.columns);
-        allData.value = Object.freeze(normalizedResponse.all_data);
-        jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin;
-        hasData.value = true;
+        reportTitle.value = "PEMASUKAN TUNAI TAHUN " + selectedTahun.value
+        columns.value = Object.freeze(normalizedResponse.columns)
+        allData.value = Object.freeze(normalizedResponse.all_data)
+        jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin
+        hasData.value = true
       } else {
-        reportTitle.value = normalizedResponse.title;
-        columns.value = Object.freeze(normalizedResponse.columns);
-        tableData.value = Object.freeze(normalizedResponse.data);
-        totals.value = Object.freeze(normalizedResponse.totals);
-        jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin;
-        hasData.value = true;
+        reportTitle.value = normalizedResponse.title
+        columns.value = Object.freeze(normalizedResponse.columns)
+        tableData.value = Object.freeze(normalizedResponse.data)
+        totals.value = Object.freeze(normalizedResponse.totals)
+        jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin
+        hasData.value = true
       }
     } else {
-      showSnackbar({ text: response.message, color: "error" });
+      showSnackbar({ text: response.message, color: "error" })
     }
   } catch (err) {
-    showSnackbar({ text: err.message, color: "error" });
+    showSnackbar({ text: err.message, color: "error" })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const downloadExcel = async () => {
   try {
-    isLoading.value = true;
-    showSnackbar({ text: "Loading Excel...", color: "info" });
+    isLoading.value = true
+    showSnackbar({ text: "Loading Excel...", color: "info" })
     
     const filterData = {
       action: 'excel',
       jenjang: selectedJenjang.value,
       ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
       ...(selectedUser.value && { user_id: selectedUser.value }),
-    };
+    }
+
     const bodyData = selectedMode.value === 'tahunan' 
       ? { mode: 'tahunan', tahun: selectedTahun.value, ...filterData }
-      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData };
+      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData }
       
     const filename = selectedMode.value === 'tahunan' 
       ? `Pemasukan_Tunai_Harian_Tahun_${selectedTahun.value}.xlsx`
-      : `Pemasukan_Tunai_Harian_${selectedBulan.value}.xlsx`;
+      : `Pemasukan_Tunai_Harian_${selectedBulan.value}.xlsx`
 
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/pemasukan-tunai-harian", {
       method: "GET",
       headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
       body: bodyData,
-    });
+    })
 
-    downloadFileExport(response, filename);
-    showSnackbar({ text: "Excel berhasil diunduh.", color: "success" });
+    downloadFileExport(response, filename)
+    showSnackbar({ text: "Excel berhasil diunduh.", color: "success" })
   } catch (err) {
-    showSnackbar({ text: err.message, color: "error" });
+    showSnackbar({ text: err.message, color: "error" })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const printTable = () => {
-  const printContent = document.getElementById("report-table-container");
-  const win = window.open("", "_blank");
+  const printContent = document.getElementById("report-table-container")
+  const win = window.open("", "_blank")
+
   win.document.write(`
     <html>
     <head>
@@ -348,70 +359,77 @@ const printTable = () => {
       ${printContent.innerHTML}
     </body>
     </html>
-  `);
-  win.document.close();
-  setTimeout(() => { win.print(); }, 500);
-};
+  `)
+  win.document.close()
+  setTimeout(() => { win.print() }, 500)
+}
 
 const fetchJenisPembayaran = async () => {
   try {
-    const userData = useCookie("userData").value ?? {};
+    const userData = useCookie("userData").value ?? {}
+
     const response = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
       method: "GET",
       body: { limit: 100 },
-    });
+    })
+
     if (response && response.data) {
-      const items = response.data.data || response.data;
+      const items = response.data.data || response.data
       
-      const role = (userData?.role?.name || '').toLowerCase();
-      const jk = (userData?.jenis_kelamin || '').toLowerCase();
+      const role = (userData?.role?.name || '').toLowerCase()
+      const jk = (userData?.jenis_kelamin || '').toLowerCase()
       
-      let userCategory = '%';
+      let userCategory = '%'
       if (role !== 'admin' && role !== 'kabag') {
-         if (jk === 'laki-laki') userCategory = 'Putra';
-         if (jk === 'perempuan') userCategory = 'Putri';
+        if (jk === 'laki-laki') userCategory = 'Putra'
+        if (jk === 'perempuan') userCategory = 'Putri'
       }
 
       jenisPembayaranList.value = items.filter(jp => {
-         if (userCategory === '%') return true;
-         if (jp.kategori && jp.kategori.toLowerCase().includes(userCategory.toLowerCase())) return true;
-         if (jp.kategori === 'Semua' || jp.kategori === '%') return true; 
-         return false;
+        if (userCategory === '%') return true
+        if (jp.kategori && jp.kategori.toLowerCase().includes(userCategory.toLowerCase())) return true
+        if (jp.kategori === 'Semua' || jp.kategori === '%') return true 
+        
+        return false
       }).map(jp => ({
         title: jp.nama + " (" + jp.kategori + ")",
         value: jp.id,
-      }));
+      }))
     }
   } catch (err) {
-    console.error('Failed to fetch jenis pembayaran:', err);
+    console.error('Failed to fetch jenis pembayaran:', err)
   }
-};
+}
 
 const fetchUser = async () => {
   try {
     const response = await $api("/helper/petugas-pembayaran", {
       method: "GET",
-    });
+    })
+
     if (response && response.data) {
-      const items = response.data.data || response.data;
+      const items = response.data.data || response.data
+
       userList.value = items.map(u => ({
         title: `${u.name} (${u.jenis_kelamin})`,
         value: u.id,
-      }));
+      }))
     }
   } catch (err) {
-    console.error('Failed to fetch petugas:', err);
+    console.error('Failed to fetch petugas:', err)
   }
-};
+}
 
 onMounted(() => {
-  document.title = "Pemasukan Tunai Harian";
-  const now = new Date();
-  selectedBulan.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  fetchJenisPembayaran();
-  fetchUser();
-  fetchData();
-});
+  document.title = "Pemasukan Tunai Harian"
+
+  const now = new Date()
+
+  selectedBulan.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+  fetchJenisPembayaran()
+  fetchUser()
+  fetchData()
+})
 </script>
 
 <template>
@@ -421,14 +439,29 @@ onMounted(() => {
       <div class="header-gradient">
         <div class="header-content">
           <div class="header-icon-wrap">
-            <VIcon icon="ri-money-dollar-circle-line" size="32" color="white" />
+            <VIcon
+              icon="ri-money-dollar-circle-line"
+              size="32"
+              color="white"
+            />
           </div>
           <div>
-            <h1 class="header-title">Pemasukan Tunai Harian</h1>
+            <h1 class="header-title">
+              Pemasukan Tunai Harian
+            </h1>
             <p class="header-subtitle">
               Laporan pemasukan tunai harian per kategori tagihan
-              <span v-if="jkInfo" class="ml-2 px-2 py-1 bg-white text-primary rounded-pill font-weight-bold" style="font-size: 0.85rem;">
-                <VIcon start icon="ri-user-line" size="14" class="mr-1" />
+              <span
+                v-if="jkInfo"
+                class="ml-2 px-2 py-1 bg-white text-primary rounded-pill font-weight-bold"
+                style="font-size: 0.85rem;"
+              >
+                <VIcon
+                  start
+                  icon="ri-user-line"
+                  size="14"
+                  class="mr-1"
+                />
                 {{ jkInfo }}
               </span>
             </p>
@@ -438,7 +471,10 @@ onMounted(() => {
 
       <VCardText class="pt-6 pb-4">
         <VRow align="center">
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="selectedMode"
               :items="modeOptions"
@@ -448,7 +484,10 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="selectedJenjang"
               :items="jenjangOptions"
@@ -458,11 +497,14 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <AppDateTimePicker
               v-if="selectedMode === 'bulanan'"
-              v-model="selectedBulan"
               :key="'month-'+theme.global.name.value"
+              v-model="selectedBulan"
               label="Bulan"
               placeholder="Bulan laporan"
               :config="monthPickerConfig"
@@ -480,7 +522,10 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="selectedJenisPembayaran"
               :items="jenisPembayaranList"
@@ -492,7 +537,10 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="selectedUser"
               :items="userList"
@@ -504,52 +552,70 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VBtn
               color="primary"
               size="large"
-              @click="fetchData"
               :loading="isLoading"
               block
               class="fetch-btn"
+              @click="fetchData"
             >
               <template #loader>
                 <span class="custom-loader">
-                  Loading<span class="loading-dots"></span>
+                  Loading<span class="loading-dots" />
                 </span>
               </template>
-              <VIcon start icon="ri-search-line" />
+              <VIcon
+                start
+                icon="ri-search-line"
+              />
               Tampilkan
             </VBtn>
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VBtn
               color="success"
               size="large"
-              @click="downloadExcel"
               :loading="isLoading"
               :disabled="!hasData"
               block
+              @click="downloadExcel"
             >
               <template #loader>
                 <span class="custom-loader">
-                  Loading<span class="loading-dots"></span>
+                  Loading<span class="loading-dots" />
                 </span>
               </template>
-              <VIcon start icon="ri-file-excel-2-line" />
+              <VIcon
+                start
+                icon="ri-file-excel-2-line"
+              />
               Excel
             </VBtn>
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VBtn
               variant="outlined"
               color="secondary"
               size="large"
-              @click="printTable"
               :disabled="!hasData || isLoading || selectedMode === 'tahunan'"
               block
+              @click="printTable"
             >
-              <VIcon start icon="ri-printer-line" />
+              <VIcon
+                start
+                icon="ri-printer-line"
+              />
               Print
             </VBtn>
           </VCol>
@@ -558,15 +624,38 @@ onMounted(() => {
     </VCard>
 
     <!-- Loading -->
-    <VCard v-if="isLoading" class="pa-8 text-center">
-      <VProgressCircular indeterminate color="primary" size="64" width="6" />
-      <p class="mt-4 text-body-1" style="color: #64748b">Memuat data laporan...</p>
+    <VCard
+      v-if="isLoading"
+      class="pa-8 text-center"
+    >
+      <VProgressCircular
+        indeterminate
+        color="primary"
+        size="64"
+        width="6"
+      />
+      <p
+        class="mt-4 text-body-1"
+        style="color: #64748b"
+      >
+        Memuat data laporan...
+      </p>
     </VCard>
 
     <!-- No Data -->
-    <VCard v-else-if="!hasData" class="pa-8 text-center">
-      <VIcon icon="ri-file-search-line" size="80" color="grey" class="mb-4" />
-      <h3 style="color: #94a3b8">Pilih {{ selectedMode === 'bulanan' ? 'bulan' : 'tahun' }} untuk menampilkan laporan</h3>
+    <VCard
+      v-else-if="!hasData"
+      class="pa-8 text-center"
+    >
+      <VIcon
+        icon="ri-file-search-line"
+        size="80"
+        color="grey"
+        class="mb-4"
+      />
+      <h3 style="color: #94a3b8">
+        Pilih {{ selectedMode === 'bulanan' ? 'bulan' : 'tahun' }} untuk menampilkan laporan
+      </h3>
     </VCard>
 
     <!-- Report Tables -->
@@ -574,19 +663,35 @@ onMounted(() => {
       <VCard class="report-table-card">
         <VCardItem class="report-table-header">
           <VCardTitle class="text-center">
-            <VIcon icon="ri-bar-chart-grouped-line" class="me-2" />
+            <VIcon
+              icon="ri-bar-chart-grouped-line"
+              class="me-2"
+            />
             {{ reportTitle }}
           </VCardTitle>
         </VCardItem>
 
         <VDivider />
 
-        <div id="report-table-container" class="table-scroll-container">
+        <div
+          id="report-table-container"
+          class="table-scroll-container"
+        >
           <table class="report-table">
             <thead>
               <tr>
-                <th class="sticky-col col-no" rowspan="1">No</th>
-                <th class="sticky-col col-tanggal" rowspan="1">Tanggal</th>
+                <th
+                  class="sticky-col col-no"
+                  rowspan="1"
+                >
+                  No
+                </th>
+                <th
+                  class="sticky-col col-tanggal"
+                  rowspan="1"
+                >
+                  Tanggal
+                </th>
                 <th
                   v-for="col in columns"
                   :key="col.key"
@@ -594,7 +699,9 @@ onMounted(() => {
                 >
                   {{ col.label }}
                 </th>
-                <th class="col-total">Jumlah</th>
+                <th class="col-total">
+                  Jumlah
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -604,8 +711,12 @@ onMounted(() => {
                 class="data-row"
                 :class="{ 'even-row': index % 2 === 0 }"
               >
-                <td class="sticky-col col-no text-center">{{ row.no }}</td>
-                <td class="sticky-col col-tanggal text-center">{{ formatTanggal(row.tanggal) }}</td>
+                <td class="sticky-col col-no text-center">
+                  {{ row.no }}
+                </td>
+                <td class="sticky-col col-tanggal text-center">
+                  {{ formatTanggal(row.tanggal) }}
+                </td>
                 <td
                   v-for="col in columns"
                   :key="col.key"
@@ -614,14 +725,22 @@ onMounted(() => {
                 >
                   {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
                 </td>
-                <td class="col-total text-right" :class="{ 'has-value-total': row.jumlah > 0 }">
+                <td
+                  class="col-total text-right"
+                  :class="{ 'has-value-total': row.jumlah > 0 }"
+                >
                   {{ formatCurrencyTotals(row.jumlah_by_currency, row.jumlah) }}
                 </td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="total-row">
-                <td class="sticky-col col-no text-center" colspan="2">TOTAL</td>
+                <td
+                  class="sticky-col col-no text-center"
+                  colspan="2"
+                >
+                  TOTAL
+                </td>
                 <td
                   v-for="col in columns"
                   :key="col.key"
@@ -640,10 +759,16 @@ onMounted(() => {
         <!-- Summary Cards -->
         <VCardText class="pa-6">
           <VRow>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <div class="summary-card summary-total">
                 <div class="summary-icon">
-                  <VIcon icon="ri-funds-line" size="28" />
+                  <VIcon
+                    icon="ri-funds-line"
+                    size="28"
+                  />
                 </div>
                 <div>
                   <span class="summary-label">Total Pemasukan</span>
@@ -651,10 +776,16 @@ onMounted(() => {
                 </div>
               </div>
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <div class="summary-card summary-days">
                 <div class="summary-icon">
-                  <VIcon icon="ri-calendar-check-line" size="28" />
+                  <VIcon
+                    icon="ri-calendar-check-line"
+                    size="28"
+                  />
                 </div>
                 <div>
                   <span class="summary-label">Hari dengan Transaksi</span>
@@ -662,10 +793,16 @@ onMounted(() => {
                 </div>
               </div>
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <div class="summary-card summary-categories">
                 <div class="summary-icon">
-                  <VIcon icon="ri-stack-line" size="28" />
+                  <VIcon
+                    icon="ri-stack-line"
+                    size="28"
+                  />
                 </div>
                 <div>
                   <span class="summary-label">Kategori Tagihan</span>
@@ -679,10 +816,17 @@ onMounted(() => {
     </template>
 
     <template v-else-if="selectedMode === 'tahunan'">
-      <VCard v-for="(monthInfo, mIdx) in allData" :key="mIdx" class="report-table-card mb-6">
+      <VCard
+        v-for="(monthInfo, mIdx) in allData"
+        :key="mIdx"
+        class="report-table-card mb-6"
+      >
         <VCardItem class="report-table-header">
           <VCardTitle class="text-center">
-            <VIcon icon="ri-bar-chart-grouped-line" class="me-2" />
+            <VIcon
+              icon="ri-bar-chart-grouped-line"
+              class="me-2"
+            />
             {{ monthInfo.title }}
           </VCardTitle>
         </VCardItem>
@@ -693,8 +837,18 @@ onMounted(() => {
           <table class="report-table">
             <thead>
               <tr>
-                <th class="sticky-col col-no" rowspan="1">No</th>
-                <th class="sticky-col col-tanggal" rowspan="1">Tanggal</th>
+                <th
+                  class="sticky-col col-no"
+                  rowspan="1"
+                >
+                  No
+                </th>
+                <th
+                  class="sticky-col col-tanggal"
+                  rowspan="1"
+                >
+                  Tanggal
+                </th>
                 <th
                   v-for="col in columns"
                   :key="col.key"
@@ -702,7 +856,9 @@ onMounted(() => {
                 >
                   {{ col.label }}
                 </th>
-                <th class="col-total">Jumlah</th>
+                <th class="col-total">
+                  Jumlah
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -712,8 +868,12 @@ onMounted(() => {
                 class="data-row"
                 :class="{ 'even-row': index % 2 === 0 }"
               >
-                <td class="sticky-col col-no text-center">{{ row.no }}</td>
-                <td class="sticky-col col-tanggal text-center">{{ formatTanggal(row.tanggal) }}</td>
+                <td class="sticky-col col-no text-center">
+                  {{ row.no }}
+                </td>
+                <td class="sticky-col col-tanggal text-center">
+                  {{ formatTanggal(row.tanggal) }}
+                </td>
                 <td
                   v-for="col in columns"
                   :key="col.key"
@@ -722,14 +882,22 @@ onMounted(() => {
                 >
                   {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
                 </td>
-                <td class="col-total text-right" :class="{ 'has-value-total': row.jumlah > 0 }">
+                <td
+                  class="col-total text-right"
+                  :class="{ 'has-value-total': row.jumlah > 0 }"
+                >
                   {{ formatCurrencyTotals(row.jumlah_by_currency, row.jumlah) }}
                 </td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="total-row">
-                <td class="sticky-col col-no text-center" colspan="2">TOTAL</td>
+                <td
+                  class="sticky-col col-no text-center"
+                  colspan="2"
+                >
+                  TOTAL
+                </td>
                 <td
                   v-for="col in columns"
                   :key="col.key"

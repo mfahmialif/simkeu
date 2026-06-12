@@ -62,6 +62,7 @@ export default [
         title: "UAS Susulan",
         to: "admin-pemasukan-mahasiswa-uas-susulan",
       },
+
       // {
       //   title: "Piutang",
       //   to: "admin-pemasukan-mahasiswa-piutang",
@@ -84,4 +85,4 @@ export default [
       },
     ],
   },
-];
+]

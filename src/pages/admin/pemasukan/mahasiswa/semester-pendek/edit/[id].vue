@@ -1,103 +1,109 @@
 <script setup>
-import { useRoute, useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router"
 
-const route = useRoute();
-const router = useRouter();
-const pageTitle = "Edit Pembayaran Semester Pendek";
+const route = useRoute()
+const router = useRouter()
+const pageTitle = "Edit Pembayaran Semester Pendek"
 
-const loading = ref(true);
-const isSubmitting = ref(false);
+const loading = ref(true)
+const isSubmitting = ref(false)
 
 // Data from API
-const pembayaran = ref(null);
-const krsData = ref(null);
+const pembayaran = ref(null)
+const krsData = ref(null)
 
 // Editable fields
-const jumlah = ref(0);
-const tanggal = ref("");
-const jenisPembayaranId = ref(null);
-const samahah = ref(false);
-const dhomin = ref(false);
+const jumlah = ref(0)
+const tanggal = ref("")
+const jenisPembayaranId = ref(null)
+const samahah = ref(false)
+const dhomin = ref(false)
 
 // Options
-const listJenisPembayaran = ref([]);
+const listJenisPembayaran = ref([])
+
 const jenisPembayaranYayasanId = computed(() =>
-  listJenisPembayaran.value.find((item) => item.nama?.toLowerCase() === "yayasan")?.value ?? null
-);
+  listJenisPembayaran.value.find(item => item.nama?.toLowerCase() === "yayasan")?.value ?? null,
+)
 
 const fetchJenisPembayaran = async () => {
   try {
     const res = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
       method: "GET",
       params: { limit: 0, manual_only: 1 },
-    });
-    const items = res?.data?.data ?? res?.data ?? [];
-    listJenisPembayaran.value = items.map((jp) => ({
+    })
+
+    const items = res?.data?.data ?? res?.data ?? []
+
+    listJenisPembayaran.value = items.map(jp => ({
       title: jp.nama + " - " + jp.kategori,
       value: jp.id,
       nama: jp.nama,
-    }));
+    }))
   } catch (e) {
-    console.error("Gagal load jenis pembayaran", e);
+    console.error("Gagal load jenis pembayaran", e)
   }
-};
+}
 
-watch(samahah, (val) => {
-  if (val) dhomin.value = false;
-});
+watch(samahah, val => {
+  if (val) dhomin.value = false
+})
 
-watch(dhomin, (val) => {
-  if (!val) return;
-  samahah.value = false;
-  jumlah.value = 0;
+watch(dhomin, val => {
+  if (!val) return
+  samahah.value = false
+  jumlah.value = 0
   if (jenisPembayaranYayasanId.value) {
-    jenisPembayaranId.value = jenisPembayaranYayasanId.value;
+    jenisPembayaranId.value = jenisPembayaranYayasanId.value
   }
-});
+})
 
-watch(jenisPembayaranYayasanId, (val) => {
+watch(jenisPembayaranYayasanId, val => {
   if (dhomin.value && val) {
-    jenisPembayaranId.value = val;
+    jenisPembayaranId.value = val
   }
-});
+})
 
 const fetchData = async () => {
-  loading.value = true;
+  loading.value = true
   try {
     const res = await $api(`/admin/pemasukan/mahasiswa/semester-pendek/${route.params.id}`, {
       method: "GET",
-    });
+    })
 
     if (res.status === "true" && res.data) {
-      pembayaran.value = res.data.pembayaran;
-      krsData.value = res.data.krs;
+      pembayaran.value = res.data.pembayaran
+      krsData.value = res.data.krs
 
       // Set editable fields
-      jumlah.value = pembayaran.value.jumlah;
-      jenisPembayaranId.value = pembayaran.value.jenis_pembayaran_id;
+      jumlah.value = pembayaran.value.jumlah
+      jenisPembayaranId.value = pembayaran.value.jenis_pembayaran_id
+
       // Format tanggal for date input (yyyy-MM-dd)
       if (pembayaran.value.tanggal) {
-        tanggal.value = pembayaran.value.tanggal.substring(0, 10);
+        tanggal.value = pembayaran.value.tanggal.substring(0, 10)
       }
     }
   } catch (error) {
-    console.error("Gagal mengambil data detail", error);
+    console.error("Gagal mengambil data detail", error)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const submitEdit = async () => {
   if (!dhomin.value && (!jumlah.value || jumlah.value <= 0)) {
-    showSnackbar({ text: "Nominal pembayaran harus lebih dari 0.", color: "warning" });
-    return;
+    showSnackbar({ text: "Nominal pembayaran harus lebih dari 0.", color: "warning" })
+    
+    return
   }
   if (!dhomin.value && !jenisPembayaranId.value) {
-    showSnackbar({ text: "Silakan pilih Jenis Pembayaran.", color: "warning" });
-    return;
+    showSnackbar({ text: "Silakan pilih Jenis Pembayaran.", color: "warning" })
+    
+    return
   }
 
-  isSubmitting.value = true;
+  isSubmitting.value = true
   try {
     const res = await $api(`/admin/pemasukan/mahasiswa/semester-pendek/${route.params.id}`, {
       method: "PUT",
@@ -109,42 +115,44 @@ const submitEdit = async () => {
         total_pembayaran: krsData.value?.total_pembayaran ?? 0,
         ...(tanggal.value && { tanggal: tanggal.value }),
       },
-    });
+    })
 
     if (res.status === "true") {
-      showSnackbar({ text: res.message, color: "success" });
-      router.push("/admin/pemasukan/mahasiswa/semester-pendek");
+      showSnackbar({ text: res.message, color: "success" })
+      router.push("/admin/pemasukan/mahasiswa/semester-pendek")
     } else {
-      showSnackbar({ text: res.message || "Gagal memperbarui.", color: "error" });
+      showSnackbar({ text: res.message || "Gagal memperbarui.", color: "error" })
     }
   } catch (err) {
-    const msg = err.data?.message || "Terjadi kesalahan pada server.";
-    showSnackbar({ text: msg, color: "error" });
+    const msg = err.data?.message || "Terjadi kesalahan pada server."
+
+    showSnackbar({ text: msg, color: "error" })
   } finally {
-    isSubmitting.value = false;
+    isSubmitting.value = false
   }
-};
+}
 
 // Helpers
-const formatRupiah = (val) =>
+const formatRupiah = val =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
-  }).format(val || 0);
+  }).format(val || 0)
 
-const formatTanggal = (val) => {
-  if (!val) return "-";
+const formatTanggal = val => {
+  if (!val) return "-"
+  
   return new Date(val).toLocaleDateString("id-ID", {
     day: "2-digit",
     month: "long",
     year: "numeric",
-  });
-};
+  })
+}
 
 onMounted(() => {
-  router.replace("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add");
-});
+  router.replace("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add")
+})
 </script>
 
 <template>
@@ -152,7 +160,9 @@ onMounted(() => {
     <VCol cols="12">
       <div class="d-flex justify-space-between align-center mb-6">
         <div>
-          <h4 class="text-h4 mb-1">{{ pageTitle }}</h4>
+          <h4 class="text-h4 mb-1">
+            {{ pageTitle }}
+          </h4>
           <p class="text-body-1 text-medium-emphasis mb-0">
             Edit nominal, tanggal, dan jenis pembayaran.
           </p>
@@ -162,34 +172,59 @@ onMounted(() => {
           variant="outlined"
           @click="router.push('/admin/pemasukan/mahasiswa/semester-pendek')"
         >
-          <VIcon icon="ri-arrow-left-line" class="me-2" />
+          <VIcon
+            icon="ri-arrow-left-line"
+            class="me-2"
+          />
           Kembali
         </VBtn>
       </div>
     </VCol>
 
     <!-- Loading -->
-    <VCol v-if="loading" cols="12">
+    <VCol
+      v-if="loading"
+      cols="12"
+    >
       <div class="d-flex justify-center pa-10">
-        <VProgressCircular indeterminate color="primary" />
+        <VProgressCircular
+          indeterminate
+          color="primary"
+        />
       </div>
     </VCol>
 
     <template v-else-if="pembayaran">
-      <VCol cols="12" md="7">
+      <VCol
+        cols="12"
+        md="7"
+      >
         <!-- Akademik Card -->
         <VCard class="mb-4">
           <VCardItem>
             <template #prepend>
-              <VAvatar color="primary" variant="tonal" rounded="lg" size="38">
-                <VIcon icon="ri-calendar-2-line" size="20" />
+              <VAvatar
+                color="primary"
+                variant="tonal"
+                rounded="lg"
+                size="38"
+              >
+                <VIcon
+                  icon="ri-calendar-2-line"
+                  size="20"
+                />
               </VAvatar>
             </template>
-            <VCardTitle class="text-base">Akademik</VCardTitle>
+            <VCardTitle class="text-base">
+              Akademik
+            </VCardTitle>
           </VCardItem>
           <VDivider />
           <VCardText class="pa-0">
-            <VList lines="one" density="compact">
+            <VList
+              lines="one"
+              density="compact"
+            >
               <VListItem>
                 <template #title>
                   <span class="text-xs text-medium-emphasis">Periode</span>
@@ -219,15 +254,28 @@ onMounted(() => {
         <VCard class="mb-4">
           <VCardItem>
             <template #prepend>
-              <VAvatar color="info" variant="tonal" rounded="lg" size="38">
-                <VIcon icon="ri-user-3-line" size="20" />
+              <VAvatar
+                color="info"
+                variant="tonal"
+                rounded="lg"
+                size="38"
+              >
+                <VIcon
+                  icon="ri-user-3-line"
+                  size="20"
+                />
               </VAvatar>
             </template>
-            <VCardTitle class="text-base">Mahasiswa</VCardTitle>
+            <VCardTitle class="text-base">
+              Mahasiswa
+            </VCardTitle>
           </VCardItem>
           <VDivider />
           <VCardText class="pa-0">
-            <VList lines="one" density="compact">
+            <VList
+              lines="one"
+              density="compact"
+            >
               <VListItem>
                 <template #title>
                   <span class="text-xs text-medium-emphasis">NIM</span>
@@ -257,7 +305,10 @@ onMounted(() => {
                 <template #subtitle>
                   <span class="text-sm font-weight-semibold text-high-emphasis">
                     {{ krsData?.prodi_nama ?? "-" }}
-                    <span v-if="krsData?.prodi_alias" class="text-medium-emphasis">
+                    <span
+                      v-if="krsData?.prodi_alias"
+                      class="text-medium-emphasis"
+                    >
                       ({{ krsData.prodi_alias }})
                     </span>
                   </span>
@@ -280,15 +331,28 @@ onMounted(() => {
       </VCol>
 
       <!-- Pembayaran (Editable) -->
-      <VCol cols="12" md="5">
+      <VCol
+        cols="12"
+        md="5"
+      >
         <VCard>
           <VCardItem>
             <template #prepend>
-              <VAvatar color="warning" variant="tonal" rounded="lg" size="38">
-                <VIcon icon="ri-money-dollar-circle-line" size="20" />
+              <VAvatar
+                color="warning"
+                variant="tonal"
+                rounded="lg"
+                size="38"
+              >
+                <VIcon
+                  icon="ri-money-dollar-circle-line"
+                  size="20"
+                />
               </VAvatar>
             </template>
-            <VCardTitle class="text-base">Pembayaran</VCardTitle>
+            <VCardTitle class="text-base">
+              Pembayaran
+            </VCardTitle>
           </VCardItem>
           <VDivider />
           <VCardText>
@@ -353,7 +417,10 @@ onMounted(() => {
               :disabled="isSubmitting"
               @click="submitEdit"
             >
-              <VIcon icon="ri-save-line" class="me-2" />
+              <VIcon
+                icon="ri-save-line"
+                class="me-2"
+              />
               Simpan Perubahan
             </VBtn>
           </VCardText>
@@ -362,8 +429,14 @@ onMounted(() => {
     </template>
 
     <!-- Error / Not Found -->
-    <VCol v-else cols="12">
-      <VAlert type="error" variant="tonal">
+    <VCol
+      v-else
+      cols="12"
+    >
+      <VAlert
+        type="error"
+        variant="tonal"
+      >
         Data pembayaran tidak ditemukan.
       </VAlert>
     </VCol>

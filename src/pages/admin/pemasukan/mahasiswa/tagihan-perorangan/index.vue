@@ -1,13 +1,14 @@
 <script setup>
-import { downloadFileExport } from "@/composables/exportFile";
+import { downloadFileExport } from "@/composables/exportFile"
 
-const selectedThAkademik = ref();
-const thAkademik = ref([]);
-const selectedThAngkatan = ref();
-const thAngkatan = ref([]);
-const selectedProdi = ref();
-const prodi = ref([]);
-const selectedDoubleDegree = ref();
+const selectedThAkademik = ref()
+const thAkademik = ref([])
+const selectedThAngkatan = ref()
+const thAngkatan = ref([])
+const selectedProdi = ref()
+const prodi = ref([])
+const selectedDoubleDegree = ref()
+
 const doubleDegree = ref([
   {
     title: "Tidak",
@@ -17,26 +18,27 @@ const doubleDegree = ref([
     title: "Ya",
     value: 1,
   },
-]);
+])
 
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
-const allYearsLimit = 1000;
-const isLoadingExcel = ref(false);
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
+const allYearsLimit = 1000
+const isLoadingExcel = ref(false)
 
-const hasFilterValue = (value) =>
-  value !== undefined && value !== null && value !== "";
+const hasFilterValue = value =>
+  value !== undefined && value !== null && value !== ""
 
 const fetchData = async () => {
   try {
-    loading.value = true;
+    loading.value = true
+
     const { data } = await $api("/admin/pemasukan/mahasiswa/tagihan-perorangan", {
       method: "GET",
       body: {
@@ -58,17 +60,17 @@ const fetchData = async () => {
           double_degree: selectedDoubleDegree.value,
         }),
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const filterPayload = () => ({
   ...(hasFilterValue(selectedThAkademik.value) && {
@@ -83,15 +85,15 @@ const filterPayload = () => ({
   ...(hasFilterValue(selectedDoubleDegree.value) && {
     double_degree: selectedDoubleDegree.value,
   }),
-});
+})
 
 const exportExcel = async () => {
   try {
-    isLoadingExcel.value = true;
+    isLoadingExcel.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
 
     const response = await $api(
       "/admin/pemasukan/mahasiswa/tagihan-perorangan/export-excel",
@@ -105,28 +107,28 @@ const exportExcel = async () => {
           search: search.value,
           ...filterPayload(),
         },
-      }
-    );
+      },
+    )
 
-    downloadFileExport(response, "Tagihan Perorangan.xlsx");
+    downloadFileExport(response, "Tagihan Perorangan.xlsx")
     showSnackbar({
       text: "Laporan berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     const message =
       typeof err.data?.message === "object"
         ? Object.values(err.data.message).flat().join("; ")
-        : err.data?.message || "Gagal export data.";
+        : err.data?.message || "Gagal export data."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    isLoadingExcel.value = false;
+    isLoadingExcel.value = false
   }
-};
+}
 
 const fetchThAkademik = async () => {
   try {
@@ -137,18 +139,18 @@ const fetchThAkademik = async () => {
         sort_key: "kode",
         sort_order: "desc",
       },
-    });
+    })
 
-    thAkademik.value = data.data.map((thAkademik) => {
+    thAkademik.value = data.data.map(thAkademik => {
       return {
         title: `${thAkademik.nama} - ${thAkademik.semester}`,
         value: thAkademik.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
 
 const fetchThAngkatan = async () => {
   try {
@@ -160,18 +162,18 @@ const fetchThAngkatan = async () => {
         sort_order: "desc",
         search: "ganjil",
       },
-    });
+    })
 
-    thAngkatan.value = data.data.map((thAngkatan) => {
+    thAngkatan.value = data.data.map(thAngkatan => {
       return {
         title: thAngkatan.kode.slice(0, -1),
         value: thAngkatan.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
 
 const fetchProdi = async () => {
   try {
@@ -182,80 +184,80 @@ const fetchProdi = async () => {
         sort_key: "kode",
         sort_order: "desc",
       },
-    });
+    })
 
-    prodi.value = data.data.map((prodi) => {
+    prodi.value = data.data.map(prodi => {
       return {
         title: prodi.nama,
         value: prodi.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
-  loading.value = true;
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  loading.value = true
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id,
     name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api(
       "/admin/pemasukan/mahasiswa/tagihan-perorangan/" + id,
       {
         method: "DELETE",
-      }
-    );
+      },
+    )
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 onMounted(() => {
-  document.title = "Tagihan Perorangan - SIMKEU";
-  fetchThAkademik();
-  fetchThAngkatan();
-  fetchProdi();
-});
+  document.title = "Tagihan Perorangan - SIMKEU"
+  fetchThAkademik()
+  fetchThAngkatan()
+  fetchProdi()
+})
 
 watch(
   [
@@ -265,16 +267,19 @@ watch(
     selectedDoubleDegree,
   ],
   () => {
-    page.value = 1;
-    fetchData();
-  }
-);
+    page.value = 1
+    fetchData()
+  },
+)
 </script>
 
 <template>
   <div>
     <VRow class="mb-2">
-      <VCol cols="12" sm="6">
+      <VCol
+        cols="12"
+        sm="6"
+      >
         <VSelect
           v-model="selectedThAkademik"
           label="Select Th Akademik"
@@ -285,7 +290,10 @@ watch(
           class="custom-bg-select"
         />
       </VCol>
-      <VCol cols="12" sm="6">
+      <VCol
+        cols="12"
+        sm="6"
+      >
         <VSelect
           v-model="selectedThAngkatan"
           label="Select Th Angkatan"
@@ -296,7 +304,10 @@ watch(
           class="custom-bg-select"
         />
       </VCol>
-      <VCol cols="12" sm="6">
+      <VCol
+        cols="12"
+        sm="6"
+      >
         <VSelect
           v-model="selectedProdi"
           label="Select Prodi"
@@ -307,7 +318,10 @@ watch(
           class="custom-bg-select"
         />
       </VCol>
-      <VCol cols="12" sm="6">
+      <VCol
+        cols="12"
+        sm="6"
+      >
         <VSelect
           v-model="selectedDoubleDegree"
           label="Select Double Degree"
@@ -385,15 +399,27 @@ watch(
         item-value="id"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data.
+          </div>
         </template>
 
         <template #item.id="{ index }">
@@ -411,7 +437,11 @@ watch(
 
         <template #item.nama="{ item }">
           <div style="margin: 15px 0">
-            <VChip color="success" size="x-small" label>
+            <VChip
+              color="success"
+              size="x-small"
+              label
+            >
               {{ item.kode }} {{ item.double_degree ? "(DoubleD)" : "" }}
             </VChip>
 
@@ -463,7 +493,10 @@ watch(
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
           variant="text"
@@ -472,7 +505,11 @@ watch(
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data tagihan perorangan ini? Penghapusan
             data tidak dapat dibatalkan.
@@ -487,8 +524,14 @@ watch(
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

@@ -1,16 +1,16 @@
 <script setup>
-const page = ref(1);
-const itemsPerPage = ref(10);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
+const page = ref(1)
+const itemsPerPage = ref(10)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
 
 const fetchData = async () => {
-  loading.value = true;
+  loading.value = true
   try {
     const { data } = await $api("/admin/pemasukan/mahasiswa/pembayaran-tambahan", {
       method: "GET",
@@ -21,108 +21,109 @@ const fetchData = async () => {
         sort_order: sortBy.value.order,
         search: search.value,
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
 
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  loading.value = true;
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  loading.value = true
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
-const disabledDelete = ref(false);
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
+const disabledDelete = ref(false)
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id: id,
     name: name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
-    disabledDelete.value = true;
+    disabledDelete.value = true
+
     const response = await $api("/admin/pemasukan/mahasiswa/pembayaran-tambahan/" + id, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: err,
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
-    disabledDelete.value = false;
+    isDialogDeleteVisible.value = false
+    disabledDelete.value = false
   }
-};
+}
 
-const kwitansi = async (id) => {
+const kwitansi = async id => {
   try {
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
+
     const blob = await $api(
       "/admin/pemasukan/mahasiswa/pembayaran-tambahan/kwitansi/" + id,
       {
         method: "GET",
         headers: { Accept: "application/pdf" },
-      }
-    );
+      },
+    )
     
-    openFileExport(blob);
+    openFileExport(blob)
   } catch (err) {
-    console.info(err);
+    console.info(err)
     showSnackbar({
       text: err,
       color: "error",
-    });
+    })
   }
-};
+}
 
 onMounted(() => {
-  document.title = "Pembayaran Mahasiswa - SIMKEU";
-});
+  document.title = "Pembayaran Mahasiswa - SIMKEU"
+})
 
 watch(
   selectedRows,
-  (newValue) => {
+  newValue => {
     newValue.forEach((row, index) => {
-      console.log(`${index + 1}.`, row);
-    });
+      console.log(`${index + 1}.`, row)
+    })
   },
-  { deep: true }
-);
-
+  { deep: true },
+)
 </script>
 
 <template>
@@ -177,6 +178,9 @@ watch(
 
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Pembayaran', key: 'tagihan' },
@@ -185,9 +189,6 @@ watch(
           { title: 'Tanggal', key: 'tanggal' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -195,15 +196,27 @@ watch(
         item-value="name"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data.
+          </div>
         </template>
 
         <template #item.id="{ index }">
@@ -212,10 +225,18 @@ watch(
 
         <template #item.tagihan="{ item }">
           <div style="margin: 15px 0">
-            <VChip color="primary" size="x-small" label>
+            <VChip
+              color="primary"
+              size="x-small"
+              label
+            >
               {{ item.nota ?? item.nomor }}
             </VChip>
-            <VChip color="success" size="x-small" label>
+            <VChip
+              color="success"
+              size="x-small"
+              label
+            >
               {{ item.jenis_pembayaran }}
             </VChip>
             <div>
@@ -281,7 +302,10 @@ watch(
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
@@ -291,7 +315,11 @@ watch(
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
             dibatalkan.
@@ -311,7 +339,10 @@ watch(
             :disabled="disabledDelete"
             @click="deleteDataSubmit(deleteData.id)"
           >
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Delete
           </VBtn>
         </VCardText>

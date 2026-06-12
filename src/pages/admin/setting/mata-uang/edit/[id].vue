@@ -1,34 +1,35 @@
 <script setup>
-import FormMataUang from "@/components/admin/mata-uang/FormMataUang.vue";
-import { useRoute, useRouter } from "vue-router";
+import FormMataUang from "@/components/admin/mata-uang/FormMataUang.vue"
+import { useRoute, useRouter } from "vue-router"
 
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 
-const id = route.params.id;
-const data = ref({});
-const isLoading = ref(false);
+const id = route.params.id
+const data = ref({})
+const isLoading = ref(false)
 
-const userData = useCookie("userData").value ?? {};
-const isAdmin = computed(() => userData.role?.name === "admin");
+const userData = useCookie("userData").value ?? {}
+const isAdmin = computed(() => userData.role?.name === "admin")
 
 const fetchData = async () => {
   try {
-    isLoading.value = true;
+    isLoading.value = true
+
     const response = await $api("/admin/mata-uang/" + id, {
       method: "GET",
-    });
+    })
 
-    data.value = response.data;
+    data.value = response.data
   } catch (err) {
-    console.error(err);
+    console.error(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const menuList = [
   {
@@ -43,14 +44,14 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/setting/mata-uang"),
   },
-];
+]
 
 onMounted(() => {
   document.title = isAdmin.value
     ? "Mata Uang Edit - SIMKEU"
-    : "Mata Uang View - SIMKEU";
-  fetchData();
-});
+    : "Mata Uang View - SIMKEU"
+  fetchData()
+})
 </script>
 
 <template>
@@ -62,7 +63,10 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <div v-if="isLoading" class="text-center">
+          <div
+            v-if="isLoading"
+            class="text-center"
+          >
             <VProgressLinear indeterminate />
           </div>
           <FormMataUang

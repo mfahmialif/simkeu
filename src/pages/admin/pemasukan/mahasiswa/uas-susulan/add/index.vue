@@ -1,8 +1,8 @@
 <script setup>
-import FormUasSusulan from "@/components/admin/uas-susulan/FormUasSusulan.vue";
-import { useRouter } from "vue-router";
+import FormUasSusulan from "@/components/admin/uas-susulan/FormUasSusulan.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -11,6 +11,7 @@ const menuList = [
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -20,13 +21,13 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/pemasukan/mahasiswa/uas-susulan"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "UAS Susulan Add - SIMKEU";
-});
+  document.title = "UAS Susulan Add - SIMKEU"
+})
 
-onMounted(() => {});
+onMounted(() => {})
 </script>
 
 <template>
@@ -38,8 +39,8 @@ onMounted(() => {});
         </template>
         <VCardText>
           <FormUasSusulan
-            typeForm="add"
-            :url="'/admin/pemasukan/mahasiswa/uas-susulan/full'"
+            type-form="add"
+            url="/admin/pemasukan/mahasiswa/uas-susulan/full"
           />
         </VCardText>
       </VCard>

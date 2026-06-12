@@ -1,12 +1,15 @@
 <script setup>
-import { VNodeRenderer } from "@layouts/components/VNodeRenderer";
-import { themeConfig } from "@themeConfig";
+import { VNodeRenderer } from "@layouts/components/VNodeRenderer"
+import { themeConfig } from "@themeConfig"
 </script>
 
 <template>
   <div class="footer">
     <!-- Bagian atas full width -->
-    <VSheet class="footer-top pt-8 pb-4" theme="dark">
+    <VSheet
+      class="footer-top pt-8 pb-4"
+      theme="dark"
+    >
       <VContainer>
         <VRow justify="center">
           <VCol
@@ -38,14 +41,20 @@ import { themeConfig } from "@themeConfig";
     <div class="footer-line w-100">
       <VContainer>
         <VRow justify="center">
-          <VCol cols="12" md="8" class="d-flex justify-center text-center">
-            <span
-              class="d-flex align-center text-body-2 footer-heading font-weight-regular"
-            >
+          <VCol
+            cols="12"
+            md="8"
+            class="d-flex justify-center text-center"
+          >
+            <span class="d-flex align-center text-body-2 footer-heading font-weight-regular">
               &copy; Tim IT Banin & Banat Universitas Islam Internasional
               Darullughah Wadda'wah
               {{ new Date().getFullYear() }}, Made with
-              <VIcon icon="ri-heart-fill" color="#FF4D49" class="ml-1" />
+              <VIcon
+                icon="ri-heart-fill"
+                color="#FF4D49"
+                class="ml-1"
+              />
             </span>
           </VCol>
         </VRow>

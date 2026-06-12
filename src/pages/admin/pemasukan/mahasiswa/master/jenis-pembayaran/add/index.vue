@@ -1,6 +1,6 @@
 <script setup>
-import FormJenisPembayaran from '@/components/admin/pemasukan/mahasiswa/master/jenis-pembayaran/FormJenisPembayaran.vue';
-import { useRouter } from 'vue-router';
+import FormJenisPembayaran from '@/components/admin/pemasukan/mahasiswa/master/jenis-pembayaran/FormJenisPembayaran.vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
@@ -11,6 +11,7 @@ const menuList = [
     icon: 'ri-arrow-left-line',
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -39,7 +40,10 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <FormJenisPembayaran typeForm="add" :url="'/admin/pemasukan/mahasiswa/jenis-pembayaran'" />
+          <FormJenisPembayaran
+            type-form="add"
+            url="/admin/pemasukan/mahasiswa/jenis-pembayaran"
+          />
         </VCardText>
       </VCard>
     </VCol>

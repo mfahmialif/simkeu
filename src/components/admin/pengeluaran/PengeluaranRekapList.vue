@@ -1,12 +1,12 @@
 <script setup>
-import { formatRupiah } from "@/composables/formatRupiah";
+import { formatRupiah } from "@/composables/formatRupiah"
 import {
   listenPengeluaranRekapUpdated,
   notifyPengeluaranRekapUpdated,
-} from "@/composables/pengeluaranRekap";
-import { showSnackbar } from "@/composables/snackbar";
-import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
-import "flatpickr/dist/plugins/monthSelect/style.css";
+} from "@/composables/pengeluaranRekap"
+import { showSnackbar } from "@/composables/snackbar"
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js"
+import "flatpickr/dist/plugins/monthSelect/style.css"
 
 const props = defineProps({
   title: {
@@ -33,54 +33,58 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-});
+})
 
-const emit = defineEmits(["updated"]);
+const emit = defineEmits(["updated"])
 
-const router = useRouter();
-const page = ref(1);
-const itemsPerPage = ref(5);
-const search = ref("");
-const filterTanggalMulai = ref(null);
-const filterTanggalAkhir = ref(null);
-const filterBulanTahun = ref(null);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(false);
-const hasLoaded = ref(false);
-const isExpanded = ref(props.defaultExpanded);
-const dialog = ref(false);
-const saving = ref(false);
-const editingItem = ref(null);
-const namaInput = ref(null);
-const nama = ref("");
-const keterangan = ref("");
-const jumlahSementara = ref(0);
+const router = useRouter()
+const page = ref(1)
+const itemsPerPage = ref(5)
+const search = ref("")
+const filterTanggalMulai = ref(null)
+const filterTanggalAkhir = ref(null)
+const filterBulanTahun = ref(null)
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(false)
+const hasLoaded = ref(false)
+const isExpanded = ref(props.defaultExpanded)
+const dialog = ref(false)
+const saving = ref(false)
+const editingItem = ref(null)
+const namaInput = ref(null)
+const nama = ref("")
+const keterangan = ref("")
+const jumlahSementara = ref(0)
+
 const currentDateValue = () => {
-  const date = new Date();
+  const date = new Date()
 
   return [
     date.getFullYear(),
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-};
-const tanggalRekap = ref(currentDateValue());
-const currentMonthValue = () => {
-  const date = new Date();
+  ].join("-")
+}
 
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-};
-const bulanTahun = ref(currentMonthValue());
-const actionDialog = ref(false);
-const actionItem = ref(null);
-const actionType = ref(null);
-const actionLoading = ref(false);
-const lpjDialog = ref(false);
-const lpjItem = ref(null);
-const lpjLoading = ref(false);
-let searchTimer = null;
-let stopListeningRekapUpdates = null;
+const tanggalRekap = ref(currentDateValue())
+
+const currentMonthValue = () => {
+  const date = new Date()
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+}
+
+const bulanTahun = ref(currentMonthValue())
+const actionDialog = ref(false)
+const actionItem = ref(null)
+const actionType = ref(null)
+const actionLoading = ref(false)
+const lpjDialog = ref(false)
+const lpjItem = ref(null)
+const lpjLoading = ref(false)
+let searchTimer = null
+let stopListeningRekapUpdates = null
 
 const monthYearPickerConfig = {
   altInput: true,
@@ -94,159 +98,175 @@ const monthYearPickerConfig = {
       altFormat: "F Y",
     }),
   ],
-};
+}
+
 const datePickerConfig = {
   altInput: true,
   altFormat: "d F Y",
   dateFormat: "Y-m-d",
   disableMobile: true,
-};
-const formatMonthYear = (value) => {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})/);
+}
 
-  if (!match) return "Tanpa periode";
+const formatMonthYear = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})/)
+
+  if (!match) return "Tanpa periode"
 
   return new Intl.DateTimeFormat("id-ID", {
     month: "long",
     year: "numeric",
-  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
-};
-const formatDate = (value) => {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1))
+}
 
-  if (!match) return "Tanggal belum diisi";
+const formatDate = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (!match) return "Tanggal belum diisi"
 
   return new Intl.DateTimeFormat("id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-};
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+}
 
-const getSelisih = (item) => {
-  const rab = Number(item.jumlah || 0);
-  const lpj = Number(item.total_lpj || 0);
-  const selisih = rab - lpj;
+const getSelisih = item => {
+  const rab = Number(item.jumlah || 0)
+  const lpj = Number(item.total_lpj || 0)
+  const selisih = rab - lpj
 
   return {
     value: selisih,
     hasLpj: lpj > 0 || item.lpj_sama_dengan_rab,
-  };
-};
+  }
+}
 
-const selisihRowClass = (item) => {
-  const { value, hasLpj } = getSelisih(item);
+const selisihRowClass = item => {
+  const { value, hasLpj } = getSelisih(item)
 
-  if (!hasLpj) return '';
-  if (value > 0) return 'rekap-row-success';
-  if (value < 0) return 'rekap-row-danger';
-  return 'rekap-row-neutral';
-};
+  if (!hasLpj) return ''
+  if (value > 0) return 'rekap-row-success'
+  if (value < 0) return 'rekap-row-danger'
+  
+  return 'rekap-row-neutral'
+}
 
 const totalPages = computed(() =>
   Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)),
-);
+)
 
 const firstItem = computed(() =>
   totalItems.value ? (page.value - 1) * itemsPerPage.value + 1 : 0,
-);
+)
 
 const lastItem = computed(() =>
   Math.min(page.value * itemsPerPage.value, totalItems.value),
-);
-const bulanTahunFilter = computed(() => {
-  const match = String(filterBulanTahun.value || "").match(/^(\d{4})-(\d{2})/);
+)
 
-  if (!match) return {};
+const bulanTahunFilter = computed(() => {
+  const match = String(filterBulanTahun.value || "").match(/^(\d{4})-(\d{2})/)
+
+  if (!match) return {}
 
   return {
     tahun: match[1],
     bulan: match[2],
-  };
-});
+  }
+})
 
 const actionDialogTitle = computed(() => (
   actionType.value === "release"
     ? "Batalkan Rekap"
     : "Hapus Rekap"
-));
+))
+
 const formDialogTitle = computed(() => (
   editingItem.value ? "Edit Data" : "Tambah Data"
-));
+))
+
 const editingHasDetails = computed(() =>
   Number(editingItem.value?.jumlah_data || 0) > 0,
-);
+)
+
 const canDeleteRekapWithDetails = computed(() =>
-  props.endpoint === "/admin/pengeluaran/dosen-kegiatan",
-);
+  ["/admin/pengeluaran/dosen-kegiatan", "/admin/pengeluaran/rumah-tangga"].includes(props.endpoint),
+)
+
 const canDeleteRekap = item =>
-  canDeleteRekapWithDetails.value || Number(item?.jumlah_data || 0) === 0;
+  canDeleteRekapWithDetails.value || Number(item?.jumlah_data || 0) === 0
 
 const actionDialogMessage = computed(() => {
   if (actionType.value === "release") {
-    return `Semua data dalam rekap "${actionItem.value?.nama || ""}" akan dikeluarkan dari rekap.`;
+    return `Semua data dalam rekap "${actionItem.value?.nama || ""}" akan dikeluarkan dari rekap.`
   }
 
   if (canDeleteRekapWithDetails.value && Number(actionItem.value?.jumlah_data || 0) > 0) {
-    return `Rekap "${actionItem.value?.nama || ""}" beserta ${actionItem.value?.jumlah_data || 0} data pengeluaran di dalamnya akan dihapus permanen.`;
+    return `Rekap "${actionItem.value?.nama || ""}" beserta ${actionItem.value?.jumlah_data || 0} data pengeluaran di dalamnya akan dihapus permanen.`
   }
 
-  return `Rekap "${actionItem.value?.nama || ""}" akan dihapus permanen.`;
-});
+  return `Rekap "${actionItem.value?.nama || ""}" akan dihapus permanen.`
+})
 
-const openDetail = item => router.push(`${props.basePath}/rekap/${item.id}`);
+const openDetail = item => router.push(`${props.basePath}/rekap/${item.id}`)
+
 const lpjDetailPath = item => ({
   path: `${props.basePath}/rekap/${item.id}/lpj`,
   query: {
     return_to: props.basePath,
   },
-});
+})
+
 const hasExistingLpj = lpjSummary =>
-  Number(lpjSummary?.jumlah_data || 0) > 0 || lpjSummary?.sama_dengan_rab === true;
-const openLpjDialog = async (item) => {
-  if (lpjLoading.value) return;
+  Number(lpjSummary?.jumlah_data || 0) > 0 || lpjSummary?.sama_dengan_rab === true
+
+const openLpjDialog = async item => {
+  if (lpjLoading.value) return
 
   try {
-    lpjLoading.value = true;
+    lpjLoading.value = true
+
     const response = await $api(`${props.endpoint}/rekap/${item.id}/lpj`, {
       method: "GET",
-    });
+    })
 
     if (hasExistingLpj(response.data?.lpj)) {
-      router.push(lpjDetailPath(item));
-      return;
+      router.push(lpjDetailPath(item))
+      
+      return
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
-    return;
+    })
+    
+    return
   } finally {
-    lpjLoading.value = false;
+    lpjLoading.value = false
   }
 
-  lpjItem.value = item;
-  lpjDialog.value = true;
-};
+  lpjItem.value = item
+  lpjDialog.value = true
+}
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message ||
     err?.response?._data?.message ||
     err?.response?.data?.message ||
-    err?.message;
+    err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
 const fetchData = async () => {
   try {
-    loading.value = true;
+    loading.value = true
+
     const response = await $api(`${props.endpoint}/rekap`, {
       method: "GET",
       body: {
@@ -260,68 +280,70 @@ const fetchData = async () => {
         ...(filterTanggalMulai.value && { tanggal_mulai: filterTanggalMulai.value }),
         ...(filterTanggalAkhir.value && { tanggal_akhir: filterTanggalAkhir.value }),
       },
-    });
+    })
 
-    dataTable.value = response.data.data;
-    totalItems.value = response.data.total;
+    dataTable.value = response.data.data
+    totalItems.value = response.data.total
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    loading.value = false;
-    hasLoaded.value = true;
+    loading.value = false
+    hasLoaded.value = true
   }
-};
+}
 
 const resetForm = () => {
-  editingItem.value = null;
-  nama.value = "";
-  keterangan.value = "";
-  jumlahSementara.value = 0;
-  tanggalRekap.value = currentDateValue();
-  bulanTahun.value = currentMonthValue();
-};
+  editingItem.value = null
+  nama.value = ""
+  keterangan.value = ""
+  jumlahSementara.value = 0
+  tanggalRekap.value = currentDateValue()
+  bulanTahun.value = currentMonthValue()
+}
 
 const openCreateDialog = () => {
-  resetForm();
-  dialog.value = true;
-};
+  resetForm()
+  dialog.value = true
+}
 
-const openEditDialog = (item) => {
-  editingItem.value = item;
-  nama.value = item.nama || "";
-  bulanTahun.value = String(item.bulan_tahun || "").slice(0, 7);
-  tanggalRekap.value = String(item.tanggal_rekap || "").slice(0, 10) || currentDateValue();
-  jumlahSementara.value = Number(item.jumlah_data > 0 ? item.jumlah : (item.jumlah_sementara ?? item.jumlah ?? 0));
-  keterangan.value = item.keterangan || "";
-  dialog.value = true;
-};
+const openEditDialog = item => {
+  editingItem.value = item
+  nama.value = item.nama || ""
+  bulanTahun.value = String(item.bulan_tahun || "").slice(0, 7)
+  tanggalRekap.value = String(item.tanggal_rekap || "").slice(0, 10) || currentDateValue()
+  jumlahSementara.value = Number(item.jumlah_data > 0 ? item.jumlah : (item.jumlah_sementara ?? item.jumlah ?? 0))
+  keterangan.value = item.keterangan || ""
+  dialog.value = true
+}
 
 const saveRekap = async (openDetailInput = false) => {
-  if (saving.value) return;
+  if (saving.value) return
 
-  const trimmedNama = nama.value.trim();
+  const trimmedNama = nama.value.trim()
 
   if (!trimmedNama) {
     showSnackbar({
       text: "Nama rekap harus diisi.",
       color: "warning",
-    });
-    namaInput.value?.focus();
-    return;
+    })
+    namaInput.value?.focus()
+    
+    return
   }
 
   if (!tanggalRekap.value) {
     showSnackbar({
       text: "Tanggal rekap harus diisi.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
-  const temporaryAmount = Number(jumlahSementara.value);
+  const temporaryAmount = Number(jumlahSementara.value)
 
   if (!editingHasDetails.value && (
     jumlahSementara.value === ""
@@ -332,13 +354,16 @@ const saveRekap = async (openDetailInput = false) => {
     showSnackbar({
       text: "Jumlah sementara harus diisi dengan nilai yang valid.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    saving.value = true;
-    const isEditing = !!editingItem.value;
+    saving.value = true
+
+    const isEditing = !!editingItem.value
+
     const response = await $api(
       isEditing
         ? `${props.endpoint}/rekap/${editingItem.value.id}`
@@ -353,19 +378,19 @@ const saveRekap = async (openDetailInput = false) => {
           keterangan: keterangan.value,
         },
       },
-    );
+    )
 
     if (response.status === true) {
-      const createdRekapId = response.data?.id;
+      const createdRekapId = response.data?.id
 
-      dialog.value = false;
-      if (!isEditing) page.value = 1;
-      resetForm();
-      notifyPengeluaranRekapUpdated(props.endpoint);
+      dialog.value = false
+      if (!isEditing) page.value = 1
+      resetForm()
+      notifyPengeluaranRekapUpdated(props.endpoint)
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
       if (!isEditing && openDetailInput && createdRekapId) {
         router.push({
@@ -374,31 +399,33 @@ const saveRekap = async (openDetailInput = false) => {
             rekap_id: createdRekapId,
             return_to: `${props.basePath}/rekap/${createdRekapId}`,
           },
-        });
+        })
       }
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    saving.value = false;
+    saving.value = false
   }
-};
+}
 
 const requestAction = (type, item) => {
-  actionType.value = type;
-  actionItem.value = item;
-  actionDialog.value = true;
-};
+  actionType.value = type
+  actionItem.value = item
+  actionDialog.value = true
+}
 
 const confirmAction = async () => {
-  if (!actionItem.value || actionLoading.value) return;
+  if (!actionItem.value || actionLoading.value) return
 
   try {
-    actionLoading.value = true;
-    const isRelease = actionType.value === "release";
+    actionLoading.value = true
+
+    const isRelease = actionType.value === "release"
+
     const response = await $api(
       isRelease
         ? `${props.endpoint}/rekap/${actionItem.value.id}/release`
@@ -406,102 +433,104 @@ const confirmAction = async () => {
       {
         method: isRelease ? "POST" : "DELETE",
       },
-    );
+    )
 
     if (response.status === true) {
-      actionDialog.value = false;
-      notifyPengeluaranRekapUpdated(props.endpoint);
-      emit("updated");
+      actionDialog.value = false
+      notifyPengeluaranRekapUpdated(props.endpoint)
+      emit("updated")
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    actionLoading.value = false;
+    actionLoading.value = false
   }
-};
+}
 
-const submitLpj = async (sameAsRab) => {
-  if (!lpjItem.value || lpjLoading.value) return;
+const submitLpj = async sameAsRab => {
+  if (!lpjItem.value || lpjLoading.value) return
 
   try {
-    lpjLoading.value = true;
+    lpjLoading.value = true
+
     const response = await $api(`${props.endpoint}/rekap/${lpjItem.value.id}/lpj/copy`, {
       method: "POST",
       body: {
         sama_dengan_rab: sameAsRab,
       },
-    });
+    })
 
     if (response.status === true) {
-      const rekapId = lpjItem.value.id;
+      const rekapId = lpjItem.value.id
 
-      lpjDialog.value = false;
-      notifyPengeluaranRekapUpdated(props.endpoint);
+      lpjDialog.value = false
+      notifyPengeluaranRekapUpdated(props.endpoint)
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
       if (!sameAsRab) {
-        router.push(lpjDetailPath({ id: rekapId }));
+        router.push(lpjDetailPath({ id: rekapId }))
       }
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    lpjLoading.value = false;
+    lpjLoading.value = false
   }
-};
+}
 
 watch(search, () => {
-  clearTimeout(searchTimer);
-  page.value = 1;
-  searchTimer = setTimeout(fetchData, 350);
-});
+  clearTimeout(searchTimer)
+  page.value = 1
+  searchTimer = setTimeout(fetchData, 350)
+})
 
 watch([filterTanggalMulai, filterTanggalAkhir, filterBulanTahun], () => {
-  page.value = 1;
-  fetchData();
-});
+  page.value = 1
+  fetchData()
+})
 
 watch(() => props.filters, () => {
-  page.value = 1;
-  fetchData();
-}, { deep: true });
+  page.value = 1
+  fetchData()
+}, { deep: true })
 
-watch(page, fetchData);
+watch(page, fetchData)
 
 watch(itemsPerPage, () => {
   if (page.value === 1) {
-    fetchData();
-    return;
+    fetchData()
+    
+    return
   }
 
-  page.value = 1;
-});
+  page.value = 1
+})
 
 onMounted(() => {
-  fetchData();
+  fetchData()
   stopListeningRekapUpdates = listenPengeluaranRekapUpdated(
     props.endpoint,
     fetchData,
-  );
-});
+  )
+})
 
 onBeforeUnmount(() => {
-  clearTimeout(searchTimer);
-  stopListeningRekapUpdates?.();
-});
+  clearTimeout(searchTimer)
+  stopListeningRekapUpdates?.()
+})
 </script>
 
 <template>
@@ -509,7 +538,10 @@ onBeforeUnmount(() => {
     <VCardItem class="rekap-panel-header">
       <template #prepend>
         <div class="rekap-header-icon">
-          <VIcon icon="ri-folder-chart-line" size="24" />
+          <VIcon
+            icon="ri-folder-chart-line"
+            size="24"
+          />
         </div>
       </template>
 
@@ -595,7 +627,10 @@ onBeforeUnmount(() => {
           />
         </VCardText>
 
-        <div class="rekap-list-wrap" :class="{ 'is-refreshing': loading && dataTable.length }">
+        <div
+          class="rekap-list-wrap"
+          :class="{ 'is-refreshing': loading && dataTable.length }"
+        >
           <VProgressLinear
             v-if="loading && dataTable.length"
             indeterminate
@@ -614,13 +649,22 @@ onBeforeUnmount(() => {
               <div class="flex-grow-1">
                 <VSkeletonLoader type="heading, text" />
               </div>
-              <VSkeletonLoader class="rekap-skeleton-value" type="text" />
+              <VSkeletonLoader
+                class="rekap-skeleton-value"
+                type="text"
+              />
             </div>
           </template>
 
-          <div v-else-if="!dataTable.length" class="rekap-empty">
+          <div
+            v-else-if="!dataTable.length"
+            class="rekap-empty"
+          >
             <div class="rekap-empty-icon">
-              <VIcon icon="ri-folder-open-line" size="30" />
+              <VIcon
+                icon="ri-folder-open-line"
+                size="30"
+              />
             </div>
             <div class="text-subtitle-1 font-weight-semibold">
               {{ search ? "Rekap tidak ditemukan" : "Belum ada rekap" }}
@@ -630,7 +674,11 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div v-else class="rekap-list" role="list">
+          <div
+            v-else
+            class="rekap-list"
+            role="list"
+          >
             <div
               v-for="(item, index) in dataTable"
               :key="item.id"
@@ -712,8 +760,15 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
-              <div class="rekap-item-actions" @click.stop @keydown.stop>
-                <VTooltip text="Edit rekap" location="top">
+              <div
+                class="rekap-item-actions"
+                @click.stop
+                @keydown.stop
+              >
+                <VTooltip
+                  text="Edit rekap"
+                  location="top"
+                >
                   <template #activator="{ props: tooltipProps }">
                     <VBtn
                       v-bind="tooltipProps"
@@ -726,7 +781,10 @@ onBeforeUnmount(() => {
                   </template>
                 </VTooltip>
 
-                <VTooltip text="Input/Lihat LPJ" location="top">
+                <VTooltip
+                  text="Input/Lihat LPJ"
+                  location="top"
+                >
                   <template #activator="{ props: tooltipProps }">
                     <VBtn
                       v-bind="tooltipProps"
@@ -739,7 +797,11 @@ onBeforeUnmount(() => {
                   </template>
                 </VTooltip>
 
-                <VTooltip v-if="allowRelease" text="Batalkan semua data dari rekap" location="top">
+                <VTooltip
+                  v-if="allowRelease"
+                  text="Batalkan semua data dari rekap"
+                  location="top"
+                >
                   <template #activator="{ props: tooltipProps }">
                     <VBtn
                       v-bind="tooltipProps"
@@ -773,7 +835,10 @@ onBeforeUnmount(() => {
                   </template>
                 </VTooltip>
 
-                <VTooltip text="Lihat detail rekap" location="top">
+                <VTooltip
+                  text="Lihat detail rekap"
+                  location="top"
+                >
                   <template #activator="{ props: tooltipProps }">
                     <VIcon
                       v-bind="tooltipProps"
@@ -845,7 +910,10 @@ onBeforeUnmount(() => {
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppDateTimePicker
                 v-model="tanggalRekap"
                 label="Tanggal Rekap *"
@@ -856,7 +924,10 @@ onBeforeUnmount(() => {
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="jumlahSementara"
                 :label="editingHasDetails ? 'Jumlah RAB dari Detail' : 'Jumlah Sementara *'"
@@ -925,7 +996,10 @@ onBeforeUnmount(() => {
       </VCard>
     </VDialog>
 
-    <VDialog v-model="actionDialog" width="500">
+    <VDialog
+      v-model="actionDialog"
+      width="500"
+    >
       <VCard :title="actionDialogTitle">
         <DialogCloseBtn
           variant="text"
@@ -959,7 +1033,10 @@ onBeforeUnmount(() => {
       </VCard>
     </VDialog>
 
-    <VDialog v-model="lpjDialog" width="560">
+    <VDialog
+      v-model="lpjDialog"
+      width="560"
+    >
       <VCard title="Input LPJ">
         <DialogCloseBtn
           variant="text"

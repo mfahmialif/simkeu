@@ -1,5 +1,5 @@
 <script setup>
-import { useRouter } from "vue-router";
+import { useRouter } from "vue-router"
 
 const props = defineProps({
   refInfo: {
@@ -19,9 +19,9 @@ const props = defineProps({
     type: String,
     required: true,
   },
-});
+})
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -36,15 +36,15 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push(props.basePath),
   },
-];
+]
 
-const dataList = ref([]);
-const tanggal = ref(fDate(new Date()));
-const search = ref("");
-const searchKode = ref("");
-const selectedPegawai = ref("");
-const loadingData = ref(false);
-const loadingSearch = ref(false);
+const dataList = ref([])
+const tanggal = ref(fDate(new Date()))
+const search = ref("")
+const searchKode = ref("")
+const selectedPegawai = ref("")
+const loadingData = ref(false)
+const loadingSearch = ref(false)
 
 const emptyData = {
   id: "",
@@ -52,36 +52,38 @@ const emptyData = {
   nama: "",
   unit: "",
   jenisKelamin: "",
-};
+}
 
-const pegawai = ref({ ...emptyData });
-let typingTimeout = null;
+const pegawai = ref({ ...emptyData })
+let typingTimeout = null
 
-const tipeTitle = computed(() => props.tipe === "staff" ? "Staff" : "Dosen");
-const identifierLabel = computed(() => props.tipe === "staff" ? "Kode Staff" : "NIY");
-const searchLabel = computed(() => `${identifierLabel.value} / Nama ${tipeTitle.value}`);
-const tipeLabel = item => item?.tipe === "staff" ? "Staff" : item?.tipe === "dosen" ? "Dosen" : "";
-const unitName = item => item?.dosen?.prodi?.nama || item?.dosen?.prodi?.alias || item?.staff?.jabatan || "-";
-const unitDescription = item => [tipeLabel(item), unitName(item)].filter(value => value && value !== "-").join(" - ") || "-";
-const unitLabel = computed(() => props.tipe === "staff" ? "Jabatan" : "Prodi");
-const jenisKelaminLabel = item => item?.jenis_kelamin === "L" ? "Laki-laki" : item?.jenis_kelamin === "P" ? "Perempuan" : item?.jenis_kelamin || "";
+const tipeTitle = computed(() => props.tipe === "staff" ? "Staff" : "Dosen")
+const identifierLabel = computed(() => props.tipe === "staff" ? "Kode Staff" : "NIY")
+const searchLabel = computed(() => `${identifierLabel.value} / Nama ${tipeTitle.value}`)
+const tipeLabel = item => item?.tipe === "staff" ? "Staff" : item?.tipe === "dosen" ? "Dosen" : ""
+const unitName = item => item?.dosen?.prodi?.nama || item?.dosen?.prodi?.alias || item?.staff?.jabatan || "-"
+const unitDescription = item => [tipeLabel(item), unitName(item)].filter(value => value && value !== "-").join(" - ") || "-"
+const unitLabel = computed(() => props.tipe === "staff" ? "Jabatan" : "Prodi")
+const jenisKelaminLabel = item => item?.jenis_kelamin === "L" ? "Laki-laki" : item?.jenis_kelamin === "P" ? "Perempuan" : item?.jenis_kelamin || ""
 
 const syncToForm = () => {
-  props.refForm?.setTanggal?.(tanggal.value);
-};
+  props.refForm?.setTanggal?.(tanggal.value)
+}
 
-watch(search, (newVal) => {
-  clearTimeout(typingTimeout);
+watch(search, newVal => {
+  clearTimeout(typingTimeout)
 
   if (!newVal.trim()) {
-    dataList.value = [];
-    loadingSearch.value = false;
-    return;
+    dataList.value = []
+    loadingSearch.value = false
+    
+    return
   }
 
   typingTimeout = setTimeout(async () => {
     try {
-      loadingSearch.value = true;
+      loadingSearch.value = true
+
       const res = await $api("/admin/pegawai", {
         method: "GET",
         body: {
@@ -91,62 +93,64 @@ watch(search, (newVal) => {
           sort_key: "nama",
           sort_order: "asc",
         },
-      });
+      })
 
-      dataList.value = (res.data?.data || []).map((item) => ({
+      dataList.value = (res.data?.data || []).map(item => ({
         ...item,
         display: `${item.kode} - ${item.nama} - ${unitDescription(item)}`,
-      }));
+      }))
     } catch (err) {
       showSnackbar({
         text: `Gagal mendapatkan list ${tipeTitle.value.toLowerCase()}`,
         color: "error",
-      });
-      dataList.value = [];
+      })
+      dataList.value = []
     } finally {
-      loadingSearch.value = false;
+      loadingSearch.value = false
     }
-  }, 300);
-});
+  }, 300)
+})
 
-watch(selectedPegawai, (newVal) => {
+watch(selectedPegawai, newVal => {
   if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
-    searchKode.value = newVal.kode;
-    searching();
+    searchKode.value = newVal.kode
+    searching()
   } else if (typeof newVal === "string") {
-    searchKode.value = newVal;
+    searchKode.value = newVal
   } else if (!newVal) {
-    searchKode.value = "";
+    searchKode.value = ""
   }
-});
+})
 
 watch(tanggal, () => {
-  syncToForm();
-});
+  syncToForm()
+})
 
 const searching = async () => {
   if (!searchKode.value) {
     showSnackbar({
       text: `${identifierLabel.value} harus diisi`,
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
   if (!tanggal.value) {
     showSnackbar({
       text: "Tanggal harus diisi",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    loadingData.value = true;
+    loadingData.value = true
 
     let res = selectedPegawai.value && typeof selectedPegawai.value === "object" && !Array.isArray(selectedPegawai.value)
       ? selectedPegawai.value
-      : null;
+      : null
 
     if (!res) {
       const response = await $api("/admin/pegawai", {
@@ -158,72 +162,83 @@ const searching = async () => {
           sort_key: "nama",
           sort_order: "asc",
         },
-      });
+      })
 
-      const items = response.data?.data || [];
-      res = items.find(item => String(item.kode) === String(searchKode.value)) || items[0];
+      const items = response.data?.data || []
+
+      res = items.find(item => String(item.kode) === String(searchKode.value)) || items[0]
     }
 
     if (!res || (Array.isArray(res) && res.length < 1)) {
       showSnackbar({
         text: `Data ${tipeTitle.value.toLowerCase()} tidak ditemukan`,
         color: "error",
-      });
-      return;
+      })
+      
+      return
     }
 
-    pegawai.value.id = res.id;
-    pegawai.value.kode = res.kode;
-    pegawai.value.nama = res.nama;
-    pegawai.value.unit = unitDescription(res);
-    pegawai.value.jenisKelamin = jenisKelaminLabel(res);
-    syncToForm();
-    props.refInfo?.fetchDataHistory?.(res.kode);
-    props.refInfo?.fetchDataAbsensi?.(res.kode);
+    pegawai.value.id = res.id
+    pegawai.value.kode = res.kode
+    pegawai.value.nama = res.nama
+    pegawai.value.unit = unitDescription(res)
+    pegawai.value.jenisKelamin = jenisKelaminLabel(res)
+    syncToForm()
+    props.refInfo?.fetchDataHistory?.(res.kode)
+    props.refInfo?.fetchDataAbsensi?.(res.kode)
   } catch (error) {
     showSnackbar({
       text: error,
       color: "error",
-    });
+    })
   } finally {
-    loadingData.value = false;
+    loadingData.value = false
   }
-};
+}
 
-const refSearch = ref(null);
+const refSearch = ref(null)
+
 const searchFocus = async () => {
-  await nextTick();
-  refSearch.value?.focus();
-};
+  await nextTick()
+  refSearch.value?.focus()
+}
 
 const selectAll = async () => {
-  await nextTick();
-  const input = refSearch.value?.$el?.querySelector("input");
-  input?.select();
-};
+  await nextTick()
+
+  const input = refSearch.value?.$el?.querySelector("input")
+
+  input?.select()
+}
 
 onMounted(() => {
-  searchFocus();
-  syncToForm();
-});
+  searchFocus()
+  syncToForm()
+})
 
 defineExpose({
   pegawai,
   tanggal,
   searching,
   searchFocus,
-});
+})
 </script>
 
 <template>
-  <VCard class="mb-6" :title="`Pencarian ${tipeTitle} :`">
+  <VCard
+    class="mb-6"
+    :title="`Pencarian ${tipeTitle} :`"
+  >
     <template #append>
       <MoreBtnAction :menu-list="menuList" />
     </template>
 
     <VCardText>
       <VRow>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <AppDateTimePicker
             v-model="tanggal"
             label="Tanggal"
@@ -236,7 +251,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="8">
+        <VCol
+          cols="12"
+          md="8"
+        >
           <VCombobox
             ref="refSearch"
             v-model="selectedPegawai"
@@ -267,13 +285,19 @@ defineExpose({
                 @click="searching"
               >
                 <VIcon icon="ri-search-line" />
-                <span v-if="$vuetify.display.mdAndUp" class="ms-3">Search</span>
+                <span
+                  v-if="$vuetify.display.mdAndUp"
+                  class="ms-3"
+                >Search</span>
               </VBtn>
             </template>
           </VCombobox>
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="pegawai.kode"
             :label="identifierLabel"
@@ -283,7 +307,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="pegawai.nama"
             label="Nama"
@@ -293,7 +320,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="pegawai.unit"
             :label="unitLabel"
@@ -303,7 +333,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="pegawai.jenisKelamin"
             label="Jenis Kelamin"

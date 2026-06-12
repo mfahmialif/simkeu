@@ -1,7 +1,7 @@
 <script setup>
-import FormFormSchadule from '@/components/admin/form-schadule/FormFormSchadule.vue';
-import { onMounted, ref, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import FormFormSchadule from '@/components/admin/form-schadule/FormFormSchadule.vue'
+import { onMounted, ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,8 +12,8 @@ const formSchadule = ref({})
 const isLoading = ref(false)
 
 // Get user role for conditional rendering
-const userData = useCookie("userData").value ?? {};
-const isAdmin = computed(() => userData.role?.name === "admin");
+const userData = useCookie("userData").value ?? {}
+const isAdmin = computed(() => userData.role?.name === "admin")
 
 const fetchFormSchadule = async () => {
   try {
@@ -22,11 +22,12 @@ const fetchFormSchadule = async () => {
     const response = await $api('/admin/form-schadule/' + id, {
       method: "GET",
     })
-    formSchadule.value = response.data;
+
+    formSchadule.value = response.data
   } catch (err) {
-    console.log(err);
+    console.log(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
     isLoading.value = false
@@ -52,7 +53,6 @@ onMounted(() => {
   document.title = isAdmin.value ? 'Form Schedule Edit - SIMKEU' : 'Form Schedule View - SIMKEU'
   fetchFormSchadule()
 })
-
 </script>
 
 <template>
@@ -64,15 +64,18 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <div v-if="isLoading" class="text-center">
+          <div
+            v-if="isLoading"
+            class="text-center"
+          >
             <VProgressLinear indeterminate />
           </div>
           <FormFormSchadule 
             v-else 
-            typeForm="edit" 
-            :dataForm="formSchadule" 
+            type-form="edit" 
+            :data-form="formSchadule" 
             :url="'/admin/form-schadule/' + id" 
-            :readOnly="!isAdmin"
+            :read-only="!isAdmin"
           />
         </VCardText>
       </VCard>

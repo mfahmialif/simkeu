@@ -1,56 +1,65 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useTheme } from "vuetify";
+import { ref, computed, onMounted } from "vue"
+import { useTheme } from "vuetify"
 import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js'
 import 'flatpickr/dist/plugins/monthSelect/style.css'
-import { downloadFileExport } from "@/composables/exportFile";
-import { useCookie } from '@/@core/composable/useCookie';
-import { formatCurrencyTotals } from "@/composables/formatRupiah";
+import { downloadFileExport } from "@/composables/exportFile"
+import { useCookie } from '@/@core/composable/useCookie'
+import { formatCurrencyTotals } from "@/composables/formatRupiah"
 
-const theme = useTheme();
+const theme = useTheme()
 
-const selectedMode = ref("bulanan");
+const selectedMode = ref("bulanan")
+
 const modeOptions = [
   { title: "Mode Bulanan", value: "bulanan" },
-  { title: "Mode Tahunan", value: "tahunan" }
-];
+  { title: "Mode Tahunan", value: "tahunan" },
+]
 
-const selectedJenjang = ref("sarjana");
+const selectedJenjang = ref("sarjana")
+
 const jenjangOptions = [
   { title: "Sarjana", value: "sarjana" },
-  { title: "Pascasarjana", value: "pascasarjana" }
-];
+  { title: "Pascasarjana", value: "pascasarjana" },
+]
 
-const userData = useCookie("userData").value ?? {};
+const userData = useCookie("userData").value ?? {}
+
 const isAdmin = computed(() => {
-  const role = (userData?.role?.name || '').toLowerCase();
-  return role === 'admin' || role === 'kabag';
-});
+  const role = (userData?.role?.name || '').toLowerCase()
+  
+  return role === 'admin' || role === 'kabag'
+})
 
-const selectedJenisKelamin = ref("%");
+const selectedJenisKelamin = ref("%")
+
 const jenisKelaminOptions = computed(() => {
   const options = [
     { title: "Putra", value: "putra" },
-    { title: "Putri", value: "putri" }
-  ];
+    { title: "Putri", value: "putri" },
+  ]
+
   if (isAdmin.value) {
-    options.unshift({ title: "Semua", value: "%" });
+    options.unshift({ title: "Semua", value: "%" })
   }
-  return options;
-});
+  
+  return options
+})
 
-const selectedUser = ref(null);
-const userList = ref([]);
+const selectedUser = ref(null)
+const userList = ref([])
 
-const selectedTahun = ref(new Date().getFullYear().toString());
+const selectedTahun = ref(new Date().getFullYear().toString())
+
 const tahunOptions = computed(() => {
-  const currentYear = new Date().getFullYear();
-  const years = [];
+  const currentYear = new Date().getFullYear()
+  const years = []
   for(let i = currentYear; i >= 2020; i--) {
-    years.push(i.toString());
+    years.push(i.toString())
   }
-  return years;
-});
+  
+  return years
+})
 
 const monthPickerConfig = computed(() => ({
   disableMobile: true,
@@ -63,21 +72,21 @@ const monthPickerConfig = computed(() => ({
     }),
   ],
   altInput: true,
-}));
+}))
 
-const selectedBulan = ref("");
-const isLoading = ref(false);
-const reportTitle = ref("");
-const tableData = ref([]);
-const allData = ref([]);
-const totals = ref({});
-const hasData = ref(false);
-const jkInfo = ref("");
+const selectedBulan = ref("")
+const isLoading = ref(false)
+const reportTitle = ref("")
+const tableData = ref([])
+const allData = ref([])
+const totals = ref({})
+const hasData = ref(false)
+const jkInfo = ref("")
 
-const normalizeKategoriText = (value) => String(value || "")
+const normalizeKategoriText = value => String(value || "")
   .toUpperCase()
   .replace(/[^A-Z0-9]+/g, " ")
-  .trim();
+  .trim()
 
 const KATEGORI_ROW_GROUPS = [
   {
@@ -96,26 +105,27 @@ const KATEGORI_ROW_GROUPS = [
       || compact.includes("UTSSEMESTER")
       || compact.includes("UJIANTENGAHSEMESTER"),
   },
-];
+]
 
-const getKategoriRowGroup = (kategori) => {
-  const normalized = normalizeKategoriText(kategori);
-  const compact = normalized.replace(/\s+/g, "");
+const getKategoriRowGroup = kategori => {
+  const normalized = normalizeKategoriText(kategori)
+  const compact = normalized.replace(/\s+/g, "")
 
-  return KATEGORI_ROW_GROUPS.find((group) =>
-    group.match({ normalized, compact })
-  );
-};
+  return KATEGORI_ROW_GROUPS.find(group =>
+    group.match({ normalized, compact }),
+  )
+}
 
-const toNumber = (value) => Number(value) || 0;
+const toNumber = value => Number(value) || 0
 
 const mergeCurrencyTotals = (...groups) => {
-  const totals = new Map();
+  const totals = new Map()
 
-  groups.flat().forEach((group) => {
-    const mataUang = group?.mata_uang || {};
-    const kode = String(mataUang.kode || "IDR").toUpperCase();
-    const key = `kode:${kode}`;
+  groups.flat().forEach(group => {
+    const mataUang = group?.mata_uang || {}
+    const kode = String(mataUang.kode || "IDR").toUpperCase()
+    const key = `kode:${kode}`
+
     const current = totals.get(key) || {
       key,
       mata_uang: {
@@ -125,25 +135,26 @@ const mergeCurrencyTotals = (...groups) => {
         simbol: mataUang.simbol || (kode === "IDR" ? "Rp" : kode),
       },
       total: 0,
-    };
+    }
 
-    current.total += toNumber(group?.total);
-    totals.set(key, current);
-  });
+    current.total += toNumber(group?.total)
+    totals.set(key, current)
+  })
 
-  return [...totals.values()];
-};
+  return [...totals.values()]
+}
 
 const groupKategoriRows = (rows = []) => {
-  const groupRows = new Map();
-  const groupedRows = [];
+  const groupRows = new Map()
+  const groupedRows = []
 
-  rows.forEach((row) => {
-    const group = getKategoriRowGroup(row?.kategori);
+  rows.forEach(row => {
+    const group = getKategoriRowGroup(row?.kategori)
 
     if (!group) {
-      groupedRows.push({ ...row });
-      return;
+      groupedRows.push({ ...row })
+      
+      return
     }
 
     if (!groupRows.has(group.key)) {
@@ -158,126 +169,131 @@ const groupKategoriRows = (rows = []) => {
         transfer_by_currency: [],
         yayasan_by_currency: [],
         total_by_currency: [],
-      };
+      }
 
-      groupRows.set(group.key, groupedRow);
-      groupedRows.push(groupedRow);
+      groupRows.set(group.key, groupedRow)
+      groupedRows.push(groupedRow)
     }
 
-    const groupedRow = groupRows.get(group.key);
-    groupedRow.tunai += toNumber(row.tunai);
-    groupedRow.transfer += toNumber(row.transfer);
-    groupedRow.yayasan += toNumber(row.yayasan);
-    groupedRow.total += toNumber(row.total);
+    const groupedRow = groupRows.get(group.key)
+
+    groupedRow.tunai += toNumber(row.tunai)
+    groupedRow.transfer += toNumber(row.transfer)
+    groupedRow.yayasan += toNumber(row.yayasan)
+    groupedRow.total += toNumber(row.total)
     groupedRow.tunai_by_currency = mergeCurrencyTotals(
       groupedRow.tunai_by_currency,
       row.tunai_by_currency || [],
-    );
+    )
     groupedRow.transfer_by_currency = mergeCurrencyTotals(
       groupedRow.transfer_by_currency,
       row.transfer_by_currency || [],
-    );
+    )
     groupedRow.yayasan_by_currency = mergeCurrencyTotals(
       groupedRow.yayasan_by_currency,
       row.yayasan_by_currency || [],
-    );
+    )
     groupedRow.total_by_currency = mergeCurrencyTotals(
       groupedRow.total_by_currency,
       row.total_by_currency || [],
-    );
-  });
+    )
+  })
 
   return groupedRows.map((row, index) => ({
     ...row,
     no: index + 1,
-  }));
-};
+  }))
+}
 
 const normalizeReportData = (response = {}) => ({
   ...response,
   data: groupKategoriRows(response.data || []),
   all_data: response.all_data
-    ? response.all_data.map((monthInfo) => ({
+    ? response.all_data.map(monthInfo => ({
       ...monthInfo,
       data: groupKategoriRows(monthInfo.data || []),
     }))
     : response.all_data,
-});
+})
 
 const fetchData = async () => {
-  if (selectedMode.value === 'bulanan' && !selectedBulan.value) return;
-  if (selectedMode.value === 'tahunan' && !selectedTahun.value) return;
+  if (selectedMode.value === 'bulanan' && !selectedBulan.value) return
+  if (selectedMode.value === 'tahunan' && !selectedTahun.value) return
   
   try {
-    isLoading.value = true;
+    isLoading.value = true
+
     const filterData = {
       jenjang: selectedJenjang.value,
       jenis_kelamin: selectedJenisKelamin.value,
       ...(selectedUser.value && { user_id: selectedUser.value }),
-    };
+    }
+
     const bodyData = selectedMode.value === 'tahunan' 
       ? { mode: 'tahunan', tahun: selectedTahun.value, ...filterData }
-      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData };
+      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData }
 
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/pemasukan-uii-dalwa", {
       method: "GET",
       body: bodyData,
-    });
+    })
 
     if (response.status) {
-      const normalizedResponse = normalizeReportData(response);
+      const normalizedResponse = normalizeReportData(response)
 
-      reportTitle.value = normalizedResponse.title;
-      tableData.value = Object.freeze(normalizedResponse.data);
-      totals.value = Object.freeze(normalizedResponse.totals);
-      allData.value = Object.freeze(normalizedResponse.all_data || []);
-      jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin;
-      hasData.value = true;
+      reportTitle.value = normalizedResponse.title
+      tableData.value = Object.freeze(normalizedResponse.data)
+      totals.value = Object.freeze(normalizedResponse.totals)
+      allData.value = Object.freeze(normalizedResponse.all_data || [])
+      jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin
+      hasData.value = true
     } else {
-      showSnackbar({ text: response.message, color: "error" });
+      showSnackbar({ text: response.message, color: "error" })
     }
   } catch (err) {
-    showSnackbar({ text: err.message, color: "error" });
+    showSnackbar({ text: err.message, color: "error" })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const downloadExcel = async () => {
   try {
-    isLoading.value = true;
-    showSnackbar({ text: "Loading Excel...", color: "info" });
+    isLoading.value = true
+    showSnackbar({ text: "Loading Excel...", color: "info" })
     
     const filterData = {
       action: 'excel',
       jenjang: selectedJenjang.value,
       jenis_kelamin: selectedJenisKelamin.value,
       ...(selectedUser.value && { user_id: selectedUser.value }),
-    };
+    }
+
     const bodyData = selectedMode.value === 'tahunan' 
       ? { mode: 'tahunan', tahun: selectedTahun.value, ...filterData }
-      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData };
+      : { mode: 'bulanan', bulan: selectedBulan.value, ...filterData }
       
-    const filename = `Pemasukan_UII_Dalwa_${selectedMode.value === 'tahunan' ? selectedTahun.value : selectedBulan.value}.xlsx`;
+    const filename = `Pemasukan_UII_Dalwa_${selectedMode.value === 'tahunan' ? selectedTahun.value : selectedBulan.value}.xlsx`
 
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/pemasukan-uii-dalwa", {
       method: "GET",
       headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
       body: bodyData,
-    });
+    })
 
-    downloadFileExport(response, filename);
-    showSnackbar({ text: "Excel berhasil diunduh.", color: "success" });
+    downloadFileExport(response, filename)
+    showSnackbar({ text: "Excel berhasil diunduh.", color: "success" })
   } catch (err) {
-    showSnackbar({ text: err.message, color: "error" });
+    showSnackbar({ text: err.message, color: "error" })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const printTable = () => {
-  const printContent = document.getElementById("report-table-container");
-  const win = window.open("", "_blank");
+  const printContent = document.getElementById("report-table-container")
+  const win = window.open("", "_blank")
+
   win.document.write(`
     <html>
     <head>
@@ -303,43 +319,47 @@ const printTable = () => {
       ${printContent.innerHTML}
     </body>
     </html>
-  `);
-  win.document.close();
-  setTimeout(() => { win.print(); }, 500);
-};
+  `)
+  win.document.close()
+  setTimeout(() => { win.print() }, 500)
+}
 
 const fetchUser = async () => {
   try {
     const response = await $api("/helper/petugas-pembayaran", {
       method: "GET",
-    });
+    })
+
     if (response && response.data) {
-      const items = response.data.data || response.data;
+      const items = response.data.data || response.data
+
       userList.value = items.map(u => ({
         title: `${u.name} (${u.jenis_kelamin})`,
         value: u.id,
-      }));
+      }))
     }
   } catch (err) {
-    console.error('Failed to fetch petugas:', err);
+    console.error('Failed to fetch petugas:', err)
   }
-};
+}
 
 onMounted(() => {
   if (isAdmin.value) {
-    selectedJenisKelamin.value = "%";
+    selectedJenisKelamin.value = "%"
   } else {
-    const userJk = (userData?.jenis_kelamin || '').toLowerCase();
-    if (userJk === 'perempuan') selectedJenisKelamin.value = 'putri';
-    else selectedJenisKelamin.value = 'putra';
+    const userJk = (userData?.jenis_kelamin || '').toLowerCase()
+    if (userJk === 'perempuan') selectedJenisKelamin.value = 'putri'
+    else selectedJenisKelamin.value = 'putra'
   }
 
-  document.title = "Pemasukan UII Dalwa";
-  const now = new Date();
-  selectedBulan.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  fetchUser();
-  fetchData();
-});
+  document.title = "Pemasukan UII Dalwa"
+
+  const now = new Date()
+
+  selectedBulan.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+  fetchUser()
+  fetchData()
+})
 </script>
 
 <template>
@@ -349,14 +369,29 @@ onMounted(() => {
       <div class="header-gradient">
         <div class="header-content">
           <div class="header-icon-wrap">
-            <VIcon icon="ri-file-chart-line" size="32" color="white" />
+            <VIcon
+              icon="ri-file-chart-line"
+              size="32"
+              color="white"
+            />
           </div>
           <div>
-            <h1 class="header-title">Pemasukan UII Dalwa</h1>
+            <h1 class="header-title">
+              Pemasukan UII Dalwa
+            </h1>
             <p class="header-subtitle">
               Laporan rekapitulasi pemasukan metode Tunai, Transfer, dan Yayasan
-              <span v-if="jkInfo" class="ml-2 px-2 py-1 bg-white text-primary rounded-pill font-weight-bold" style="font-size: 0.85rem;">
-                <VIcon start icon="ri-user-line" size="14" class="mr-1" />
+              <span
+                v-if="jkInfo"
+                class="ml-2 px-2 py-1 bg-white text-primary rounded-pill font-weight-bold"
+                style="font-size: 0.85rem;"
+              >
+                <VIcon
+                  start
+                  icon="ri-user-line"
+                  size="14"
+                  class="mr-1"
+                />
                 {{ jkInfo }}
               </span>
             </p>
@@ -366,7 +401,10 @@ onMounted(() => {
 
       <VCardText class="pt-6 pb-4">
         <VRow align="center">
-          <VCol cols="12" md="3">
+          <VCol
+            cols="12"
+            md="3"
+          >
             <VSelect
               v-model="selectedMode"
               :items="modeOptions"
@@ -376,7 +414,10 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="selectedJenjang"
               :items="jenjangOptions"
@@ -386,11 +427,14 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="3">
+          <VCol
+            cols="12"
+            md="3"
+          >
             <AppDateTimePicker
               v-if="selectedMode === 'bulanan'"
-              v-model="selectedBulan"
               :key="'month-'+theme.global.name.value"
+              v-model="selectedBulan"
               label="Bulan"
               placeholder="Bulan laporan"
               :config="monthPickerConfig"
@@ -408,7 +452,10 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="selectedJenisKelamin"
               :items="jenisKelaminOptions"
@@ -418,7 +465,10 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="selectedUser"
               :items="userList"
@@ -430,39 +480,51 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VBtn
               color="primary"
               size="large"
-              @click="fetchData"
               :loading="isLoading"
               block
               class="fetch-btn"
+              @click="fetchData"
             >
               <template #loader>
                 <span class="custom-loader">
-                  Loading<span class="loading-dots"></span>
+                  Loading<span class="loading-dots" />
                 </span>
               </template>
-              <VIcon start icon="ri-search-line" />
+              <VIcon
+                start
+                icon="ri-search-line"
+              />
               Tampilkan
             </VBtn>
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VBtn
               color="success"
               size="large"
-              @click="downloadExcel"
               :loading="isLoading"
               :disabled="!hasData"
               block
+              @click="downloadExcel"
             >
               <template #loader>
                 <span class="custom-loader">
-                  Loading<span class="loading-dots"></span>
+                  Loading<span class="loading-dots" />
                 </span>
               </template>
-              <VIcon start icon="ri-file-excel-2-line" />
+              <VIcon
+                start
+                icon="ri-file-excel-2-line"
+              />
               Excel
             </VBtn>
           </VCol>
@@ -471,35 +533,76 @@ onMounted(() => {
     </VCard>
 
     <!-- Loading -->
-    <VCard v-if="isLoading" class="pa-8 text-center">
-      <VProgressCircular indeterminate color="primary" size="64" width="6" />
-      <p class="mt-4 text-body-1" style="color: #64748b">Memuat data laporan...</p>
+    <VCard
+      v-if="isLoading"
+      class="pa-8 text-center"
+    >
+      <VProgressCircular
+        indeterminate
+        color="primary"
+        size="64"
+        width="6"
+      />
+      <p
+        class="mt-4 text-body-1"
+        style="color: #64748b"
+      >
+        Memuat data laporan...
+      </p>
     </VCard>
 
     <!-- No Data -->
-    <VCard v-else-if="!hasData" class="pa-8 text-center">
-      <VIcon icon="ri-file-search-line" size="80" color="grey" class="mb-4" />
-      <h3 style="color: #94a3b8">Klik Tampilkan untuk melihat laporan</h3>
+    <VCard
+      v-else-if="!hasData"
+      class="pa-8 text-center"
+    >
+      <VIcon
+        icon="ri-file-search-line"
+        size="80"
+        color="grey"
+        class="mb-4"
+      />
+      <h3 style="color: #94a3b8">
+        Klik Tampilkan untuk melihat laporan
+      </h3>
     </VCard>
 
     <!-- Report Table -->
     <template v-else>
       <VCard class="report-table-card mb-6">
-        <div id="report-table-container" class="table-scroll-container pa-4">
+        <div
+          id="report-table-container"
+          class="table-scroll-container pa-4"
+        >
           <table class="report-table">
             <thead>
               <tr class="header-main">
-                <th colspan="6" class="text-center font-weight-black text-uppercase">
+                <th
+                  colspan="6"
+                  class="text-center font-weight-black text-uppercase"
+                >
                   {{ reportTitle }}
                 </th>
               </tr>
               <tr class="header-sub">
-                <th class="col-no">NO</th>
-                <th class="col-kategori">KATEGORI</th>
-                <th class="col-amount">TUNAI</th>
-                <th class="col-amount">TRANSFER</th>
-                <th class="col-amount">YAYASAN</th>
-                <th class="col-amount">TOTAL</th>
+                <th class="col-no">
+                  NO
+                </th>
+                <th class="col-kategori">
+                  KATEGORI
+                </th>
+                <th class="col-amount">
+                  TUNAI
+                </th>
+                <th class="col-amount">
+                  TRANSFER
+                </th>
+                <th class="col-amount">
+                  YAYASAN
+                </th>
+                <th class="col-amount">
+                  TOTAL
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -509,21 +612,46 @@ onMounted(() => {
                 class="data-row"
                 :class="{ 'even-row': index % 2 === 0 }"
               >
-                <td class="col-no text-center border-cell">{{ row.no }}</td>
-                <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">{{ row.kategori }}</td>
-                <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}</td>
-                <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}</td>
-                <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}</td>
-                <td class="col-amount text-right border-cell font-weight-bold">{{ formatCurrencyTotals(row.total_by_currency, row.total) }}</td>
+                <td class="col-no text-center border-cell">
+                  {{ row.no }}
+                </td>
+                <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">
+                  {{ row.kategori }}
+                </td>
+                <td class="col-amount text-right border-cell">
+                  {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                </td>
+                <td class="col-amount text-right border-cell">
+                  {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                </td>
+                <td class="col-amount text-right border-cell">
+                  {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                </td>
+                <td class="col-amount text-right border-cell font-weight-bold">
+                  {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                </td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="total-row">
-                <td colspan="2" class="text-center text-uppercase font-weight-black border-cell font-italic">TOTAL</td>
-                <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(totals.tunai_by_currency, totals.tunai) }}</td>
-                <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(totals.transfer_by_currency, totals.transfer) }}</td>
-                <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(totals.yayasan_by_currency, totals.yayasan) }}</td>
-                <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(totals.total_by_currency, totals.total) }}</td>
+                <td
+                  colspan="2"
+                  class="text-center text-uppercase font-weight-black border-cell font-italic"
+                >
+                  TOTAL
+                </td>
+                <td class="text-right font-weight-black border-cell">
+                  {{ formatCurrencyTotals(totals.tunai_by_currency, totals.tunai) }}
+                </td>
+                <td class="text-right font-weight-black border-cell">
+                  {{ formatCurrencyTotals(totals.transfer_by_currency, totals.transfer) }}
+                </td>
+                <td class="text-right font-weight-black border-cell">
+                  {{ formatCurrencyTotals(totals.yayasan_by_currency, totals.yayasan) }}
+                </td>
+                <td class="text-right font-weight-black border-cell">
+                  {{ formatCurrencyTotals(totals.total_by_currency, totals.total) }}
+                </td>
               </tr>
             </tfoot>
           </table>
@@ -532,22 +660,41 @@ onMounted(() => {
 
       <!-- Monthly Tables (Tahunan Mode) -->
       <template v-if="selectedMode === 'tahunan'">
-        <VCard v-for="(monthInfo, mIdx) in allData" :key="mIdx" class="report-table-card mb-6">
+        <VCard
+          v-for="(monthInfo, mIdx) in allData"
+          :key="mIdx"
+          class="report-table-card mb-6"
+        >
           <div class="table-scroll-container pa-4">
             <table class="report-table">
               <thead>
                 <tr class="header-main">
-                  <th colspan="6" class="text-center font-weight-black text-uppercase month-header">
+                  <th
+                    colspan="6"
+                    class="text-center font-weight-black text-uppercase month-header"
+                  >
                     {{ monthInfo.title }}
                   </th>
                 </tr>
                 <tr class="header-sub">
-                  <th class="col-no">NO</th>
-                  <th class="col-kategori">KATEGORI</th>
-                  <th class="col-amount">TUNAI</th>
-                  <th class="col-amount">TRANSFER</th>
-                  <th class="col-amount">YAYASAN</th>
-                  <th class="col-amount">TOTAL</th>
+                  <th class="col-no">
+                    NO
+                  </th>
+                  <th class="col-kategori">
+                    KATEGORI
+                  </th>
+                  <th class="col-amount">
+                    TUNAI
+                  </th>
+                  <th class="col-amount">
+                    TRANSFER
+                  </th>
+                  <th class="col-amount">
+                    YAYASAN
+                  </th>
+                  <th class="col-amount">
+                    TOTAL
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -557,21 +704,46 @@ onMounted(() => {
                   class="data-row"
                   :class="{ 'even-row': index % 2 === 0 }"
                 >
-                  <td class="col-no text-center border-cell">{{ row.no }}</td>
-                  <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">{{ row.kategori }}</td>
-                  <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}</td>
-                  <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}</td>
-                  <td class="col-amount text-right border-cell">{{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}</td>
-                  <td class="col-amount text-right border-cell font-weight-bold">{{ formatCurrencyTotals(row.total_by_currency, row.total) }}</td>
+                  <td class="col-no text-center border-cell">
+                    {{ row.no }}
+                  </td>
+                  <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">
+                    {{ row.kategori }}
+                  </td>
+                  <td class="col-amount text-right border-cell">
+                    {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                  </td>
+                  <td class="col-amount text-right border-cell">
+                    {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                  </td>
+                  <td class="col-amount text-right border-cell">
+                    {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                  </td>
+                  <td class="col-amount text-right border-cell font-weight-bold">
+                    {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                  </td>
                 </tr>
               </tbody>
               <tfoot>
                 <tr class="total-row">
-                  <td colspan="2" class="text-center text-uppercase font-weight-black border-cell font-italic">TOTAL</td>
-                  <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(monthInfo.totals.tunai_by_currency, monthInfo.totals.tunai) }}</td>
-                  <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(monthInfo.totals.transfer_by_currency, monthInfo.totals.transfer) }}</td>
-                  <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(monthInfo.totals.yayasan_by_currency, monthInfo.totals.yayasan) }}</td>
-                  <td class="text-right font-weight-black border-cell">{{ formatCurrencyTotals(monthInfo.totals.total_by_currency, monthInfo.totals.total) }}</td>
+                  <td
+                    colspan="2"
+                    class="text-center text-uppercase font-weight-black border-cell font-italic"
+                  >
+                    TOTAL
+                  </td>
+                  <td class="text-right font-weight-black border-cell">
+                    {{ formatCurrencyTotals(monthInfo.totals.tunai_by_currency, monthInfo.totals.tunai) }}
+                  </td>
+                  <td class="text-right font-weight-black border-cell">
+                    {{ formatCurrencyTotals(monthInfo.totals.transfer_by_currency, monthInfo.totals.transfer) }}
+                  </td>
+                  <td class="text-right font-weight-black border-cell">
+                    {{ formatCurrencyTotals(monthInfo.totals.yayasan_by_currency, monthInfo.totals.yayasan) }}
+                  </td>
+                  <td class="text-right font-weight-black border-cell">
+                    {{ formatCurrencyTotals(monthInfo.totals.total_by_currency, monthInfo.totals.total) }}
+                  </td>
                 </tr>
               </tfoot>
             </table>

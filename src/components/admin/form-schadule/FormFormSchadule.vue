@@ -1,7 +1,5 @@
 <script setup>
-import { showSnackbar } from "@/composables/snackbar";
-
-const router = useRouter();
+import { showSnackbar } from "@/composables/snackbar"
 
 const props = defineProps({
   typeForm: {
@@ -20,41 +18,43 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
-const refForm = ref(null);
+const router = useRouter()
 
-const kode = ref("");
-const nama = ref("");
-const tglMulai = ref(null);
-const tglSelesai = ref(null);
-const semester = ref("");
-const aktif = ref("Y");
-const disabled = ref(false);
+const refForm = ref(null)
+
+const kode = ref("")
+const nama = ref("")
+const tglMulai = ref(null)
+const tglSelesai = ref(null)
+const semester = ref("")
+const aktif = ref("Y")
+const disabled = ref(false)
 
 const aktifOptions = [
   { title: "Aktif", value: "Y" },
   { title: "Tidak Aktif", value: "T" },
-];
+]
 
 onMounted(() => {
   if (props.typeForm === "edit" && props.dataForm) {
-    kode.value = props.dataForm.kode || "";
-    nama.value = props.dataForm.nama || "";
-    tglMulai.value = props.dataForm.tgl_mulai ? props.dataForm.tgl_mulai.slice(0, 16) : null;
-    tglSelesai.value = props.dataForm.tgl_selesai ? props.dataForm.tgl_selesai.slice(0, 16) : null;
-    semester.value = props.dataForm.semester || "";
-    aktif.value = props.dataForm.aktif || "Y";
+    kode.value = props.dataForm.kode || ""
+    nama.value = props.dataForm.nama || ""
+    tglMulai.value = props.dataForm.tgl_mulai ? props.dataForm.tgl_mulai.slice(0, 16) : null
+    tglSelesai.value = props.dataForm.tgl_selesai ? props.dataForm.tgl_selesai.slice(0, 16) : null
+    semester.value = props.dataForm.semester || ""
+    aktif.value = props.dataForm.aktif || "Y"
   }
-});
+})
 
 const onSubmit = async () => {
-  const valid = await refForm.value.validate();
-  if (!valid.valid) return;
+  const valid = await refForm.value.validate()
+  if (!valid.valid) return
 
-  const method = props.typeForm === "edit" ? "PUT" : "POST";
+  const method = props.typeForm === "edit" ? "PUT" : "POST"
 
-  disabled.value = true;
+  disabled.value = true
 
   try {
     const response = await $api(props.url, {
@@ -67,39 +67,46 @@ const onSubmit = async () => {
         semester: semester.value,
         aktif: aktif.value,
       },
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      router.push("/admin/setting/form-schadule");
+      router.push("/admin/setting/form-schadule")
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = typeof err.data?.message === 'object'
       ? Object.values(err.data.message).flat().join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
+
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    disabled.value = false;
+    disabled.value = false
   }
-};
+}
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="kode"
           :rules="[requiredValidator]"
@@ -109,7 +116,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="nama"
           :rules="[requiredValidator]"
@@ -119,7 +129,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="tglMulai"
           label="Tanggal Mulai"
@@ -128,7 +141,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="tglSelesai"
           label="Tanggal Selesai"
@@ -137,7 +153,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="semester"
           label="Semester"
@@ -146,7 +165,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VSelect
           v-model="aktif"
           label="Status"
@@ -155,14 +177,21 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" class="d-flex gap-4" v-if="!readOnly">
-        <VBtn type="submit" :disabled>
+      <VCol
+        v-if="!readOnly"
+        cols="12"
+        class="d-flex gap-4"
+      >
+        <VBtn
+          type="submit"
+          :disabled
+        >
           Submit
         </VBtn>
 
         <VBtn
-          type="reset"
           v-if="typeForm !== 'edit'"
+          type="reset"
           color="secondary"
           variant="tonal"
         >

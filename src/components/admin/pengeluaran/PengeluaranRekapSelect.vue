@@ -1,12 +1,12 @@
 <script setup>
-import { formatRupiah } from "@/composables/formatRupiah";
-import { showSnackbar } from "@/composables/snackbar";
+import { formatRupiah } from "@/composables/formatRupiah"
+import { showSnackbar } from "@/composables/snackbar"
 import {
   listenPengeluaranRekapUpdated,
   notifyPengeluaranRekapUpdated,
-} from "@/composables/pengeluaranRekap";
-import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
-import "flatpickr/dist/plugins/monthSelect/style.css";
+} from "@/composables/pengeluaranRekap"
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js"
+import "flatpickr/dist/plugins/monthSelect/style.css"
 
 const props = defineProps({
   modelValue: {
@@ -37,35 +37,39 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-});
+})
 
-const emit = defineEmits(["update:modelValue", "created", "selected"]);
+const emit = defineEmits(["update:modelValue", "created", "selected"])
 
-const items = ref([]);
-const loading = ref(false);
-const dialog = ref(false);
-const saving = ref(false);
-const namaInput = ref(null);
-const nama = ref("");
-const keterangan = ref("");
-const jumlahSementara = ref(0);
+const items = ref([])
+const loading = ref(false)
+const dialog = ref(false)
+const saving = ref(false)
+const namaInput = ref(null)
+const nama = ref("")
+const keterangan = ref("")
+const jumlahSementara = ref(0)
+
 const currentDateValue = () => {
-  const date = new Date();
+  const date = new Date()
 
   return [
     date.getFullYear(),
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-};
-const tanggalRekap = ref(currentDateValue());
-const currentMonthValue = () => {
-  const date = new Date();
+  ].join("-")
+}
 
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-};
-const bulanTahun = ref(currentMonthValue());
-let stopListeningRekapUpdates = null;
+const tanggalRekap = ref(currentDateValue())
+
+const currentMonthValue = () => {
+  const date = new Date()
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+}
+
+const bulanTahun = ref(currentMonthValue())
+let stopListeningRekapUpdates = null
 
 const monthYearPickerConfig = {
   altInput: true,
@@ -79,34 +83,38 @@ const monthYearPickerConfig = {
       altFormat: "F Y",
     }),
   ],
-};
+}
+
 const datePickerConfig = {
   altInput: true,
   altFormat: "d F Y",
   dateFormat: "Y-m-d",
   disableMobile: true,
-};
-const formatMonthYear = (value) => {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})/);
+}
 
-  if (!match) return "Periode belum diisi";
+const formatMonthYear = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})/)
+
+  if (!match) return "Periode belum diisi"
 
   return new Intl.DateTimeFormat("id-ID", {
     month: "long",
     year: "numeric",
-  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
-};
-const formatDate = (value) => {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1))
+}
 
-  if (!match) return null;
+const formatDate = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (!match) return null
 
   return new Intl.DateTimeFormat("id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-};
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+}
+
 const rekapSubtitle = item => [
   formatMonthYear(item.bulan_tahun),
   item.tanggal_rekap ? `Tanggal ${formatDate(item.tanggal_rekap)}` : null,
@@ -115,33 +123,35 @@ const rekapSubtitle = item => [
     ? `Target ${formatRupiah(item.jumlah_sementara)}`
     : null,
   item.keterangan,
-].filter(Boolean).join(" · ");
+].filter(Boolean).join(" · ")
 
 const selectedValue = computed({
   get: () => props.modelValue,
   set: value => emit("update:modelValue", value || null),
-});
+})
+
 const selectedItem = computed(() =>
   items.value.find(item => String(item.id) === String(selectedValue.value)) || null,
-);
+)
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message ||
     err?.response?._data?.message ||
     err?.response?.data?.message ||
-    err?.message;
+    err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
 const fetchRekap = async () => {
   try {
-    loading.value = true;
+    loading.value = true
+
     const response = await $api(`${props.endpoint}/rekap`, {
       method: "GET",
       body: {
@@ -150,62 +160,64 @@ const fetchRekap = async () => {
         sort_order: "desc",
         ...props.filters,
       },
-    });
+    })
 
-    items.value = response.data?.data || [];
+    items.value = response.data?.data || []
 
     if (
       selectedValue.value
       && !items.value.some(item => String(item.id) === String(selectedValue.value))
     ) {
-      selectedValue.value = null;
+      selectedValue.value = null
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const resetForm = () => {
-  nama.value = "";
-  keterangan.value = "";
-  jumlahSementara.value = 0;
-  tanggalRekap.value = currentDateValue();
-  bulanTahun.value = currentMonthValue();
-};
+  nama.value = ""
+  keterangan.value = ""
+  jumlahSementara.value = 0
+  tanggalRekap.value = currentDateValue()
+  bulanTahun.value = currentMonthValue()
+}
 
 const openCreateDialog = () => {
-  resetForm();
-  dialog.value = true;
-};
+  resetForm()
+  dialog.value = true
+}
 
 const createRekap = async () => {
-  if (saving.value) return;
+  if (saving.value) return
 
-  const trimmedNama = nama.value.trim();
+  const trimmedNama = nama.value.trim()
 
   if (!trimmedNama) {
     showSnackbar({
       text: "Nama rekap harus diisi.",
       color: "warning",
-    });
-    namaInput.value?.focus();
-    return;
+    })
+    namaInput.value?.focus()
+    
+    return
   }
 
   if (!tanggalRekap.value) {
     showSnackbar({
       text: "Tanggal rekap harus diisi.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
-  const temporaryAmount = Number(jumlahSementara.value);
+  const temporaryAmount = Number(jumlahSementara.value)
 
   if (
     jumlahSementara.value === ""
@@ -216,12 +228,14 @@ const createRekap = async () => {
     showSnackbar({
       text: "Jumlah sementara harus diisi dengan nilai yang valid.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    saving.value = true;
+    saving.value = true
+
     const response = await $api(`${props.endpoint}/rekap`, {
       method: "POST",
       body: {
@@ -231,43 +245,43 @@ const createRekap = async () => {
         jumlah_sementara: temporaryAmount,
         keterangan: keterangan.value,
       },
-    });
+    })
 
     if (response.status === true) {
-      items.value = [response.data, ...items.value.filter(item => item.id !== response.data.id)];
-      selectedValue.value = response.data.id;
-      emit("created", response.data);
-      dialog.value = false;
-      resetForm();
-      notifyPengeluaranRekapUpdated(props.endpoint);
+      items.value = [response.data, ...items.value.filter(item => item.id !== response.data.id)]
+      selectedValue.value = response.data.id
+      emit("created", response.data)
+      dialog.value = false
+      resetForm()
+      notifyPengeluaranRekapUpdated(props.endpoint)
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    saving.value = false;
+    saving.value = false
   }
-};
+}
 
 onMounted(() => {
-  fetchRekap();
+  fetchRekap()
   stopListeningRekapUpdates = listenPengeluaranRekapUpdated(
     props.endpoint,
     fetchRekap,
-  );
-});
+  )
+})
 
-watch(selectedItem, item => emit("selected", item), { immediate: true });
+watch(selectedItem, item => emit("selected", item), { immediate: true })
 
-watch(() => props.filters, fetchRekap, { deep: true });
+watch(() => props.filters, fetchRekap, { deep: true })
 
-onBeforeUnmount(() => stopListeningRekapUpdates?.());
+onBeforeUnmount(() => stopListeningRekapUpdates?.())
 </script>
 
 <template>
@@ -291,7 +305,10 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.());
         </VListItem>
       </template>
 
-      <template v-if="allowCreate" #append>
+      <template
+        v-if="allowCreate"
+        #append
+      >
         <VBtn
           icon
           size="small"
@@ -332,7 +349,10 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.());
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppDateTimePicker
                 v-model="tanggalRekap"
                 label="Tanggal Rekap *"
@@ -343,7 +363,10 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.());
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="jumlahSementara"
                 label="Jumlah Sementara *"

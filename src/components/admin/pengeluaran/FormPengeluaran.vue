@@ -1,9 +1,7 @@
 <script setup>
-import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue";
-import { showSnackbar } from "@/composables/snackbar";
-import { appendLampiranFormData } from "@/utils/lampiran";
-
-const router = useRouter();
+import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue"
+import { showSnackbar } from "@/composables/snackbar"
+import { appendLampiranFormData } from "@/utils/lampiran"
 
 const props = defineProps({
   typeForm: {
@@ -18,111 +16,122 @@ const props = defineProps({
     type: String,
     required: false,
   },
-});
+})
 
-const refForm = ref(null);
+const router = useRouter()
 
-const jumlah = ref(0);
-const keterangan = ref("");
-const tanggal = ref(fDate(new Date()));
-const lampiran = ref([]);
-const existingLampiran = ref([]);
-const removedLampiran = ref([]);
-const disabled = ref(false);
+const refForm = ref(null)
 
-const saldo = ref([]);
-const selectedSaldo = ref(null);
-const isLoadingSaldo = ref(false);
+const jumlah = ref(0)
+const keterangan = ref("")
+const tanggal = ref(fDate(new Date()))
+const lampiran = ref([])
+const existingLampiran = ref([])
+const removedLampiran = ref([])
+const disabled = ref(false)
+
+const saldo = ref([])
+const selectedSaldo = ref(null)
+const isLoadingSaldo = ref(false)
 
 const fetchSaldo = async () => {
   try {
-    isLoadingSaldo.value = true;
+    isLoadingSaldo.value = true
+
     const { data } = await $api("/admin/saldo/kategori", {
       method: "GET",
       body: props.typeForm !== "edit" ? { aktif: "y" } : {},
-    });
+    })
 
-    saldo.value = data.data.map((saldo) => {
+    saldo.value = data.data.map(saldo => {
       return {
         title: `${saldo.nama} - ${saldo.kode} - ${formatRupiah(saldo.saldo)}`,
         value: saldo.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    isLoadingSaldo.value = false;
+    isLoadingSaldo.value = false
   }
-};
+}
 
 onMounted(async () => {
-  await fetchSaldo();
+  await fetchSaldo()
   if (props.typeForm === "edit") {
-    selectedSaldo.value = saldo.value.find((saldo) => saldo.value === props.dataForm.saldo_id);
-    jumlah.value = props.dataForm.jumlah;
-    keterangan.value = props.dataForm.keterangan;
-    tanggal.value = props.dataForm.tanggal;
-    existingLampiran.value = props.dataForm.lampiran ?? [];
+    selectedSaldo.value = saldo.value.find(saldo => saldo.value === props.dataForm.saldo_id)
+    jumlah.value = props.dataForm.jumlah
+    keterangan.value = props.dataForm.keterangan
+    tanggal.value = props.dataForm.tanggal
+    existingLampiran.value = props.dataForm.lampiran ?? []
   }
-});
+})
 
 const onSubmit = async () => {
-  const valid = await refForm.value.validate();
-  if (!valid.valid) return;
+  const valid = await refForm.value.validate()
+  if (!valid.valid) return
 
-  const method = props.typeForm === "edit" ? "PUT" : "POST";
+  const method = props.typeForm === "edit" ? "PUT" : "POST"
 
-  disabled.value = true;
+  disabled.value = true
 
-  const formData = new FormData();
-  formData.append("saldo_id", selectedSaldo.value.value);
-  formData.append("jumlah", jumlah.value);
-  formData.append("tanggal", tanggal.value);
-  formData.append("keterangan", keterangan.value);
-  appendLampiranFormData(formData, lampiran.value, removedLampiran.value);
+  const formData = new FormData()
 
-  formData.append("_method", method);
+  formData.append("saldo_id", selectedSaldo.value.value)
+  formData.append("jumlah", jumlah.value)
+  formData.append("tanggal", tanggal.value)
+  formData.append("keterangan", keterangan.value)
+  appendLampiranFormData(formData, lampiran.value, removedLampiran.value)
+
+  formData.append("_method", method)
 
   try {
     const response = await $api(props.url, {
       method: "POST",
       body: formData,
       onResponseError({ response }) {
-        console.error(response);
+        console.error(response)
       },
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      router.push("/admin/pengeluaran");
+      router.push("/admin/pengeluaran")
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data.message)
       ? err.data.message.join("; ")
-      : err.data.message;
+      : err.data.message
+
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    disabled.value = false;
+    disabled.value = false
   }
-};
+}
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <AppDateTimePicker
           v-model="tanggal"
           label="Tanggal"
@@ -175,14 +184,21 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" class="d-flex gap-4">
-        <VBtn type="submit" :disabled @click="refForm?.validate()">
+      <VCol
+        cols="12"
+        class="d-flex gap-4"
+      >
+        <VBtn
+          type="submit"
+          :disabled
+          @click="refForm?.validate()"
+        >
           Submit
         </VBtn>
 
         <VBtn
-          type="reset"
           v-if="typeForm !== 'edit'"
+          type="reset"
           color="secondary"
           variant="tonal"
         >

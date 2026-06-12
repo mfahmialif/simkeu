@@ -1,8 +1,8 @@
 <script setup>
-import FormDispensasi from "@/components/admin/pemasukan/mahasiswa/dispensasi/FormDispensasi.vue";
-import { useRouter } from "vue-router";
+import FormDispensasi from "@/components/admin/pemasukan/mahasiswa/dispensasi/FormDispensasi.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -11,6 +11,7 @@ const menuList = [
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -20,12 +21,11 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/pemasukan/mahasiswa/dispensasi"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Catatan Dispensasi Add - SIMKEU";
-});
-
+  document.title = "Catatan Dispensasi Add - SIMKEU"
+})
 </script>
 
 <template>
@@ -37,7 +37,11 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <FormDispensasi typeForm="add" :url="'/admin/pemasukan/mahasiswa/dispensasi'" :isRoleVisible="true" />
+          <FormDispensasi
+            type-form="add"
+            url="/admin/pemasukan/mahasiswa/dispensasi"
+            :is-role-visible="true"
+          />
         </VCardText>
       </VCard>
     </VCol>

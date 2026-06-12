@@ -1,7 +1,7 @@
 <script setup>
-import FormProdi from '@/components/admin/prodi/FormProdi.vue';
-import { onMounted, ref, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import FormProdi from '@/components/admin/prodi/FormProdi.vue'
+import { onMounted, ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,8 +12,8 @@ const prodi = ref({})
 const isLoading = ref(false)
 
 // Get user role for conditional rendering
-const userData = useCookie("userData").value ?? {};
-const isAdmin = computed(() => userData.role?.name === "admin");
+const userData = useCookie("userData").value ?? {}
+const isAdmin = computed(() => userData.role?.name === "admin")
 
 const fetchProdi = async () => {
   try {
@@ -22,11 +22,12 @@ const fetchProdi = async () => {
     const response = await $api('/admin/prodi/' + id, {
       method: "GET",
     })
-    prodi.value = response.data;
+
+    prodi.value = response.data
   } catch (err) {
-    console.log(err);
+    console.log(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
     isLoading.value = false
@@ -52,7 +53,6 @@ onMounted(() => {
   document.title = isAdmin.value ? 'Prodi Edit - SIMKEU' : 'Prodi View - SIMKEU'
   fetchProdi()
 })
-
 </script>
 
 <template>
@@ -64,15 +64,18 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <div v-if="isLoading" class="text-center">
+          <div
+            v-if="isLoading"
+            class="text-center"
+          >
             <VProgressLinear indeterminate />
           </div>
           <FormProdi 
             v-else 
-            typeForm="edit" 
-            :dataForm="prodi" 
+            type-form="edit" 
+            :data-form="prodi" 
             :url="'/admin/prodi/' + id" 
-            :readOnly="!isAdmin"
+            :read-only="!isAdmin"
           />
         </VCardText>
       </VCard>

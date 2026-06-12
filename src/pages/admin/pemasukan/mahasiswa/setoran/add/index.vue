@@ -1,8 +1,8 @@
 <script setup>
-import FormSetoran from "@/components/admin/setoran/FormSetoran.vue";
-import { useRouter } from "vue-router";
+import FormSetoran from "@/components/admin/setoran/FormSetoran.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -11,6 +11,7 @@ const menuList = [
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -21,13 +22,13 @@ const menuList = [
     clickHandler: () =>
       router.push("/admin/pemasukan/mahasiswa/setoran"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Setoran Add - SIMKEU";
-});
+  document.title = "Setoran Add - SIMKEU"
+})
 
-onMounted(() => {});
+onMounted(() => {})
 </script>
 
 <template>
@@ -40,8 +41,8 @@ onMounted(() => {});
 
         <VCardText>
           <FormSetoran
-            typeForm="add"
-            :url="'/admin/pemasukan/mahasiswa/setoran'"
+            type-form="add"
+            url="/admin/pemasukan/mahasiswa/setoran"
           />
         </VCardText>
       </VCard>

@@ -1,5 +1,4 @@
 <script setup>
-
 const widgetData = ref([
   {
     title: "In-Store Sales",
@@ -28,7 +27,7 @@ const widgetData = ref([
     desc: "150 orders",
     change: -3.5,
   },
-]);
+])
 </script>
 
 <template>
@@ -36,8 +35,16 @@ const widgetData = ref([
   <VCard class="mb-6">
     <VCardText class="px-2">
       <VRow>
-        <template v-for="(data, index) in widgetData" :key="index">
-          <VCol cols="12" sm="6" md="3" class="px-6">
+        <template
+          v-for="(data, index) in widgetData"
+          :key="index"
+        >
+          <VCol
+            cols="12"
+            sm="6"
+            md="3"
+            class="px-6"
+          >
             <div
               class="d-flex justify-space-between"
               :class="
@@ -46,10 +53,10 @@ const widgetData = ref([
                     ? 'border-b pb-4'
                     : ''
                   : $vuetify.display.sm
-                  ? index < widgetData.length / 2
-                    ? 'border-b pb-4'
+                    ? index < widgetData.length / 2
+                      ? 'border-b pb-4'
+                      : ''
                     : ''
-                  : ''
               "
             >
               <div class="d-flex flex-column gap-y-1">
@@ -76,8 +83,16 @@ const widgetData = ref([
                 </div>
               </div>
 
-              <VAvatar variant="tonal" rounded="lg" size="44">
-                <VIcon :icon="data.icon" size="28" color="high-emphasis" />
+              <VAvatar
+                variant="tonal"
+                rounded="lg"
+                size="44"
+              >
+                <VIcon
+                  :icon="data.icon"
+                  size="28"
+                  color="high-emphasis"
+                />
               </VAvatar>
             </div>
           </VCol>
@@ -86,8 +101,8 @@ const widgetData = ref([
               $vuetify.display.mdAndUp
                 ? index !== widgetData.length - 1
                 : $vuetify.display.smAndUp
-                ? index % 2 === 0
-                : false
+                  ? index % 2 === 0
+                  : false
             "
             vertical
             inset

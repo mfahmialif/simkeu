@@ -5,4 +5,4 @@ export default [
     icon: { icon: "ri-exchange-funds-line" },
     to: "admin-pengeluaran",
   },
-];
+]

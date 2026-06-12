@@ -73,6 +73,7 @@ const financeData = [
 const formatValue = (val, unit) => {
   if (unit === 'currency') return IDR(val)
   if (unit === 'percent') return PCT(val)
+  
   return val.toLocaleString('id-ID')
 }
 
@@ -85,29 +86,50 @@ const moreList = [
 
 <template>
   <VCard>
-    <VCardItem title="Ringkasan Keuangan" subtitle="Update keuangan periode ini">
+    <VCardItem
+      title="Ringkasan Keuangan"
+      subtitle="Update keuangan periode ini"
+    >
       <template #append>
-        <MoreBtn class="mt-n5" :menu-list="moreList" />
+        <MoreBtn
+          class="mt-n5"
+          :menu-list="moreList"
+        />
       </template>
     </VCardItem>
 
     <VCardText>
       <VList class="card-list">
-        <VListItem v-for="(data, index) in financeData" :key="index">
+        <VListItem
+          v-for="(data, index) in financeData"
+          :key="index"
+        >
           <template #prepend>
-            <VAvatar :color="data.color" variant="tonal" rounded="lg" size="40">
-              <VIcon :icon="data.icon" size="24" />
+            <VAvatar
+              :color="data.color"
+              variant="tonal"
+              rounded="lg"
+              size="40"
+            >
+              <VIcon
+                :icon="data.icon"
+                size="24"
+              />
             </VAvatar>
           </template>
 
           <VListItemTitle>{{ data.title }}</VListItemTitle>
 
           <VListItemSubtitle>
-            <div class="d-flex align-center"
-              :class="(data.goodIsUp ? data.change > 0 : data.change < 0) ? 'text-success' : 'text-error'">
+            <div
+              class="d-flex align-center"
+              :class="(data.goodIsUp ? data.change > 0 : data.change < 0) ? 'text-success' : 'text-error'"
+            >
               <VIcon
                 :icon="(data.goodIsUp ? data.change > 0 : data.change < 0) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"
-                size="24" class="me-1" />
+                size="24"
+                class="me-1"
+              />
               <span>{{ data.change }}%</span>
             </div>
           </VListItemSubtitle>

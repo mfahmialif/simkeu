@@ -11,7 +11,7 @@ const props = defineProps({
   avatar: {
     type: String,
     required: true,
-  }
+  },
 })
 
 const emit = defineEmits(['update:isEditable'])
@@ -19,17 +19,30 @@ const emit = defineEmits(['update:isEditable'])
 function toggleEdit() {
   emit('update:isEditable', !props.isEditable)
 }
-
 </script>
 
 <template>
   <VCard v-if="user">
-    <VImg src="/src/assets/images/pages/user-profile-header-bg.png" min-height="125" max-height="250" cover />
+    <VImg
+      src="/src/assets/images/pages/user-profile-header-bg.png"
+      min-height="125"
+      max-height="250"
+      cover
+    />
 
     <VCardText class="d-flex align-bottom flex-sm-row flex-column justify-center gap-x-6">
       <div class="d-flex h-0">
-        <VAvatar rounded size="130" :image="avatar" class="user-profile-avatar mx-auto">
-          <VImg :src="avatar" height="120" width="120" />
+        <VAvatar
+          rounded
+          size="130"
+          :image="avatar"
+          class="user-profile-avatar mx-auto"
+        >
+          <VImg
+            :src="avatar"
+            height="120"
+            width="120"
+          />
         </VAvatar>
       </div>
 
@@ -41,28 +54,40 @@ function toggleEdit() {
         <div class="d-flex align-center justify-center justify-sm-space-between flex-wrap gap-6">
           <div class="d-flex flex-wrap justify-center justify-sm-start flex-grow-1 gap-6">
             <div class="d-flex align-center gap-x-2">
-              <VIcon size="24" icon="ri-palette-line" />
+              <VIcon
+                size="24"
+                icon="ri-palette-line"
+              />
               <div class="text-body-1 font-weight-medium">
                 {{ user.role?.name }}
               </div>
             </div>
 
             <div class="d-flex align-center gap-x-2">
-              <VIcon size="24" icon="ri-map-pin-line" />
+              <VIcon
+                size="24"
+                icon="ri-map-pin-line"
+              />
               <div class="text-body-1 font-weight-medium">
                 {{ user.jenis_kelamin }}
               </div>
             </div>
 
             <div class="d-flex align-center gap-x-2">
-              <VIcon size="24" icon="ri-calendar-line" />
+              <VIcon
+                size="24"
+                icon="ri-calendar-line"
+              />
               <div class="text-body-1 font-weight-medium">
                 {{ user.created_at }}
               </div>
             </div>
           </div>
 
-          <VBtn prepend-icon="ri-user-follow-line" @click="toggleEdit">
+          <VBtn
+            prepend-icon="ri-user-follow-line"
+            @click="toggleEdit"
+          >
             {{ isEditable ? 'Batal Edit' : 'Edit Profil' }}
           </VBtn>
         </div>

@@ -4,27 +4,28 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
-const tahun = ref("");
+const tahun = ref("")
 
 const downloadExcel = async () => {
   download(
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Rekap.xlsx"
-  );
-};
+    "Laporan Rekap.xlsx",
+  )
+}
 
 
-const isLoading = ref(false);
+const isLoading = ref(false)
 
 const download = async (accept, filename) => {
   try {
-    isLoading.value = true;
+    isLoading.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
+
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/rekap-tahunan", {
       method: "GET",
       headers: {
@@ -34,26 +35,26 @@ const download = async (accept, filename) => {
         tahun_rekap: tahun.value,
         include_wisuda_semester_pendek: props.includeWisudaSemesterPendek,
       },
-    });
+    })
 
-    downloadFileExport(response, filename);
+    downloadFileExport(response, filename)
     showSnackbar({
       text: "Laporan berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: err.message,
       color: "error",
-    });
+    })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 onMounted(() => {
-  tahun.value = new Date().getFullYear();
-});
+  tahun.value = new Date().getFullYear()
+})
 </script>
 
 <template>
@@ -66,7 +67,10 @@ onMounted(() => {
 
     <VRow class="pa-4">
       <!-- Combobox Tahun -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VTextField
           v-model="tahun"
           label="Tahun"
@@ -76,10 +80,21 @@ onMounted(() => {
           variant="outlined"
         />
       </VCol>
-      <VCol cols="12" md="12">
-        <VBtn block color="success" @click="downloadExcel" :loading="isLoading">
+      <VCol
+        cols="12"
+        md="12"
+      >
+        <VBtn
+          block
+          color="success"
+          :loading="isLoading"
+          @click="downloadExcel"
+        >
           Download Excel
-          <VIcon end icon="ri-arrow-down-circle-line" />
+          <VIcon
+            end
+            icon="ri-arrow-down-circle-line"
+          />
         </VBtn>
       </VCol>
     </VRow>

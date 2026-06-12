@@ -1,5 +1,5 @@
 <script setup>
-import { defineProps } from 'vue';
+import { defineProps } from 'vue'
 
 const props = defineProps({
   menuList: {
@@ -25,14 +25,31 @@ const props = defineProps({
 </script>
 
 <template>
-  <IconBtn size="small" :class="props.class">
-    <VIcon :size="iconSize" icon="ri-more-2-line" />
+  <IconBtn
+    size="small"
+    :class="props.class"
+  >
+    <VIcon
+      :size="iconSize"
+      icon="ri-more-2-line"
+    />
 
-    <VMenu v-if="props.menuList" activator="parent">
+    <VMenu
+      v-if="props.menuList"
+      activator="parent"
+    >
       <VList>
-        <template v-for="(item, index) in props.menuList" :key="index">
+        <template
+          v-for="(item, index) in props.menuList"
+          :key="index"
+        >
           <VDivider v-if="item.value === 'hr'" />
-          <VListItem v-else :title="item.title" :prepend-icon="item.icon" @click="item.clickHandler" />
+          <VListItem
+            v-else
+            :title="item.title"
+            :prepend-icon="item.icon"
+            @click="item.clickHandler"
+          />
         </template>
       </VList>
     </VMenu>

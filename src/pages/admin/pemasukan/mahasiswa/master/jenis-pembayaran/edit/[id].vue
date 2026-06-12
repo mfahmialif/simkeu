@@ -1,7 +1,7 @@
 <script setup>
-import FormJenisPembayaran from '@/components/admin/pemasukan/mahasiswa/master/jenis-pembayaran/FormJenisPembayaran.vue';
-import { onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import FormJenisPembayaran from '@/components/admin/pemasukan/mahasiswa/master/jenis-pembayaran/FormJenisPembayaran.vue'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,12 +18,13 @@ const fetchData = async () => {
     const response = await $api('/admin/pemasukan/mahasiswa/jenis-pembayaran/' + id, {
       method: "GET",
     })
+
     console.log(response)
-    data.value = response;
+    data.value = response
   } catch (err) {
-    console.log(err);
+    console.log(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
     isLoading.value = false
@@ -37,6 +38,7 @@ const menuList = [
     icon: 'ri-arrow-left-line',
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -52,7 +54,6 @@ onMounted(() => {
   document.title = 'Jenis Pembayaran Edit - SIMKEU'
   fetchData()
 })
-
 </script>
 
 <template>
@@ -64,11 +65,19 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <div v-if="isLoading" class="text-center">
+          <div
+            v-if="isLoading"
+            class="text-center"
+          >
             <VProgressLinear indeterminate />
           </div>
-          <FormJenisPembayaran v-else typeForm="edit" :dataForm="data"
-            :url="'/admin/pemasukan/mahasiswa/jenis-pembayaran/' + id" :is-role-visible="true" />
+          <FormJenisPembayaran
+            v-else
+            type-form="edit"
+            :data-form="data"
+            :url="'/admin/pemasukan/mahasiswa/jenis-pembayaran/' + id"
+            :is-role-visible="true"
+          />
         </VCardText>
       </VCard>
     </VCol>

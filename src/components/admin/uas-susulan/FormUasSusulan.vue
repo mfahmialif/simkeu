@@ -1,8 +1,6 @@
 <script setup>
-import { showSnackbar } from "@/composables/snackbar";
-import { consoleError } from "vuetify/lib/util/console.mjs";
-
-const router = useRouter();
+import { showSnackbar } from "@/composables/snackbar"
+import { consoleError } from "vuetify/lib/util/console.mjs"
 
 const props = defineProps({
   typeForm: {
@@ -17,9 +15,11 @@ const props = defineProps({
     type: String,
     required: false,
   },
-});
+})
 
-const refForm = ref(null);
+const router = useRouter()
+
+const refForm = ref(null)
 
 const emptyMahasiswa = {
   nim: "",
@@ -33,151 +33,159 @@ const emptyMahasiswa = {
   deposit: 0,
   dipakai: 0,
   tagihan: [],
-};
+}
 
-const mahasiswaList = ref([]);
+const mahasiswaList = ref([])
 
-const search = ref("");
-const searchNim = ref("");
-const selectedMahasiswa = ref(null);
+const search = ref("")
+const searchNim = ref("")
+const selectedMahasiswa = ref(null)
 
-const loadingDataMahasiswa = ref(false);
-const loadingSearch = ref(false);
+const loadingDataMahasiswa = ref(false)
+const loadingSearch = ref(false)
 
-watch(selectedMahasiswa, (newVal) => {
+watch(selectedMahasiswa, newVal => {
   if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
     // mahasiswa.value.nim = newVal.nim;
-    searchNim.value = newVal.nim;
-    searching();
+    searchNim.value = newVal.nim
+    searching()
   } else if (typeof newVal === "string") {
     // mahasiswa.value.nim = newVal;
-    searchNim.value = newVal;
+    searchNim.value = newVal
   } else if (!newVal) {
     // mahasiswa.value.nim = "";
-    searchNim.value = "";
+    searchNim.value = ""
   }
-});
+})
 
-let typingTimeout = null;
-const mahasiswa = ref(emptyMahasiswa);
-const keterangan = ref("");
-const disabledSusulan = ref(true);
-const disabled = ref(false);
-const disabledSearch = ref(false);
+let typingTimeout = null
+const mahasiswa = ref(emptyMahasiswa)
+const keterangan = ref("")
+const disabledSusulan = ref(true)
+const disabled = ref(false)
+const disabledSearch = ref(false)
 
-watch(search, (newVal) => {
-  clearTimeout(typingTimeout);
+watch(search, newVal => {
+  clearTimeout(typingTimeout)
 
   if (!newVal.trim()) {
-    mahasiswaList.value = [];
-    loadingSearch.value = false;
-    return;
+    mahasiswaList.value = []
+    loadingSearch.value = false
+    
+    return
   }
 
   typingTimeout = setTimeout(async () => {
     try {
-      loadingSearch.value = true;
+      loadingSearch.value = true
+
       const res = await $api(`/admin/mahasiswa/search/${newVal}`, {
         method: "GET",
-      });
+      })
+
+
       // ubah hasil API jadi format { nim, nama, display: "nama - nim" }
-      mahasiswaList.value = res.map((m) => ({
+      mahasiswaList.value = res.map(m => ({
         ...m,
         display: `${m.nim} - ${m.nama}`,
-      }));
+      }))
     } catch (err) {
       showSnackbar({
         text: "Gagal mendapatkan list mahasiswa",
         color: "error",
-      });
-      mahasiswaList.value = [];
+      })
+      mahasiswaList.value = []
     } finally {
-      loadingSearch.value = false;
+      loadingSearch.value = false
     }
-  }, 1000); // <-- debounce 2 detik
-});
+  }, 1000) // <-- debounce 2 detik
+})
 
 const searching = async () => {
   if (!searchNim.value) {
     showSnackbar({
       text: "NIM harus diisi",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    loadingDataMahasiswa.value = true;
-    disabledSusulan.value = true;
+    loadingDataMahasiswa.value = true
+    disabledSusulan.value = true
 
     const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
       body: {
         nim: searchNim.value,
       },
-    });
+    })
 
     if (res.length < 1) {
       showSnackbar({
         text: "Data mahasiswa tidak ditemukan",
         color: "error",
-      });
-      return;
+      })
+      
+      return
     }
 
-    mahasiswa.value.nim = res.nim;
-    mahasiswa.value.nama = res.nama;
-    mahasiswa.value.prodi = res.prodi?.nama;
-    mahasiswa.value.jenisKelamin = res.jk?.nama;
-    mahasiswa.value.jkId = res.jk?.id;
-    mahasiswa.value.angkatan = res.th_akademik?.kode;
-    mahasiswa.value.kelas = res.kelas?.nama;
-    mahasiswa.value.semester = res.semester;
+    mahasiswa.value.nim = res.nim
+    mahasiswa.value.nama = res.nama
+    mahasiswa.value.prodi = res.prodi?.nama
+    mahasiswa.value.jenisKelamin = res.jk?.nama
+    mahasiswa.value.jkId = res.jk?.id
+    mahasiswa.value.angkatan = res.th_akademik?.kode
+    mahasiswa.value.kelas = res.kelas?.nama
+    mahasiswa.value.semester = res.semester
 
-    disabledSusulan.value = false;
+    disabledSusulan.value = false
   } catch (error) {
-    disabledSusulan.value = true;
+    disabledSusulan.value = true
     showSnackbar({
       text: error,
       color: "error",
-    });
+    })
   } finally {
-    loadingDataMahasiswa.value = false;
+    loadingDataMahasiswa.value = false
   }
-};
+}
 
-const selectedThAkademik = ref(null);
-const thAkademik = ref([]);
-const isLoadingThAkademik = ref(false);
-const tanggal = ref("");
+const selectedThAkademik = ref(null)
+const thAkademik = ref([])
+const isLoadingThAkademik = ref(false)
+const tanggal = ref("")
 
 const fetchThAkademik = async () => {
   try {
-    isLoadingThAkademik.value = true;
+    isLoadingThAkademik.value = true
+
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
-    });
+    })
 
-    thAkademik.value = data.data.map((thAkademik) => {
+    thAkademik.value = data.data.map(thAkademik => {
       return {
         title: `${thAkademik.nama} - ${thAkademik.semester}`,
         value: thAkademik.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    isLoadingThAkademik.value = false;
+    isLoadingThAkademik.value = false
   }
-};
+}
 
-const jadwal = ref([]);
-const selectedJadwal = ref([]);
-const isLoadingJadwal = ref(false);
+const jadwal = ref([])
+const selectedJadwal = ref([])
+const isLoadingJadwal = ref(false)
 
 const fetchJadwal = async () => {
   try {
-    isLoadingJadwal.value = true;
+    isLoadingJadwal.value = true
+
     const response = await $api(
       "/admin/pemasukan/mahasiswa/uas-susulan/jadwal-kuliah",
       {
@@ -186,46 +194,47 @@ const fetchJadwal = async () => {
           nim: mahasiswa.value.nim,
           th_akademik_id: selectedThAkademik.value,
         },
-      }
-    );
+      },
+    )
 
     if (!response.status) {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
-      return;
+      })
+      
+      return
     }
 
-    const data = response.data;
+    const data = response.data
 
-    const prodi = data.prodi.alias;
+    const prodi = data.prodi.alias
 
-    jadwal.value = data.krs_detail.map((krsDetail) => {
+    jadwal.value = data.krs_detail.map(krsDetail => {
       return {
         title: `${prodi} - ${krsDetail.jadwal_kuliah.kurikulum_matakuliah.matakuliah.nama} - ${krsDetail.jadwal_kuliah.kelompok.kode}`,
         value: krsDetail.jadwal_kuliah_id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    isLoadingJadwal.value = false;
+    isLoadingJadwal.value = false
   }
-};
+}
 
-watch(selectedJadwal, (newValue) => {
-console.log(newValue);
-});
+watch(selectedJadwal, newValue => {
+  console.log(newValue)
+})
 
 watch(
   [selectedThAkademik, mahasiswa],
   async ([th, mhs]) => {
     if (th && mhs.nim) {
-      await fetchJadwal();
+      await fetchJadwal()
 
       if (props.typeForm === "edit") {
-        selectedJadwal.value = props.dataForm.uas_susulan_mk.map((item) => item.jadwal_kuliah_id);
+        selectedJadwal.value = props.dataForm.uas_susulan_mk.map(item => item.jadwal_kuliah_id)
       }
     } else {
       // showSnackbar({
@@ -234,85 +243,93 @@ watch(
       // });
     }
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 onMounted(async () => {
-  tanggal.value = fDate(new Date());
-  await fetchThAkademik();
+  tanggal.value = fDate(new Date())
+  await fetchThAkademik()
 
   if (props.typeForm === "edit") {
-    disabledSearch.value = true;
-    selectedMahasiswa.value = props.dataForm.nim;
-    tanggal.value = props.dataForm.tanggal;
-    selectedThAkademik.value = props.dataForm.th_akademik_id;
-    searchNim.value = props.dataForm.nim;
+    disabledSearch.value = true
+    selectedMahasiswa.value = props.dataForm.nim
+    tanggal.value = props.dataForm.tanggal
+    selectedThAkademik.value = props.dataForm.th_akademik_id
+    searchNim.value = props.dataForm.nim
     if (selectedMahasiswa.value) {
-      await searching();
-      keterangan.value = props.dataForm.keterangan;
+      await searching()
+      keterangan.value = props.dataForm.keterangan
     }
   }
-});
+})
 
 const onSubmit = async () => {
-  const valid = await refForm.value.validate();
-  if (!valid.valid) return;
+  const valid = await refForm.value.validate()
+  if (!valid.valid) return
 
-  const method = props.typeForm === "edit" ? "PUT" : "POST";
+  const method = props.typeForm === "edit" ? "PUT" : "POST"
 
-  disabled.value = true;
+  disabled.value = true
 
-  const formData = new FormData();
-  formData.append("nim", mahasiswa.value.nim);
-  formData.append("tanggal", tanggal.value);
-  formData.append("th_akademik_id", selectedThAkademik.value);
-  formData.append("keterangan", keterangan.value);
-  selectedJadwal.value.forEach((jadwal) => {
-    formData.append("jadwal_kuliah_id[]", jadwal);
-  });
-  formData.append("_method", method);
+  const formData = new FormData()
+
+  formData.append("nim", mahasiswa.value.nim)
+  formData.append("tanggal", tanggal.value)
+  formData.append("th_akademik_id", selectedThAkademik.value)
+  formData.append("keterangan", keterangan.value)
+  selectedJadwal.value.forEach(jadwal => {
+    formData.append("jadwal_kuliah_id[]", jadwal)
+  })
+  formData.append("_method", method)
 
   try {
     const response = await $api(props.url, {
       method: "POST",
       body: formData,
       onResponseError({ response }) {
-        console.error(response);
+        console.error(response)
       },
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      router.push("/admin/pemasukan/mahasiswa/uas-susulan");
+      router.push("/admin/pemasukan/mahasiswa/uas-susulan")
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data.message)
       ? err.data.message.join("; ")
-      : err.data.message;
+      : err.data.message
+
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    disabled.value = false;
+    disabled.value = false
   }
-};
+}
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
       <!-- Input Tanggal -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <AppDateTimePicker
           v-model="tanggal"
           label="Tanggal"
@@ -324,7 +341,10 @@ const onSubmit = async () => {
           }"
         />
       </VCol>
-      <VCol cols="12" sm="12">
+      <VCol
+        cols="12"
+        sm="12"
+      >
         <VSelect
           v-model="selectedThAkademik"
           label="Select Th Akademik"
@@ -368,7 +388,10 @@ const onSubmit = async () => {
               @click="searching"
             >
               <VIcon icon="ri-search-line" />
-              <span v-if="$vuetify.display.mdAndUp" class="ms-3">Search</span>
+              <span
+                v-if="$vuetify.display.mdAndUp"
+                class="ms-3"
+              >Search</span>
             </VBtn>
           </template>
         </VCombobox>
@@ -433,7 +456,10 @@ const onSubmit = async () => {
           :loading="loadingDataMahasiswa"
         />
       </VCol>
-      <VCol cols="12" sm="12">
+      <VCol
+        cols="12"
+        sm="12"
+      >
         <VSelect
           v-model="selectedJadwal"
           label="Select Jadwal"
@@ -454,13 +480,20 @@ const onSubmit = async () => {
           :disabled="disabledSusulan"
         />
       </VCol>
-      <VCol cols="12" class="d-flex gap-4">
-        <VBtn type="submit" :disabled @click="refForm?.validate()">
+      <VCol
+        cols="12"
+        class="d-flex gap-4"
+      >
+        <VBtn
+          type="submit"
+          :disabled
+          @click="refForm?.validate()"
+        >
           Submit
         </VBtn>
         <VBtn
-          type="reset"
           v-if="typeForm !== 'edit'"
+          type="reset"
           color="secondary"
           variant="tonal"
         >

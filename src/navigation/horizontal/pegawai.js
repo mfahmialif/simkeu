@@ -6,6 +6,6 @@ export const pegawaiMenu = {
     { title: "Dosen", to: "admin-pegawai-dosen" },
     { title: "Staff", to: "admin-pegawai-staff" },
   ],
-};
+}
 
-export default [pegawaiMenu];
+export default [pegawaiMenu]

@@ -1,6 +1,6 @@
 <script setup>
-import InfoAbsensiPengeluaranPegawaiBulanan from "./info/InfoAbsensiPengeluaranPegawaiBulanan.vue";
-import InfoHistoryPengeluaranPegawaiBulanan from "./info/InfoHistoryPengeluaranPegawaiBulanan.vue";
+import InfoAbsensiPengeluaranPegawaiBulanan from "./info/InfoAbsensiPengeluaranPegawaiBulanan.vue"
+import InfoHistoryPengeluaranPegawaiBulanan from "./info/InfoHistoryPengeluaranPegawaiBulanan.vue"
 
 const props = defineProps({
   refDataPegawai: {
@@ -19,24 +19,24 @@ const props = defineProps({
     type: String,
     required: true,
   },
-});
+})
 
-const currentTab = ref(0);
-const refInfoHistory = ref(null);
-const refInfoAbsensi = ref(null);
+const currentTab = ref(0)
+const refInfoHistory = ref(null)
+const refInfoAbsensi = ref(null)
 
-const fetchDataHistory = (kode) => {
-  refInfoHistory.value?.fetchData(kode);
-};
+const fetchDataHistory = kode => {
+  refInfoHistory.value?.fetchData(kode)
+}
 
-const fetchDataAbsensi = (kode) => {
-  refInfoAbsensi.value?.fetchData(kode);
-};
+const fetchDataAbsensi = kode => {
+  refInfoAbsensi.value?.fetchData(kode)
+}
 
 defineExpose({
   fetchDataHistory,
   fetchDataAbsensi,
-});
+})
 </script>
 
 <template>
@@ -45,7 +45,10 @@ defineExpose({
     <VTab>Absensi Fingerprint</VTab>
   </VTabs>
 
-  <VWindow v-model="currentTab" class="mt-5">
+  <VWindow
+    v-model="currentTab"
+    class="mt-5"
+  >
     <VWindowItem key="riwayat">
       <InfoHistoryPengeluaranPegawaiBulanan
         ref="refInfoHistory"

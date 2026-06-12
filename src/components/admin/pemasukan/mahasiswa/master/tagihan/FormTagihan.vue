@@ -1,7 +1,5 @@
 <script setup>
-import { showSnackbar } from "@/composables/snackbar";
-
-const router = useRouter();
+import { showSnackbar } from "@/composables/snackbar"
 
 const props = defineProps({
   typeForm: {
@@ -64,40 +62,48 @@ const props = defineProps({
     type: Boolean,
     required: false,
   },
-});
+})
 
-const passwordValidator = (value) => {
-  if (value.length < 6) return "Password must be at least 6 characters";
-  return true;
-};
+const router = useRouter()
 
-const noSpaceValidator = (value) => {
+const passwordValidator = value => {
+  if (value.length < 6) return "Password must be at least 6 characters"
+  
+  return true
+}
+
+const noSpaceValidator = value => {
   if (/\s/.test(value))
-    return "Username cannot contain spaces, example: fulanah123";
-  return true;
-};
+    return "Username cannot contain spaces, example: fulanah123"
+  
+  return true
+}
 
-const refForm = ref(null);
+const refForm = ref(null)
 
-const selectedThAkademik = ref();
-const thAkademik = ref([]);
-const selectedThAngkatan = ref();
-const thAngkatan = ref([]);
-const selectedProdi = ref();
-const prodi = ref([]);
-const selectedFormSchadule = ref();
-const formSchadule = ref([]);
-const selectedMataUangId = ref();
-const mataUang = ref([]);
+const selectedThAkademik = ref()
+const thAkademik = ref([])
+const selectedThAngkatan = ref()
+const thAngkatan = ref([])
+const selectedProdi = ref()
+const prodi = ref([])
+const selectedFormSchadule = ref()
+const formSchadule = ref([])
+const selectedMataUangId = ref()
+const mataUang = ref([])
+
 const isMultipleTagihan = computed(
-  () => props.multipleTagihan && props.typeForm !== "edit"
-);
+  () => props.multipleTagihan && props.typeForm !== "edit",
+)
+
 const createEmptyTagihanItem = () => ({
   nama: "",
   mata_uang_id: selectedMataUangId.value,
   jumlah: "",
-});
-const tagihanItems = ref([createEmptyTagihanItem()]);
+})
+
+const tagihanItems = ref([createEmptyTagihanItem()])
+
 const doubleDegree = ref([
   {
     title: "Tidak",
@@ -107,16 +113,18 @@ const doubleDegree = ref([
     title: "Ya",
     value: 1,
   },
-]);
-const selectedDoubleDegree = ref();
-const selectedKelasId = ref(6);
+])
 
-const nim = ref("");
-const mahasiswaList = ref([]);
-const selectedMahasiswa = ref(null);
-const searchMahasiswa = ref("");
-const loadingSearchMahasiswa = ref(false);
-const loadingDataMahasiswa = ref(false);
+const selectedDoubleDegree = ref()
+const selectedKelasId = ref(6)
+
+const nim = ref("")
+const mahasiswaList = ref([])
+const selectedMahasiswa = ref(null)
+const searchMahasiswa = ref("")
+const loadingSearchMahasiswa = ref(false)
+const loadingDataMahasiswa = ref(false)
+
 const createEmptyMahasiswaDetail = () => ({
   nim: "",
   nama: "",
@@ -125,32 +133,35 @@ const createEmptyMahasiswaDetail = () => ({
   angkatan: "",
   kelas: "",
   semester: "",
-});
-const mahasiswaDetail = ref(createEmptyMahasiswaDetail());
-const hasMahasiswaDetail = computed(() => Boolean(mahasiswaDetail.value.nim));
-const nama = ref("");
-const jumlah = ref("");
+})
 
-const disabled = ref(false);
+const mahasiswaDetail = ref(createEmptyMahasiswaDetail())
+const hasMahasiswaDetail = computed(() => Boolean(mahasiswaDetail.value.nim))
+const nama = ref("")
+const jumlah = ref("")
+
+const disabled = ref(false)
+
 const submitButtonText = computed(() => {
-  if (!isMultipleTagihan.value) return "Submit";
+  if (!isMultipleTagihan.value) return "Submit"
 
-  return `Simpan ${tagihanItems.value.length} Tagihan`;
-});
+  return `Simpan ${tagihanItems.value.length} Tagihan`
+})
 
-const passwordRules = ref([requiredValidator, passwordValidator]);
+const passwordRules = ref([requiredValidator, passwordValidator])
 
-const normalizeSelectValue = (value) => {
-  if (value === null || value === undefined || value === "") return undefined;
+const normalizeSelectValue = value => {
+  if (value === null || value === undefined || value === "") return undefined
 
-  const numericValue = Number(value);
-  return Number.isNaN(numericValue) ? value : numericValue;
-};
+  const numericValue = Number(value)
+  
+  return Number.isNaN(numericValue) ? value : numericValue
+}
 
-const makeMahasiswaOption = (mahasiswa) => ({
+const makeMahasiswaOption = mahasiswa => ({
   ...mahasiswa,
   display: mahasiswa.display || `${mahasiswa.nim}${mahasiswa.nama ? ` - ${mahasiswa.nama}` : ""}`,
-});
+})
 
 const setMahasiswaDetail = (mahasiswa = {}) => {
   mahasiswaDetail.value = {
@@ -161,85 +172,89 @@ const setMahasiswaDetail = (mahasiswa = {}) => {
     angkatan: mahasiswa.th_akademik?.kode || mahasiswa.angkatan || mahasiswa.th_angkatan_kode || "",
     kelas: mahasiswa.kelas?.nama || mahasiswa.kelas_nama || mahasiswa.nama_kelas || "",
     semester: mahasiswa.semester || "",
-  };
-};
+  }
+}
 
 const resetMahasiswaDetail = () => {
-  mahasiswaDetail.value = createEmptyMahasiswaDetail();
-};
+  mahasiswaDetail.value = createEmptyMahasiswaDetail()
+}
 
-const setSelectedMahasiswaFromNim = (value) => {
-  if (!value || !props.searchNim) return;
+const setSelectedMahasiswaFromNim = value => {
+  if (!value || !props.searchNim) return
 
   const mahasiswa = makeMahasiswaOption({
     nim: value,
     nama: "",
-  });
+  })
 
-  selectedMahasiswa.value = mahasiswa;
-  searchMahasiswa.value = mahasiswa.display;
-};
+  selectedMahasiswa.value = mahasiswa
+  searchMahasiswa.value = mahasiswa.display
+}
 
-const applyMahasiswaDefaults = (mahasiswa) => {
+const applyMahasiswaDefaults = mahasiswa => {
   if (!mahasiswa || typeof mahasiswa !== "object" || Array.isArray(mahasiswa))
-    return;
+    return
 
   const prodiDoubleDegreeId = Number(mahasiswa.prodi_double_degree_id) > 0
     ? mahasiswa.prodi_double_degree_id
-    : null;
+    : null
 
   const thAngkatanId = normalizeSelectValue(
-    mahasiswa.th_akademik_id || mahasiswa.th_angkatan_id
-  );
-  const prodiId = normalizeSelectValue(prodiDoubleDegreeId || mahasiswa.prodi_id);
-  const kelasId = normalizeSelectValue(mahasiswa.kelas_id);
+    mahasiswa.th_akademik_id || mahasiswa.th_angkatan_id,
+  )
+
+  const prodiId = normalizeSelectValue(prodiDoubleDegreeId || mahasiswa.prodi_id)
+  const kelasId = normalizeSelectValue(mahasiswa.kelas_id)
+
   const doubleDegreeValue = normalizeSelectValue(
-    prodiDoubleDegreeId ? 1 : mahasiswa.double_degree
-  );
+    prodiDoubleDegreeId ? 1 : mahasiswa.double_degree,
+  )
 
-  if (thAngkatanId !== undefined) selectedThAngkatan.value = thAngkatanId;
-  if (prodiId !== undefined) selectedProdi.value = prodiId;
-  if (kelasId !== undefined) selectedKelasId.value = kelasId;
-  selectedDoubleDegree.value = doubleDegreeValue ?? 0;
-};
+  if (thAngkatanId !== undefined) selectedThAngkatan.value = thAngkatanId
+  if (prodiId !== undefined) selectedProdi.value = prodiId
+  if (kelasId !== undefined) selectedKelasId.value = kelasId
+  selectedDoubleDegree.value = doubleDegreeValue ?? 0
+}
 
-const fetchMahasiswaDetail = async (nimValue) => {
-  if (!nimValue || !props.searchNim) return null;
+const fetchMahasiswaDetail = async nimValue => {
+  if (!nimValue || !props.searchNim) return null
 
   try {
-    loadingDataMahasiswa.value = true;
+    loadingDataMahasiswa.value = true
 
     const mahasiswa = await $api("/admin/mahasiswa/nim", {
       method: "GET",
       body: {
         nim: nimValue,
       },
-    });
+    })
 
     if (!mahasiswa || (Array.isArray(mahasiswa) && mahasiswa.length < 1)) {
-      resetMahasiswaDetail();
+      resetMahasiswaDetail()
       showSnackbar({
         text: "Data mahasiswa tidak ditemukan",
         color: "error",
-      });
-      return null;
+      })
+      
+      return null
     }
 
-    setMahasiswaDetail(mahasiswa);
-    applyMahasiswaDefaults(mahasiswa);
+    setMahasiswaDetail(mahasiswa)
+    applyMahasiswaDefaults(mahasiswa)
 
-    return mahasiswa;
+    return mahasiswa
   } catch (err) {
-    resetMahasiswaDetail();
+    resetMahasiswaDetail()
     showSnackbar({
       text: err.data?.message || "Gagal mendapatkan detail mahasiswa",
       color: "error",
-    });
-    return null;
+    })
+    
+    return null
   } finally {
-    loadingDataMahasiswa.value = false;
+    loadingDataMahasiswa.value = false
   }
-};
+}
 
 const fetchThAkademik = async () => {
   try {
@@ -247,29 +262,30 @@ const fetchThAkademik = async () => {
       limit: 0,
       sort_key: "kode",
       sort_order: "desc",
-    };
+    }
 
-    if (props.useActiveThAkademik) params.aktif = "Y";
+    if (props.useActiveThAkademik) params.aktif = "Y"
 
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
       params,
-    });
+    })
 
-    thAkademik.value = data.data.map((thAkademik) => {
+    thAkademik.value = data.data.map(thAkademik => {
       return {
         title: `${thAkademik.nama} - ${thAkademik.semester}`,
         value: thAkademik.id,
-      };
-    });
+      }
+    })
 
     if (props.useActiveThAkademik && thAkademik.value.length > 0) {
-      selectedThAkademik.value = thAkademik.value[0].value;
+      selectedThAkademik.value = thAkademik.value[0].value
     }
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
+
 const fetchThAngkatan = async () => {
   try {
     const { data } = await $api("/admin/th-akademik", {
@@ -280,18 +296,19 @@ const fetchThAngkatan = async () => {
         sort_order: "desc",
         search: "ganjil",
       },
-    });
+    })
 
-    thAngkatan.value = data.data.map((thAngkatan) => {
+    thAngkatan.value = data.data.map(thAngkatan => {
       return {
         title: thAngkatan.kode.slice(0, -1),
         value: thAngkatan.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
+
 const fetchProdi = async () => {
   try {
     const { data } = await $api("/admin/prodi", {
@@ -301,18 +318,19 @@ const fetchProdi = async () => {
         sort_key: "kode",
         sort_order: "desc",
       },
-    });
+    })
 
-    prodi.value = data.data.map((prodi) => {
+    prodi.value = data.data.map(prodi => {
       return {
         title: prodi.nama,
         value: prodi.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
+
 const fetchFormSchadule = async () => {
   try {
     const { data } = await $api("/admin/form-schadule", {
@@ -320,18 +338,18 @@ const fetchFormSchadule = async () => {
       body: {
         limit: 0,
       },
-    });
+    })
 
-    formSchadule.value = data.data.map((formSchadule) => {
+    formSchadule.value = data.data.map(formSchadule => {
       return {
         title: formSchadule.nama,
         value: formSchadule.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
 
 const fetchMataUang = async () => {
   try {
@@ -342,244 +360,257 @@ const fetchMataUang = async () => {
         sort_key: "kode",
         sort_order: "asc",
       },
-    });
+    })
 
-    mataUang.value = data.data.map((item) => {
+    mataUang.value = data.data.map(item => {
       return {
         title: `${item.kode} - ${item.nama}${item.simbol ? ` (${item.simbol})` : ""}`,
         value: item.id,
-      };
-    });
+      }
+    })
 
     if (!selectedMataUangId.value && mataUang.value.length > 0) {
       selectedMataUangId.value =
-        data.data.find((item) => item.kode === "IDR")?.id ??
-        mataUang.value[0].value;
+        data.data.find(item => item.kode === "IDR")?.id ??
+        mataUang.value[0].value
     }
 
-    tagihanItems.value = tagihanItems.value.map((item) => ({
+    tagihanItems.value = tagihanItems.value.map(item => ({
       ...item,
       mata_uang_id: item.mata_uang_id || selectedMataUangId.value,
-    }));
+    }))
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
 
 onMounted(async () => {
-  await fetchThAkademik();
-  fetchThAngkatan();
-  fetchProdi();
-  fetchFormSchadule();
-  fetchMataUang();
+  await fetchThAkademik()
+  fetchThAngkatan()
+  fetchProdi()
+  fetchFormSchadule()
+  fetchMataUang()
 
-  nim.value = props.nim || "";
-  setSelectedMahasiswaFromNim(nim.value);
-  selectedKelasId.value = normalizeSelectValue(props.defaultKelasId) ?? 6;
+  nim.value = props.nim || ""
+  setSelectedMahasiswaFromNim(nim.value)
+  selectedKelasId.value = normalizeSelectValue(props.defaultKelasId) ?? 6
 
   if (props.typeForm === "edit") {
-    selectedThAkademik.value = props.dataForm.th_akademik_id;
-    selectedThAngkatan.value = props.dataForm.th_angkatan_id;
-    selectedFormSchadule.value = props.dataForm.form_schadule_id;
-    selectedProdi.value = props.dataForm.prodi_id;
-    selectedDoubleDegree.value = props.dataForm.double_degree;
-    selectedKelasId.value = props.dataForm.kelas_id ?? selectedKelasId.value;
+    selectedThAkademik.value = props.dataForm.th_akademik_id
+    selectedThAngkatan.value = props.dataForm.th_angkatan_id
+    selectedFormSchadule.value = props.dataForm.form_schadule_id
+    selectedProdi.value = props.dataForm.prodi_id
+    selectedDoubleDegree.value = props.dataForm.double_degree
+    selectedKelasId.value = props.dataForm.kelas_id ?? selectedKelasId.value
     selectedMataUangId.value =
-      props.dataForm.mata_uang_id || props.dataForm.mata_uang?.id || selectedMataUangId.value;
-    nim.value = props.dataForm.nim ?? nim.value;
-    setSelectedMahasiswaFromNim(nim.value);
-    nama.value = props.dataForm.nama;
-    jumlah.value = props.dataForm.jumlah;
+      props.dataForm.mata_uang_id || props.dataForm.mata_uang?.id || selectedMataUangId.value
+    nim.value = props.dataForm.nim ?? nim.value
+    setSelectedMahasiswaFromNim(nim.value)
+    nama.value = props.dataForm.nama
+    jumlah.value = props.dataForm.jumlah
   } else {
-    selectedThAkademik.value = normalizeSelectValue(props.defaultThAkademikId) ?? selectedThAkademik.value;
-    selectedThAngkatan.value = normalizeSelectValue(props.defaultThAngkatanId);
-    selectedProdi.value = normalizeSelectValue(props.defaultProdiId);
-    selectedDoubleDegree.value = normalizeSelectValue(props.defaultDoubleDegree);
+    selectedThAkademik.value = normalizeSelectValue(props.defaultThAkademikId) ?? selectedThAkademik.value
+    selectedThAngkatan.value = normalizeSelectValue(props.defaultThAngkatanId)
+    selectedProdi.value = normalizeSelectValue(props.defaultProdiId)
+    selectedDoubleDegree.value = normalizeSelectValue(props.defaultDoubleDegree)
   }
-});
+})
 
-let typingMahasiswaTimeout = null;
+let typingMahasiswaTimeout = null
 
-watch(searchMahasiswa, (newVal) => {
-  if (!props.showNim || !props.searchNim) return;
+watch(searchMahasiswa, newVal => {
+  if (!props.showNim || !props.searchNim) return
 
-  clearTimeout(typingMahasiswaTimeout);
+  clearTimeout(typingMahasiswaTimeout)
 
-  const keyword = String(newVal || "").trim();
+  const keyword = String(newVal || "").trim()
   if (!keyword || keyword === selectedMahasiswa.value?.display) {
-    mahasiswaList.value = [];
-    loadingSearchMahasiswa.value = false;
-    return;
+    mahasiswaList.value = []
+    loadingSearchMahasiswa.value = false
+    
+    return
   }
 
   typingMahasiswaTimeout = setTimeout(async () => {
     try {
-      loadingSearchMahasiswa.value = true;
+      loadingSearchMahasiswa.value = true
+
       const res = await $api(`/admin/mahasiswa/search/${keyword}`, {
         method: "GET",
-      });
+      })
 
-      mahasiswaList.value = res.map((mahasiswa) =>
-        makeMahasiswaOption(mahasiswa)
-      );
+      mahasiswaList.value = res.map(mahasiswa =>
+        makeMahasiswaOption(mahasiswa),
+      )
     } catch (err) {
       showSnackbar({
         text: err.data?.message || "Gagal mencari mahasiswa",
         color: "error",
-      });
-      mahasiswaList.value = [];
+      })
+      mahasiswaList.value = []
     } finally {
-      loadingSearchMahasiswa.value = false;
+      loadingSearchMahasiswa.value = false
     }
-  }, 1000);
-});
+  }, 1000)
+})
 
-watch(selectedMahasiswa, (newVal) => {
-  if (!props.showNim || !props.searchNim) return;
+watch(selectedMahasiswa, newVal => {
+  if (!props.showNim || !props.searchNim) return
 
   if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
-    nim.value = newVal.nim;
-    applyMahasiswaDefaults(newVal);
-    setMahasiswaDetail(newVal);
-    fetchMahasiswaDetail(newVal.nim);
+    nim.value = newVal.nim
+    applyMahasiswaDefaults(newVal)
+    setMahasiswaDetail(newVal)
+    fetchMahasiswaDetail(newVal.nim)
   } else if (typeof newVal === "string") {
-    nim.value = newVal;
-    resetMahasiswaDetail();
+    nim.value = newVal
+    resetMahasiswaDetail()
   } else if (!newVal) {
-    nim.value = "";
-    resetMahasiswaDetail();
+    nim.value = ""
+    resetMahasiswaDetail()
   }
-});
+})
 
 onBeforeUnmount(() => {
-  clearTimeout(typingMahasiswaTimeout);
-});
+  clearTimeout(typingMahasiswaTimeout)
+})
 
 const addTagihanItem = () => {
   if (tagihanItems.value.length >= 50) {
     showSnackbar({
       text: "Maksimal 50 tagihan dalam satu kali simpan",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
-  tagihanItems.value.push(createEmptyTagihanItem());
-};
+  tagihanItems.value.push(createEmptyTagihanItem())
+}
 
-const removeTagihanItem = (index) => {
-  if (tagihanItems.value.length === 1) return;
+const removeTagihanItem = index => {
+  if (tagihanItems.value.length === 1) return
 
-  tagihanItems.value.splice(index, 1);
-};
+  tagihanItems.value.splice(index, 1)
+}
 
 const resetTagihanItems = () => {
   if (isMultipleTagihan.value) {
-    tagihanItems.value = [createEmptyTagihanItem()];
-    return;
+    tagihanItems.value = [createEmptyTagihanItem()]
+    
+    return
   }
 
-  nama.value = "";
-  jumlah.value = "";
-};
+  nama.value = ""
+  jumlah.value = ""
+}
 
-const getApiErrorMessage = (err) => {
-  const message = err.data?.message;
+const getApiErrorMessage = err => {
+  const message = err.data?.message
 
-  if (Array.isArray(message)) return message.join("; ");
+  if (Array.isArray(message)) return message.join("; ")
   if (message && typeof message === "object")
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
 
-  return message || "Gagal menyimpan tagihan";
-};
+  return message || "Gagal menyimpan tagihan"
+}
 
 const onSubmit = async () => {
-  const valid = await refForm.value.validate();
-  if (!valid.valid) return;
+  const valid = await refForm.value.validate()
+  if (!valid.valid) return
 
   if (props.showNim && props.searchNim && !selectedMahasiswa.value?.nim) {
     showSnackbar({
       text: "Pilih mahasiswa dari hasil pencarian",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
   if (props.showNim && !nim.value) {
     showSnackbar({
       text: "NIM harus diisi",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
-  const method = props.typeForm === "edit" ? "PUT" : "POST";
+  const method = props.typeForm === "edit" ? "PUT" : "POST"
 
-  disabled.value = true;
+  disabled.value = true
 
-  const formData = new FormData();
-  formData.append("th_akademik_id", selectedThAkademik.value);
-  formData.append("th_angkatan_id", selectedThAngkatan.value);
-  formData.append("prodi_id", selectedProdi.value);
-  formData.append("double_degree", selectedDoubleDegree.value);
-  formData.append("form_schadule_id", selectedFormSchadule.value);
-  formData.append("kelas_id", selectedKelasId.value);
-  if (props.showNim) formData.append("nim", nim.value);
+  const formData = new FormData()
+
+  formData.append("th_akademik_id", selectedThAkademik.value)
+  formData.append("th_angkatan_id", selectedThAngkatan.value)
+  formData.append("prodi_id", selectedProdi.value)
+  formData.append("double_degree", selectedDoubleDegree.value)
+  formData.append("form_schadule_id", selectedFormSchadule.value)
+  formData.append("kelas_id", selectedKelasId.value)
+  if (props.showNim) formData.append("nim", nim.value)
 
   if (isMultipleTagihan.value) {
     tagihanItems.value.forEach((item, index) => {
-      formData.append(`tagihan[${index}][nama]`, item.nama.trim());
+      formData.append(`tagihan[${index}][nama]`, item.nama.trim())
       formData.append(
         `tagihan[${index}][mata_uang_id]`,
-        item.mata_uang_id
-      );
-      formData.append(`tagihan[${index}][jumlah]`, item.jumlah);
-    });
+        item.mata_uang_id,
+      )
+      formData.append(`tagihan[${index}][jumlah]`, item.jumlah)
+    })
   } else {
-    formData.append("mata_uang_id", selectedMataUangId.value);
-    formData.append("nama", nama.value);
-    formData.append("jumlah", jumlah.value);
+    formData.append("mata_uang_id", selectedMataUangId.value)
+    formData.append("nama", nama.value)
+    formData.append("jumlah", jumlah.value)
   }
 
-  formData.append("_method", method);
+  formData.append("_method", method)
 
   try {
     const response = await $api(props.url, {
       method: "POST",
       body: formData,
       onResponseError({ response }) {
-        console.error(response);
+        console.error(response)
       },
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      router.push(props.submitRedirect);
+      router.push(props.submitRedirect)
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: getApiErrorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    disabled.value = false;
+    disabled.value = false
   }
-};
+}
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
-      <VCol v-if="showNim && searchNim" cols="12">
+      <VCol
+        v-if="showNim && searchNim"
+        cols="12"
+      >
         <VCombobox
           v-model="selectedMahasiswa"
           v-model:search="searchMahasiswa"
@@ -605,7 +636,10 @@ const onSubmit = async () => {
         </VCombobox>
       </VCol>
       <template v-if="showNim && searchNim && (hasMahasiswaDetail || loadingDataMahasiswa)">
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswaDetail.nim"
             label="NIM"
@@ -614,7 +648,10 @@ const onSubmit = async () => {
             :loading="loadingDataMahasiswa"
           />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswaDetail.nama"
             label="Nama"
@@ -623,7 +660,10 @@ const onSubmit = async () => {
             :loading="loadingDataMahasiswa"
           />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswaDetail.prodi"
             label="Prodi"
@@ -632,7 +672,10 @@ const onSubmit = async () => {
             :loading="loadingDataMahasiswa"
           />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswaDetail.jenisKelamin"
             label="Jenis Kelamin"
@@ -641,7 +684,10 @@ const onSubmit = async () => {
             :loading="loadingDataMahasiswa"
           />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="mahasiswaDetail.angkatan"
             label="Angkatan"
@@ -650,7 +696,10 @@ const onSubmit = async () => {
             :loading="loadingDataMahasiswa"
           />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="mahasiswaDetail.kelas"
             label="Kelas"
@@ -659,7 +708,10 @@ const onSubmit = async () => {
             :loading="loadingDataMahasiswa"
           />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="mahasiswaDetail.semester"
             label="Semester"
@@ -669,7 +721,10 @@ const onSubmit = async () => {
           />
         </VCol>
       </template>
-      <VCol v-else-if="showNim" cols="12">
+      <VCol
+        v-else-if="showNim"
+        cols="12"
+      >
         <VTextField
           v-model="nim"
           :rules="[requiredValidator]"
@@ -729,11 +784,12 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol v-if="isMultipleTagihan" cols="12">
+      <VCol
+        v-if="isMultipleTagihan"
+        cols="12"
+      >
         <VCard variant="outlined">
-          <VCardText
-            class="d-flex align-center justify-space-between flex-wrap gap-3"
-          >
+          <VCardText class="d-flex align-center justify-space-between flex-wrap gap-3">
             <div>
               <div class="text-h6">
                 Daftar Tagihan
@@ -761,7 +817,10 @@ const onSubmit = async () => {
               :key="index"
               align="center"
             >
-              <VCol cols="12" md="4">
+              <VCol
+                cols="12"
+                md="4"
+              >
                 <VTextField
                   v-model="item.nama"
                   :rules="[requiredValidator]"
@@ -769,7 +828,10 @@ const onSubmit = async () => {
                   placeholder="KRS ...."
                 />
               </VCol>
-              <VCol cols="12" md="3">
+              <VCol
+                cols="12"
+                md="3"
+              >
                 <VSelect
                   v-model="item.mata_uang_id"
                   label="Mata Uang"
@@ -779,7 +841,10 @@ const onSubmit = async () => {
                   clear-icon="ri-close-line"
                 />
               </VCol>
-              <VCol cols="12" md="4">
+              <VCol
+                cols="12"
+                md="4"
+              >
                 <VTextField
                   v-model="item.jumlah"
                   :rules="[requiredValidator]"
@@ -789,7 +854,11 @@ const onSubmit = async () => {
                   min="0"
                 />
               </VCol>
-              <VCol cols="12" md="1" class="d-flex justify-end">
+              <VCol
+                cols="12"
+                md="1"
+                class="d-flex justify-end"
+              >
                 <VBtn
                   icon
                   color="error"
@@ -841,7 +910,10 @@ const onSubmit = async () => {
           />
         </VCol>
       </template>
-      <VCol cols="12" class="d-flex gap-4">
+      <VCol
+        cols="12"
+        class="d-flex gap-4"
+      >
         <VBtn
           type="submit"
           :disabled
@@ -852,8 +924,8 @@ const onSubmit = async () => {
         </VBtn>
 
         <VBtn
-          type="reset"
           v-if="typeForm !== 'edit'"
+          type="reset"
           color="secondary"
           variant="tonal"
           @click="resetTagihanItems"

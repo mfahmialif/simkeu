@@ -1,8 +1,8 @@
 <script setup>
-import FormMataUang from "@/components/admin/mata-uang/FormMataUang.vue";
-import { useRouter } from "vue-router";
+import FormMataUang from "@/components/admin/mata-uang/FormMataUang.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -17,11 +17,11 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/setting/mata-uang"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Mata Uang Add - SIMKEU";
-});
+  document.title = "Mata Uang Add - SIMKEU"
+})
 </script>
 
 <template>
@@ -33,7 +33,10 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <FormMataUang type-form="add" url="/admin/mata-uang" />
+          <FormMataUang
+            type-form="add"
+            url="/admin/mata-uang"
+          />
         </VCardText>
       </VCard>
     </VCol>

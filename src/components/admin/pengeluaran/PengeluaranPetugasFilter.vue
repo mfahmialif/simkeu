@@ -8,9 +8,9 @@ defineProps({
     type: Array,
     default: () => [],
   },
-});
+})
 
-defineEmits(["update:modelValue"]);
+defineEmits(["update:modelValue"])
 </script>
 
 <template>

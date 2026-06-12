@@ -1,8 +1,8 @@
 <script setup>
-import FormThAkademik from "@/components/admin/th-akademik/FormThAkademik.vue";
-import { useRouter } from "vue-router";
+import FormThAkademik from "@/components/admin/th-akademik/FormThAkademik.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -17,11 +17,11 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/setting/th-akademik"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Tahun Akademik Add - SIMKEU";
-});
+  document.title = "Tahun Akademik Add - SIMKEU"
+})
 </script>
 
 <template>
@@ -34,8 +34,8 @@ onMounted(() => {
 
         <VCardText>
           <FormThAkademik
-            typeForm="add"
-            :url="'/admin/th-akademik'"
+            type-form="add"
+            url="/admin/th-akademik"
           />
         </VCardText>
       </VCard>

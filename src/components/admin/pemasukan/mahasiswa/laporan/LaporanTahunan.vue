@@ -28,34 +28,36 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
-const tahun = ref("");
+const tahun = ref("")
 
-const selectedProdi = ref(null);
-const selectedTahunAkademik = ref(null);
-const selectedJenisPembayaran = ref(null);
+const selectedProdi = ref(null)
+const selectedTahunAkademik = ref(null)
+const selectedJenisPembayaran = ref(null)
 
 const downloadExcel = async () => {
   download(
     "excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Tahunan.xlsx"
-  );
-};
+    "Laporan Tahunan.xlsx",
+  )
+}
 
 const downloadPdf = async () => {
-  download("pdf", "application/pdf", "Laporan Tahunan.pdf");
-};
+  download("pdf", "application/pdf", "Laporan Tahunan.pdf")
+}
 
-const isLoading = ref(false);
+const isLoading = ref(false)
+
 const download = async (type, accept, filename) => {
   try {
-    isLoading.value = true;
+    isLoading.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
+
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/tahunan", {
       method: "GET",
       headers: {
@@ -74,27 +76,27 @@ const download = async (type, accept, filename) => {
           jenis_pembayaran: selectedJenisPembayaran.value.value,
         }),
       },
-    });
+    })
 
-    downloadFileExport(response, filename);
+    downloadFileExport(response, filename)
     showSnackbar({
       text: "Laporan berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: err.message,
       color: "error",
-    });
+    })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 onMounted(() => {
   // month now
-  tahun.value = new Date().getFullYear();
-});
+  tahun.value = new Date().getFullYear()
+})
 </script>
 
 <template>
@@ -107,7 +109,10 @@ onMounted(() => {
 
     <VRow class="pa-4">
       <!-- Input Tahun -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VTextField
           v-model="tahun"
           label="Tahun"
@@ -118,7 +123,10 @@ onMounted(() => {
       </VCol>
 
       <!-- Combobox Prodi -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedProdi"
           :items="props.prodi"
@@ -129,7 +137,10 @@ onMounted(() => {
         />
       </VCol>
       <!-- Combobox Tahun Akademik -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedTahunAkademik"
           :items="props.tahunAkademik"
@@ -140,7 +151,10 @@ onMounted(() => {
         />
       </VCol>
       <!-- Combobox Jenis Pembayaran -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedJenisPembayaran"
           :items="props.jenisPembayaran"
@@ -150,16 +164,38 @@ onMounted(() => {
           :loading="props.isLoadingJenisPembayaran"
         />
       </VCol>
-      <VCol cols="12" md="12">
-        <VBtn block color="success" @click="downloadExcel" :loading="isLoading">
+      <VCol
+        cols="12"
+        md="12"
+      >
+        <VBtn
+          block
+          color="success"
+          :loading="isLoading"
+          @click="downloadExcel"
+        >
           Download Excel
-          <VIcon end icon="ri-arrow-down-circle-line" />
+          <VIcon
+            end
+            icon="ri-arrow-down-circle-line"
+          />
         </VBtn>
       </VCol>
-      <VCol cols="12" md="12">
-        <VBtn block color="primary" @click="downloadPdf" :loading="isLoading">
+      <VCol
+        cols="12"
+        md="12"
+      >
+        <VBtn
+          block
+          color="primary"
+          :loading="isLoading"
+          @click="downloadPdf"
+        >
           Download PDF
-          <VIcon end icon="ri-arrow-down-circle-line" />
+          <VIcon
+            end
+            icon="ri-arrow-down-circle-line"
+          />
         </VBtn>
       </VCol>
     </VRow>

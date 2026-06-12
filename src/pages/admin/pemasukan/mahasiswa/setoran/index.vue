@@ -1,14 +1,14 @@
 <script setup>
-const selectedRole = ref();
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
+const selectedRole = ref()
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
 
 const fetchData = async () => {
   try {
@@ -22,145 +22,148 @@ const fetchData = async () => {
         search: search.value,
         ...(selectedRole.value && { role_id: selectedRole.value }),
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  loading.value = true;
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  loading.value = true
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id: id,
     name: name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
-    loading.value = true;
+    loading.value = true
+
     const response = await $api("/admin/pemasukan/mahasiswa/setoran/" + id, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
-    loading.value = false;
+    isDialogDeleteVisible.value = false
+    loading.value = false
   }
-};
+}
 
-const isDialogValidasiVisible = ref(false);
-const validasiData = ref({});
+const isDialogValidasiVisible = ref(false)
+const validasiData = ref({})
 
 const showDialogValidasi = (id, name) => {
   validasiData.value = {
     id: id,
     name: name,
-  };
-  isDialogValidasiVisible.value = true;
-};
+  }
+  isDialogValidasiVisible.value = true
+}
 
 const validasiDataSubmit = async (id, status) => {
   try {
-    loading.value = true;
-    const formData = new FormData();
-    formData.append("status", status);
-    formData.append("_method", "PUT");
+    loading.value = true
+
+    const formData = new FormData()
+
+    formData.append("status", status)
+    formData.append("_method", "PUT")
 
     const response = await $api(
       "/admin/pemasukan/mahasiswa/setoran/" + id + "/validasi",
       {
         method: "POST",
         body: formData,
-      }
-    );
+      },
+    )
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    isDialogValidasiVisible.value = false;
-    loading.value = false;
+    isDialogValidasiVisible.value = false
+    loading.value = false
   }
-};
+}
 
 onMounted(() => {
-  document.title = "Catatan Setoran - SIMKEU";
-  fetchData();
-});
+  document.title = "Catatan Setoran - SIMKEU"
+  fetchData()
+})
 
 watch(
   selectedRows,
-  (newValue) => {
+  newValue => {
     newValue.forEach((row, index) => {
-      console.log(`${index + 1}.`, row);
-    });
+      console.log(`${index + 1}.`, row)
+    })
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 watch(selectedRole, () => {
-  console.log("value from wathc", selectedRole.value);
-  fetchData();
-});
+  console.log("value from wathc", selectedRole.value)
+  fetchData()
+})
 </script>
 
 <template>
@@ -208,6 +211,9 @@ watch(selectedRole, () => {
 
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
@@ -219,9 +225,6 @@ watch(selectedRole, () => {
           { title: 'status', key: 'status' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         show-select
         :items="dataTable"
         :items-length="totalItems"
@@ -230,15 +233,27 @@ watch(selectedRole, () => {
         item-value="name"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data setoran...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data setoran.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data setoran.
+          </div>
         </template>
 
         <template #item.id="{ index }">
@@ -246,13 +261,22 @@ watch(selectedRole, () => {
         </template>
 
         <template #item.status="{ item }">
-          <VChip color="success" v-if="item.status === 'Disetujui'">
+          <VChip
+            v-if="item.status === 'Disetujui'"
+            color="success"
+          >
             {{ item.status }}
           </VChip>
-          <VChip color="error" v-else-if="item.status === 'Ditolak'">
+          <VChip
+            v-else-if="item.status === 'Ditolak'"
+            color="error"
+          >
             {{ item.status }}
           </VChip>
-          <VChip color="warning" v-else>
+          <VChip
+            v-else
+            color="warning"
+          >
             {{ item.status }}
           </VChip>
         </template>
@@ -297,7 +321,10 @@ watch(selectedRole, () => {
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
@@ -307,7 +334,11 @@ watch(selectedRole, () => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data setoran ini? Penghapusan data
             setoran tidak dapat dibatalkan.
@@ -322,15 +353,24 @@ watch(selectedRole, () => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>
       </VCard>
     </VDialog>
 
-    <VDialog v-model="isDialogValidasiVisible" width="500">
+    <VDialog
+      v-model="isDialogValidasiVisible"
+      width="500"
+    >
       <!-- Dialog Content -->
       <VCard :title="'Validasi Data: ' + validasiData.name">
         <DialogCloseBtn
@@ -340,7 +380,11 @@ watch(selectedRole, () => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span> Anda yakin ingin memvalidasi data setoran ini? </span>
         </VCardText>
 
@@ -349,21 +393,30 @@ watch(selectedRole, () => {
             color="warning"
             @click="validasiDataSubmit(validasiData.id, 'Belum Divalidasi')"
           >
-            <VIcon icon="ri-close-line" class="me-1" />
+            <VIcon
+              icon="ri-close-line"
+              class="me-1"
+            />
             Belum Divalidasi
           </VBtn>
           <VBtn
             color="error"
             @click="validasiDataSubmit(validasiData.id, 'Ditolak')"
           >
-            <VIcon icon="ri-close-line" class="me-1" />
+            <VIcon
+              icon="ri-close-line"
+              class="me-1"
+            />
             Ditolak
           </VBtn>
           <VBtn
             color="success"
             @click="validasiDataSubmit(validasiData.id, 'Disetujui')"
           >
-            <VIcon icon="ri-check-line" class="me-1" />
+            <VIcon
+              icon="ri-check-line"
+              class="me-1"
+            />
             Disetujui
           </VBtn>
         </VCardText>

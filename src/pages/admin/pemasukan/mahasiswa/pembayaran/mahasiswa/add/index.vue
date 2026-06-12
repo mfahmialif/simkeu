@@ -1,288 +1,303 @@
 <script setup>
-import AkademikPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/AkademikPembayaranMahasiswa.vue";
-import DepositPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/DepositPembayaranMahasiswa.vue";
-import JenisPembayaranMahasiswaPembayaran from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/JenisPembayaranMahasiswaPembayaran.vue";
-import MahasiswaPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/MahasiswaPembayaranMahasiswa.vue";
-import TagihanPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/TagihanPembayaranMahasiswa.vue";
+import AkademikPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/AkademikPembayaranMahasiswa.vue"
+import DepositPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/DepositPembayaranMahasiswa.vue"
+import JenisPembayaranMahasiswaPembayaran from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/JenisPembayaranMahasiswaPembayaran.vue"
+import MahasiswaPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/MahasiswaPembayaranMahasiswa.vue"
+import TagihanPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/TagihanPembayaranMahasiswa.vue"
 
-const router = useRouter();
+const router = useRouter()
 
-const disabled = ref(false);
-const isAdmin = ref(false);
+const disabled = ref(false)
+const isAdmin = ref(false)
 
 const submitData = async () => {
-    const formData = buildPembayaranFormData();
-    if (!formData) {
-        return;
-    }
+  const formData = buildPembayaranFormData()
+  if (!formData) {
+    return
+  }
 
-    try {
-        disabled.value = true;
-        const response = await $api("/admin/pemasukan/mahasiswa/pembayaran", {
+  try {
+    disabled.value = true
+
+    const response = await $api("/admin/pemasukan/mahasiswa/pembayaran", {
+      method: "POST",
+      body: formData,
+      onResponseError({ response }) {
+        console.error(response)
+      },
+    })
+
+    console.log(response)
+    if (response.status === true) {
+      // Simpan catatan deposit jika ada kelebihan nominal
+      const excessDeposit = Number(mahasiswaRef.value?.mahasiswa?.autoSimpanDeposit) || 0
+      if (excessDeposit > 0) {
+        try {
+          await $api("/admin/pemasukan/mahasiswa/catatan-deposit", {
             method: "POST",
-            body: formData,
-            onResponseError({ response }) {
-                console.error(response);
+            body: {
+              nim: mahasiswaRef.value.mahasiswa.nim,
+              jumlah: excessDeposit,
             },
-        });
-
-        console.log(response);
-        if (response.status === true) {
-            // Simpan catatan deposit jika ada kelebihan nominal
-            const excessDeposit = Number(mahasiswaRef.value?.mahasiswa?.autoSimpanDeposit) || 0;
-            if (excessDeposit > 0) {
-                try {
-                    await $api("/admin/pemasukan/mahasiswa/catatan-deposit", {
-                        method: "POST",
-                        body: {
-                            nim: mahasiswaRef.value.mahasiswa.nim,
-                            jumlah: excessDeposit,
-                        },
-                    });
-                } catch (e) {
-                    console.error("Gagal simpan catatan deposit:", e);
-                }
-            }
-
-            showSnackbar({
-                text: response.message,
-                color: "success",
-            });
-
-            if (redirectKwitansi.value && response.id) {
-                await kwitansi(response.id);
-
-                tagihanRef.value.clearTagihan();
-                depositRef.value.clearDeposit();
-                mahasiswaRef.value.searching();
-                mahasiswaRef.value.nimFocus();
-            } else if (redirectKwitansi.value) {
-                tagihanRef.value.clearTagihan();
-                depositRef.value.clearDeposit();
-                mahasiswaRef.value.searching();
-                mahasiswaRef.value.nimFocus();
-            } else {
-                router.push("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa");
-            }
-        } else {
-            showSnackbar({
-                text: response.message,
-                color: "error",
-            });
+          })
+        } catch (e) {
+          console.error("Gagal simpan catatan deposit:", e)
         }
-    } catch (err) {
-        console.log(err);
-    } finally {
-        disabled.value = false;
+      }
+
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      })
+
+      if (redirectKwitansi.value && response.id) {
+        await kwitansi(response.id)
+
+        tagihanRef.value.clearTagihan()
+        depositRef.value.clearDeposit()
+        mahasiswaRef.value.searching()
+        mahasiswaRef.value.nimFocus()
+      } else if (redirectKwitansi.value) {
+        tagihanRef.value.clearTagihan()
+        depositRef.value.clearDeposit()
+        mahasiswaRef.value.searching()
+        mahasiswaRef.value.nimFocus()
+      } else {
+        router.push("/admin/pemasukan/mahasiswa/pembayaran/mahasiswa")
+      }
+    } else {
+      showSnackbar({
+        text: response.message,
+        color: "error",
+      })
     }
-};
+  } catch (err) {
+    console.log(err)
+  } finally {
+    disabled.value = false
+  }
+}
 
 function buildPembayaranFormData() {
-    const mahasiswa = mahasiswaRef.value?.mahasiswa;
-    const thAkademik = akademikRef.value?.selectedThAkademik ?? null;
-    const tanggal = akademikRef.value?.tanggal ?? null;
-    const jenisPembayaran =
-        jenisPembayaranRef.value?.selectedJenisPembayaran ?? null;
+  const mahasiswa = mahasiswaRef.value?.mahasiswa
+  const thAkademik = akademikRef.value?.selectedThAkademik ?? null
+  const tanggal = akademikRef.value?.tanggal ?? null
 
-    if (thAkademik === null || tanggal === null || jenisPembayaran === null) {
-        showSnackbar({
-            text: "Harap memilih tahun akademik, tanggal, dan jenis pembayaran",
-            color: "error",
-        });
-        return false;
+  const jenisPembayaran =
+        jenisPembayaranRef.value?.selectedJenisPembayaran ?? null
+
+  if (thAkademik === null || tanggal === null || jenisPembayaran === null) {
+    showSnackbar({
+      text: "Harap memilih tahun akademik, tanggal, dan jenis pembayaran",
+      color: "error",
+    })
+    
+    return false
+  }
+
+  // Opsional: validasi minimal
+  if (!unref(mahasiswaRef.value.mahasiswa.tagihan)?.length) {
+    showSnackbar({ text: "List tagihan kosong", color: "error" })
+    
+    return false
+  }
+
+  const m = mahasiswa ?? {}
+  const rows = unref(m.tagihan) ?? [] // tagihan adalah Ref<Array>
+
+  const fd = new FormData()
+
+  // Wajib
+  fd.append("tanggal", tanggal)
+  fd.append("tahun_akademik", thAkademik?.value ?? "")
+  fd.append("nim", m.nim ?? "")
+  fd.append("jenis_pembayaran", jenisPembayaran?.value ?? "")
+  fd.append("jk_id", m.jkId ?? "")
+
+  // Nullable
+  if (m.semester != null) fd.append("semester", m.semester)
+  fd.append("dipakai_deposit_mhs", m.dipakai ?? 0) // total deposit yang dipakai
+  if (m.kamarId != null) fd.append("kamar_id", m.kamarId)
+  if (m.wisuda != null) fd.append("wisuda", JSON.stringify(m.wisuda))
+
+  // Array list_tagihan_*
+  for (const r of rows) {
+    const keringananJenis = normalizeKeringananJenis(r.keringanan_jenis)
+    const keringananJumlah = Number(r.keringanan_jumlah) || 0
+
+    const keringananBatas = keringananJenis
+      ? (r.keringanan_batas || "9999-12-31")
+      : ""
+
+    if (keringananJenis === "samahah" && (keringananJumlah <= 0 || !keringananBatas)) {
+      showSnackbar({
+        text: "Harap isi jumlah keringanan Samahah",
+        color: "error",
+      })
+      
+      return false
     }
 
-    // Opsional: validasi minimal
-    if (!unref(mahasiswaRef.value.mahasiswa.tagihan)?.length) {
-        showSnackbar({ text: "List tagihan kosong", color: "error" });
-        return false;
-    }
+    fd.append("list_tagihan_id[]", r.id ?? "")
+    fd.append("list_tagihan[]", r.display ?? r.nama ?? r.judul ?? "") // nama tagihan
+    fd.append("list_dibayar[]", r.dibayar ?? 0)
+    fd.append("list_deposit[]", r.deposit ?? 0)
+    fd.append("list_keringanan_jenis[]", keringananJenis)
+    fd.append("list_keringanan_jumlah[]", keringananJumlah)
+    fd.append("list_keringanan_batas[]", keringananBatas)
+  }
 
-    const m = mahasiswa ?? {};
-    const rows = unref(m.tagihan) ?? []; // tagihan adalah Ref<Array>
-
-    const fd = new FormData();
-
-    // Wajib
-    fd.append("tanggal", tanggal);
-    fd.append("tahun_akademik", thAkademik?.value ?? "");
-    fd.append("nim", m.nim ?? "");
-    fd.append("jenis_pembayaran", jenisPembayaran?.value ?? "");
-    fd.append("jk_id", m.jkId ?? "");
-
-    // Nullable
-    if (m.semester != null) fd.append("semester", m.semester);
-    fd.append("dipakai_deposit_mhs", m.dipakai ?? 0); // total deposit yang dipakai
-    if (m.kamarId != null) fd.append("kamar_id", m.kamarId);
-    if (m.wisuda != null) fd.append("wisuda", JSON.stringify(m.wisuda));
-
-    // Array list_tagihan_*
-    for (const r of rows) {
-        const keringananJenis = normalizeKeringananJenis(r.keringanan_jenis);
-        const keringananJumlah = Number(r.keringanan_jumlah) || 0;
-        const keringananBatas = keringananJenis
-            ? (r.keringanan_batas || "9999-12-31")
-            : "";
-
-        if (keringananJenis === "samahah" && (keringananJumlah <= 0 || !keringananBatas)) {
-            showSnackbar({
-                text: "Harap isi jumlah keringanan Samahah",
-                color: "error",
-            });
-            return false;
-        }
-
-        fd.append("list_tagihan_id[]", r.id ?? "");
-        fd.append("list_tagihan[]", r.display ?? r.nama ?? r.judul ?? ""); // nama tagihan
-        fd.append("list_dibayar[]", r.dibayar ?? 0);
-        fd.append("list_deposit[]", r.deposit ?? 0);
-        fd.append("list_keringanan_jenis[]", keringananJenis);
-        fd.append("list_keringanan_jumlah[]", keringananJumlah);
-        fd.append("list_keringanan_batas[]", keringananBatas);
-    }
-
-    return fd;
+  return fd
 }
 
 function normalizeKeringananJenis(value) {
-    const jenis = String(value || "").toLowerCase();
-    return ["samahah", "dhomin"].includes(jenis) ? jenis : "";
+  const jenis = String(value || "").toLowerCase()
+  
+  return ["samahah", "dhomin"].includes(jenis) ? jenis : ""
 }
 
-const tagihanRef = ref(null);
+const tagihanRef = ref(null)
 function onRefreshTagihan(nim) {
-    tagihanRef.value?.fetchTagihan(nim);
+  tagihanRef.value?.fetchTagihan(nim)
 }
 
-const mahasiswaRef = ref(null);
+const mahasiswaRef = ref(null)
 
-const depositRef = ref(null);
+const depositRef = ref(null)
 function onRefreshDeposit() {
-    depositRef.value?.fetchDeposit();
+  depositRef.value?.fetchDeposit()
 }
 
-const akademikRef = ref(null);
-const jenisPembayaranRef = ref(null);
+const akademikRef = ref(null)
+const jenisPembayaranRef = ref(null)
 
-const redirectKwitansi = ref(false);
+const redirectKwitansi = ref(false)
 
-const kwitansi = async (id) => {
-    try {
-        showSnackbar({
-            text: "Loading cetak kwitansi...",
-            color: "info",
-        });
-        const blob = await $api(
-            "/admin/pemasukan/mahasiswa/pembayaran/kwitansi/" + id + "/view",
-            {
-                method: "GET",
-                headers: { Accept: "application/pdf" },
-            },
-        );
+const kwitansi = async id => {
+  try {
+    showSnackbar({
+      text: "Loading cetak kwitansi...",
+      color: "info",
+    })
 
-        openFileExport(blob);
-    } catch (err) {
-        console.info(err);
-        showSnackbar({
-            text: err,
-            color: "error",
-        });
-    }
-};
+    const blob = await $api(
+      "/admin/pemasukan/mahasiswa/pembayaran/kwitansi/" + id + "/view",
+      {
+        method: "GET",
+        headers: { Accept: "application/pdf" },
+      },
+    )
+
+    openFileExport(blob)
+  } catch (err) {
+    console.info(err)
+    showSnackbar({
+      text: err,
+      color: "error",
+    })
+  }
+}
 
 onMounted(() => {
-    document.title = "Tambah Data Pembayaran Mahasiswa - SIMKEU";
-    const userData = useCookie("userData").value ?? {};
-    const role = userData.role?.name;
-    const jenisKelamin = userData.jenis_kelamin;
+  document.title = "Tambah Data Pembayaran Mahasiswa - SIMKEU"
 
-    isAdmin.value = role === "admin";
+  const userData = useCookie("userData").value ?? {}
+  const role = userData.role?.name
+  const jenisKelamin = userData.jenis_kelamin
 
-    if ((role == "staff" || role == "kabag") && jenisKelamin == "Laki-laki") {
-        redirectKwitansi.value = true;
-    }
-});
+  isAdmin.value = role === "admin"
+
+  if ((role == "staff" || role == "kabag") && jenisKelamin == "Laki-laki") {
+    redirectKwitansi.value = true
+  }
+})
 </script>
 
 <template>
-    <div>
-        <div class="d-flex flex-wrap justify-space-between gap-4 mb-6">
-            <div class="d-flex flex-column justify-center">
-                <h4 class="text-h4 mb-1">Tambah data pembayaran</h4>
-                <p class="text-body-1 mb-0">
-                    Silahkan mengisi data yang diperlukan
-                </p>
-            </div>
+  <div>
+    <div class="d-flex flex-wrap justify-space-between gap-4 mb-6">
+      <div class="d-flex flex-column justify-center">
+        <h4 class="text-h4 mb-1">
+          Tambah data pembayaran
+        </h4>
+        <p class="text-body-1 mb-0">
+          Silahkan mengisi data yang diperlukan
+        </p>
+      </div>
 
-            <div class="d-flex gap-4 align-center flex-wrap">
-                <VBtn
-                    variant="outlined"
-                    color="secondary"
-                    @click="
-                        $router.push(
-                            '/admin/pemasukan/mahasiswa/pembayaran/mahasiswa',
-                        )
-                    "
-                    >Batalkan</VBtn
-                >
-            </div>
-        </div>
-
-        <div class="payment-grid">
-            <!-- Akademik + Mahasiswa + Deposit -->
-            <div class="grid-main">
-                <AkademikPembayaranMahasiswa ref="akademikRef" />
-
-                <MahasiswaPembayaranMahasiswa
-                    ref="mahasiswaRef"
-                    @refreshTagihan="onRefreshTagihan"
-                    @refreshDeposit="onRefreshDeposit"
-                />
-
-                <DepositPembayaranMahasiswa
-                    ref="depositRef"
-                    :mahasiswa="mahasiswaRef?.mahasiswa"
-                    :is-admin="isAdmin"
-                    class="mt-4"
-                />
-            </div>
-
-            <!-- Pembayaran -->
-            <div class="grid-pembayaran">
-                <TagihanPembayaranMahasiswa
-                    ref="tagihanRef"
-                    :mahasiswa="mahasiswaRef?.mahasiswa"
-                />
-            </div>
-
-            <!-- Metode + Print + Simpan (mobile: paling bawah, desktop: sidebar bawah) -->
-            <div class="grid-actions">
-                <JenisPembayaranMahasiswaPembayaran ref="jenisPembayaranRef" />
-
-                <VCard class="mt-4">
-                    <VCardText>
-                        <VSwitch
-                            v-model="redirectKwitansi"
-                            label="Otomatis Print Kwitansi ?"
-                            hide-details
-                            color="primary"
-                        />
-                    </VCardText>
-                </VCard>
-
-                <VBtn
-                    color="primary"
-                    @click="submitData"
-                    :disabled
-                    class="w-100 mt-4"
-                    size="large"
-                >
-                    <VIcon icon="ri-save-line" class="me-2" />
-                    Simpan Pembayaran
-                </VBtn>
-            </div>
-        </div>
+      <div class="d-flex gap-4 align-center flex-wrap">
+        <VBtn
+          variant="outlined"
+          color="secondary"
+          @click="
+            $router.push(
+              '/admin/pemasukan/mahasiswa/pembayaran/mahasiswa',
+            )
+          "
+        >
+          Batalkan
+        </VBtn>
+      </div>
     </div>
+
+    <div class="payment-grid">
+      <!-- Akademik + Mahasiswa + Deposit -->
+      <div class="grid-main">
+        <AkademikPembayaranMahasiswa ref="akademikRef" />
+
+        <MahasiswaPembayaranMahasiswa
+          ref="mahasiswaRef"
+          @refresh-tagihan="onRefreshTagihan"
+          @refresh-deposit="onRefreshDeposit"
+        />
+
+        <DepositPembayaranMahasiswa
+          ref="depositRef"
+          :mahasiswa="mahasiswaRef?.mahasiswa"
+          :is-admin="isAdmin"
+          class="mt-4"
+        />
+      </div>
+
+      <!-- Pembayaran -->
+      <div class="grid-pembayaran">
+        <TagihanPembayaranMahasiswa
+          ref="tagihanRef"
+          :mahasiswa="mahasiswaRef?.mahasiswa"
+        />
+      </div>
+
+      <!-- Metode + Print + Simpan (mobile: paling bawah, desktop: sidebar bawah) -->
+      <div class="grid-actions">
+        <JenisPembayaranMahasiswaPembayaran ref="jenisPembayaranRef" />
+
+        <VCard class="mt-4">
+          <VCardText>
+            <VSwitch
+              v-model="redirectKwitansi"
+              label="Otomatis Print Kwitansi ?"
+              hide-details
+              color="primary"
+            />
+          </VCardText>
+        </VCard>
+
+        <VBtn
+          color="primary"
+          :disabled
+          class="w-100 mt-4"
+          size="large"
+          @click="submitData"
+        >
+          <VIcon
+            icon="ri-save-line"
+            class="me-2"
+          />
+          Simpan Pembayaran
+        </VBtn>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>

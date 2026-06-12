@@ -16,6 +16,7 @@ import { VerticalNavLayout } from '@layouts'
 
 const configStore = useConfigStore()
 const userData = useCookie("userData")
+
 const navKey = computed(() =>
   `${userData.value?.id || "guest"}-${userData.value?.role?.name || "none"}`,
 )
@@ -35,7 +36,10 @@ watch([
 </script>
 
 <template>
-  <VerticalNavLayout :key="navKey" :nav-items="navItems">
+  <VerticalNavLayout
+    :key="navKey"
+    :nav-items="navItems"
+  >
     <!-- 👉 navbar -->
     <template #navbar="{ toggleVerticalOverlayNavActive }">
       <div class="d-flex h-100 align-center">

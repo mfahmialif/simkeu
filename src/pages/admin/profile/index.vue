@@ -1,7 +1,7 @@
 <script setup>
-import FormProfile from '@/components/admin/profile/FormProfile.vue';
-import UserProfileheader from '@/components/admin/profile/UserProfileHeader.vue';
-import { onMounted } from 'vue';
+import FormProfile from '@/components/admin/profile/FormProfile.vue'
+import UserProfileheader from '@/components/admin/profile/UserProfileHeader.vue'
+import { onMounted } from 'vue'
 
 const user = ref({})
 const isLoading = ref(false)
@@ -12,10 +12,12 @@ const avatar = ref(null)
 const fetchUser = async () => {
   try {
     isLoading.value = true
+
     const response = await $api('/admin/profil', {
       method: "GET",
     })
-    console.log(response);
+
+    console.log(response)
     if (response.user.avatar) {
       response.user.avatar = import.meta.env.VITE_BASE_URL + "/avatar/" + response.user.avatar
     } else {
@@ -36,19 +38,30 @@ onMounted(() => {
   document.title = 'Profile - SIMKEU'
   fetchUser()
 })
-
 </script>
 
 <template>
   <div>
-    <UserProfileheader class="mb-6" v-model:isEditable="isEditable" :user="user" :avatar="avatar"  />
+    <UserProfileheader
+      v-model:is-editable="isEditable"
+      class="mb-6"
+      :user="user"
+      :avatar="avatar"
+    />
 
     <VCard>
       <VCardText>
-        <div v-if="isLoading" class="text-center">
+        <div
+          v-if="isLoading"
+          class="text-center"
+        >
           <VProgressLinear indeterminate />
         </div>
-        <FormProfile :dataForm="user" :isEditable="isEditable" v-model:avatar="avatar" />
+        <FormProfile
+          v-model:avatar="avatar"
+          :data-form="user"
+          :is-editable="isEditable"
+        />
       </VCardText>
     </VCard>
   </div>

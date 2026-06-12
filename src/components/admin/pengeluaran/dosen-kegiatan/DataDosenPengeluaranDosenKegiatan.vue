@@ -1,5 +1,5 @@
 <script setup>
-import { useRouter } from "vue-router";
+import { useRouter } from "vue-router"
 
 const props = defineProps({
   refInfo: {
@@ -10,9 +10,9 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-});
+})
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -27,15 +27,15 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/pengeluaran/dosen-kegiatan"),
   },
-];
+]
 
-const dataList = ref([]);
-const tanggal = ref(fDate(new Date()));
-const search = ref("");
-const searchKode = ref("");
-const selectedDosen = ref("");
-const loadingData = ref(false);
-const loadingSearch = ref(false);
+const dataList = ref([])
+const tanggal = ref(fDate(new Date()))
+const search = ref("")
+const searchKode = ref("")
+const selectedDosen = ref("")
+const loadingData = ref(false)
+const loadingSearch = ref(false)
 
 const emptyData = {
   id: "",
@@ -44,32 +44,34 @@ const emptyData = {
   unit: "",
   jenisKelamin: "",
   jkId: "",
-};
+}
 
-const dosen = ref(emptyData);
-let typingTimeout = null;
+const dosen = ref(emptyData)
+let typingTimeout = null
 
-const tipeLabel = item => item?.tipe === "staff" ? "Staff" : item?.tipe === "dosen" ? "Dosen" : "";
-const unitName = item => item?.dosen?.prodi?.nama || item?.dosen?.prodi?.alias || item?.staff?.jabatan || "-";
-const unitDescription = item => [tipeLabel(item), unitName(item)].filter(value => value && value !== "-").join(" - ") || "-";
-const jenisKelaminLabel = item => item?.jenis_kelamin === "L" ? "Laki-laki" : item?.jenis_kelamin === "P" ? "Perempuan" : item?.jenis_kelamin || "";
+const tipeLabel = item => item?.tipe === "staff" ? "Staff" : item?.tipe === "dosen" ? "Dosen" : ""
+const unitName = item => item?.dosen?.prodi?.nama || item?.dosen?.prodi?.alias || item?.staff?.jabatan || "-"
+const unitDescription = item => [tipeLabel(item), unitName(item)].filter(value => value && value !== "-").join(" - ") || "-"
+const jenisKelaminLabel = item => item?.jenis_kelamin === "L" ? "Laki-laki" : item?.jenis_kelamin === "P" ? "Perempuan" : item?.jenis_kelamin || ""
 
 const syncTanggalToForm = () => {
-  props.refForm?.setTanggal?.(tanggal.value);
-};
+  props.refForm?.setTanggal?.(tanggal.value)
+}
 
-watch(search, (newVal) => {
-  clearTimeout(typingTimeout);
+watch(search, newVal => {
+  clearTimeout(typingTimeout)
 
   if (!newVal.trim()) {
-    dataList.value = [];
-    loadingSearch.value = false;
-    return;
+    dataList.value = []
+    loadingSearch.value = false
+    
+    return
   }
 
   typingTimeout = setTimeout(async () => {
     try {
-      loadingSearch.value = true;
+      loadingSearch.value = true
+
       const res = await $api("/admin/pegawai", {
         method: "GET",
         body: {
@@ -78,62 +80,64 @@ watch(search, (newVal) => {
           sort_key: "nama",
           sort_order: "asc",
         },
-      });
+      })
 
-      dataList.value = (res.data?.data || []).map((item) => ({
+      dataList.value = (res.data?.data || []).map(item => ({
         ...item,
         display: `${item.kode} - ${item.nama} - ${unitDescription(item)}`,
-      }));
+      }))
     } catch (err) {
       showSnackbar({
         text: "Gagal mendapatkan list pegawai",
         color: "error",
-      });
-      dataList.value = [];
+      })
+      dataList.value = []
     } finally {
-      loadingSearch.value = false;
+      loadingSearch.value = false
     }
-  }, 300);
-});
+  }, 300)
+})
 
-watch(selectedDosen, (newVal) => {
+watch(selectedDosen, newVal => {
   if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
-    searchKode.value = newVal.kode;
-    searching();
+    searchKode.value = newVal.kode
+    searching()
   } else if (typeof newVal === "string") {
-    searchKode.value = newVal;
+    searchKode.value = newVal
   } else if (!newVal) {
-    searchKode.value = "";
+    searchKode.value = ""
   }
-});
+})
 
 watch(tanggal, () => {
-  syncTanggalToForm();
-});
+  syncTanggalToForm()
+})
 
 const searching = async () => {
   if (!searchKode.value) {
     showSnackbar({
       text: "Kode harus diisi",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
   if (!tanggal.value) {
     showSnackbar({
       text: "Tanggal harus diisi",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    loadingData.value = true;
+    loadingData.value = true
 
     let res = selectedDosen.value && typeof selectedDosen.value === "object" && !Array.isArray(selectedDosen.value)
       ? selectedDosen.value
-      : null;
+      : null
 
     if (!res) {
       const response = await $api("/admin/pegawai", {
@@ -144,74 +148,84 @@ const searching = async () => {
           sort_key: "nama",
           sort_order: "asc",
         },
-      });
+      })
 
-      const items = response.data?.data || [];
-      res = items.find(item => String(item.kode) === String(searchKode.value)) || items[0];
+      const items = response.data?.data || []
+
+      res = items.find(item => String(item.kode) === String(searchKode.value)) || items[0]
     }
 
     if (!res || (Array.isArray(res) && res.length < 1)) {
       showSnackbar({
         text: "Data pegawai tidak ditemukan",
         color: "error",
-      });
-      return;
+      })
+      
+      return
     }
 
-    dosen.value.id = res.id;
-    dosen.value.kode = res.kode;
-    dosen.value.nama = res.nama;
-    dosen.value.unit = unitDescription(res);
-    dosen.value.jenisKelamin = jenisKelaminLabel(res);
-    dosen.value.jkId = res.jenis_kelamin;
+    dosen.value.id = res.id
+    dosen.value.kode = res.kode
+    dosen.value.nama = res.nama
+    dosen.value.unit = unitDescription(res)
+    dosen.value.jenisKelamin = jenisKelaminLabel(res)
+    dosen.value.jkId = res.jenis_kelamin
 
-    syncTanggalToForm();
-    props.refInfo?.fetchDataHistory?.(res.id);
+    syncTanggalToForm()
+    props.refInfo?.fetchDataHistory?.(res.id)
   } catch (error) {
     showSnackbar({
       text: error,
       color: "error",
-    });
+    })
   } finally {
-    loadingData.value = false;
+    loadingData.value = false
   }
-};
+}
 
-const refSearch = ref(null);
+const refSearch = ref(null)
+
 const searchFocus = async () => {
-  await nextTick();
-  refSearch.value?.focus();
-};
+  await nextTick()
+  refSearch.value?.focus()
+}
 
 const selectAll = async () => {
-  await nextTick();
+  await nextTick()
 
-  const input = refSearch.value?.$el?.querySelector("input");
-  input?.select();
-};
+  const input = refSearch.value?.$el?.querySelector("input")
+
+  input?.select()
+}
 
 onMounted(() => {
-  searchFocus();
-  syncTanggalToForm();
-});
+  searchFocus()
+  syncTanggalToForm()
+})
 
 defineExpose({
   dosen,
   tanggal,
   searching,
   searchFocus,
-});
+})
 </script>
 
 <template>
-  <VCard class="mb-6" title="Pencarian Pegawai :">
+  <VCard
+    class="mb-6"
+    title="Pencarian Pegawai :"
+  >
     <template #append>
       <MoreBtnAction :menu-list="menuList" />
     </template>
 
     <VCardText>
       <VRow>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <AppDateTimePicker
             v-model="tanggal"
             label="Tanggal"
@@ -224,7 +238,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="8">
+        <VCol
+          cols="12"
+          md="8"
+        >
           <VCombobox
             ref="refSearch"
             v-model="selectedDosen"
@@ -255,13 +272,19 @@ defineExpose({
                 @click="searching"
               >
                 <VIcon icon="ri-search-line" />
-                <span v-if="$vuetify.display.mdAndUp" class="ms-3">Search</span>
+                <span
+                  v-if="$vuetify.display.mdAndUp"
+                  class="ms-3"
+                >Search</span>
               </VBtn>
             </template>
           </VCombobox>
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="dosen.kode"
             label="NIY"
@@ -271,7 +294,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="dosen.nama"
             label="Nama"
@@ -281,7 +307,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="dosen.unit"
             label="Tipe / Unit / Jabatan"
@@ -291,7 +320,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="dosen.jenisKelamin"
             label="Jenis Kelamin"

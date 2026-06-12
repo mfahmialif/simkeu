@@ -1,5 +1,5 @@
 <script setup>
-import PegawaiBulananTable from "@/components/admin/pengeluaran/pegawai-bulanan/PegawaiBulananTable.vue";
+import PegawaiBulananTable from "@/components/admin/pengeluaran/pegawai-bulanan/PegawaiBulananTable.vue"
 </script>
 
 <template>

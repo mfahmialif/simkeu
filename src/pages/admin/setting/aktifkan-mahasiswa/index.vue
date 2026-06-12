@@ -1,103 +1,105 @@
 <script setup>
-const router = useRouter();
+const router = useRouter()
 
-const userData = useCookie("userData").value ?? {};
-const isAdmin = computed(() => (userData.role?.name || "").toLowerCase() === "admin");
+const userData = useCookie("userData").value ?? {}
+const isAdmin = computed(() => (userData.role?.name || "").toLowerCase() === "admin")
 
-const thAkademikList = ref([]);
-const selectedThAkademik = ref(null);
-const mahasiswaRows = ref([]);
-const loadingThAkademik = ref(false);
-const loadingPreview = ref(false);
-const activating = ref(false);
-const processedCount = ref(0);
-const successCount = ref(0);
-const failedCount = ref(0);
-const skippedCount = ref(0);
-const activationTargetCount = ref(0);
-const selectedNims = ref([]);
-const tableSearchInput = ref("");
-const tableSearch = ref("");
-const batchSize = 10;
-const searchDebounceDelay = 250;
+const thAkademikList = ref([])
+const selectedThAkademik = ref(null)
+const mahasiswaRows = ref([])
+const loadingThAkademik = ref(false)
+const loadingPreview = ref(false)
+const activating = ref(false)
+const processedCount = ref(0)
+const successCount = ref(0)
+const failedCount = ref(0)
+const skippedCount = ref(0)
+const activationTargetCount = ref(0)
+const selectedNims = ref([])
+const tableSearchInput = ref("")
+const tableSearch = ref("")
+const batchSize = 10
+const searchDebounceDelay = 250
 
-let searchDebounceTimer = null;
+let searchDebounceTimer = null
 
 const headers = [
   { title: "NIM", key: "nim", minWidth: 130 },
   { title: "Prodi", key: "prodi", minWidth: 240 },
-];
+]
 
 const selectedThAkademikLabel = computed(() => {
-  return thAkademikList.value.find((item) => item.value === selectedThAkademik.value)?.title || "-";
-});
+  return thAkademikList.value.find(item => item.value === selectedThAkademik.value)?.title || "-"
+})
 
-const searchText = computed(() => tableSearch.value.trim().toLowerCase());
-const searchInputText = computed(() => tableSearchInput.value.trim().toLowerCase());
+const searchText = computed(() => tableSearch.value.trim().toLowerCase())
+const searchInputText = computed(() => tableSearchInput.value.trim().toLowerCase())
 
 const filteredMahasiswaRows = computed(() => {
-  if (!searchText.value) return mahasiswaRows.value;
+  if (!searchText.value) return mahasiswaRows.value
 
-  return mahasiswaRows.value.filter((row) => {
-    const searchable = row.search_text || `${row.nim || ""} ${row.prodi || ""}`.toLowerCase();
+  return mahasiswaRows.value.filter(row => {
+    const searchable = row.search_text || `${row.nim || ""} ${row.prodi || ""}`.toLowerCase()
 
-    return searchable.includes(searchText.value);
-  });
-});
+    return searchable.includes(searchText.value)
+  })
+})
 
 const selectedNimValues = computed(() => {
   return selectedNims.value
-    .map((item) => (typeof item === "object" ? item?.nim : item))
-    .filter(Boolean);
-});
+    .map(item => (typeof item === "object" ? item?.nim : item))
+    .filter(Boolean)
+})
 
-const selectedNimSet = computed(() => new Set(selectedNimValues.value));
+const selectedNimSet = computed(() => new Set(selectedNimValues.value))
 
-const selectedCount = computed(() => selectedNimSet.value.size);
+const selectedCount = computed(() => selectedNimSet.value.size)
 
 const selectedVisibleCount = computed(() => {
-  return filteredMahasiswaRows.value.filter((row) => selectedNimSet.value.has(row.nim)).length;
-});
+  return filteredMahasiswaRows.value.filter(row => selectedNimSet.value.has(row.nim)).length
+})
 
 const progressPercent = computed(() => {
-  if (!activationTargetCount.value) return 0;
-  return Math.round((processedCount.value / activationTargetCount.value) * 100);
-});
+  if (!activationTargetCount.value) return 0
+  
+  return Math.round((processedCount.value / activationTargetCount.value) * 100)
+})
 
 const canActivate = computed(() => {
-  return isAdmin.value && selectedCount.value > 0 && !loadingPreview.value && !activating.value;
-});
+  return isAdmin.value && selectedCount.value > 0 && !loadingPreview.value && !activating.value
+})
 
-const getErrorMessage = (error) => {
-  const message = error?.data?.message || error?.message;
+const getErrorMessage = error => {
+  const message = error?.data?.message || error?.message
 
-  if (Array.isArray(message)) return message.join("; ");
-  if (message && typeof message === "object") return Object.values(message).flat().join("; ");
+  if (Array.isArray(message)) return message.join("; ")
+  if (message && typeof message === "object") return Object.values(message).flat().join("; ")
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
 const clearSearchDebounce = () => {
-  if (!searchDebounceTimer) return;
+  if (!searchDebounceTimer) return
 
-  clearTimeout(searchDebounceTimer);
-  searchDebounceTimer = null;
-};
+  clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = null
+}
 
 const resetTableSearch = () => {
-  clearSearchDebounce();
-  tableSearchInput.value = "";
-  tableSearch.value = "";
-};
+  clearSearchDebounce()
+  tableSearchInput.value = ""
+  tableSearch.value = ""
+}
 
 const flushTableSearch = () => {
-  clearSearchDebounce();
-  tableSearch.value = tableSearchInput.value;
-};
+  clearSearchDebounce()
+  tableSearch.value = tableSearchInput.value
+}
 
 const fetchThAkademik = async () => {
   try {
-    loadingThAkademik.value = true;
+    loadingThAkademik.value = true
+
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
       body: {
@@ -105,75 +107,76 @@ const fetchThAkademik = async () => {
         sort_key: "id",
         sort_order: "desc",
       },
-    });
+    })
 
-    thAkademikList.value = (data?.data || []).map((item) => ({
+    thAkademikList.value = (data?.data || []).map(item => ({
       title: `${item.kode} - ${item.nama} (${item.semester})${item.aktif === "Y" ? " - Aktif" : ""}`,
       value: item.id,
       aktif: item.aktif,
-    }));
+    }))
 
-    const activeItem = thAkademikList.value.find((item) => item.aktif === "Y");
-    if (activeItem) selectedThAkademik.value = activeItem.value;
+    const activeItem = thAkademikList.value.find(item => item.aktif === "Y")
+    if (activeItem) selectedThAkademik.value = activeItem.value
   } catch (error) {
     showSnackbar({
       text: getErrorMessage(error),
       color: "error",
-    });
+    })
   } finally {
-    loadingThAkademik.value = false;
+    loadingThAkademik.value = false
   }
-};
+}
 
 const resetActivationState = () => {
-  processedCount.value = 0;
-  successCount.value = 0;
-  failedCount.value = 0;
-  skippedCount.value = 0;
-  activationTargetCount.value = 0;
-};
+  processedCount.value = 0
+  successCount.value = 0
+  failedCount.value = 0
+  skippedCount.value = 0
+  activationTargetCount.value = 0
+}
 
 const selectFilteredRows = () => {
-  flushTableSearch();
+  flushTableSearch()
 
-  const nextSelected = new Set(selectedNimValues.value);
+  const nextSelected = new Set(selectedNimValues.value)
 
-  filteredMahasiswaRows.value.forEach((row) => {
-    if (row.nim) nextSelected.add(row.nim);
-  });
+  filteredMahasiswaRows.value.forEach(row => {
+    if (row.nim) nextSelected.add(row.nim)
+  })
 
-  selectedNims.value = Array.from(nextSelected);
-};
+  selectedNims.value = Array.from(nextSelected)
+}
 
 const clearSelectedRows = () => {
-  selectedNims.value = [];
-};
+  selectedNims.value = []
+}
 
 const previewMahasiswa = async () => {
   if (!selectedThAkademik.value) {
     showSnackbar({
       text: "Pilih tahun akademik terlebih dahulu.",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    loadingPreview.value = true;
-    resetActivationState();
+    loadingPreview.value = true
+    resetActivationState()
 
     const response = await $api("/admin/aktifkan-mahasiswa/preview", {
       method: "GET",
       body: {
         th_akademik_id: selectedThAkademik.value,
       },
-    });
+    })
 
     const uniqueRows = new Map();
 
-    (response.data || []).forEach((item) => {
-      const nim = String(item.nim || "").trim().toUpperCase();
-      if (!nim || uniqueRows.has(nim)) return;
+    (response.data || []).forEach(item => {
+      const nim = String(item.nim || "").trim().toUpperCase()
+      if (!nim || uniqueRows.has(nim)) return
 
       uniqueRows.set(nim, {
         nim,
@@ -181,145 +184,148 @@ const previewMahasiswa = async () => {
         search_text: `${nim} ${item.prodi || "-"}`.toLowerCase(),
         activation_status: "pending",
         activation_message: "",
-      });
-    });
+      })
+    })
 
-    mahasiswaRows.value = Array.from(uniqueRows.values());
-    selectedNims.value = mahasiswaRows.value.map((item) => item.nim).filter(Boolean);
-    resetTableSearch();
+    mahasiswaRows.value = Array.from(uniqueRows.values())
+    selectedNims.value = mahasiswaRows.value.map(item => item.nim).filter(Boolean)
+    resetTableSearch()
 
     showSnackbar({
       text: `${mahasiswaRows.value.length} NIM unik ditemukan.`,
       color: "success",
-    });
+    })
   } catch (error) {
-    mahasiswaRows.value = [];
-    selectedNims.value = [];
+    mahasiswaRows.value = []
+    selectedNims.value = []
     showSnackbar({
       text: getErrorMessage(error),
       color: "error",
-    });
+    })
   } finally {
-    loadingPreview.value = false;
+    loadingPreview.value = false
   }
-};
+}
 
 const applyBatchResult = (items, status) => {
-  items.forEach((result) => {
-    const row = mahasiswaRows.value.find((item) => item.nim === result.nim);
-    if (!row) return;
+  items.forEach(result => {
+    const row = mahasiswaRows.value.find(item => item.nim === result.nim)
+    if (!row) return
 
-    row.activation_status = status;
-    row.activation_message = result.message || "";
-  });
-};
+    row.activation_status = status
+    row.activation_message = result.message || ""
+  })
+}
 
 const activateMahasiswa = async () => {
-  if (!canActivate.value) return;
+  if (!canActivate.value) return
 
-  const rows = mahasiswaRows.value.filter((row) => selectedNimSet.value.has(row.nim));
+  const rows = mahasiswaRows.value.filter(row => selectedNimSet.value.has(row.nim))
 
   if (!rows.length) {
     showSnackbar({
       text: "Centang minimal satu mahasiswa yang akan diaktifkan.",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
-  activating.value = true;
-  resetActivationState();
-  activationTargetCount.value = rows.length;
+  activating.value = true
+  resetActivationState()
+  activationTargetCount.value = rows.length
 
   for (let index = 0; index < rows.length; index += batchSize) {
-    const batch = rows.slice(index, index + batchSize);
+    const batch = rows.slice(index, index + batchSize)
 
-    batch.forEach((row) => {
-      row.activation_status = "processing";
-      row.activation_message = "";
-    });
+    batch.forEach(row => {
+      row.activation_status = "processing"
+      row.activation_message = ""
+    })
 
     try {
       const response = await $api("/admin/aktifkan-mahasiswa/activate", {
         method: "POST",
         body: {
           th_akademik_id: selectedThAkademik.value,
-          nims: batch.map((item) => item.nim),
+          nims: batch.map(item => item.nim),
         },
-      });
+      })
 
-      applyBatchResult(response.data?.success || [], "success");
-      applyBatchResult(response.data?.failed || [], "failed");
-      applyBatchResult(response.data?.skipped || [], "skipped");
+      applyBatchResult(response.data?.success || [], "success")
+      applyBatchResult(response.data?.failed || [], "failed")
+      applyBatchResult(response.data?.skipped || [], "skipped")
 
-      successCount.value += response.summary?.success || 0;
-      failedCount.value += response.summary?.failed || 0;
-      skippedCount.value += response.summary?.skipped || 0;
-      processedCount.value += batch.length;
+      successCount.value += response.summary?.success || 0
+      failedCount.value += response.summary?.failed || 0
+      skippedCount.value += response.summary?.skipped || 0
+      processedCount.value += batch.length
     } catch (error) {
-      const message = getErrorMessage(error);
+      const message = getErrorMessage(error)
 
-      batch.forEach((row) => {
-        row.activation_status = "failed";
-        row.activation_message = message;
-      });
+      batch.forEach(row => {
+        row.activation_status = "failed"
+        row.activation_message = message
+      })
 
-      failedCount.value += batch.length;
-      processedCount.value += batch.length;
+      failedCount.value += batch.length
+      processedCount.value += batch.length
 
       showSnackbar({
         text: message,
         color: "error",
-      });
-      break;
+      })
+      break
     }
   }
 
-  activating.value = false;
+  activating.value = false
 
   showSnackbar({
     text: `Selesai. Aktif: ${successCount.value}, gagal: ${failedCount.value}, dilewati: ${skippedCount.value}.`,
     color: failedCount.value ? "warning" : "success",
-  });
-};
+  })
+}
 
 onMounted(() => {
-  document.title = "Aktifkan Mahasiswa - SIMKEU";
+  document.title = "Aktifkan Mahasiswa - SIMKEU"
 
   if (!isAdmin.value) {
-    router.replace({ name: "not-authorized" });
-    return;
+    router.replace({ name: "not-authorized" })
+    
+    return
   }
 
-  fetchThAkademik();
-});
+  fetchThAkademik()
+})
 
-watch(tableSearchInput, (value) => {
-  clearSearchDebounce();
+watch(tableSearchInput, value => {
+  clearSearchDebounce()
 
   if (!value) {
-    tableSearch.value = "";
-    return;
+    tableSearch.value = ""
+    
+    return
   }
 
   searchDebounceTimer = setTimeout(() => {
-    tableSearch.value = value;
-    searchDebounceTimer = null;
-  }, searchDebounceDelay);
-});
+    tableSearch.value = value
+    searchDebounceTimer = null
+  }, searchDebounceDelay)
+})
 
 watch(selectedThAkademik, () => {
-  if (activating.value) return;
+  if (activating.value) return
 
-  mahasiswaRows.value = [];
-  selectedNims.value = [];
-  resetTableSearch();
-  resetActivationState();
-});
+  mahasiswaRows.value = []
+  selectedNims.value = []
+  resetTableSearch()
+  resetActivationState()
+})
 
 onBeforeUnmount(() => {
-  clearSearchDebounce();
-});
+  clearSearchDebounce()
+})
 </script>
 
 <template>
@@ -363,7 +369,10 @@ onBeforeUnmount(() => {
 
       <VCardText>
         <VRow>
-          <VCol cols="12" md="8">
+          <VCol
+            cols="12"
+            md="8"
+          >
             <VSelect
               v-model="selectedThAkademik"
               label="Tahun Akademik"
@@ -375,7 +384,11 @@ onBeforeUnmount(() => {
             />
           </VCol>
 
-          <VCol cols="12" md="4" class="d-flex align-start">
+          <VCol
+            cols="12"
+            md="4"
+            class="d-flex align-start"
+          >
             <VBtn
               block
               color="primary"
@@ -412,10 +425,30 @@ onBeforeUnmount(() => {
           v-if="activating || processedCount"
           class="d-flex flex-wrap gap-3 mt-3"
         >
-          <VChip color="primary" label>Diproses {{ processedCount }}/{{ activationTargetCount }}</VChip>
-          <VChip color="success" label>Aktif {{ successCount }}</VChip>
-          <VChip color="error" label>Gagal {{ failedCount }}</VChip>
-          <VChip color="warning" label>Dilewati {{ skippedCount }}</VChip>
+          <VChip
+            color="primary"
+            label
+          >
+            Diproses {{ processedCount }}/{{ activationTargetCount }}
+          </VChip>
+          <VChip
+            color="success"
+            label
+          >
+            Aktif {{ successCount }}
+          </VChip>
+          <VChip
+            color="error"
+            label
+          >
+            Gagal {{ failedCount }}
+          </VChip>
+          <VChip
+            color="warning"
+            label
+          >
+            Dilewati {{ skippedCount }}
+          </VChip>
         </div>
 
         <div
@@ -426,7 +459,10 @@ onBeforeUnmount(() => {
             align="center"
             dense
           >
-            <VCol cols="12" md="5">
+            <VCol
+              cols="12"
+              md="5"
+            >
               <VTextField
                 v-model="tableSearchInput"
                 density="compact"
@@ -473,8 +509,8 @@ onBeforeUnmount(() => {
         </div>
 
         <VDataTable
-          class="mt-4"
           v-model:model-value="selectedNims"
+          class="mt-4"
           :headers="headers"
           :items="filteredMahasiswaRows"
           :items-per-page="10"
@@ -488,7 +524,11 @@ onBeforeUnmount(() => {
         >
           <template #loading>
             <div class="text-center pa-4">
-              <VProgressCircular indeterminate color="primary" class="mb-2" />
+              <VProgressCircular
+                indeterminate
+                color="primary"
+                class="mb-2"
+              />
               <div>Memuat data mahasiswa...</div>
             </div>
           </template>

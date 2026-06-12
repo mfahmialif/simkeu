@@ -1,88 +1,95 @@
 <script setup>
-import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue";
-import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
-import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
-import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
-import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue";
-import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
-import { downloadFileExport } from "@/composables/exportFile";
-import { formatRupiah } from "@/composables/formatRupiah";
-import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran";
-import { copyTextToClipboard } from "@/utils/clipboard";
+import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue"
+import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue"
+import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue"
+import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue"
+import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue"
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue"
+import { downloadFileExport } from "@/composables/exportFile"
+import { formatRupiah } from "@/composables/formatRupiah"
+import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran"
+import { copyTextToClipboard } from "@/utils/clipboard"
 
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
-const stats = ref({});
-const filterMode = ref("harian");
-const tanggalHarian = ref(null);
-const tanggalMulai = ref(null);
-const tanggalAkhir = ref(null);
-const selectedRekapId = ref(null);
-const selectedPetugasId = ref(null);
-const petugasList = ref([]);
-const selectAllPages = ref(false);
-const isLoadingExcel = ref(false);
-const isLoadingBsiExcel = ref(false);
-const isLoadingBsiCopy = ref(false);
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
+const stats = ref({})
+const filterMode = ref("harian")
+const tanggalHarian = ref(null)
+const tanggalMulai = ref(null)
+const tanggalAkhir = ref(null)
+const selectedRekapId = ref(null)
+const selectedPetugasId = ref(null)
+const petugasList = ref([])
+const selectAllPages = ref(false)
+const isLoadingExcel = ref(false)
+const isLoadingBsiExcel = ref(false)
+const isLoadingBsiCopy = ref(false)
+
 const hasDateFilter = computed(() => !!(
   tanggalHarian.value
   || tanggalMulai.value
   || tanggalAkhir.value
-));
-const hasContextFilter = computed(() => !!selectedRekapId.value || hasDateFilter.value);
-const contextFilterTitle = computed(() => {
-  if (selectedRekapId.value) return "Pengeluaran Sesuai Data Rekap";
-  if (tanggalHarian.value) return "Pengeluaran Sesuai Tanggal";
+))
 
-  return "Pengeluaran Sesuai Rentang Tanggal";
-});
+const hasContextFilter = computed(() => !!selectedRekapId.value || hasDateFilter.value)
+
+const contextFilterTitle = computed(() => {
+  if (selectedRekapId.value) return "Pengeluaran Sesuai Data Rekap"
+  if (tanggalHarian.value) return "Pengeluaran Sesuai Tanggal"
+
+  return "Pengeluaran Sesuai Rentang Tanggal"
+})
 
 const filterModeOptions = [
   { title: "Harian", value: "harian" },
   { title: "Rentang Tanggal", value: "rentang" },
-];
+]
 
 const dateFilterPayload = computed(() => {
   if (filterMode.value === "harian") {
     return tanggalHarian.value
       ? {
-          tanggal_mulai: tanggalHarian.value,
-          tanggal_akhir: tanggalHarian.value,
-        }
-      : {};
+        tanggal_mulai: tanggalHarian.value,
+        tanggal_akhir: tanggalHarian.value,
+      }
+      : {}
   }
 
   return {
     ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
     ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
-  };
-});
+  }
+})
+
 const requestFilterPayload = computed(() => ({
   ...dateFilterPayload.value,
   ...(selectedRekapId.value && { rekap_id: selectedRekapId.value }),
   ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
-}));
+}))
+
 const rekapFilterPayload = computed(() => ({
   ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
-}));
+}))
+
 const batchFilterPayload = computed(() => ({
   search: search.value,
   ...requestFilterPayload.value,
-}));
+}))
+
 const selectedIds = computed(() => selectedRows.value
   .map(row => (typeof row === "object" ? row.id : row))
-  .filter(Boolean));
+  .filter(Boolean))
 
 const fetchData = async () => {
   try {
-    loading.value = true;
+    loading.value = true
 
     const response = await $api("/admin/pengeluaran/dosen-kegiatan", {
       method: "GET",
@@ -94,116 +101,117 @@ const fetchData = async () => {
         search: search.value,
         ...requestFilterPayload.value,
       },
-    });
+    })
 
-    dataTable.value = response.data.data;
-    totalItems.value = response.data.total;
-    stats.value = response.stats || stats.value;
+    dataTable.value = response.data.data
+    totalItems.value = response.data.total
+    stats.value = response.stats || stats.value
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id: id,
     name: name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message ||
     err?.response?._data?.message ||
     err?.response?.data?.message ||
-    err?.message;
+    err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api("/admin/pengeluaran/dosen-kegiatan/" + id, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
-      fetchData();
+      })
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 const clearFilter = () => {
-  tanggalHarian.value = null;
-  tanggalMulai.value = null;
-  tanggalAkhir.value = null;
-  selectedRekapId.value = null;
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  page.value = 1;
-  fetchData();
-};
+  tanggalHarian.value = null
+  tanggalMulai.value = null
+  tanggalAkhir.value = null
+  selectedRekapId.value = null
+  selectedRows.value = []
+  selectAllPages.value = false
+  page.value = 1
+  fetchData()
+}
 
 const clearBatchSelection = () => {
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  fetchData();
-};
+  selectedRows.value = []
+  selectAllPages.value = false
+  fetchData()
+}
 
 const fetchPetugas = async () => {
   try {
-    const items = await fetchPetugasPengeluaranOptions("kegiatan");
-    petugasList.value = items;
+    const items = await fetchPetugasPengeluaranOptions("kegiatan")
+
+    petugasList.value = items
 
     if (!selectedPetugasId.value) {
-      selectedPetugasId.value = defaultPetugasPengeluaranId(items);
+      selectedPetugasId.value = defaultPetugasPengeluaranId(items)
     }
   } catch (err) {
-    console.error("Failed to fetch petugas pengeluaran:", err);
+    console.error("Failed to fetch petugas pengeluaran:", err)
   }
-};
+}
 
 const exportExcel = async () => {
   try {
-    isLoadingExcel.value = true;
+    isLoadingExcel.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
 
     const response = await $api("/admin/pengeluaran/dosen-kegiatan/export-excel", {
       method: "GET",
@@ -215,30 +223,30 @@ const exportExcel = async () => {
         search: search.value,
         ...requestFilterPayload.value,
       },
-    });
+    })
 
-    downloadFileExport(response, "Laporan Barokah Pegawai Kegiatan.xlsx");
+    downloadFileExport(response, "Laporan Barokah Pegawai Kegiatan.xlsx")
     showSnackbar({
       text: "Laporan berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isLoadingExcel.value = false;
+    isLoadingExcel.value = false
   }
-};
+}
 
 const exportBsiExcel = async () => {
   try {
-    isLoadingBsiExcel.value = true;
+    isLoadingBsiExcel.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
 
     const response = await $api("/admin/pengeluaran/dosen-kegiatan/export-bsi", {
       method: "GET",
@@ -250,30 +258,30 @@ const exportBsiExcel = async () => {
         search: search.value,
         ...requestFilterPayload.value,
       },
-    });
+    })
 
-    downloadFileExport(response, "CUS BSI Barokah Pegawai Kegiatan.xlsx");
+    downloadFileExport(response, "CUS BSI Barokah Pegawai Kegiatan.xlsx")
     showSnackbar({
       text: "Laporan CUS BSI berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isLoadingBsiExcel.value = false;
+    isLoadingBsiExcel.value = false
   }
-};
+}
 
 const copyBsiData = async () => {
   try {
-    isLoadingBsiCopy.value = true;
+    isLoadingBsiCopy.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
 
     const response = await $api("/admin/pengeluaran/dosen-kegiatan/copy-bsi", {
       method: "GET",
@@ -281,65 +289,66 @@ const copyBsiData = async () => {
         search: search.value,
         ...requestFilterPayload.value,
       },
-    });
+    })
 
-    const text = response.data?.text || "";
-    const total = Number(response.data?.total || 0);
+    const text = response.data?.text || ""
+    const total = Number(response.data?.total || 0)
 
     if (!text || total === 0) {
       showSnackbar({
         text: "Tidak ada data CUS BSI untuk disalin.",
         color: "warning",
-      });
-      return;
+      })
+      
+      return
     }
 
-    await copyTextToClipboard(text);
+    await copyTextToClipboard(text)
     showSnackbar({
       text: `${total} data CUS BSI berhasil disalin.`,
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isLoadingBsiCopy.value = false;
+    isLoadingBsiCopy.value = false
   }
-};
+}
 
 watch(filterMode, () => {
-  tanggalHarian.value = null;
-  tanggalMulai.value = null;
-  tanggalAkhir.value = null;
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  page.value = 1;
-  fetchData();
-});
+  tanggalHarian.value = null
+  tanggalMulai.value = null
+  tanggalAkhir.value = null
+  selectedRows.value = []
+  selectAllPages.value = false
+  page.value = 1
+  fetchData()
+})
 
 watch([tanggalHarian, tanggalMulai, tanggalAkhir, selectedRekapId, selectedPetugasId, search], () => {
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  page.value = 1;
-  fetchData();
-});
+  selectedRows.value = []
+  selectAllPages.value = false
+  page.value = 1
+  fetchData()
+})
 
-watch(selectAllPages, (enabled) => {
-  selectedRows.value = enabled ? dataTable.value.map(item => item.id) : [];
-});
+watch(selectAllPages, enabled => {
+  selectedRows.value = enabled ? dataTable.value.map(item => item.id) : []
+})
 
 watch(dataTable, () => {
   if (selectAllPages.value) {
-    selectedRows.value = dataTable.value.map(item => item.id);
+    selectedRows.value = dataTable.value.map(item => item.id)
   }
-});
+})
 
 onMounted(() => {
-  document.title = "Barokah Pegawai Kegiatan - SIMKEU";
-  fetchPetugas();
-});
+  document.title = "Barokah Pegawai Kegiatan - SIMKEU"
+  fetchPetugas()
+})
 </script>
 
 <template>
@@ -360,8 +369,12 @@ onMounted(() => {
       <div class="section-heading">
         <span class="section-number">1</span>
         <div>
-          <div class="text-h6 font-weight-semibold">Rekap Pengeluaran</div>
-          <div class="text-body-2 text-medium-emphasis">Kelompok rekap barokah pegawai kegiatan.</div>
+          <div class="text-h6 font-weight-semibold">
+            Rekap Pengeluaran
+          </div>
+          <div class="text-body-2 text-medium-emphasis">
+            Kelompok rekap barokah pegawai kegiatan.
+          </div>
         </div>
       </div>
 
@@ -380,13 +393,21 @@ onMounted(() => {
       <div class="section-heading">
         <span class="section-number">2</span>
         <div>
-          <div class="text-h6 font-weight-semibold">Data Pengeluaran</div>
-          <div class="text-body-2 text-medium-emphasis">Detail pengeluaran pegawai dan nonpegawai.</div>
+          <div class="text-h6 font-weight-semibold">
+            Data Pengeluaran
+          </div>
+          <div class="text-body-2 text-medium-emphasis">
+            Detail pengeluaran pegawai dan nonpegawai.
+          </div>
         </div>
       </div>
 
       <VRow class="mb-3 filter-controls-row">
-        <VCol cols="12" md="2" class="filter-control-col">
+        <VCol
+          cols="12"
+          md="2"
+          class="filter-control-col"
+        >
           <VSelect
             v-model="filterMode"
             :items="filterModeOptions"
@@ -415,7 +436,11 @@ onMounted(() => {
         </VCol>
 
         <template v-else>
-          <VCol cols="12" md="2" class="filter-control-col">
+          <VCol
+            cols="12"
+            md="2"
+            class="filter-control-col"
+          >
             <AppDateTimePicker
               v-model="tanggalMulai"
               label="Dari Tanggal"
@@ -429,7 +454,11 @@ onMounted(() => {
             />
           </VCol>
 
-          <VCol cols="12" md="2" class="filter-control-col">
+          <VCol
+            cols="12"
+            md="2"
+            class="filter-control-col"
+          >
             <AppDateTimePicker
               v-model="tanggalAkhir"
               label="Sampai Tanggal"
@@ -458,7 +487,11 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" md="2" class="filter-control-col">
+        <VCol
+          cols="12"
+          md="2"
+          class="filter-control-col"
+        >
           <VBtn
             color="primary"
             class="w-100 filter-reset-btn"
@@ -482,238 +515,261 @@ onMounted(() => {
       />
 
       <VCard>
-      <VCardItem class="pb-4">
-        <VCardTitle>Barokah Pegawai Kegiatan</VCardTitle>
-      </VCardItem>
+        <VCardItem class="pb-4">
+          <VCardTitle>Barokah Pegawai Kegiatan</VCardTitle>
+        </VCardItem>
 
-      <VDivider />
+        <VDivider />
 
-      <VCardText class="d-flex flex-wrap gap-4">
-        <div class="d-flex align-center w-100 w-sm-auto">
-          <VTextField
-            v-model="search"
-            placeholder="Search Data"
-            style="inline-size: 200px"
-            density="compact"
-            class="me-3"
-          />
-        </div>
-
-        <VSpacer />
-
-        <div class="d-flex flex-wrap gap-3 align-center">
-          <VBtn
-            variant="outlined"
-            color="success"
-            prepend-icon="ri-file-excel-2-line"
-            :loading="isLoadingExcel"
-            @click="exportExcel"
-          >
-            Download Excel
-          </VBtn>
-
-          <VBtn
-            variant="outlined"
-            color="success"
-            prepend-icon="ri-bank-card-line"
-            :loading="isLoadingBsiExcel"
-            @click="exportBsiExcel"
-          >
-            Download CUS BSI
-          </VBtn>
-
-          <VBtn
-            variant="outlined"
-            color="primary"
-            prepend-icon="ri-file-copy-line"
-            :loading="isLoadingBsiCopy"
-            @click="copyBsiData"
-          >
-            Salin untuk CUS BSI
-          </VBtn>
-
-          <VBtn
-            color="primary"
-            prepend-icon="ri-add-line"
-            @click="$router.push('/admin/pengeluaran/dosen-kegiatan/add')"
-          >
-            Add Data
-          </VBtn>
-        </div>
-      </VCardText>
-
-      <VDataTableServer
-        show-select
-        :headers="[
-          { title: 'No', key: 'id' },
-          { title: 'Tanggal', key: 'tanggal' },
-          { title: 'Kategori', key: 'kategori_detail' },
-          { title: 'Pegawai', key: 'nama_pegawai' },
-          { title: 'Rekap', key: 'nama_rekap' },
-          { title: 'Transport', key: 'transport' },
-          { title: 'Barokah', key: 'barokah' },
-          { title: 'Nominal', key: 'nominal' },
-          { title: 'Total', key: 'total' },
-          { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
-          { title: 'Bukti', key: 'bukti_transfer', sortable: false },
-          { title: 'Lampiran', key: 'lampiran', sortable: false },
-          { title: 'Keterangan', key: 'keterangan' },
-          { title: 'Actions', key: 'actions', sortable: false },
-        ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
-        :items="dataTable"
-        :items-length="totalItems"
-        :loading="loading"
-        :search="search"
-        item-value="id"
-        @update:options="loadItems"
-      >
-        <template v-if="initialLoading" #loading>
-          <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
-            <div>Memuat data...</div>
+        <VCardText class="d-flex flex-wrap gap-4">
+          <div class="d-flex align-center w-100 w-sm-auto">
+            <VTextField
+              v-model="search"
+              placeholder="Search Data"
+              style="inline-size: 200px"
+              density="compact"
+              class="me-3"
+            />
           </div>
-        </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
-        </template>
+          <VSpacer />
 
-        <template #item.id="{ index }">
-          {{ itemsPerPage * (page - 1) + index + 1 }}
-        </template>
+          <div class="d-flex flex-wrap gap-3 align-center">
+            <VBtn
+              variant="outlined"
+              color="success"
+              prepend-icon="ri-file-excel-2-line"
+              :loading="isLoadingExcel"
+              @click="exportExcel"
+            >
+              Download Excel
+            </VBtn>
 
-        <template #item.tanggal="{ item }">
-          {{ item.tanggal || "-" }}
-        </template>
+            <VBtn
+              variant="outlined"
+              color="success"
+              prepend-icon="ri-bank-card-line"
+              :loading="isLoadingBsiExcel"
+              @click="exportBsiExcel"
+            >
+              Download CUS BSI
+            </VBtn>
 
-        <template #item.nama_pegawai="{ item }">
-          <div class="font-weight-medium">
-            {{
-              item.kategori_detail === "non_pegawai"
-                ? "Nonpegawai"
-                : item.nama_pegawai || item.nama_dosen || "-"
-            }}
+            <VBtn
+              variant="outlined"
+              color="primary"
+              prepend-icon="ri-file-copy-line"
+              :loading="isLoadingBsiCopy"
+              @click="copyBsiData"
+            >
+              Salin untuk CUS BSI
+            </VBtn>
+
+            <VBtn
+              color="primary"
+              prepend-icon="ri-add-line"
+              @click="$router.push('/admin/pengeluaran/dosen-kegiatan/add')"
+            >
+              Add Data
+            </VBtn>
           </div>
-          <div class="text-caption text-medium-emphasis">
-            {{
-              item.kategori_detail === "non_pegawai"
-                ? "Tanpa pegawai"
-                : item.kode_pegawai || item.kode_dosen || "-"
-            }}
-          </div>
-          <div v-if="item.kategori_detail !== 'non_pegawai'" class="text-caption text-medium-emphasis">
-            {{
-              item.tipe_pegawai === "staff"
-                ? "Staff"
-                : item.tipe_pegawai === "dosen"
-                  ? "Dosen"
-                  : "-"
-            }}
-            <span v-if="item.jabatan_staff || item.nama_prodi_dosen">
-              - {{ item.jabatan_staff || item.nama_prodi_dosen }}
-            </span>
-          </div>
-        </template>
+        </VCardText>
 
-        <template #item.kategori_detail="{ item }">
-          <VChip
-            :color="item.kategori_detail === 'non_pegawai' ? 'secondary' : 'primary'"
-            size="small"
-            label
+        <VDataTableServer
+          v-model:model-value="selectedRows"
+          v-model:items-per-page="itemsPerPage"
+          v-model:page="page"
+          show-select
+          :headers="[
+            { title: 'No', key: 'id' },
+            { title: 'Tanggal', key: 'tanggal' },
+            { title: 'Kategori', key: 'kategori_detail' },
+            { title: 'Pegawai', key: 'nama_pegawai' },
+            { title: 'Rekap', key: 'nama_rekap' },
+            { title: 'Uraian', key: 'nama_kegiatan' },
+            { title: 'Transport', key: 'transport' },
+            { title: 'Barokah', key: 'barokah' },
+            { title: 'Nominal', key: 'nominal' },
+            { title: 'Total', key: 'total' },
+            { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
+            { title: 'Bukti', key: 'bukti_transfer', sortable: false },
+            { title: 'Lampiran', key: 'lampiran', sortable: false },
+            { title: 'Keterangan', key: 'keterangan' },
+            { title: 'Actions', key: 'actions', sortable: false },
+          ]"
+          :items="dataTable"
+          :items-length="totalItems"
+          :loading="loading"
+          :search="search"
+          item-value="id"
+          @update:options="loadItems"
+        >
+          <template
+            v-if="initialLoading"
+            #loading
           >
-            {{ item.kategori_detail === "non_pegawai" ? "Nonpegawai" : "Pegawai" }}
-          </VChip>
-        </template>
+            <div class="text-center pa-4">
+              <VProgressCircular
+                indeterminate
+                color="primary"
+                class="mb-2"
+              />
+              <div>Memuat data...</div>
+            </div>
+          </template>
 
-        <template #item.nama_rekap="{ item }">
-          {{ item.nama_rekap || "-" }}
-        </template>
-
-        <template #item.transport="{ item }">
-          {{ formatRupiah(item.transport) }}
-        </template>
-
-        <template #item.barokah="{ item }">
-          {{ formatRupiah(item.barokah) }}
-        </template>
-
-        <template #item.nominal="{ item }">
-          {{ item.kategori_detail === "non_pegawai" ? formatRupiah(item.nominal) : "-" }}
-        </template>
-
-        <template #item.total="{ item }">
-          {{ formatRupiah(item.total) }}
-        </template>
-
-        <template #item.jenis_pembayaran="{ item }">
-          <VChip
-            :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
-            size="small"
-            label
+          <template
+            v-else
+            #no-data
           >
-            {{ item.jenis_pembayaran }}
-          </VChip>
-        </template>
+            <div class="text-center pa-4">
+              Tidak ada data.
+            </div>
+          </template>
 
-        <template #item.bukti_transfer="{ item }">
-          <VBtn
-            v-if="item.bukti_transfer_url"
-            icon
-            size="small"
-            variant="text"
-            color="primary"
-            :href="item.bukti_transfer_url"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <VIcon icon="ri-file-paper-2-line" />
-          </VBtn>
-          <span v-else>-</span>
-        </template>
+          <template #item.id="{ index }">
+            {{ itemsPerPage * (page - 1) + index + 1 }}
+          </template>
 
-        <template #item.lampiran="{ item }">
-          <PengeluaranLampiranList :items="item.lampiran" />
-        </template>
+          <template #item.tanggal="{ item }">
+            {{ item.tanggal || "-" }}
+          </template>
 
-        <template #item.keterangan="{ item }">
-          {{ item.keterangan || "-" }}
-        </template>
+          <template #item.nama_pegawai="{ item }">
+            <div class="font-weight-medium">
+              {{
+                item.kategori_detail === "non_pegawai"
+                  ? "Nonpegawai"
+                  : item.nama_pegawai || item.nama_dosen || "-"
+              }}
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              {{
+                item.kategori_detail === "non_pegawai"
+                  ? "Tanpa pegawai"
+                  : item.kode_pegawai || item.kode_dosen || "-"
+              }}
+            </div>
+            <div
+              v-if="item.kategori_detail !== 'non_pegawai'"
+              class="text-caption text-medium-emphasis"
+            >
+              {{
+                item.tipe_pegawai === "staff"
+                  ? "Staff"
+                  : item.tipe_pegawai === "dosen"
+                    ? "Dosen"
+                    : "-"
+              }}
+              <span v-if="item.jabatan_staff || item.nama_prodi_dosen">
+                - {{ item.jabatan_staff || item.nama_prodi_dosen }}
+              </span>
+            </div>
+          </template>
 
-        <template #item.actions="{ item }">
-          <IconBtn size="small">
-            <VIcon icon="ri-more-2-fill" />
+          <template #item.kategori_detail="{ item }">
+            <VChip
+              :color="item.kategori_detail === 'non_pegawai' ? 'secondary' : 'primary'"
+              size="small"
+              label
+            >
+              {{ item.kategori_detail === "non_pegawai" ? "Nonpegawai" : "Pegawai" }}
+            </VChip>
+          </template>
 
-            <VMenu activator="parent">
-              <VList>
-                <VListItem
-                  value="edit"
-                  prepend-icon="ri-edit-box-line"
-                  @click="
-                    $router.push(`/admin/pengeluaran/dosen-kegiatan/edit/${item.id}`)
-                  "
-                >
-                  Edit
-                </VListItem>
+          <template #item.nama_rekap="{ item }">
+            {{ item.nama_rekap || "-" }}
+          </template>
 
-                <VListItem
-                  value="delete"
-                  prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.nama_rekap || item.tanggal)"
-                >
-                  Delete
-                </VListItem>
-              </VList>
-            </VMenu>
-          </IconBtn>
-        </template>
-      </VDataTableServer>
+          <template #item.nama_kegiatan="{ item }">
+            {{ item.nama_kegiatan || "-" }}
+          </template>
+
+          <template #item.transport="{ item }">
+            {{ formatRupiah(item.transport) }}
+          </template>
+
+          <template #item.barokah="{ item }">
+            {{ formatRupiah(item.barokah) }}
+          </template>
+
+          <template #item.nominal="{ item }">
+            {{ item.kategori_detail === "non_pegawai" ? formatRupiah(item.nominal) : "-" }}
+          </template>
+
+          <template #item.total="{ item }">
+            {{ formatRupiah(item.total) }}
+          </template>
+
+          <template #item.jenis_pembayaran="{ item }">
+            <VChip
+              :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
+              size="small"
+              label
+            >
+              {{ item.jenis_pembayaran }}
+            </VChip>
+          </template>
+
+          <template #item.bukti_transfer="{ item }">
+            <VBtn
+              v-if="item.bukti_transfer_url"
+              icon
+              size="small"
+              variant="text"
+              color="primary"
+              :href="item.bukti_transfer_url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <VIcon icon="ri-file-paper-2-line" />
+            </VBtn>
+            <span v-else>-</span>
+          </template>
+
+          <template #item.lampiran="{ item }">
+            <PengeluaranLampiranList :items="item.lampiran" />
+          </template>
+
+          <template #item.keterangan="{ item }">
+            {{ item.keterangan || "-" }}
+          </template>
+
+          <template #item.actions="{ item }">
+            <IconBtn size="small">
+              <VIcon icon="ri-more-2-fill" />
+
+              <VMenu activator="parent">
+                <VList>
+                  <VListItem
+                    value="edit"
+                    prepend-icon="ri-edit-box-line"
+                    @click="
+                      $router.push(`/admin/pengeluaran/dosen-kegiatan/edit/${item.id}`)
+                    "
+                  >
+                    Edit
+                  </VListItem>
+
+                  <VListItem
+                    value="delete"
+                    prepend-icon="ri-delete-bin-line"
+                    @click="showDialogDelete(item.id, item.nama_rekap || item.tanggal)"
+                  >
+                    Delete
+                  </VListItem>
+                </VList>
+              </VMenu>
+            </IconBtn>
+          </template>
+        </VDataTableServer>
       </VCard>
     </section>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
           variant="text"
@@ -722,7 +778,11 @@ onMounted(() => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
             dibatalkan.
@@ -737,8 +797,14 @@ onMounted(() => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

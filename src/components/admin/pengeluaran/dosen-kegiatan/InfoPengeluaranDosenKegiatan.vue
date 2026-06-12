@@ -1,15 +1,15 @@
 <script setup>
-import InfoHistoryPengeluaranDosenKegiatan from "./info/InfoHistoryPengeluaranDosenKegiatan.vue";
+import InfoHistoryPengeluaranDosenKegiatan from "./info/InfoHistoryPengeluaranDosenKegiatan.vue"
 
-const refInfoHistory = ref(null);
+const refInfoHistory = ref(null)
 
 const fetchDataHistory = pegawaiId => {
-  refInfoHistory.value?.fetchData(pegawaiId);
-};
+  refInfoHistory.value?.fetchData(pegawaiId)
+}
 
 defineExpose({
   fetchDataHistory,
-});
+})
 </script>
 
 <template>

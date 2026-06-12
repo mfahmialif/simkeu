@@ -1,13 +1,13 @@
 <script setup>
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
 
 const fetchUsers = async () => {
   try {
@@ -20,38 +20,43 @@ const fetchUsers = async () => {
         sort_order: sortBy.value.order,
         search: search.value,
       },
-    });
-    const data = response.data;
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    const data = response.data
 
-    fetchDetailData();
+    dataTable.value = data.data
+    totalItems.value = data.total
+
+    fetchDetailData()
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 
 const fetchDetailData = async () => {
-  const nimList = dataTable.value.map((item) => item.bill_key);
+  const nimList = dataTable.value.map(item => item.bill_key)
+
   const res = await $api("/admin/mahasiswa/nim", {
     method: "GET",
     body: {
       nim: JSON.stringify(nimList),
       whereIn: true,
     },
-  });
-  dataTable.value = dataTable.value.map((item) => {
-    const mhs = res.find((m) => m.nim === item.bill_key);
+  })
+
+  dataTable.value = dataTable.value.map(item => {
+    const mhs = res.find(m => m.nim === item.bill_key)
+    
     return {
       ...item,
       mahasiswa: mhs ? mhs : false, // tambahkan objek mahasiswa (atau false kalau tidak ditemukan)
-    };
-  });
+    }
+  })
+
   // dataTable.value.forEach((item, index) => {
   //   $api(`/admin/mahasiswa/nim/${item.nim}`, { method: "GET" })
   //     .then((res) => {
@@ -62,31 +67,30 @@ const fetchDetailData = async () => {
   //       dataTable.value[index].mahasiswa = "Error";
   //     });
   // });
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  loading.value = true;
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchUsers();
-};
+  loading.value = true
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchUsers()
+}
 
 onMounted(() => {
-  document.title = "Catatan Pembayaran IDN - SIMKEU";
-  fetchUsers();
-});
+  document.title = "Catatan Pembayaran IDN - SIMKEU"
+  fetchUsers()
+})
 
 watch(
   selectedRows,
-  (newValue) => {
+  newValue => {
     newValue.forEach((row, index) => {
-      console.log(`${index + 1}.`, row);
-    });
+      console.log(`${index + 1}.`, row)
+    })
   },
-  { deep: true }
-);
-
+  { deep: true },
+)
 </script>
 
 <template>
@@ -115,6 +119,9 @@ watch(
 
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Pembayaran', key: 'keuangan_tagihan_nama' },
@@ -122,9 +129,6 @@ watch(
           { title: 'Tahun', key: 'th_akademik_kode' },
           { title: 'Tanggal', key: 'paid_date' },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         show-select
         :items="dataTable"
         :items-length="totalItems"
@@ -133,24 +137,40 @@ watch(
         item-value="name"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data pembayaran idn...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data pembayaran idn.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data pembayaran idn.
+          </div>
         </template>
 
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
 
-          <template #item.keuangan_tagihan_nama="{ item }">
+        <template #item.keuangan_tagihan_nama="{ item }">
           <div style="margin: 15px 0">
-            <VChip color="primary" size="x-small" label>
+            <VChip
+              color="primary"
+              size="x-small"
+              label
+            >
               {{ item.bill_id }}
             </VChip>
             <div>
@@ -172,7 +192,7 @@ watch(
                   size="16"
                   width="2"
                   style="vertical-align: middle"
-                ></VProgressCircular>
+                />
               </template>
             </div>
           </div>
@@ -183,39 +203,44 @@ watch(
         </template>
 
         <!-- Actions -->
-        <!-- <template #item.actions="{ item }">
+        <!--
+          <template #item.actions="{ item }">
           <IconBtn size="small">
-            <VIcon icon="ri-more-2-fill" />
+          <VIcon icon="ri-more-2-fill" />
 
-            <VMenu activator="parent">
-              <VList>
-                <VListItem
-                  value="download"
-                  prepend-icon="ri-edit-box-line"
-                  @click="
-                    $router.push(
-                      `/admin/pemasukan/mahasiswa/prm/edit/${item.id}`
-                    )
-                  "
-                >
-                  Edit
-                </VListItem>
+          <VMenu activator="parent">
+          <VList>
+          <VListItem
+          value="download"
+          prepend-icon="ri-edit-box-line"
+          @click="
+          $router.push(
+          `/admin/pemasukan/mahasiswa/prm/edit/${item.id}`
+          )
+          "
+          >
+          Edit
+          </VListItem>
 
-                <VListItem
-                  value="delete"
-                  prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.username)"
-                >
-                  Delete
-                </VListItem>
-              </VList>
-            </VMenu>
+          <VListItem
+          value="delete"
+          prepend-icon="ri-delete-bin-line"
+          @click="showDialogDelete(item.id, item.username)"
+          >
+          Delete
+          </VListItem>
+          </VList>
+          </VMenu>
           </IconBtn>
-        </template> -->
+          </template> 
+        -->
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
@@ -225,7 +250,11 @@ watch(
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data pembayaran idn ini? Penghapusan data
             pembayaran idn tidak dapat dibatalkan.
@@ -240,8 +269,14 @@ watch(
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

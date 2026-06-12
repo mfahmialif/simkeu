@@ -1,6 +1,6 @@
 <script setup>
-import { formatMoney } from "@/composables/formatRupiah";
-import { watch } from "vue";
+import { formatMoney } from "@/composables/formatRupiah"
+import { watch } from "vue"
 
 const props = defineProps({
   typeForm: {
@@ -12,30 +12,30 @@ const props = defineProps({
     type: Object,
     required: false,
   },
-});
+})
 
 /** ──── Payment Mode Toggle ──── */
-const paymentMode = ref("nominal"); // 'nominal' | 'tagihan'
-const nominalInput = ref(0);
+const paymentMode = ref("nominal") // 'nominal' | 'tagihan'
+const nominalInput = ref(0)
 
-const rows = ref([]);
+const rows = ref([])
 
 const normalizeMataUang = (item = {}) => {
-  const mataUang = item?.tagihan?.mata_uang || item?.mata_uang || {};
+  const mataUang = item?.tagihan?.mata_uang || item?.mata_uang || {}
 
   return {
     id: mataUang.id ?? item.mata_uang_id ?? null,
     kode: String(mataUang.kode ?? item.mata_uang_kode ?? "IDR").toUpperCase(),
     nama: mataUang.nama ?? item.mata_uang_nama ?? "Rupiah",
     simbol: mataUang.simbol ?? item.mata_uang_simbol ?? "Rp",
-  };
-};
+  }
+}
 
 watch(
   () => props.dataForm,
-  (newVal) => {
+  newVal => {
     if (props.typeForm === "edit" && newVal) {
-      const mataUang = normalizeMataUang(newVal);
+      const mataUang = normalizeMataUang(newVal)
 
       rows.value.push({
         id: newVal.id,
@@ -43,45 +43,52 @@ watch(
         nominal: newVal.jumlah ?? 0,
         dibayar: newVal.jumlah ?? 0, // default isi penuh
         mata_uang: mataUang,
-      });
+      })
 
       // Pre-fill nominal input with current value
-      nominalInput.value = newVal.jumlah ?? 0;
+      nominalInput.value = newVal.jumlah ?? 0
     }
-  }
-);
+  },
+)
 
 /** Mode nominal: sync input ke dibayar */
 function applyNominal() {
   if (rows.value.length > 0) {
-    const nominal = Number(nominalInput.value) || 0;
-    rows.value[0].dibayar = Math.min(nominal, rows.value[0].nominal);
+    const nominal = Number(nominalInput.value) || 0
+
+    rows.value[0].dibayar = Math.min(nominal, rows.value[0].nominal)
   }
 }
 
 /** Clear saat mode berubah — reset dibayar ke original */
-watch(paymentMode, (mode) => {
+watch(paymentMode, mode => {
   if (rows.value.length > 0) {
     if (mode === "tagihan") {
       // Reset ke nominal asli saat switch ke mode tagihan
-      rows.value[0].dibayar = rows.value[0].nominal;
+      rows.value[0].dibayar = rows.value[0].nominal
     }
-    nominalInput.value = rows.value[0].dibayar;
+    nominalInput.value = rows.value[0].dibayar
   }
-});
+})
 
 defineExpose({
   rows,
   paymentMode,
-});
+})
 </script>
 
 <template>
   <!-- Pembayaran -->
-  <VCard class="mt-4" title="Pembayaran">
+  <VCard
+    class="mt-4"
+    title="Pembayaran"
+  >
     <!-- Toggle Mode -->
     <VCardText class="pb-0">
-      <VRow class="mb-4" dense>
+      <VRow
+        class="mb-4"
+        dense
+      >
         <VCol cols="6">
           <VBtn
             block
@@ -89,7 +96,10 @@ defineExpose({
             :variant="paymentMode === 'nominal' ? 'elevated' : 'outlined'"
             @click="paymentMode = 'nominal'"
           >
-            <VIcon icon="ri-money-dollar-circle-line" class="me-2" />
+            <VIcon
+              icon="ri-money-dollar-circle-line"
+              class="me-2"
+            />
             Bayar Nominal
           </VBtn>
         </VCol>
@@ -100,7 +110,10 @@ defineExpose({
             :variant="paymentMode === 'tagihan' ? 'elevated' : 'outlined'"
             @click="paymentMode = 'tagihan'"
           >
-            <VIcon icon="ri-list-check-2" class="me-2" />
+            <VIcon
+              icon="ri-list-check-2"
+              class="me-2"
+            />
             Pilih Tagihan
           </VBtn>
         </VCol>
@@ -111,7 +124,10 @@ defineExpose({
       <!-- ═══ MODE NOMINAL ═══ -->
       <template v-if="paymentMode === 'nominal'">
         <VRow class="align-center mb-4">
-          <VCol cols="12" md="8">
+          <VCol
+            cols="12"
+            md="8"
+          >
             <VTextField
               v-model.number="nominalInput"
               :label="`Nominal Pembayaran (${rows[0]?.mata_uang?.kode || 'IDR'})`"
@@ -125,7 +141,10 @@ defineExpose({
               @keyup.enter="applyNominal"
             />
           </VCol>
-          <VCol cols="12" md="4">
+          <VCol
+            cols="12"
+            md="4"
+          >
             <VBtn
               color="primary"
               variant="elevated"
@@ -133,7 +152,10 @@ defineExpose({
               :disabled="nominalInput <= 0"
               @click="applyNominal"
             >
-              <VIcon icon="ri-arrow-right-line" class="me-2" />
+              <VIcon
+                icon="ri-arrow-right-line"
+                class="me-2"
+              />
               Terapkan
             </VBtn>
           </VCol>
@@ -141,8 +163,15 @@ defineExpose({
       </template>
 
       <!-- ═══ PREVIEW ROWS (Kedua mode) ═══ -->
-      <VRow v-for="(row, idx) in rows" :key="row.id" class="align-center">
-        <VCol cols="12" md="6">
+      <VRow
+        v-for="(row, idx) in rows"
+        :key="row.id"
+        class="align-center"
+      >
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             :model-value="row.display"
             label="Tagihan"
@@ -154,7 +183,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model.number="row.dibayar"
             label="Dibayar"
@@ -177,5 +209,4 @@ defineExpose({
       </div>
     </VCardText>
   </VCard>
-
 </template>

@@ -1,11 +1,12 @@
 <script setup>
-import FormPegawai from "@/components/admin/pegawai/FormPegawai.vue";
+import FormPegawai from "@/components/admin/pegawai/FormPegawai.vue"
 
-const router = useRouter();
-const userData = useCookie("userData").value ?? {};
+const router = useRouter()
+const userData = useCookie("userData").value ?? {}
+
 const isAdmin = computed(
-  () => String(userData.role?.name || "").toLowerCase() === "admin"
-);
+  () => String(userData.role?.name || "").toLowerCase() === "admin",
+)
 
 const menuList = [
   {
@@ -20,15 +21,15 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/pegawai"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Pegawai Add - SIMKEU";
+  document.title = "Pegawai Add - SIMKEU"
 
   if (!isAdmin.value) {
-    router.replace({ name: "not-authorized" });
+    router.replace({ name: "not-authorized" })
   }
-});
+})
 </script>
 
 <template>
@@ -40,7 +41,10 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <FormPegawai typeForm="add" :url="'/admin/pegawai'" />
+          <FormPegawai
+            type-form="add"
+            url="/admin/pegawai"
+          />
         </VCardText>
       </VCard>
     </VCol>

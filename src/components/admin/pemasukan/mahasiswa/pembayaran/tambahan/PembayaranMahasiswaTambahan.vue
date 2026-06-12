@@ -1,5 +1,5 @@
 <script setup>
-import { watch } from "vue";
+import { watch } from "vue"
 
 const props = defineProps({
   mahasiswa: {
@@ -16,36 +16,46 @@ const props = defineProps({
     type: Object,
     required: false,
   },
-});
+})
 
-const rows = ref([]);
+const rows = ref([])
 
 watch(
   () => props.dataForm,
-  (newVal) => {
+  newVal => {
     if (props.typeForm === "edit" && newVal) {
       rows.value.push({
         id: newVal.id,
         display: `${newVal.tagihan}`,
         jumlah: newVal.jumlah ?? 0,
         dibayar: newVal.bayar ?? 0, // default isi penuh
-      });
+      })
     }
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 defineExpose({
   rows,
-});
+})
 </script>
 
 <template>
   <!-- Pembayaran -->
-  <VCard class="mt-4" title="Pembayaran">
+  <VCard
+    class="mt-4"
+    title="Pembayaran"
+  >
     <VCardText>
-      <VRow v-for="(row, idx) in rows" :key="row.id" class="align-center">
-        <VCol cols="12" md="4">
+      <VRow
+        v-for="(row, idx) in rows"
+        :key="row.id"
+        class="align-center"
+      >
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="row.display"
             label="Tagihan"
@@ -56,7 +66,10 @@ defineExpose({
           />
         </VCol>
 
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model.number="row.jumlah"
             label="Jumlah"
@@ -69,7 +82,10 @@ defineExpose({
           />
         </VCol>
         
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model.number="row.dibayar"
             label="Dibayar"

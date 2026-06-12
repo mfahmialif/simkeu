@@ -5,6 +5,7 @@ export const appendLampiranFormData = (
   prefix = "",
 ) => {
   const field = name => (prefix ? `${prefix}[${name}][]` : `${name}[]`)
+
   const normalizedFiles = Array.isArray(files)
     ? files
     : files

@@ -1,25 +1,25 @@
 <script setup>
-const selectedRole = ref();
-const role = ref([]);
+const selectedRole = ref()
+const role = ref([])
 
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
-let isFetching = ref(false);
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
+let isFetching = ref(false)
 
 const fetchDispensasiTagihan = async () => {
   if (isFetching.value) {
-    return;
+    return
   }
-  isFetching.value = true;
+  isFetching.value = true
   try {
-    loading.value = true;
+    loading.value = true
 
     const response = await $api(
       "/admin/pemasukan/mahasiswa/dispensasi-tagihan",
@@ -33,26 +33,30 @@ const fetchDispensasiTagihan = async () => {
           search: search.value,
           ...(selectedRole.value && { role_id: selectedRole.value }),
         },
-      }
-    );
-    const dispensasiTagihanList = response.data.data ?? response;
+      },
+    )
 
-    dataTable.value = dispensasiTagihanList;
-    totalItems.value = response.data.total ?? 0;
+    const dispensasiTagihanList = response.data.data ?? response
 
-    fetchMahasiswa();
+    dataTable.value = dispensasiTagihanList
+    totalItems.value = response.data.total ?? 0
+
+    fetchMahasiswa()
   } catch (err) {
-    console.error("Gagal fetch dispensasi:", err);
+    console.error("Gagal fetch dispensasi:", err)
   } finally {
-    isFetching.value = false;
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    isFetching.value = false
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
+
 const fetchMahasiswa = async () => {
   try {
-    const nimList = dataTable.value.map((item) => item.nim);
-    console.log("NIM List:", nimList);
+    const nimList = dataTable.value.map(item => item.nim)
+
+    console.log("NIM List:", nimList)
+
     const response = await $api("/admin/mahasiswa/nim", {
       method: "GET",
       params: {
@@ -60,96 +64,97 @@ const fetchMahasiswa = async () => {
         nim: JSON.stringify(nimList),
         whereIn: true,
       },
-    });
-    dataTable.value = dataTable.value.map((item) => {
-      const mahasiswa = response.find((mhs) => mhs.nim === item.nim);
+    })
+
+    dataTable.value = dataTable.value.map(item => {
+      const mahasiswa = response.find(mhs => mhs.nim === item.nim)
 
       return {
         ...item,
         nama_mahasiswa: mahasiswa ? mahasiswa.nama : "N/A",
         jenis_kelamin: mahasiswa ? mahasiswa.jk.kode : "N/A",
         prodi: mahasiswa ? mahasiswa.prodi.nama : "N/A",
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error("Gagal fetch mahasiswa:", err);
+    console.error("Gagal fetch mahasiswa:", err)
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  loading.value = true;
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchDispensasiTagihan();
-};
+  loading.value = true
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchDispensasiTagihan()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id: id,
     name: name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api(
       "/admin/pemasukan/mahasiswa/dispensasi-tagihan/" + id,
       {
         method: "DELETE",
-      }
-    );
+      },
+    )
 
     if (response.status === "true") {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchDispensasiTagihan();
+      fetchDispensasiTagihan()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 onMounted(() => {
-  document.title = "Catatan Dispensasi - SIMKEU";
-  fetchDispensasiTagihan();
-});
+  document.title = "Catatan Dispensasi - SIMKEU"
+  fetchDispensasiTagihan()
+})
 
 watch(
   selectedRows,
-  (newValue) => {
+  newValue => {
     newValue.forEach((row, index) => {
-      console.log(`${index + 1}.`, row);
-    });
+      console.log(`${index + 1}.`, row)
+    })
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 watch(selectedRole, () => {
-  console.log("value from wathc", selectedRole.value);
-  fetchUsers();
-});
+  console.log("value from wathc", selectedRole.value)
+  fetchUsers()
+})
 </script>
 
 <template>
@@ -198,6 +203,8 @@ watch(selectedRole, () => {
       </VCardText>
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tahun Akademik', key: 'th_akademik' },
@@ -209,8 +216,6 @@ watch(selectedRole, () => {
           { title: 'keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -218,19 +223,35 @@ watch(selectedRole, () => {
         item-value="name"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data disposisi...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data disposisi.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data disposisi.
+          </div>
         </template>
         <template #item.nim="{ item }">
           <div>
-            <VChip color="success" size="x-small" label>
+            <VChip
+              color="success"
+              size="x-small"
+              label
+            >
               {{ item.nim }}
             </VChip>
             <template v-if="item.nama_mahasiswa">
@@ -243,8 +264,7 @@ watch(selectedRole, () => {
                 size="16"
                 width="2"
                 style="vertical-align: middle"
-              >
-              </VProgressCircular>
+              />
             </template>
           </div>
         </template>
@@ -260,8 +280,7 @@ watch(selectedRole, () => {
                 size="16"
                 width="2"
                 style="vertical-align: middle"
-              >
-              </VProgressCircular>
+              />
             </template>
           </div>
         </template>
@@ -277,8 +296,7 @@ watch(selectedRole, () => {
                 size="16"
                 width="2"
                 style="vertical-align: middle"
-              >
-              </VProgressCircular>
+              />
             </template>
           </div>
         </template>
@@ -317,7 +335,10 @@ watch(selectedRole, () => {
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
@@ -327,7 +348,11 @@ watch(selectedRole, () => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data dispensasi tagihan ini? Penghapusan
             data pengguna tidak dapat dibatalkan.
@@ -342,8 +367,14 @@ watch(selectedRole, () => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

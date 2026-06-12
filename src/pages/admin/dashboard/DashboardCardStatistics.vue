@@ -1,23 +1,23 @@
 <script setup>
-import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah";
-import { showSnackbar } from "@/composables/snackbar";
+import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah"
+import { showSnackbar } from "@/composables/snackbar"
 
 const props = defineProps({
   visibleCards: {
     type: Array,
     default: () => ["saldo", "pemasukan", "pengeluaran", "user"],
   },
-});
+})
 
-const router = useRouter();
+const router = useRouter()
 
 const currencyRows = (groups = [], fallbackValue = null) => {
   if (Array.isArray(groups) && groups.length) {
-    return groups.map((group) => ({
+    return groups.map(group => ({
       key: group.key || `kode:${group.mata_uang?.kode || "IDR"}`,
       kode: String(group.mata_uang?.kode || "IDR").toUpperCase(),
       amount: formatMoney(group.total, group.mata_uang),
-    }));
+    }))
   }
 
   if (fallbackValue !== null) {
@@ -25,18 +25,18 @@ const currencyRows = (groups = [], fallbackValue = null) => {
       key: "kode:IDR",
       kode: "IDR",
       amount: formatMoney(fallbackValue),
-    }];
+    }]
   }
 
-  return [];
-};
+  return []
+}
 
 const detailRoutes = {
   saldo: "/admin/saldo/kategori",
   pemasukan: "/admin/pemasukan/mahasiswa/laporan",
   pengeluaran: "/admin/pengeluaran/umum",
   user: "/admin/user",
-};
+}
 
 const logisticData = ref([
   {
@@ -78,17 +78,20 @@ const logisticData = ref([
     change: 0,
     isHover: false,
   },
-]);
+])
 
 const filteredLogisticData = computed(() =>
-  logisticData.value.filter((item) => props.visibleCards.includes(item.key)),
-);
+  logisticData.value.filter(item => props.visibleCards.includes(item.key)),
+)
 
-const isLoading = ref(false);
+const isLoading = ref(false)
+
 const fetchData = async () => {
-  isLoading.value = true;
-  const response = await $api("/admin/dashboard/widget");
-  isLoading.value = false;
+  isLoading.value = true
+
+  const response = await $api("/admin/dashboard/widget")
+
+  isLoading.value = false
   if (response.status) {
     logisticData.value = [
       {
@@ -118,20 +121,21 @@ const fetchData = async () => {
         isHover: false,
         isPemasukan: true,
         breakdown: (() => {
-          const breakdown = {};
+          const breakdown = {}
           if (response.data.pemasukanBreakdown) {
             for (const [period, genders] of Object.entries(response.data.pemasukanBreakdown)) {
-              breakdown[period] = {};
+              breakdown[period] = {}
               for (const [gender, item] of Object.entries(genders)) {
                 breakdown[period][gender] = {
                   value: formatCurrencyTotals(item.by_currency, item.value || 0),
                   change: item.change || 0,
-                  hideIfZero: item.hideIfZero || false
-                };
+                  hideIfZero: item.hideIfZero || false,
+                }
               }
             }
           }
-          return breakdown;
+          
+          return breakdown
         })(),
       },
       {
@@ -159,26 +163,26 @@ const fetchData = async () => {
         change: response.data.jumlahUser,
         isHover: false,
       },
-    ];
+    ]
   } else {
     showSnackbar({
       text: response.message,
       color: "error",
-    });
+    })
   }
-};
+}
 
-const goToDetail = (data) => {
-  const path = detailRoutes[data.key];
+const goToDetail = data => {
+  const path = detailRoutes[data.key]
 
   if (path) {
-    router.push(path);
+    router.push(path)
   }
-};
+}
 
 onMounted(() => {
-  fetchData();
-});
+  fetchData()
+})
 </script>
 
 <template>
@@ -203,11 +207,21 @@ onMounted(() => {
           @click="goToDetail(data)"
         >
           <VCardText>
-            <VSkeletonLoader v-if="isLoading" type="paragraph"></VSkeletonLoader>
+            <VSkeletonLoader
+              v-if="isLoading"
+              type="paragraph"
+            />
             <template v-else>
               <div class="dashboard-stat-content d-flex align-center gap-x-4 mb-2 min-w-0">
-                <VAvatar variant="tonal" :color="data.color" rounded="lg">
-                  <VIcon :icon="data.icon" size="24" />
+                <VAvatar
+                  variant="tonal"
+                  :color="data.color"
+                  rounded="lg"
+                >
+                  <VIcon
+                    :icon="data.icon"
+                    size="24"
+                  />
                 </VAvatar>
                 <div class="dashboard-stat-value">
                   <div
@@ -224,7 +238,11 @@ onMounted(() => {
                       <strong class="dashboard-currency-amount">{{ currency.amount }}</strong>
                     </div>
                   </div>
-                  <h4 v-else class="text-h4 text-truncate" :title="data.value">
+                  <h4
+                    v-else
+                    class="text-h4 text-truncate"
+                    :title="data.value"
+                  >
                     {{ data.value }}
                   </h4>
                 </div>

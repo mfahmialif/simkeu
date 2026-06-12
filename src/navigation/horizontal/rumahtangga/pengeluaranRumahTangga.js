@@ -2,7 +2,8 @@ export default [
   {
     title: "Pengeluaran",
     icon: { icon: "ri-arrow-down-line" },
-    to: "admin-pengeluaran"
+    to: "admin-pengeluaran",
+
     // children: [
     //   {
     //     title: "Jenis Saldo",
@@ -14,4 +15,4 @@ export default [
     //   },
     // ],
   },
-];
+]

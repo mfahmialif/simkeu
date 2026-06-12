@@ -1,5 +1,6 @@
 <script setup>
 import { default as teamPerson1, default as teamPerson2, default as teamPerson3 } from '@images/front-pages/landing-page/orang.png'
+
 //import teamPerson3 from '@images/front-pages/landing-page/team-member-3.png'
 import sectionTitleIcon from '@images/pages/section-title-icon.png'
 import frontPageElement from '@images/svg/front-page-element.svg'
@@ -37,34 +38,63 @@ const teamData = ref([
   <VContainer id="team">
     <div class="our-team">
       <div class="headers d-flex justify-center flex-column align-center">
-        <Component :is="frontPageElement" class="front-page-element" />
+        <Component
+          :is="frontPageElement"
+          class="front-page-element"
+        />
 
         <div class="d-flex gap-x-3 mb-6">
-          <img :src="sectionTitleIcon" alt="section title icon" height="24" width="25">
+          <img
+            :src="sectionTitleIcon"
+            alt="section title icon"
+            height="24"
+            width="25"
+          >
           <div class="text-body-1 text-high-emphasis font-weight-medium">
             OUR GREAT TEAM
           </div>
         </div>
 
         <div class="mb-2">
-          <span class="text-h4 d-inline-block font-weight-bold" style="line-height: 2rem;">
+          <span
+            class="text-h4 d-inline-block font-weight-bold"
+            style="line-height: 2rem;"
+          >
             Supported
           </span> <span class="text-h5 d-inline-block">by Real People</span>
         </div>
 
-        <p class="text-body-1 font-weight-medium text-center" style="letter-spacing: 0.15px !important;">
+        <p
+          class="text-body-1 font-weight-medium text-center"
+          style="letter-spacing: 0.15px !important;"
+        >
           Who is behind these great-looking interfaces?
         </p>
       </div>
 
       <VRow class="d-flex justify-center">
-        <VCol v-for="(data, index) in teamData" :key="index" cols="12" lg="3" sm="6">
-          <VCard flat variant="outlined" min-width="267" class="position-relative overflow-visible mt-16"
-            :style="data.isHover ? { border: `1px solid ${data.borderColor}` } : {}" @mouseenter="data.isHover = true"
-            @mouseleave="data.isHover = false">
-            <VImg :src="data.image" height="240px" class="team-image" />
-            <div
-              :style="{ 'maxHeight': '185px', 'minHeight': '185px', 'backgroundColor': data.backgroundColor, 'border-top-left-radius': '0.625rem', 'border-top-right-radius': '0.625rem' }" />
+        <VCol
+          v-for="(data, index) in teamData"
+          :key="index"
+          cols="12"
+          lg="3"
+          sm="6"
+        >
+          <VCard
+            flat
+            variant="outlined"
+            min-width="267"
+            class="position-relative overflow-visible mt-16"
+            :style="data.isHover ? { border: `1px solid ${data.borderColor}` } : {}"
+            @mouseenter="data.isHover = true"
+            @mouseleave="data.isHover = false"
+          >
+            <VImg
+              :src="data.image"
+              height="240px"
+              class="team-image"
+            />
+            <div :style="{ 'maxHeight': '185px', 'minHeight': '185px', 'backgroundColor': data.backgroundColor, 'border-top-left-radius': '0.625rem', 'border-top-right-radius': '0.625rem' }" />
             <VCardText class="text-center">
               <div class="mb-3">
                 <h5 class="text-h5">
@@ -76,12 +106,20 @@ const teamData = ref([
               </div>
 
               <div class="d-flex gap-x-2 align-center justify-center">
-                <template v-for="{ icon, color } in [
-                  { icon: 'ri-facebook-circle-line', color: 'rgba(59, 89, 152, 1)', link: 'https://www.facebook.com/' },
-                  { icon: 'ri-twitter-line', color: 'rgba(0, 172, 238, 1)', link: 'https://twitter.com/' },
-                  { icon: 'ri-linkedin-box-line', color: 'rgba(0, 119, 181, 1)', link: 'https://linkedin.com' },
-                ]" :key="color">
-                  <VIcon :icon="icon" size="22" :color="data.isHover ? color : ''" class="cursor-pointer" />
+                <template
+                  v-for="{ icon, color } in [
+                    { icon: 'ri-facebook-circle-line', color: 'rgba(59, 89, 152, 1)', link: 'https://www.facebook.com/' },
+                    { icon: 'ri-twitter-line', color: 'rgba(0, 172, 238, 1)', link: 'https://twitter.com/' },
+                    { icon: 'ri-linkedin-box-line', color: 'rgba(0, 119, 181, 1)', link: 'https://linkedin.com' },
+                  ]"
+                  :key="color"
+                >
+                  <VIcon
+                    :icon="icon"
+                    size="22"
+                    :color="data.isHover ? color : ''"
+                    class="cursor-pointer"
+                  />
                 </template>
               </div>
             </VCardText>

@@ -1,15 +1,15 @@
 <script setup>
-import { consoleError } from "vuetify/lib/util/console.mjs";
+import { consoleError } from "vuetify/lib/util/console.mjs"
 
-const emit = defineEmits(["refreshTagihan"]);
+const emit = defineEmits(["refreshTagihan"])
 
-const mahasiswaList = ref([]);
+const mahasiswaList = ref([])
 
-const search = ref("");
-const searchNim = ref("");
-const selectedMahasiswa = ref("");
-const loadingDataMahasiswa = ref(false);
-const loadingSearch = ref(false);
+const search = ref("")
+const searchNim = ref("")
+const selectedMahasiswa = ref("")
+const loadingDataMahasiswa = ref(false)
+const loadingSearch = ref(false)
 
 const emptyMahasiswa = {
   nim: "",
@@ -26,136 +26,146 @@ const emptyMahasiswa = {
   dipakai: 0,
   tagihan: [],
   wisuda: null,
-};
+}
 
-const mahasiswa = ref(emptyMahasiswa);
+const mahasiswa = ref(emptyMahasiswa)
 
-let typingTimeout = null;
+let typingTimeout = null
 
-watch(search, (newVal) => {
-  clearTimeout(typingTimeout);
+watch(search, newVal => {
+  clearTimeout(typingTimeout)
 
   if (!newVal.trim()) {
-    mahasiswaList.value = [];
-    loadingSearch.value = false;
-    return;
+    mahasiswaList.value = []
+    loadingSearch.value = false
+    
+    return
   }
 
   typingTimeout = setTimeout(async () => {
     try {
-      loadingSearch.value = true;
+      loadingSearch.value = true
+
       const res = await $api(`/admin/mahasiswa/search/${newVal}`, {
         method: "GET",
-      });
+      })
+
+
       // ubah hasil API jadi format { nim, nama, display: "nama - nim" }
-      mahasiswaList.value = res.map((m) => ({
+      mahasiswaList.value = res.map(m => ({
         ...m,
         display: `${m.nim} - ${m.nama}`,
-      }));
+      }))
     } catch (err) {
       showSnackbar({
         text: "Gagal mendapatkan list mahasiswa",
         color: "error",
-      });
-      mahasiswaList.value = [];
+      })
+      mahasiswaList.value = []
     } finally {
-      loadingSearch.value = false;
+      loadingSearch.value = false
     }
-  }, 300); // <-- debounce 300 mili detik
-});
+  }, 300) // <-- debounce 300 mili detik
+})
 
-watch(selectedMahasiswa, (newVal) => {
+watch(selectedMahasiswa, newVal => {
   if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
-    searchNim.value = newVal.nim;
-    searching();
+    searchNim.value = newVal.nim
+    searching()
   } else if (typeof newVal === "string") {
-    searchNim.value = newVal;
+    searchNim.value = newVal
   } else if (!newVal) {
-    searchNim.value = "";
+    searchNim.value = ""
   }
-});
+})
 
 const searching = async () => {
   if (!searchNim.value) {
     showSnackbar({
       text: "NIM harus diisi",
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    loadingDataMahasiswa.value = true;
+    loadingDataMahasiswa.value = true
 
     const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
       body: {
         nim: searchNim.value,
       },
-    });
+    })
 
     if (res.length < 1) {
       showSnackbar({
         text: "Data mahasiswa tidak ditemukan",
         color: "error",
-      });
-      return;
+      })
+      
+      return
     }
 
-    mahasiswa.value.nim = res.nim;
-    mahasiswa.value.nama = res.nama;
-    mahasiswa.value.namaAyah = res.nama_ayah ?? res.ayah ?? res.mhs_ayah ?? "-";
-    mahasiswa.value.prodi = res.prodi?.nama;
-    mahasiswa.value.prodiAlias = res.prodi?.alias ?? res.prodi_alias ?? res.alias ?? res.prodi?.nama;
-    mahasiswa.value.jenisKelamin = res.jk?.nama;
-    mahasiswa.value.jkId = res.jk?.id;
-    mahasiswa.value.angkatan = res.th_akademik?.kode;
-    mahasiswa.value.kelas = res.kelas?.nama;
-    mahasiswa.value.semester = res.semester;
+    mahasiswa.value.nim = res.nim
+    mahasiswa.value.nama = res.nama
+    mahasiswa.value.namaAyah = res.nama_ayah ?? res.ayah ?? res.mhs_ayah ?? "-"
+    mahasiswa.value.prodi = res.prodi?.nama
+    mahasiswa.value.prodiAlias = res.prodi?.alias ?? res.prodi_alias ?? res.alias ?? res.prodi?.nama
+    mahasiswa.value.jenisKelamin = res.jk?.nama
+    mahasiswa.value.jkId = res.jk?.id
+    mahasiswa.value.angkatan = res.th_akademik?.kode
+    mahasiswa.value.kelas = res.kelas?.nama
+    mahasiswa.value.semester = res.semester
 
-    emit("refreshTagihan", mahasiswa.value.nim);
-    emit("refreshDeposit");
+    emit("refreshTagihan", mahasiswa.value.nim)
+    emit("refreshDeposit")
   } catch (error) {
     showSnackbar({
       text: error,
       color: "error",
-    });
+    })
   } finally {
-    loadingDataMahasiswa.value = false;
+    loadingDataMahasiswa.value = false
   }
-};
+}
 
-const refSearch = ref(null);
+const refSearch = ref(null)
+
 const nimFocus = async () => {
-  await nextTick();
-  refSearch.value.focus();
-};
+  await nextTick()
+  refSearch.value.focus()
+}
 
 const selectAll = async () => {
   // tunggu sampai elemen input benar-benar ter-render
-  await nextTick();
+  await nextTick()
 
   // akses input dalam VCombobox
-  const input = refSearch.value?.$el?.querySelector("input");
+  const input = refSearch.value?.$el?.querySelector("input")
   if (input) {
-    input.select(); // ✨ menyorot seluruh teks di dalam field
+    input.select() // ✨ menyorot seluruh teks di dalam field
   }
-};
+}
 
 onMounted(async () => {
-  nimFocus();
-});
+  nimFocus()
+})
 
 defineExpose({
   mahasiswa,
   searching,
   nimFocus,
-});
+})
 </script>
 
 <template>
   <!-- 👉 Mahasiswa -->
-  <VCard class="mb-6" title="Mahasiswa">
+  <VCard
+    class="mb-6"
+    title="Mahasiswa"
+  >
     <VCardText>
       <VRow>
         <VCol cols="12">
@@ -190,80 +200,97 @@ defineExpose({
                 @click="searching"
               >
                 <VIcon icon="ri-search-line" />
-                <span v-if="$vuetify.display.mdAndUp" class="ms-3">Search</span>
+                <span
+                  v-if="$vuetify.display.mdAndUp"
+                  class="ms-3"
+                >Search</span>
               </VBtn>
             </template>
           </VCombobox>
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswa.nim"
             label="NIM"
             placeholder="NIM"
             readonly
             :loading="loadingDataMahasiswa"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswa.nama"
             label="Nama"
             placeholder="Nama"
             readonly
             :loading="loadingDataMahasiswa"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswa.prodi"
             label="Prodi"
             placeholder="Prodi"
             readonly
             :loading="loadingDataMahasiswa"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswa.jenisKelamin"
             label="Jenis Kelamin"
             placeholder="Jenis Kelamin"
             readonly
             :loading="loadingDataMahasiswa"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="mahasiswa.angkatan"
             label="Angkatan"
             placeholder="Angkatan"
             readonly
             :loading="loadingDataMahasiswa"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="mahasiswa.kelas"
             label="Kelas"
             placeholder="Kelas"
             readonly
             :loading="loadingDataMahasiswa"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="mahasiswa.semester"
             label="Semester"
             placeholder="Semester"
             readonly
             :loading="loadingDataMahasiswa"
-          >
-          </VTextField>
+          />
         </VCol>
       </VRow>
     </VCardText>

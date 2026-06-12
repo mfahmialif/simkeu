@@ -1,19 +1,20 @@
 <script setup>
-const selectedRole = ref();
+const selectedRole = ref()
 
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(false);
-const initialLoading = ref(true);
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(false)
+const initialLoading = ref(true)
 
 const fetchData = async () => {
   try {
-    loading.value = true;
+    loading.value = true
+
     const { data } = await $api("/admin/pemasukan/mahasiswa/catatan-deposit", {
       method: "GET",
       body: {
@@ -24,112 +25,115 @@ const fetchData = async () => {
         search: search.value,
         ...(selectedRole.value && { role_id: selectedRole.value }),
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
 
-    fetchDetailData();
+    fetchDetailData()
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  loading.value = true;
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  loading.value = true
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id: id,
     name: name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api(
       "/admin/pemasukan/mahasiswa/catatan-deposit/" + id,
       {
         method: "DELETE",
-      }
-    );
+      },
+    )
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 const fetchDetailData = async () => {
-  const nimList = dataTable.value.map((item) => item.nim);
+  const nimList = dataTable.value.map(item => item.nim)
+
   const res = await $api("/admin/mahasiswa/nim", {
     method: "GET",
     body: {
       nim: JSON.stringify(nimList),
       whereIn: true,
     },
-  });
-  dataTable.value = dataTable.value.map((item) => {
-    const mhs = res.find((m) => m.nim === item.nim);
+  })
+
+  dataTable.value = dataTable.value.map(item => {
+    const mhs = res.find(m => m.nim === item.nim)
+    
     return {
       ...item,
       mahasiswa: mhs ? mhs : false, // tambahkan objek mahasiswa (atau false kalau tidak ditemukan)
-    };
-  });
-};
+    }
+  })
+}
 
 onMounted(() => {
-  document.title = "Catatan Deposit - SIMKEU";
-  fetchData();
-});
+  document.title = "Catatan Deposit - SIMKEU"
+  fetchData()
+})
 
 watch(
   selectedRows,
-  (newValue) => {
+  newValue => {
     newValue.forEach((row, index) => {
-      console.log(`${index + 1}.`, row);
-    });
+      console.log(`${index + 1}.`, row)
+    })
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 watch(selectedRole, () => {
-  console.log("value from wathc", selectedRole.value);
-  fetchData();
-});
+  console.log("value from wathc", selectedRole.value)
+  fetchData()
+})
 </script>
 
 <template>
@@ -179,6 +183,9 @@ watch(selectedRole, () => {
 
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Nim', key: 'nim' },
@@ -187,9 +194,6 @@ watch(selectedRole, () => {
           { title: 'keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         show-select
         :items="dataTable"
         :items-length="totalItems"
@@ -198,15 +202,27 @@ watch(selectedRole, () => {
         item-value="name"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data.
+          </div>
         </template>
 
         <template #item.id="{ index }">
@@ -219,7 +235,11 @@ watch(selectedRole, () => {
 
         <template #item.nim="{ item }">
           <div style="margin: 15px 0">
-            <VChip color="primary" size="x-small" label>
+            <VChip
+              color="primary"
+              size="x-small"
+              label
+            >
               {{ item.nim }}
             </VChip>
             <div>
@@ -228,7 +248,7 @@ watch(selectedRole, () => {
                 {{ item.mahasiswa.jk?.kode }}
               </template>
               <template v-else-if="item.mahasiswa === false">
-                Data tidak ditemukan di SIAKAD.<br />Silakan hapus atau periksa
+                Data tidak ditemukan di SIAKAD.<br>Silakan hapus atau periksa
                 kembali di SIAKAD.
               </template>
               <template v-else>
@@ -238,7 +258,7 @@ watch(selectedRole, () => {
                   size="16"
                   width="2"
                   style="vertical-align: middle"
-                ></VProgressCircular>
+                />
               </template>
             </div>
           </div>
@@ -281,7 +301,10 @@ watch(selectedRole, () => {
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
@@ -291,7 +314,11 @@ watch(selectedRole, () => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
             dibatalkan.
@@ -306,8 +333,14 @@ watch(selectedRole, () => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

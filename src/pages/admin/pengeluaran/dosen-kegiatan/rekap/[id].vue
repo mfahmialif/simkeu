@@ -1,5 +1,5 @@
 <script setup>
-import PengeluaranRekapDetail from "@/components/admin/pengeluaran/PengeluaranRekapDetail.vue";
+import PengeluaranRekapDetail from "@/components/admin/pengeluaran/PengeluaranRekapDetail.vue"
 </script>
 
 <template>

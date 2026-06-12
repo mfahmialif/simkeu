@@ -28,50 +28,52 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
-const tanggal = ref("");
+const tanggal = ref("")
 
-const selectedProdi = ref(null);
-const selectedTahunAkademik = ref(null);
-const selectedJenisPembayaran = ref(null);
+const selectedProdi = ref(null)
+const selectedTahunAkademik = ref(null)
+const selectedJenisPembayaran = ref(null)
 
 const downloadExcel = async () => {
   download(
     "excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Harian.xlsx"
-  );
-};
+    "Laporan Harian.xlsx",
+  )
+}
 
 const downloadExcelTotalan = async () => {
   download(
     "excelTotalan",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Harian Totalan.xlsx"
-  );
-};
+    "Laporan Harian Totalan.xlsx",
+  )
+}
 
 const downloadExcelTotalanStaff = async () => {
   download(
     "excelTotalanStaff",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Harian Totalan Staff.xlsx"
-  );
-};
+    "Laporan Harian Totalan Staff.xlsx",
+  )
+}
 
 const downloadPdf = async () => {
-  download("pdf", "application/pdf", "Laporan Harian.pdf");
-};
+  download("pdf", "application/pdf", "Laporan Harian.pdf")
+}
 
-const isLoading = ref(false);
+const isLoading = ref(false)
+
 const download = async (type, accept, filename) => {
   try {
-    isLoading.value = true;
+    isLoading.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
+
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/harian", {
       method: "GET",
       headers: {
@@ -90,27 +92,27 @@ const download = async (type, accept, filename) => {
           jenis_pembayaran: selectedJenisPembayaran.value.value,
         }),
       },
-    });
+    })
 
-    downloadFileExport(response, filename);
+    downloadFileExport(response, filename)
     showSnackbar({
       text: "Laporan berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: err.message,
       color: "error",
-    });
+    })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 onMounted(() => {
   // date now
-  tanggal.value = fDate(new Date());
-});
+  tanggal.value = fDate(new Date())
+})
 </script>
 
 <template>
@@ -123,7 +125,10 @@ onMounted(() => {
 
     <VRow class="pa-4">
       <!-- Input Tanggal -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <AppDateTimePicker
           v-model="tanggal"
           label="Tanggal"
@@ -137,7 +142,10 @@ onMounted(() => {
       </VCol>
 
       <!-- Combobox Prodi -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedProdi"
           :items="props.prodi"
@@ -147,7 +155,10 @@ onMounted(() => {
         />
       </VCol>
       <!-- Combobox Tahun Akademik -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedTahunAkademik"
           :items="props.tahunAkademik"
@@ -157,7 +168,10 @@ onMounted(() => {
         />
       </VCol>
       <!-- Combobox Jenis Pembayaran -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedJenisPembayaran"
           :items="props.jenisPembayaran"
@@ -166,38 +180,72 @@ onMounted(() => {
           :loading="props.isLoadingJenisPembayaran"
         />
       </VCol>
-      <VCol cols="12" md="12">
-        <VBtn block color="success" @click="downloadExcel" :loading="isLoading">
-          Download Excel
-          <VIcon end icon="ri-arrow-down-circle-line" />
-        </VBtn>
-      </VCol>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VBtn
           block
           color="success"
-          @click="downloadExcelTotalanStaff"
           :loading="isLoading"
+          @click="downloadExcel"
+        >
+          Download Excel
+          <VIcon
+            end
+            icon="ri-arrow-down-circle-line"
+          />
+        </VBtn>
+      </VCol>
+      <VCol
+        cols="12"
+        md="6"
+      >
+        <VBtn
+          block
+          color="success"
+          :loading="isLoading"
+          @click="downloadExcelTotalanStaff"
         >
           Download Totalan Sesuai Staff
-          <VIcon end icon="ri-arrow-down-circle-line" />
+          <VIcon
+            end
+            icon="ri-arrow-down-circle-line"
+          />
         </VBtn>
       </VCol>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VBtn
           block
           color="success"
-          @click="downloadExcelTotalan"
           :loading="isLoading"
+          @click="downloadExcelTotalan"
         >
           Download Totalan
-          <VIcon end icon="ri-arrow-down-circle-line" />
+          <VIcon
+            end
+            icon="ri-arrow-down-circle-line"
+          />
         </VBtn>
       </VCol>
-      <VCol cols="12" md="12">
-        <VBtn block color="primary" @click="downloadPdf" :loading="isLoading">
+      <VCol
+        cols="12"
+        md="12"
+      >
+        <VBtn
+          block
+          color="primary"
+          :loading="isLoading"
+          @click="downloadPdf"
+        >
           Download PDF
-          <VIcon end icon="ri-arrow-down-circle-line" />
+          <VIcon
+            end
+            icon="ri-arrow-down-circle-line"
+          />
         </VBtn>
       </VCol>
     </VRow>

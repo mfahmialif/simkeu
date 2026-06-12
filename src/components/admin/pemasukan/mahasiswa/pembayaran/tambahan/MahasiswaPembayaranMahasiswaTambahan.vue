@@ -1,5 +1,4 @@
 <script setup>
-
 const props = defineProps({
   typeForm: {
     type: String,
@@ -9,48 +8,49 @@ const props = defineProps({
     type: Object,
     required: true,
   },
-});
+})
 
 const emptyMahasiswa = {
   nim: "",
   nama: "",
   prodi: "",
   jenisKelamin: "",
-  jkId:"",
+  jkId: "",
   angkatan: "",
   kelas: "",
   semester: "",
   deposit: 0,
   dipakai: 0,
   tagihan: [],
-};
+}
 
-const mahasiswa = ref(emptyMahasiswa);
+const mahasiswa = ref(emptyMahasiswa)
 
 const jenisKelaminList = [
   { value: "L", text: "Laki-laki" },
   { value: "P", text: "Perempuan" },
-];
+]
 
 const kelasList = [
   { value: "Reguler", text: "Reguler" },
   { value: "Non Reguler", text: "Non Reguler" },
   { value: "Karyawan", text: "Karyawan" },
-];
+]
 
-const prodi = ref([]);
-const loadingProdi = ref(false);
+const prodi = ref([])
+const loadingProdi = ref(false)
 
 const fetchProdi = async () => {
   try {
-    loadingProdi.value = true;
+    loadingProdi.value = true
+
     const { data } = await $api('/admin/prodi', {
       method: "GET",
       body: {
         limit: 0,
         sort_key: 'kode',
         sort_order: 'desc',
-      }
+      },
     })
 
     prodi.value = data.data.map(prodi => {
@@ -62,7 +62,7 @@ const fetchProdi = async () => {
   } catch (err) {
     console.error(err)
   } finally {
-    loadingProdi.value = false;
+    loadingProdi.value = false
   }
 }
 
@@ -73,7 +73,7 @@ onMounted(() => {
 
 watch(
   () => props.dataForm,
-  (newVal) => {
+  newVal => {
     if (props.typeForm === "edit" && newVal) {
       mahasiswa.value = {
         nim: newVal.nim,
@@ -83,38 +83,48 @@ watch(
         angkatan: newVal.th_angkatan,
         kelas: newVal.kelas,
         semester: newVal.smt,
-      };
+      }
     }
   },
-);
+)
 
 defineExpose({
   mahasiswa,
-});
+})
 </script>
 
 <template>
   <!-- 👉 Mahasiswa -->
-  <VCard class="mb-6" title="Mahasiswa">
+  <VCard
+    class="mb-6"
+    title="Mahasiswa"
+  >
     <VCardText>
       <VRow>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswa.nim"
             label="NIM"
             placeholder="NIM"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="mahasiswa.nama"
             label="Nama"
             placeholder="Nama"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VSelect
             v-model="mahasiswa.prodi"
             :items="prodi"
@@ -123,10 +133,12 @@ defineExpose({
             label="Prodi"
             placeholder="Prodi"
             :loading="loadingProdi"
-          >
-          </VSelect>
+          />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VSelect
             v-model="mahasiswa.jenisKelamin"
             :items="jenisKelaminList"
@@ -134,18 +146,22 @@ defineExpose({
             item-value="value"
             label="Jenis Kelamin"
             placeholder="Jenis Kelamin"
-          >
-          </VSelect>
+          />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="mahasiswa.angkatan"
             label="Angkatan"
             placeholder="Angkatan"
-          >
-          </VTextField>
+          />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VSelect
             v-model="mahasiswa.kelas"
             :items="kelasList"
@@ -153,16 +169,17 @@ defineExpose({
             item-value="value"
             label="Kelas"
             placeholder="Kelas"
-          >
-          </VSelect>
+          />
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VTextField
             v-model="mahasiswa.semester"
             label="Semester"
             placeholder="Semester"
-          >
-          </VTextField>
+          />
         </VCol>
       </VRow>
     </VCardText>

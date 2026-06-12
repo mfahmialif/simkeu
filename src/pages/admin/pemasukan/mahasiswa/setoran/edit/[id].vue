@@ -1,33 +1,34 @@
 <script setup>
-import FormSetoran from "@/components/admin/setoran/FormSetoran.vue";
-import { onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import FormSetoran from "@/components/admin/setoran/FormSetoran.vue"
+import { onMounted, ref } from "vue"
+import { useRoute, useRouter } from "vue-router"
 
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 
-const id = route.params.id;
+const id = route.params.id
 
-const data = ref({});
-const isLoading = ref(false);
+const data = ref({})
+const isLoading = ref(false)
 
 const fetchData = async () => {
   try {
-    isLoading.value = true;
+    isLoading.value = true
 
     const response = await $api("/admin/pemasukan/mahasiswa/setoran/" + id, {
       method: "GET",
-    });
-    data.value = response;
+    })
+
+    data.value = response
   } catch (err) {
-    console.log(err);
+    console.log(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const menuList = [
   {
@@ -36,6 +37,7 @@ const menuList = [
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -45,13 +47,13 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/pemasukan/mahasiswa/setoran"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Setoran Edit - SIMKEU";
-  console.log("edit Setoran id", id);
-  fetchData();
-});
+  document.title = "Setoran Edit - SIMKEU"
+  console.log("edit Setoran id", id)
+  fetchData()
+})
 </script>
 
 <template>
@@ -63,13 +65,16 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <div v-if="isLoading" class="text-center">
+          <div
+            v-if="isLoading"
+            class="text-center"
+          >
             <VProgressLinear indeterminate />
           </div>
           <FormSetoran
             v-else
-            typeForm="edit"
-            :dataForm="data"
+            type-form="edit"
+            :data-form="data"
             :url="'/admin/pemasukan/mahasiswa/setoran/' + id"
             :is-role-visible="true"
           />

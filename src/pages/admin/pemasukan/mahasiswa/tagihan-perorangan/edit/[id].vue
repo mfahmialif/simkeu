@@ -1,36 +1,36 @@
 <script setup>
-import FormTagihan from "@/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue";
-import { useRoute, useRouter } from "vue-router";
+import FormTagihan from "@/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue"
+import { useRoute, useRouter } from "vue-router"
 
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 
-const id = route.params.id;
+const id = route.params.id
 
-const data = ref({});
-const isLoading = ref(false);
+const data = ref({})
+const isLoading = ref(false)
 
 const fetchData = async () => {
   try {
-    isLoading.value = true;
+    isLoading.value = true
 
     const response = await $api(
       "/admin/pemasukan/mahasiswa/tagihan-perorangan/" + id,
       {
         method: "GET",
-      }
-    );
+      },
+    )
 
-    data.value = response;
+    data.value = response
   } catch (err) {
-    console.error(err);
+    console.error(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const menuList = [
   {
@@ -46,12 +46,12 @@ const menuList = [
     clickHandler: () =>
       router.push("/admin/pemasukan/mahasiswa/tagihan-perorangan"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Tagihan Perorangan Edit - SIMKEU";
-  fetchData();
-});
+  document.title = "Tagihan Perorangan Edit - SIMKEU"
+  fetchData()
+})
 </script>
 
 <template>
@@ -63,7 +63,10 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <div v-if="isLoading" class="text-center">
+          <div
+            v-if="isLoading"
+            class="text-center"
+          >
             <VProgressLinear indeterminate />
           </div>
           <FormTagihan

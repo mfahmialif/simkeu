@@ -1,5 +1,5 @@
 <script setup>
-import PegawaiTable from "@/components/admin/pegawai/PegawaiTable.vue";
+import PegawaiTable from "@/components/admin/pegawai/PegawaiTable.vue"
 </script>
 
 <template>

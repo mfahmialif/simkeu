@@ -19,7 +19,12 @@ const configStore = useConfigStore()
 </script>
 
 <template>
-  <VSnackbar v-model="snackbarData.visible" location="top end" variant="flat" :color="snackbarData.color">
+  <VSnackbar
+    v-model="snackbarData.visible"
+    location="top end"
+    variant="flat"
+    :color="snackbarData.color"
+  >
     {{ snackbarData.text }}
   </VSnackbar>
 

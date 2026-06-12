@@ -1,40 +1,40 @@
 <script setup>
-import { formatDate } from "@vueuse/core";
-import { formatMoney } from "@/composables/formatRupiah";
+import { formatDate } from "@vueuse/core"
+import { formatMoney } from "@/composables/formatRupiah"
 
-const selectedThAkademik = ref();
-const thAkademik = ref([]);
-const selectedProdi = ref(null);
-const prodiList = ref([]);
-const selectedJenisPembayaran = ref(null);
-const jenisPembayaranList = ref([]);
-const selectedUser = ref(null);
-const userList = ref([]);
-const tanggalMulai = ref(null);
-const tanggalAkhir = ref(null);
+const selectedThAkademik = ref()
+const thAkademik = ref([])
+const selectedProdi = ref(null)
+const prodiList = ref([])
+const selectedJenisPembayaran = ref(null)
+const jenisPembayaranList = ref([])
+const selectedUser = ref(null)
+const userList = ref([])
+const tanggalMulai = ref(null)
+const tanggalAkhir = ref(null)
 
-const widgetRef = ref(null);
+const widgetRef = ref(null)
 
-const page = ref(1);
-const itemsPerPage = ref(10);
-const sortBy = ref({ key: "created_at", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
-const isBsiPayment = item => String(item?.sumber || '').toLowerCase() === 'bsi';
+const page = ref(1)
+const itemsPerPage = ref(10)
+const sortBy = ref({ key: "created_at", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
+const isBsiPayment = item => String(item?.sumber || '').toLowerCase() === 'bsi'
 
 const getItemMataUang = (item = {}) => ({
   id: item.mata_uang_id ?? null,
   kode: String(item.mata_uang_kode ?? "IDR").toUpperCase(),
   nama: item.mata_uang_nama ?? "Rupiah",
   simbol: item.mata_uang_simbol ?? "Rp",
-});
+})
 
 const fetchData = async () => {
-  loading.value = true;
+  loading.value = true
   try {
     const { data } = await $api("/admin/pemasukan/mahasiswa/pembayaran", {
       method: "GET",
@@ -59,71 +59,76 @@ const fetchData = async () => {
         ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
         ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
 
-    fetchDetailData();
+    fetchDetailData()
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const fetchDetailData = async () => {
-  const nimList = dataTable.value.map((item) => item.nim);
+  const nimList = dataTable.value.map(item => item.nim)
+
   const res = await $api("/admin/mahasiswa/nim", {
     method: "GET",
     body: {
       nim: JSON.stringify(nimList),
       whereIn: true,
     },
-  });
-  dataTable.value = dataTable.value.map((item) => {
-    const mhs = res.find((m) => m.nim === item.nim);
+  })
+
+  dataTable.value = dataTable.value.map(item => {
+    const mhs = res.find(m => m.nim === item.nim)
+    
     return {
       ...item,
       mahasiswa: mhs ? mhs : false, // tambahkan objek mahasiswa (atau false kalau tidak ditemukan)
-    };
-  });
-};
+    }
+  })
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  loading.value = true;
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  loading.value = true
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
 const fetchThAkademik = async () => {
   try {
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
-    });
+    })
 
-    thAkademik.value = data.data.map((thAkademik) => {
+    thAkademik.value = data.data.map(thAkademik => {
       return {
         title: `${thAkademik.nama} - ${thAkademik.semester}`,
         value: thAkademik.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
 
 const fetchProdi = async () => {
   try {
     const response = await $api("/admin/prodi", {
       method: "GET",
       body: { limit: 100, sort_key: 'nama', sort_order: 'asc' },
-    });
+    })
+
     if (response && response.data) {
-      const items = response.data.data || response.data;
+      const items = response.data.data || response.data
+
       prodiList.value = [
         { title: '📚 Semua Prodi Sarjana', value: 'sarjana' },
         { title: '🎓 Semua Prodi Pasca', value: 'pasca' },
@@ -133,182 +138,192 @@ const fetchProdi = async () => {
             title: `${p.alias} - ${p.nama} (${p.jenjang})`,
             value: p.id,
           })),
-      ];
+      ]
     }
   } catch (err) {
-    console.error('Failed to fetch prodi:', err);
+    console.error('Failed to fetch prodi:', err)
   }
-};
+}
 
 const fetchJenisPembayaran = async () => {
   try {
     const response = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
       method: "GET",
       body: { limit: 100 },
-    });
+    })
+
     if (response && response.data) {
-      const items = response.data.data || response.data;
+      const items = response.data.data || response.data
+
       jenisPembayaranList.value = items.map(jp => ({
         title: jp.nama+" - "+jp.kategori,
         value: jp.id,
-      }));
+      }))
     }
   } catch (err) {
-    console.error('Failed to fetch jenis pembayaran:', err);
+    console.error('Failed to fetch jenis pembayaran:', err)
   }
-};
+}
 
 const fetchUser = async () => {
   try {
     const response = await $api("/helper/petugas-pembayaran", {
       method: "GET",
-    });
+    })
+
     if (response && response.data) {
-      const items = response.data.data || response.data;
+      const items = response.data.data || response.data
+
       userList.value = items.map(u => ({
         title: `${u.name} (${u.jenis_kelamin})`,
         value: u.id,
-      }));
+      }))
     }
   } catch (err) {
-    console.error('Failed to fetch petugas:', err);
+    console.error('Failed to fetch petugas:', err)
   }
-};
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
-const disabledDelete = ref(false);
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
+const disabledDelete = ref(false)
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id: id,
     name: name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
-    disabledDelete.value = true;
+    disabledDelete.value = true
+
     const response = await $api("/admin/pemasukan/mahasiswa/pembayaran/" + id, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: err,
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
-    disabledDelete.value = false;
+    isDialogDeleteVisible.value = false
+    disabledDelete.value = false
   }
-};
+}
 
-const kwitansi = async (id) => {
+const kwitansi = async id => {
   try {
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
+
     const blob = await $api(
       "/admin/pemasukan/mahasiswa/pembayaran/kwitansi/" + id + "/view",
       {
         method: "GET",
         headers: { Accept: "application/pdf" },
-      }
-    );
+      },
+    )
 
-    openFileExport(blob);
+    openFileExport(blob)
   } catch (err) {
-    console.info(err);
+    console.info(err)
     showSnackbar({
       text: err,
       color: "error",
-    });
+    })
   }
-};
+}
 
-const userData = useCookie("userData").value ?? {};
+const userData = useCookie("userData").value ?? {}
 
 onMounted(() => {
-  document.title = "Pembayaran Mahasiswa - SIMKEU";
-  console.log(userData);
-  fetchThAkademik();
-  fetchProdi();
-  fetchJenisPembayaran();
-  fetchUser();
-});
+  document.title = "Pembayaran Mahasiswa - SIMKEU"
+  console.log(userData)
+  fetchThAkademik()
+  fetchProdi()
+  fetchJenisPembayaran()
+  fetchUser()
+})
 
 watch(
   selectedRows,
-  (newValue) => {
+  newValue => {
     newValue.forEach((row, index) => {
-      console.log(`${index + 1}.`, row);
-    });
+      console.log(`${index + 1}.`, row)
+    })
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 watch(selectedThAkademik, () => {
-  page.value = 1;
-  fetchData();
-});
+  page.value = 1
+  fetchData()
+})
 
 watch(selectedProdi, () => {
-  page.value = 1;
-  fetchData();
-});
+  page.value = 1
+  fetchData()
+})
 
 watch(selectedJenisPembayaran, () => {
-  page.value = 1;
-  fetchData();
-});
+  page.value = 1
+  fetchData()
+})
 
 watch(selectedUser, () => {
-  page.value = 1;
-  fetchData();
-});
+  page.value = 1
+  fetchData()
+})
 
 watch(
   [tanggalMulai, tanggalAkhir],
   () => {
-    page.value = 1;
-    fetchData();
+    page.value = 1
+    fetchData()
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 const clearDateFilter = () => {
-  tanggalMulai.value = null;
-  tanggalAkhir.value = null;
-};
+  tanggalMulai.value = null
+  tanggalAkhir.value = null
+}
 
 const refreshData = () => {
-  fetchData();
+  fetchData()
   if (widgetRef.value) {
-    widgetRef.value.fetchStatistics();
+    widgetRef.value.fetchStatistics()
   }
-};
+}
 </script>
 
 <template>
   <div>
     <div class="d-flex justify-end mb-4">
-      <VBtn color="primary" prepend-icon="ri-refresh-line" @click="refreshData">
+      <VBtn
+        color="primary"
+        prepend-icon="ri-refresh-line"
+        @click="refreshData"
+      >
         Refresh Data
       </VBtn>
     </div>
@@ -325,7 +340,10 @@ const refreshData = () => {
 
     <VRow>
       <!-- 👉 Select ThAkademik -->
-      <VCol cols="12" sm="3">
+      <VCol
+        cols="12"
+        sm="3"
+      >
         <VSelect
           v-model="selectedThAkademik"
           label="Select Th Akademik"
@@ -337,7 +355,10 @@ const refreshData = () => {
         />
       </VCol>
       <!-- 👉 Select Prodi -->
-      <VCol cols="12" sm="3">
+      <VCol
+        cols="12"
+        sm="3"
+      >
         <VSelect
           v-model="selectedProdi"
           label="Filter Prodi"
@@ -349,7 +370,10 @@ const refreshData = () => {
         />
       </VCol>
       <!-- 👉 Select Jenis Pembayaran -->
-      <VCol cols="12" sm="3">
+      <VCol
+        cols="12"
+        sm="3"
+      >
         <VSelect
           v-model="selectedJenisPembayaran"
           label="Filter Jenis Pembayaran"
@@ -361,7 +385,10 @@ const refreshData = () => {
         />
       </VCol>
       <!-- 👉 Select User/Petugas -->
-      <VCol cols="12" sm="3">
+      <VCol
+        cols="12"
+        sm="3"
+      >
         <VSelect
           v-model="selectedUser"
           label="Filter Petugas"
@@ -376,7 +403,10 @@ const refreshData = () => {
 
     <VRow class="mb-2">
       <!-- 👉 Dari Tanggal -->
-      <VCol cols="12" sm="5">
+      <VCol
+        cols="12"
+        sm="5"
+      >
         <AppDateTimePicker
           v-model="tanggalMulai"
           label="Dari Tanggal"
@@ -389,7 +419,10 @@ const refreshData = () => {
         />
       </VCol>
       <!-- 👉 Sampai Tanggal -->
-      <VCol cols="12" sm="5">
+      <VCol
+        cols="12"
+        sm="5"
+      >
         <AppDateTimePicker
           v-model="tanggalAkhir"
           label="Sampai Tanggal"
@@ -402,7 +435,11 @@ const refreshData = () => {
         />
       </VCol>
       <!-- 👉 Reset -->
-      <VCol cols="12" sm="2" class="d-flex align-end">
+      <VCol
+        cols="12"
+        sm="2"
+        class="d-flex align-end"
+      >
         <VBtn
           color="secondary"
           variant="outlined"
@@ -463,6 +500,9 @@ const refreshData = () => {
 
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Pembayaran', key: 'keuangan_tagihan_nama' },
@@ -473,9 +513,6 @@ const refreshData = () => {
           { title: 'Tanggal Transaksi', key: 'tanggal' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -483,29 +520,45 @@ const refreshData = () => {
         item-value="name"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data.
+          </div>
         </template>
         <template #item.id="{ index }">
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
         <template #item.keuangan_tagihan_nama="{ item }">
           <div style="margin: 15px 0">
-            <VChip color="primary" size="x-small" label>
+            <VChip
+              color="primary"
+              size="x-small"
+              label
+            >
               {{ item.nota ?? item.nomor }}
             </VChip>
             <VChip
+              v-if="item.keuangan_tagihan_double_degree == 1"
               class="ms-2"
               color="success"
               size="x-small"
               label
-              v-if="item.keuangan_tagihan_double_degree == 1"
             >
               (Double Degree)
             </VChip>
@@ -519,7 +572,7 @@ const refreshData = () => {
                 {{ item.mahasiswa.jk?.kode }}
               </template>
               <template v-else-if="item.mahasiswa === false">
-                Data tidak ditemukan di SIAKAD.<br />Silakan hapus atau periksa
+                Data tidak ditemukan di SIAKAD.<br>Silakan hapus atau periksa
                 kembali di SIAKAD.
               </template>
               <template v-else>
@@ -529,46 +582,71 @@ const refreshData = () => {
                   size="16"
                   width="2"
                   style="vertical-align: middle"
-                >
-                </VProgressCircular>
+                />
               </template>
             </div>
           </div>
         </template>
         <template #item.created_at="{ item }">
           <div>
-            <VIcon icon="ri-calendar-check-line" size="14" class="me-1" />
+            <VIcon
+              icon="ri-calendar-check-line"
+              size="14"
+              class="me-1"
+            />
             {{ item.created_at ? formatDate(new Date(item.created_at), "YYYY-MM-DD") : '-' }}
           </div>
         </template>
         <template #item.tanggal="{ item }">
           <div class="text-caption font-weight-bold text-primary mb-1">
-            <VIcon icon="ri-user-line" size="14" class="me-1" />
+            <VIcon
+              icon="ri-user-line"
+              size="14"
+              class="me-1"
+            />
             {{ item.petugas_nama || '-' }}
           </div>
           <div>
-            <VIcon icon="ri-calendar-line" size="14" class="me-1" />
+            <VIcon
+              icon="ri-calendar-line"
+              size="14"
+              class="me-1"
+            />
             {{ formatDate(new Date(item.tanggal), "YYYY-MM-DD") }}
           </div>
         </template>
         <template #item.jumlah="{ item }">
           <div>
-            <VChip color="primary" size="x-small" label>
+            <VChip
+              color="primary"
+              size="x-small"
+              label
+            >
               {{ item.keuangan_jenis_pembayaran_nama }}
             </VChip>
           </div>
           <div>{{ formatMoney(item.jumlah, getItemMataUang(item)) }}</div>
         </template>
         <template #item.mata_uang_kode="{ item }">
-          <VChip size="x-small" color="primary" variant="tonal">
+          <VChip
+            size="x-small"
+            color="primary"
+            variant="tonal"
+          >
             {{ item.mata_uang_kode || 'IDR' }}
           </VChip>
         </template>
 
         <template #item.username="{ item }">
           <div class="d-flex align-center">
-            <VAvatar size="32" :color="item.avatar ? '' : 'primary'">
-              <VImg v-if="item.avatar" :src="item.avatar_url" />
+            <VAvatar
+              size="32"
+              :color="item.avatar ? '' : 'primary'"
+            >
+              <VImg
+                v-if="item.avatar"
+                :src="item.avatar_url"
+              />
               <span v-else>{{ item.username[0] }}</span>
             </VAvatar>
             <div class="d-flex flex-column ms-3">
@@ -605,14 +683,14 @@ const refreshData = () => {
                 <VListItem
                   v-if="
                     !isBsiPayment(item) &&
-                    (
-                      ['admin', 'kabag'].includes(
-                        (userData?.role?.name || '').toLowerCase()
-                      ) ||
-                      ((userData?.role?.name || '').toLowerCase() === 'staff' &&
-                        (userData?.jenis_kelamin || '').toLowerCase() ===
+                      (
+                        ['admin', 'kabag'].includes(
+                          (userData?.role?.name || '').toLowerCase()
+                        ) ||
+                        ((userData?.role?.name || '').toLowerCase() === 'staff' &&
+                          (userData?.jenis_kelamin || '').toLowerCase() ===
                           'perempuan')
-                    )
+                      )
                   "
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
@@ -626,7 +704,10 @@ const refreshData = () => {
         </template>
       </VDataTableServer>
     </VCard>
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
@@ -636,7 +717,11 @@ const refreshData = () => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
             dibatalkan.
@@ -656,7 +741,10 @@ const refreshData = () => {
             :disabled="disabledDelete"
             @click="deleteDataSubmit(deleteData.id)"
           >
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Delete
           </VBtn>
         </VCardText>

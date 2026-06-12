@@ -5,4 +5,4 @@ export default [
     icon: { icon: "ri-user-settings-line" },
     to: "admin-user",
   },
-];
+]

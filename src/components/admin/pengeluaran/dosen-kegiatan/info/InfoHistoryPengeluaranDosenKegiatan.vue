@@ -1,29 +1,31 @@
 <script setup>
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "tanggal", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(false);
-const currentPegawaiId = ref(null);
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "tanggal", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(false)
+const currentPegawaiId = ref(null)
 
 const noDataText = computed(() => currentPegawaiId.value
   ? "Tidak ada riwayat kegiatan."
-  : "Pilih pegawai terlebih dahulu.");
+  : "Pilih pegawai terlebih dahulu.")
 
 const fetchData = async (pegawaiId = currentPegawaiId.value) => {
-  currentPegawaiId.value = pegawaiId;
+  currentPegawaiId.value = pegawaiId
 
   if (!currentPegawaiId.value) {
-    dataTable.value = [];
-    totalItems.value = 0;
-    return;
+    dataTable.value = []
+    totalItems.value = 0
+    
+    return
   }
 
   try {
-    loading.value = true;
+    loading.value = true
+
     const { data } = await $api("/admin/pengeluaran/dosen-kegiatan", {
       method: "GET",
       body: {
@@ -34,71 +36,71 @@ const fetchData = async (pegawaiId = currentPegawaiId.value) => {
         search: search.value,
         pegawai_id: currentPegawaiId.value,
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id,
     name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
 const deleteDataSubmit = async id => {
   try {
     const response = await $api("/admin/pengeluaran/dosen-kegiatan/" + id, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 defineExpose({
   fetchData,
-});
+})
 </script>
 
 <template>
@@ -122,6 +124,9 @@ defineExpose({
       </VCardText>
 
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
@@ -133,9 +138,6 @@ defineExpose({
           { title: 'Keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -229,7 +231,10 @@ defineExpose({
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
           variant="text"
@@ -238,7 +243,11 @@ defineExpose({
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
             dibatalkan.
@@ -253,8 +262,14 @@ defineExpose({
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

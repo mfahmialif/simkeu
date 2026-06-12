@@ -1,80 +1,84 @@
 <script setup>
-import { formatMoney } from "@/composables/formatRupiah";
-import { showSnackbar } from "@/composables/snackbar";
-import { computed, onMounted, ref, watch } from "vue";
+import { formatMoney } from "@/composables/formatRupiah"
+import { showSnackbar } from "@/composables/snackbar"
+import { computed, onMounted, ref, watch } from "vue"
 
-const route = useRoute();
-const router = useRouter();
+const route = useRoute()
+const router = useRouter()
 
 // Params dari query string
-const category = computed(() => route.query.category || "SPP");
+const category = computed(() => route.query.category || "SPP")
 
 // ===== FILTER =====
-const thAkademikList = ref([]);
-const prodiList = ref([]);
-const mataUangList = ref([]);
+const thAkademikList = ref([])
+const prodiList = ref([])
+const mataUangList = ref([])
 
-const selectedThAkademik = ref(route.query.th_akademik_id ? Number(route.query.th_akademik_id) : null);
-const selectedProdi = ref(route.query.prodi_id ? Number(route.query.prodi_id) : null);
-const selectedJk = ref(route.query.jk_id ? Number(route.query.jk_id) : null);
-const selectedCurrency = ref(String(route.query.mata_uang_kode || "IDR").toUpperCase());
+const selectedThAkademik = ref(route.query.th_akademik_id ? Number(route.query.th_akademik_id) : null)
+const selectedProdi = ref(route.query.prodi_id ? Number(route.query.prodi_id) : null)
+const selectedJk = ref(route.query.jk_id ? Number(route.query.jk_id) : null)
+const selectedCurrency = ref(String(route.query.mata_uang_kode || "IDR").toUpperCase())
+
 const activeMataUang = ref({
   kode: selectedCurrency.value,
   simbol: selectedCurrency.value === "IDR" ? "Rp" : selectedCurrency.value,
-});
+})
 
 const fetchThAkademik = async () => {
   try {
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
       body: { limit: 0, sort_key: "kode", sort_order: "desc" },
-    });
-    thAkademikList.value = (data.data || []).map((i) => ({
+    })
+
+    thAkademikList.value = (data.data || []).map(i => ({
       title: `${i.nama} - ${i.semester}`,
       value: i.id,
-    }));
+    }))
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-};
+}
 
 const fetchProdi = async () => {
   try {
     const { data } = await $api("/admin/prodi", {
       method: "GET",
       body: { limit: 0, sort_key: "kode", sort_order: "desc" },
-    });
-    prodiList.value = (data.data || []).map((i) => ({
+    })
+
+    prodiList.value = (data.data || []).map(i => ({
       title: i.nama,
       value: i.id,
-    }));
+    }))
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-};
+}
 
 const fetchMataUang = async () => {
   try {
-    const response = await $api("/admin/mata-uang?limit=0&aktif=1&sort_key=kode&sort_order=asc");
-    const items = response.data?.data || [];
-    mataUangList.value = items.map((item) => ({
+    const response = await $api("/admin/mata-uang?limit=0&aktif=1&sort_key=kode&sort_order=asc")
+    const items = response.data?.data || []
+
+    mataUangList.value = items.map(item => ({
       title: `${item.kode} - ${item.nama}`,
       value: String(item.kode).toUpperCase(),
-    }));
+    }))
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-};
+}
 
 const jkList = [
   { title: "Laki-laki", value: 8 },
   { title: "Perempuan", value: 9 },
-];
+]
 
 // Watch filter changes -> refetch
 watch([selectedThAkademik, selectedProdi, selectedJk, selectedCurrency], () => {
-  fetchDetail();
-});
+  fetchDetail()
+})
 
 // Tabs
 const tabs = [
@@ -83,80 +87,85 @@ const tabs = [
   { value: "prodi", label: "Per Prodi" },
   { value: "bulan", label: "Per Bulan" },
   { value: "tahun", label: "Per Tahun" },
-];
-const activeTab = ref("detail");
+]
+
+const activeTab = ref("detail")
 
 // Data
-const isLoading = ref(false);
-const detailData = ref([]);
-const totalAmount = ref(0);
-const totalLakiLaki = ref(0);
-const totalPerempuan = ref(0);
+const isLoading = ref(false)
+const detailData = ref([])
+const totalAmount = ref(0)
+const totalLakiLaki = ref(0)
+const totalPerempuan = ref(0)
 
-const money = (amount) => formatMoney(amount, activeMataUang.value);
+const money = amount => formatMoney(amount, activeMataUang.value)
 
-const paymentMethodColor = (jenisKelamin) => {
-  const value = String(jenisKelamin || "").toLowerCase();
-  if (value.includes("putra") || value.includes("laki")) return "primary";
-  if (value.includes("putri") || value.includes("perempuan")) return "error";
-  return "secondary";
-};
+const paymentMethodColor = jenisKelamin => {
+  const value = String(jenisKelamin || "").toLowerCase()
+  if (value.includes("putra") || value.includes("laki")) return "primary"
+  if (value.includes("putri") || value.includes("perempuan")) return "error"
+  
+  return "secondary"
+}
 
 const fetchDetail = async () => {
-  isLoading.value = true;
+  isLoading.value = true
 
   const params = {
     category: category.value,
     group_by: activeTab.value,
     mata_uang_kode: selectedCurrency.value,
-  };
-  if (selectedThAkademik.value) params.th_akademik_id = selectedThAkademik.value;
-  if (selectedProdi.value) params.prodi_id = selectedProdi.value;
-  if (selectedJk.value) params.jk_id = selectedJk.value;
+  }
 
-  const queryString = new URLSearchParams(params).toString();
-  const url = `/admin/dashboard/finance-overview-detail?${queryString}`;
+  if (selectedThAkademik.value) params.th_akademik_id = selectedThAkademik.value
+  if (selectedProdi.value) params.prodi_id = selectedProdi.value
+  if (selectedJk.value) params.jk_id = selectedJk.value
+
+  const queryString = new URLSearchParams(params).toString()
+  const url = `/admin/dashboard/finance-overview-detail?${queryString}`
 
   try {
-    const response = await $api(url);
-    isLoading.value = false;
+    const response = await $api(url)
+
+    isLoading.value = false
 
     if (!response.status) {
-      showSnackbar({ text: response.message, color: "error" });
-      return;
+      showSnackbar({ text: response.message, color: "error" })
+      
+      return
     }
 
-    detailData.value = (response.data || []).map((row) => ({
+    detailData.value = (response.data || []).map(row => ({
       ...row,
       amount: Number(row.amount || 0),
       laki_laki: Number(row.laki_laki || 0),
       perempuan: Number(row.perempuan || 0),
-      payment_methods: (row.payment_methods || []).map((method) => ({
+      payment_methods: (row.payment_methods || []).map(method => ({
         ...method,
         amount: Number(method.amount || 0),
         laki_laki: Number(method.laki_laki || 0),
         perempuan: Number(method.perempuan || 0),
       })),
-    }));
-    totalAmount.value = Number(response.total || 0);
-    totalLakiLaki.value = Number(response.total_laki_laki || 0);
-    totalPerempuan.value = Number(response.total_perempuan || 0);
-    activeMataUang.value = response.mata_uang || activeMataUang.value;
+    }))
+    totalAmount.value = Number(response.total || 0)
+    totalLakiLaki.value = Number(response.total_laki_laki || 0)
+    totalPerempuan.value = Number(response.total_perempuan || 0)
+    activeMataUang.value = response.mata_uang || activeMataUang.value
   } catch (err) {
-    isLoading.value = false;
-    showSnackbar({ text: "Gagal memuat data", color: "error" });
+    isLoading.value = false
+    showSnackbar({ text: "Gagal memuat data", color: "error" })
   }
-};
+}
 
-watch(activeTab, () => fetchDetail());
+watch(activeTab, () => fetchDetail())
 
 onMounted(() => {
-  document.title = `Detail ${category.value} - SIMKEU`;
-  fetchThAkademik();
-  fetchProdi();
-  fetchMataUang();
-  fetchDetail();
-});
+  document.title = `Detail ${category.value} - SIMKEU`
+  fetchThAkademik()
+  fetchProdi()
+  fetchMataUang()
+  fetchDetail()
+})
 </script>
 
 <template>
@@ -189,7 +198,11 @@ onMounted(() => {
         <VCardText>
           <!-- Filter -->
           <VRow class="mb-4">
-            <VCol cols="12" sm="6" lg="3">
+            <VCol
+              cols="12"
+              sm="6"
+              lg="3"
+            >
               <VSelect
                 v-model="selectedThAkademik"
                 :items="thAkademikList"
@@ -200,7 +213,11 @@ onMounted(() => {
                 hide-details
               />
             </VCol>
-            <VCol cols="12" sm="6" lg="3">
+            <VCol
+              cols="12"
+              sm="6"
+              lg="3"
+            >
               <VSelect
                 v-model="selectedProdi"
                 :items="prodiList"
@@ -211,7 +228,11 @@ onMounted(() => {
                 hide-details
               />
             </VCol>
-            <VCol cols="12" sm="6" lg="3">
+            <VCol
+              cols="12"
+              sm="6"
+              lg="3"
+            >
               <VSelect
                 v-model="selectedJk"
                 :items="jkList"
@@ -222,7 +243,11 @@ onMounted(() => {
                 hide-details
               />
             </VCol>
-            <VCol cols="12" sm="6" lg="3">
+            <VCol
+              cols="12"
+              sm="6"
+              lg="3"
+            >
               <VSelect
                 v-model="selectedCurrency"
                 :items="mataUangList"
@@ -234,7 +259,10 @@ onMounted(() => {
           </VRow>
 
           <!-- Tabs -->
-          <VTabs v-model="activeTab" class="mb-6">
+          <VTabs
+            v-model="activeTab"
+            class="mb-6"
+          >
             <VTab
               v-for="tab in tabs"
               :key="tab.value"
@@ -251,7 +279,10 @@ onMounted(() => {
           />
 
           <!-- Data Table -->
-          <VTable v-else class="text-no-wrap">
+          <VTable
+            v-else
+            class="text-no-wrap"
+          >
             <thead>
               <tr>
                 <th>No</th>
@@ -265,11 +296,17 @@ onMounted(() => {
             </thead>
             <tbody>
               <tr v-if="detailData.length === 0">
-                <td colspan="7" class="text-center text-disabled py-8">
+                <td
+                  colspan="7"
+                  class="text-center text-disabled py-8"
+                >
                   Tidak ada data
                 </td>
               </tr>
-              <tr v-for="(row, idx) in detailData" :key="idx">
+              <tr
+                v-for="(row, idx) in detailData"
+                :key="idx"
+              >
                 <td>{{ idx + 1 }}</td>
                 <td>
                   <span class="font-weight-medium">{{ row.label }}</span>
@@ -281,13 +318,19 @@ onMounted(() => {
                   <span class="font-weight-medium">{{ money(row.perempuan || 0) }}</span>
                 </td>
                 <td style="min-inline-size: 280px;">
-                  <div v-if="row.payment_methods?.length" class="d-flex flex-column gap-y-1">
+                  <div
+                    v-if="row.payment_methods?.length"
+                    class="d-flex flex-column gap-y-1"
+                  >
                     <div
                       v-for="(method, methodIdx) in row.payment_methods"
                       :key="methodIdx"
                       class="payment-method-row"
                     >
-                      <div class="d-flex align-center gap-x-2" style="min-inline-size: 0;">
+                      <div
+                        class="d-flex align-center gap-x-2"
+                        style="min-inline-size: 0;"
+                      >
                         <VChip
                           size="x-small"
                           label
@@ -304,7 +347,10 @@ onMounted(() => {
                       </span>
                     </div>
                   </div>
-                  <span v-else class="text-disabled">-</span>
+                  <span
+                    v-else
+                    class="text-disabled"
+                  >-</span>
                 </td>
                 <td>
                   <span class="font-weight-medium">{{ money(row.amount) }}</span>
@@ -325,11 +371,11 @@ onMounted(() => {
 
               <!-- Total -->
               <tr v-if="detailData.length > 0">
-                <td></td>
+                <td />
                 <td><strong>Total</strong></td>
                 <td><strong>{{ money(totalLakiLaki) }}</strong></td>
                 <td><strong>{{ money(totalPerempuan) }}</strong></td>
-                <td></td>
+                <td />
                 <td><strong>{{ money(totalAmount) }}</strong></td>
                 <td><strong>100%</strong></td>
               </tr>

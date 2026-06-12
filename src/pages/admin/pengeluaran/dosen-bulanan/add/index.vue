@@ -1,17 +1,20 @@
 <script setup>
-import FormPengeluaranDosenBulananBatch from "@/components/admin/pengeluaran/pegawai-bulanan/FormPengeluaranDosenBulananBatch.vue";
-import { useRouter } from "vue-router";
+import FormPengeluaranDosenBulananBatch from "@/components/admin/pengeluaran/pegawai-bulanan/FormPengeluaranDosenBulananBatch.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 onMounted(() => {
-  document.title = "Tambah Barokah Dosen Bulanan - SIMKEU";
-});
+  document.title = "Tambah Barokah Dosen Bulanan - SIMKEU"
+})
 </script>
 
 <template>
   <VRow>
-    <VCol cols="12" class="pb-0">
+    <VCol
+      cols="12"
+      class="pb-0"
+    >
       <VBtn
         variant="outlined"
         color="secondary"

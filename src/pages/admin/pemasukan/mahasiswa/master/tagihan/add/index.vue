@@ -1,6 +1,6 @@
 <script setup>
-import FormTagihan from '@/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue';
-import { useRouter } from 'vue-router';
+import FormTagihan from '@/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
@@ -11,6 +11,7 @@ const menuList = [
     icon: 'ri-arrow-left-line',
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -39,7 +40,10 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <FormTagihan typeForm="add" :url="'/admin/pemasukan/mahasiswa/tagihan'" />
+          <FormTagihan
+            type-form="add"
+            url="/admin/pemasukan/mahasiswa/tagihan"
+          />
         </VCardText>
       </VCard>
     </VCol>

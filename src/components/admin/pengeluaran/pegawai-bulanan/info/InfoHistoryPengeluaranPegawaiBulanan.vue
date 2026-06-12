@@ -1,6 +1,6 @@
 <script setup>
-import { formatRupiah } from "@/composables/formatRupiah";
-import { showSnackbar } from "@/composables/snackbar";
+import { formatRupiah } from "@/composables/formatRupiah"
+import { showSnackbar } from "@/composables/snackbar"
 
 const props = defineProps({
   refDataPegawai: {
@@ -19,20 +19,20 @@ const props = defineProps({
     type: String,
     required: true,
   },
-});
+})
 
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(false);
-const initialLoading = ref(false);
-const selectedKode = ref("");
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(false)
+const initialLoading = ref(false)
+const selectedKode = ref("")
 
-const monthName = (value) => {
+const monthName = value => {
   const months = [
     "Januari",
     "Februari",
@@ -46,41 +46,42 @@ const monthName = (value) => {
     "Oktober",
     "November",
     "Desember",
-  ];
+  ]
 
-  return months[Number(value) - 1] || "-";
-};
+  return months[Number(value) - 1] || "-"
+}
 
-const subtotalHarian = item => Number(item.barokah_harian || 0) * Number(item.hari || 0);
+const subtotalHarian = item => Number(item.barokah_harian || 0) * Number(item.hari || 0)
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message ||
     err?.response?._data?.message ||
     err?.response?.data?.message ||
-    err?.message;
+    err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
 const fetchData = async (kode = null) => {
-  selectedKode.value = kode || props.refDataPegawai?.pegawai?.kode || selectedKode.value;
+  selectedKode.value = kode || props.refDataPegawai?.pegawai?.kode || selectedKode.value
 
   if (!selectedKode.value) {
-    dataTable.value = [];
-    totalItems.value = 0;
-    loading.value = false;
-    initialLoading.value = false;
-    return;
+    dataTable.value = []
+    totalItems.value = 0
+    loading.value = false
+    initialLoading.value = false
+    
+    return
   }
 
   try {
-    loading.value = true;
-    initialLoading.value = true;
+    loading.value = true
+    initialLoading.value = true
 
     const { data } = await $api(props.endpoint, {
       method: "GET",
@@ -92,72 +93,72 @@ const fetchData = async (kode = null) => {
         search: search.value,
         kode: selectedKode.value,
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    initialLoading.value = false;
+    loading.value = false
+    initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id,
     name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api(`${props.endpoint}/${id}`, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
-      fetchData();
+      })
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 watch(search, () => {
-  page.value = 1;
-  fetchData();
-});
+  page.value = 1
+  fetchData()
+})
 
 defineExpose({
   fetchData,
-});
+})
 </script>
 
 <template>
@@ -178,6 +179,9 @@ defineExpose({
     </VCardText>
 
     <VDataTableServer
+      v-model:model-value="selectedRows"
+      v-model:items-per-page="itemsPerPage"
+      v-model:page="page"
       :headers="[
         { title: 'No', key: 'id' },
         { title: 'Tanggal', key: 'tanggal' },
@@ -190,9 +194,6 @@ defineExpose({
         { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
         { title: 'Actions', key: 'actions', sortable: false },
       ]"
-      v-model:model-value="selectedRows"
-      v-model:items-per-page="itemsPerPage"
-      v-model:page="page"
       :items="dataTable"
       :items-length="totalItems"
       :loading="loading"
@@ -200,15 +201,27 @@ defineExpose({
       item-value="id"
       @update:options="loadItems"
     >
-      <template v-if="initialLoading" #loading>
+      <template
+        v-if="initialLoading"
+        #loading
+      >
         <div class="text-center pa-4">
-          <VProgressCircular indeterminate color="primary" class="mb-2" />
+          <VProgressCircular
+            indeterminate
+            color="primary"
+            class="mb-2"
+          />
           <div>Memuat data...</div>
         </div>
       </template>
 
-      <template v-else #no-data>
-        <div class="text-center pa-4">Tidak ada data.</div>
+      <template
+        v-else
+        #no-data
+      >
+        <div class="text-center pa-4">
+          Tidak ada data.
+        </div>
       </template>
 
       <template #item.id="{ index }">
@@ -266,7 +279,10 @@ defineExpose({
       </template>
     </VDataTableServer>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
           variant="text"
@@ -275,7 +291,11 @@ defineExpose({
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat dibatalkan.</span>
         </VCardText>
 
@@ -287,8 +307,14 @@ defineExpose({
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

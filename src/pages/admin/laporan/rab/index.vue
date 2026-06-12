@@ -1,37 +1,38 @@
 <script setup>
-import { formatRupiah } from "@/composables/formatRupiah";
-import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue";
-import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran";
-import { showSnackbar } from "@/composables/snackbar";
+import { formatRupiah } from "@/composables/formatRupiah"
+import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue"
+import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran"
+import { showSnackbar } from "@/composables/snackbar"
 
-const router = useRouter();
-const route = useRoute();
-const currentDate = new Date();
-const page = ref(1);
-const itemsPerPage = ref(10);
-const sortBy = ref([{ key: "tanggal_rekap", order: "desc" }]);
-const search = ref("");
-const selectedBulan = ref(currentDate.getMonth() + 1);
-const selectedTahun = ref(currentDate.getFullYear());
-const selectedModule = ref(null);
-const selectedPetugasId = ref(null);
-const petugasList = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const stats = ref({});
-const years = ref([currentDate.getFullYear()]);
-const modules = ref([]);
-const loading = ref(false);
-const initialLoading = ref(true);
-const kasLoading = ref(false);
-const kasSummary = ref([]);
-const kasTotals = ref({});
-const kasManualRows = ref([]);
-const kasPetugas = ref(null);
-const kasDetailDialog = ref(false);
-const kasFormDialog = ref(false);
-const kasEditingId = ref(null);
-const kasSaving = ref(false);
+const router = useRouter()
+const route = useRoute()
+const currentDate = new Date()
+const page = ref(1)
+const itemsPerPage = ref(10)
+const sortBy = ref([{ key: "tanggal_rekap", order: "desc" }])
+const search = ref("")
+const selectedBulan = ref(currentDate.getMonth() + 1)
+const selectedTahun = ref(currentDate.getFullYear())
+const selectedModule = ref(null)
+const selectedPetugasId = ref(null)
+const petugasList = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const stats = ref({})
+const years = ref([currentDate.getFullYear()])
+const modules = ref([])
+const loading = ref(false)
+const initialLoading = ref(true)
+const kasLoading = ref(false)
+const kasSummary = ref([])
+const kasTotals = ref({})
+const kasManualRows = ref([])
+const kasPetugas = ref(null)
+const kasDetailDialog = ref(false)
+const kasFormDialog = ref(false)
+const kasEditingId = ref(null)
+const kasSaving = ref(false)
+
 const kasForm = ref({
   petugas_id: null,
   module_key: null,
@@ -43,8 +44,9 @@ const kasForm = ref({
   tipe: "masuk",
   nominal: 0,
   keterangan: "",
-});
-let searchTimer = null;
+})
+
+let searchTimer = null
 
 const bulanItems = [
   "Januari",
@@ -59,50 +61,56 @@ const bulanItems = [
   "Oktober",
   "November",
   "Desember",
-].map((title, index) => ({ title, value: index + 1 }));
-const formatMonthYear = (value) => {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})/);
+].map((title, index) => ({ title, value: index + 1 }))
 
-  if (!match) return "Belum diatur";
+const formatMonthYear = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})/)
+
+  if (!match) return "Belum diatur"
 
   return new Intl.DateTimeFormat("id-ID", {
     month: "long",
     year: "numeric",
-  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
-};
-const formatDate = (value) => {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1))
+}
 
-  if (!match) return "-";
+const formatDate = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (!match) return "-"
 
   return new Intl.DateTimeFormat("id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-};
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+}
+
 const yearItems = computed(() => [...new Set([
   currentDate.getFullYear(),
   ...years.value,
-])].sort((a, b) => b - a));
+])].sort((a, b) => b - a))
+
 const saldoAdjustmentTotal = computed(() =>
-  Number(kasTotals.value.manual_masuk || 0) - Number(kasTotals.value.manual_keluar || 0)
-);
+  Number(kasTotals.value.manual_masuk || 0) - Number(kasTotals.value.manual_keluar || 0),
+)
+
 const selectedPetugasName = computed(() => {
-  if (kasPetugas.value?.name) return kasPetugas.value.name;
+  if (kasPetugas.value?.name) return kasPetugas.value.name
 
-  const petugas = petugasList.value.find(item => String(item.value) === String(selectedPetugasId.value));
+  const petugas = petugasList.value.find(item => String(item.value) === String(selectedPetugasId.value))
 
-  if (!petugas?.title) return "";
+  if (!petugas?.title) return ""
 
   return String(petugas.title)
     .replace(/\s*\([^)]*\)/g, "")
     .replace(/\s*-\s*.+$/, "")
-    .trim();
-});
+    .trim()
+})
+
 const saldoCardTitle = computed(() => (
   selectedPetugasName.value ? `Saldo ${selectedPetugasName.value}` : "Saldo"
-));
+))
 
 const statCards = computed(() => [
   {
@@ -137,66 +145,71 @@ const statCards = computed(() => [
     icon: "ri-layout-grid-line",
     color: "secondary",
   },
-]);
+])
 
 const moduleColor = key => ({
   tatap_muka: "primary",
   kegiatan: "warning",
   dosen_bulanan: "info",
   staff_bulanan: "success",
-}[key] || "secondary");
+}[key] || "secondary")
+
 const kasTipeItems = [
   { title: "Saldo Awal / Penyesuaian Masuk", value: "masuk" },
   { title: "Penyesuaian Keluar", value: "keluar" },
-];
+]
+
 const activeFilterPayload = () => ({
   search: search.value,
   ...(selectedBulan.value && { bulan: selectedBulan.value }),
   ...(selectedTahun.value && { tahun: selectedTahun.value }),
   ...(selectedModule.value && { module_key: selectedModule.value }),
   ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
-});
+})
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message
     || err?.response?._data?.message
     || err?.response?.data?.message
-    || err?.message;
+    || err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
 const fetchKas = async () => {
   try {
-    kasLoading.value = true;
+    kasLoading.value = true
+
     const response = await $api("/admin/laporan/rab/kas", {
       method: "GET",
       body: activeFilterPayload(),
-    });
+    })
 
-    kasSummary.value = response.data?.summary || [];
-    kasTotals.value = response.data?.totals || {};
-    kasManualRows.value = response.data?.manual || [];
-    kasPetugas.value = response.data?.petugas || null;
+    kasSummary.value = response.data?.summary || []
+    kasTotals.value = response.data?.totals || {}
+    kasManualRows.value = response.data?.manual || []
+    kasPetugas.value = response.data?.petugas || null
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    kasLoading.value = false;
+    kasLoading.value = false
   }
-};
+}
 
 const fetchData = async () => {
   try {
-    loading.value = true;
-    const activeSort = sortBy.value?.[0] || { key: "tanggal_rekap", order: "desc" };
+    loading.value = true
+
+    const activeSort = sortBy.value?.[0] || { key: "tanggal_rekap", order: "desc" }
+
     const response = await $api("/admin/laporan/rab", {
       method: "GET",
       body: {
@@ -206,72 +219,76 @@ const fetchData = async () => {
         sort_order: activeSort.order,
         ...activeFilterPayload(),
       },
-    });
+    })
 
-    dataTable.value = response.data?.data || [];
-    totalItems.value = Number(response.data?.total || 0);
-    stats.value = response.stats || {};
-    years.value = response.filters?.years || years.value;
-    modules.value = response.filters?.modules || modules.value;
-    fetchKas();
+    dataTable.value = response.data?.data || []
+    totalItems.value = Number(response.data?.total || 0)
+    stats.value = response.stats || {}
+    years.value = response.filters?.years || years.value
+    modules.value = response.filters?.modules || modules.value
+    fetchKas()
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    loading.value = false;
-    initialLoading.value = false;
+    loading.value = false
+    initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: nextPage, itemsPerPage: nextLimit, sortBy: nextSort }) => {
-  page.value = nextPage;
-  itemsPerPage.value = nextLimit;
-  sortBy.value = nextSort.length ? nextSort : [{ key: "tanggal_rekap", order: "desc" }];
-  fetchData();
-};
+  page.value = nextPage
+  itemsPerPage.value = nextLimit
+  sortBy.value = nextSort.length ? nextSort : [{ key: "tanggal_rekap", order: "desc" }]
+  fetchData()
+}
 
 const resetFilters = () => {
-  search.value = "";
-  selectedBulan.value = null;
-  selectedTahun.value = null;
-  selectedModule.value = null;
-  page.value = 1;
-  fetchData();
-};
+  search.value = ""
+  selectedBulan.value = null
+  selectedTahun.value = null
+  selectedModule.value = null
+  page.value = 1
+  fetchData()
+}
 
 const fetchPetugas = async () => {
   try {
-    const items = await fetchPetugasPengeluaranOptions(selectedModule.value || "rab");
-    petugasList.value = items;
+    const items = await fetchPetugasPengeluaranOptions(selectedModule.value || "rab")
+
+    petugasList.value = items
 
     const hasSelectedPetugas = selectedPetugasId.value
-      && items.some(item => String(item.value) === String(selectedPetugasId.value));
+      && items.some(item => String(item.value) === String(selectedPetugasId.value))
+
     const nextPetugasId = hasSelectedPetugas
       ? selectedPetugasId.value
-      : defaultPetugasPengeluaranId(items);
+      : defaultPetugasPengeluaranId(items)
 
     if (String(selectedPetugasId.value ?? "") !== String(nextPetugasId ?? "")) {
-      selectedPetugasId.value = nextPetugasId;
+      selectedPetugasId.value = nextPetugasId
     }
   } catch (err) {
-    console.error("Failed to fetch petugas pengeluaran:", err);
+    console.error("Failed to fetch petugas pengeluaran:", err)
   }
-};
+}
 
 const openDetail = item => router.push({
   path: `${item.detail_path}${item.id}`,
   query: {
     return_to: route.fullPath,
   },
-});
+})
+
 const openKasDetailDialog = () => {
-  kasDetailDialog.value = true;
-  fetchKas();
-};
+  kasDetailDialog.value = true
+  fetchKas()
+}
+
 const openKasForm = (item = null) => {
-  kasEditingId.value = item?.id || null;
+  kasEditingId.value = item?.id || null
   kasForm.value = {
     petugas_id: item?.petugas_id || selectedPetugasId.value || null,
     module_key: item?.module_key || selectedModule.value || modules.value?.[0]?.value || "tatap_muka",
@@ -283,11 +300,12 @@ const openKasForm = (item = null) => {
     tipe: item?.tipe || "masuk",
     nominal: item?.nominal || 0,
     keterangan: item?.keterangan || "Saldo awal",
-  };
-  kasFormDialog.value = true;
-};
+  }
+  kasFormDialog.value = true
+}
+
 const saveKasManual = async () => {
-  if (kasSaving.value) return;
+  if (kasSaving.value) return
 
   if (
     !kasForm.value.petugas_id
@@ -298,12 +316,14 @@ const saveKasManual = async () => {
     showSnackbar({
       text: "Petugas, kategori, tanggal, dan keterangan saldo wajib diisi.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    kasSaving.value = true;
+    kasSaving.value = true
+
     const response = await $api(
       kasEditingId.value
         ? `/admin/laporan/rab/kas/manual/${kasEditingId.value}`
@@ -314,70 +334,73 @@ const saveKasManual = async () => {
           ...kasForm.value,
           nominal: Number(kasForm.value.nominal || 0),
         },
-      }
-    );
+      },
+    )
 
-    kasFormDialog.value = false;
-    kasEditingId.value = null;
+    kasFormDialog.value = false
+    kasEditingId.value = null
     showSnackbar({
       text: response.message,
       color: "success",
-    });
-    fetchKas();
+    })
+    fetchKas()
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    kasSaving.value = false;
+    kasSaving.value = false
   }
-};
-const deleteKasManual = async (item) => {
+}
+
+const deleteKasManual = async item => {
   try {
     const response = await $api(`/admin/laporan/rab/kas/manual/${item.id}`, {
       method: "DELETE",
-    });
+    })
 
     showSnackbar({
       text: response.message,
       color: "success",
-    });
-    fetchKas();
+    })
+    fetchKas()
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   }
-};
+}
 
 watch([selectedBulan, selectedTahun, selectedModule, selectedPetugasId], () => {
-  page.value = 1;
-  fetchData();
-});
+  page.value = 1
+  fetchData()
+})
 
-watch(selectedModule, fetchPetugas);
+watch(selectedModule, fetchPetugas)
 
 watch(search, () => {
-  clearTimeout(searchTimer);
-  page.value = 1;
-  searchTimer = setTimeout(fetchData, 350);
-});
+  clearTimeout(searchTimer)
+  page.value = 1
+  searchTimer = setTimeout(fetchData, 350)
+})
 
 onMounted(() => {
-  document.title = "RAB - SIMKEU";
-  fetchPetugas();
-});
+  document.title = "RAB - SIMKEU"
+  fetchPetugas()
+})
 
-onBeforeUnmount(() => clearTimeout(searchTimer));
+onBeforeUnmount(() => clearTimeout(searchTimer))
 </script>
 
 <template>
   <div>
     <div class="rab-header mb-5">
       <div>
-        <h1 class="text-h4 font-weight-semibold">RAB</h1>
+        <h1 class="text-h4 font-weight-semibold">
+          RAB
+        </h1>
         <p class="text-body-1 text-medium-emphasis mb-0">
           Rekap anggaran seluruh pengeluaran Barokah
         </p>
@@ -395,17 +418,36 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
         @keydown.enter="item.clickable && openKasDetailDialog()"
       >
         <VCardText class="d-flex align-center gap-4">
-          <VAvatar :color="item.color" variant="tonal" rounded size="48">
-            <VIcon :icon="item.icon" size="24" />
+          <VAvatar
+            :color="item.color"
+            variant="tonal"
+            rounded
+            size="48"
+          >
+            <VIcon
+              :icon="item.icon"
+              size="24"
+            />
           </VAvatar>
 
           <div class="min-w-0">
-            <div class="text-body-2 text-medium-emphasis">{{ item.title }}</div>
-            <VSkeletonLoader v-if="initialLoading || item.loading" type="text" width="120" />
-            <div v-else class="text-h5 font-weight-semibold rab-stat-value">
+            <div class="text-body-2 text-medium-emphasis">
+              {{ item.title }}
+            </div>
+            <VSkeletonLoader
+              v-if="initialLoading || item.loading"
+              type="text"
+              width="120"
+            />
+            <div
+              v-else
+              class="text-h5 font-weight-semibold rab-stat-value"
+            >
               {{ item.value }}
             </div>
-            <div class="text-caption text-disabled">{{ item.note }}</div>
+            <div class="text-caption text-disabled">
+              {{ item.note }}
+            </div>
           </div>
         </VCardText>
       </VCard>
@@ -419,7 +461,11 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
     <VCard class="mb-5">
       <VCardText>
         <VRow align="center">
-          <VCol cols="12" md="4" lg="3">
+          <VCol
+            cols="12"
+            md="4"
+            lg="3"
+          >
             <VTextField
               v-model="search"
               label="Cari Rekap"
@@ -430,7 +476,12 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             />
           </VCol>
 
-          <VCol cols="12" sm="6" md="2" lg="2">
+          <VCol
+            cols="12"
+            sm="6"
+            md="2"
+            lg="2"
+          >
             <VSelect
               v-model="selectedBulan"
               label="Bulan"
@@ -440,7 +491,12 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             />
           </VCol>
 
-          <VCol cols="12" sm="6" md="2" lg="2">
+          <VCol
+            cols="12"
+            sm="6"
+            md="2"
+            lg="2"
+          >
             <VSelect
               v-model="selectedTahun"
               label="Tahun"
@@ -450,7 +506,11 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             />
           </VCol>
 
-          <VCol cols="12" md="4" lg="2">
+          <VCol
+            cols="12"
+            md="4"
+            lg="2"
+          >
             <VSelect
               v-model="selectedModule"
               label="Jenis Rekap"
@@ -460,7 +520,11 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             />
           </VCol>
 
-          <VCol cols="12" md="4" lg="1">
+          <VCol
+            cols="12"
+            md="4"
+            lg="1"
+          >
             <VBtn
               class="w-100"
               height="56"
@@ -507,13 +571,20 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
       >
         <template #loading>
           <div class="text-center pa-6">
-            <VProgressCircular indeterminate color="primary" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+            />
           </div>
         </template>
 
         <template #no-data>
           <div class="text-center pa-8">
-            <VIcon icon="ri-file-search-line" size="36" class="mb-2" />
+            <VIcon
+              icon="ri-file-search-line"
+              size="36"
+              class="mb-2"
+            />
             <div>Tidak ada rekap sesuai filter.</div>
           </div>
         </template>
@@ -535,13 +606,21 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
         </template>
 
         <template #item.nama="{ item }">
-          <button type="button" class="rab-name" @click="openDetail(item)">
+          <button
+            type="button"
+            class="rab-name"
+            @click="openDetail(item)"
+          >
             {{ item.nama }}
           </button>
         </template>
 
         <template #item.module_name="{ item }">
-          <VChip :color="moduleColor(item.module_key)" size="small" label>
+          <VChip
+            :color="moduleColor(item.module_key)"
+            size="small"
+            label
+          >
             {{ item.module_name }}
           </VChip>
         </template>
@@ -573,7 +652,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
         </template>
 
         <template #item.actions="{ item }">
-          <VTooltip text="Lihat detail rekap" location="top">
+          <VTooltip
+            text="Lihat detail rekap"
+            location="top"
+          >
             <template #activator="{ props: tooltipProps }">
               <VBtn
                 v-bind="tooltipProps"
@@ -589,7 +671,11 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="kasDetailDialog" max-width="1120" scrollable>
+    <VDialog
+      v-model="kasDetailDialog"
+      max-width="1120"
+      scrollable
+    >
       <VCard>
         <VCardItem>
           <VCardTitle>{{ saldoCardTitle }}</VCardTitle>
@@ -601,7 +687,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             <VBtn
               color="primary"
               prepend-icon="ri-add-line"
-              @click="openKasForm()"
+              @click="openKasForm"
             >
               Tambah Saldo Awal
             </VBtn>
@@ -636,18 +722,31 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             </div>
           </div>
 
-          <div v-if="kasLoading" class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" />
+          <div
+            v-if="kasLoading"
+            class="text-center pa-4"
+          >
+            <VProgressCircular
+              indeterminate
+              color="primary"
+            />
           </div>
 
-          <div v-else class="kas-grid">
+          <div
+            v-else
+            class="kas-grid"
+          >
             <div
               v-for="item in kasSummary"
               :key="item.module_key"
               class="kas-item"
             >
               <div class="kas-item-header">
-                <VChip :color="moduleColor(item.module_key)" size="small" label>
+                <VChip
+                  :color="moduleColor(item.module_key)"
+                  size="small"
+                  label
+                >
                   {{ item.module_name }}
                 </VChip>
                 <strong>{{ formatRupiah(item.saldo_kas) }}</strong>
@@ -664,15 +763,19 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
 
           <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-3">
             <div>
-              <div class="font-weight-semibold">Detail Saldo Awal / Penyesuaian</div>
-              <div class="text-caption text-medium-emphasis">{{ kasManualRows.length }} data</div>
+              <div class="font-weight-semibold">
+                Detail Saldo Awal / Penyesuaian
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {{ kasManualRows.length }} data
+              </div>
             </div>
 
             <VBtn
               variant="tonal"
               color="primary"
               prepend-icon="ri-add-line"
-              @click="openKasForm()"
+              @click="openKasForm"
             >
               Tambah
             </VBtn>
@@ -707,7 +810,11 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
             </template>
 
             <template #item.module_name="{ item }">
-              <VChip :color="moduleColor(item.module_key)" size="small" label>
+              <VChip
+                :color="moduleColor(item.module_key)"
+                size="small"
+                label
+              >
                 {{ item.module_name }}
               </VChip>
             </template>
@@ -732,7 +839,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
 
             <template #item.actions="{ item }">
               <div class="d-flex justify-end gap-1">
-                <VTooltip text="Edit saldo awal" location="top">
+                <VTooltip
+                  text="Edit saldo awal"
+                  location="top"
+                >
                   <template #activator="{ props: tooltipProps }">
                     <VBtn
                       v-bind="tooltipProps"
@@ -745,7 +855,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
                   </template>
                 </VTooltip>
 
-                <VTooltip text="Hapus saldo awal" location="top">
+                <VTooltip
+                  text="Hapus saldo awal"
+                  location="top"
+                >
                   <template #activator="{ props: tooltipProps }">
                     <VBtn
                       v-bind="tooltipProps"
@@ -764,7 +877,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
       </VCard>
     </VDialog>
 
-    <VDialog v-model="kasFormDialog" width="680">
+    <VDialog
+      v-model="kasFormDialog"
+      width="680"
+    >
       <VCard :title="kasEditingId ? 'Edit Saldo Awal' : 'Tambah Saldo Awal'">
         <DialogCloseBtn
           variant="text"
@@ -774,7 +890,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
 
         <VCardText>
           <VRow>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VSelect
                 v-model="kasForm.petugas_id"
                 label="Petugas *"
@@ -783,7 +902,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VSelect
                 v-model="kasForm.module_key"
                 label="Kategori *"
@@ -792,7 +914,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppDateTimePicker
                 v-model="kasForm.tanggal"
                 label="Tanggal *"
@@ -805,7 +930,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VSelect
                 v-model="kasForm.tipe"
                 label="Tipe Saldo *"
@@ -814,7 +942,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer));
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="kasForm.nominal"
                 label="Nominal *"

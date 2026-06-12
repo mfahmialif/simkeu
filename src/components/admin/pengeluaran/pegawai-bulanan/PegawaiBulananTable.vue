@@ -1,16 +1,16 @@
 <script setup>
-import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
-import "flatpickr/dist/plugins/monthSelect/style.css";
-import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue";
-import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue";
-import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue";
-import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue";
-import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue";
-import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
-import { downloadFileExport } from "@/composables/exportFile";
-import { formatRupiah } from "@/composables/formatRupiah";
-import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran";
-import { copyTextToClipboard } from "@/utils/clipboard";
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js"
+import "flatpickr/dist/plugins/monthSelect/style.css"
+import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue"
+import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue"
+import PengeluaranRekapBulkUpdate from "@/components/admin/pengeluaran/PengeluaranRekapBulkUpdate.vue"
+import PengeluaranRekapList from "@/components/admin/pengeluaran/PengeluaranRekapList.vue"
+import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue"
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue"
+import { downloadFileExport } from "@/composables/exportFile"
+import { formatRupiah } from "@/composables/formatRupiah"
+import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran"
+import { copyTextToClipboard } from "@/utils/clipboard"
 
 const props = defineProps({
   title: {
@@ -29,56 +29,61 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
-const isDosenBulanan = computed(() => props.endpoint.includes("dosen-bulanan"));
+})
 
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
-const stats = ref({});
-const filterMode = ref("harian");
-const tanggalHarian = ref(null);
-const tanggalMulai = ref(null);
-const tanggalAkhir = ref(null);
-const periodeBulanTahun = ref(null);
-const selectedRekapId = ref(null);
-const selectedPetugasId = ref(null);
-const petugasList = ref([]);
-const selectAllPages = ref(false);
-const isLoadingExcel = ref(false);
-const isLoadingBsiExcel = ref(false);
-const isLoadingBsiCopy = ref(false);
+const isDosenBulanan = computed(() => props.endpoint.includes("dosen-bulanan"))
+
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
+const stats = ref({})
+const filterMode = ref("harian")
+const tanggalHarian = ref(null)
+const tanggalMulai = ref(null)
+const tanggalAkhir = ref(null)
+const periodeBulanTahun = ref(null)
+const selectedRekapId = ref(null)
+const selectedPetugasId = ref(null)
+const petugasList = ref([])
+const selectAllPages = ref(false)
+const isLoadingExcel = ref(false)
+const isLoadingBsiExcel = ref(false)
+const isLoadingBsiCopy = ref(false)
+
 const hasDateFilter = computed(() => !!(
   tanggalHarian.value
   || tanggalMulai.value
   || tanggalAkhir.value
-));
-const hasPeriodFilter = computed(() => !!periodeBulanTahun.value);
+))
+
+const hasPeriodFilter = computed(() => !!periodeBulanTahun.value)
+
 const hasContextFilter = computed(() => !!(
   selectedRekapId.value
   || hasDateFilter.value
   || hasPeriodFilter.value
-));
+))
+
 const contextFilterTitle = computed(() => {
-  if (selectedRekapId.value) return "Pengeluaran Sesuai Data Rekap";
-  if (tanggalHarian.value) return "Pengeluaran Sesuai Tanggal";
+  if (selectedRekapId.value) return "Pengeluaran Sesuai Data Rekap"
+  if (tanggalHarian.value) return "Pengeluaran Sesuai Tanggal"
   if (tanggalMulai.value || tanggalAkhir.value) {
-    return "Pengeluaran Sesuai Rentang Tanggal";
+    return "Pengeluaran Sesuai Rentang Tanggal"
   }
 
-  return "Pengeluaran Sesuai Periode";
-});
+  return "Pengeluaran Sesuai Periode"
+})
 
 const filterModeOptions = [
   { title: "Harian", value: "harian" },
   { title: "Rentang Tanggal", value: "rentang" },
-];
+]
 
 const monthYearPickerConfig = {
   altInput: true,
@@ -91,69 +96,72 @@ const monthYearPickerConfig = {
       altFormat: "F Y",
     }),
   ],
-};
+}
 
 const dateFilterPayload = computed(() => {
-  if (!props.showPeriod) return {};
+  if (!props.showPeriod) return {}
 
   if (filterMode.value === "harian") {
     return tanggalHarian.value
       ? {
-          tanggal_mulai: tanggalHarian.value,
-          tanggal_akhir: tanggalHarian.value,
-        }
-      : {};
+        tanggal_mulai: tanggalHarian.value,
+        tanggal_akhir: tanggalHarian.value,
+      }
+      : {}
   }
 
   return {
     ...(tanggalMulai.value && { tanggal_mulai: tanggalMulai.value }),
     ...(tanggalAkhir.value && { tanggal_akhir: tanggalAkhir.value }),
-  };
-});
+  }
+})
 
 const periodFilterPayload = computed(() => {
-  if (!props.showPeriod || !periodeBulanTahun.value) return {};
+  if (!props.showPeriod || !periodeBulanTahun.value) return {}
 
-  const period = String(periodeBulanTahun.value);
-  const match = period.match(/^(\d{4})-(\d{1,2})/);
+  const period = String(periodeBulanTahun.value)
+  const match = period.match(/^(\d{4})-(\d{1,2})/)
 
   if (match) {
     return {
       tahun: Number(match[1]),
       bulan: Number(match[2]),
-    };
+    }
   }
 
-  const date = new Date(period);
+  const date = new Date(period)
 
-  if (Number.isNaN(date.getTime())) return {};
+  if (Number.isNaN(date.getTime())) return {}
 
   return {
     tahun: date.getFullYear(),
     bulan: date.getMonth() + 1,
-  };
-});
+  }
+})
 
 const requestFilterPayload = computed(() => ({
   ...dateFilterPayload.value,
   ...periodFilterPayload.value,
   ...(selectedRekapId.value && { rekap_id: selectedRekapId.value }),
   ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
-}));
+}))
+
 const rekapFilterPayload = computed(() => ({
   ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
-}));
+}))
+
 const batchFilterPayload = computed(() => ({
   search: search.value,
   ...requestFilterPayload.value,
-}));
+}))
+
 const selectedIds = computed(() => selectedRows.value
   .map(row => (typeof row === "object" ? row.id : row))
-  .filter(Boolean));
+  .filter(Boolean))
 
 const fetchData = async () => {
   try {
-    loading.value = true;
+    loading.value = true
 
     const response = await $api(props.endpoint, {
       method: "GET",
@@ -165,119 +173,120 @@ const fetchData = async () => {
         search: search.value,
         ...requestFilterPayload.value,
       },
-    });
+    })
 
-    dataTable.value = response.data.data;
-    totalItems.value = response.data.total;
-    stats.value = response.stats || stats.value;
+    dataTable.value = response.data.data
+    totalItems.value = response.data.total
+    stats.value = response.stats || stats.value
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id,
     name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message ||
     err?.response?._data?.message ||
     err?.response?.data?.message ||
-    err?.message;
+    err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api(`${props.endpoint}/${id}`, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
-      fetchData();
+      })
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 const clearFilter = () => {
-  tanggalHarian.value = null;
-  tanggalMulai.value = null;
-  tanggalAkhir.value = null;
-  periodeBulanTahun.value = null;
-  selectedRekapId.value = null;
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  page.value = 1;
-  fetchData();
-};
+  tanggalHarian.value = null
+  tanggalMulai.value = null
+  tanggalAkhir.value = null
+  periodeBulanTahun.value = null
+  selectedRekapId.value = null
+  selectedRows.value = []
+  selectAllPages.value = false
+  page.value = 1
+  fetchData()
+}
 
 const clearBatchSelection = () => {
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  fetchData();
-};
+  selectedRows.value = []
+  selectAllPages.value = false
+  fetchData()
+}
 
 const fetchPetugas = async () => {
   try {
     const items = await fetchPetugasPengeluaranOptions(
-      isDosenBulanan.value ? "dosen_bulanan" : "staff_bulanan"
-    );
-    petugasList.value = items;
+      isDosenBulanan.value ? "dosen_bulanan" : "staff_bulanan",
+    )
+
+    petugasList.value = items
 
     if (!selectedPetugasId.value) {
-      selectedPetugasId.value = defaultPetugasPengeluaranId(items);
+      selectedPetugasId.value = defaultPetugasPengeluaranId(items)
     }
   } catch (err) {
-    console.error("Failed to fetch petugas pengeluaran:", err);
+    console.error("Failed to fetch petugas pengeluaran:", err)
   }
-};
+}
 
 const exportExcel = async () => {
   try {
-    isLoadingExcel.value = true;
+    isLoadingExcel.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
 
     const response = await $api(`${props.endpoint}/export-excel`, {
       method: "GET",
@@ -289,30 +298,30 @@ const exportExcel = async () => {
         search: search.value,
         ...requestFilterPayload.value,
       },
-    });
+    })
 
-    downloadFileExport(response, `Laporan ${props.title}.xlsx`);
+    downloadFileExport(response, `Laporan ${props.title}.xlsx`)
     showSnackbar({
       text: "Laporan berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isLoadingExcel.value = false;
+    isLoadingExcel.value = false
   }
-};
+}
 
 const exportBsiExcel = async () => {
   try {
-    isLoadingBsiExcel.value = true;
+    isLoadingBsiExcel.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
 
     const response = await $api(`${props.endpoint}/export-bsi`, {
       method: "GET",
@@ -324,30 +333,30 @@ const exportBsiExcel = async () => {
         search: search.value,
         ...requestFilterPayload.value,
       },
-    });
+    })
 
-    downloadFileExport(response, `CUS BSI ${props.title}.xlsx`);
+    downloadFileExport(response, `CUS BSI ${props.title}.xlsx`)
     showSnackbar({
       text: "Laporan CUS BSI berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isLoadingBsiExcel.value = false;
+    isLoadingBsiExcel.value = false
   }
-};
+}
 
 const copyBsiData = async () => {
   try {
-    isLoadingBsiCopy.value = true;
+    isLoadingBsiCopy.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
 
     const response = await $api(`${props.endpoint}/copy-bsi`, {
       method: "GET",
@@ -355,40 +364,42 @@ const copyBsiData = async () => {
         search: search.value,
         ...requestFilterPayload.value,
       },
-    });
+    })
 
-    const text = response.data?.text || "";
-    const total = Number(response.data?.total || 0);
+    const text = response.data?.text || ""
+    const total = Number(response.data?.total || 0)
 
     if (!text || total === 0) {
       showSnackbar({
         text: "Tidak ada data CUS BSI untuk disalin.",
         color: "warning",
-      });
-      return;
+      })
+      
+      return
     }
 
-    await copyTextToClipboard(text);
+    await copyTextToClipboard(text)
     showSnackbar({
       text: `${total} data CUS BSI berhasil disalin.`,
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isLoadingBsiCopy.value = false;
+    isLoadingBsiCopy.value = false
   }
-};
+}
 
 const unitLabel = item => item.tipe_pegawai === "staff"
   ? item.jabatan_staff
-  : item.nama_prodi_dosen;
+  : item.nama_prodi_dosen
 
-const subtotalHarian = item => Number(item.barokah_harian || 0) * Number(item.hari || 0);
-const monthName = (value) => {
+const subtotalHarian = item => Number(item.barokah_harian || 0) * Number(item.hari || 0)
+
+const monthName = value => {
   const months = [
     "Januari",
     "Februari",
@@ -402,49 +413,49 @@ const monthName = (value) => {
     "Oktober",
     "November",
     "Desember",
-  ];
+  ]
 
-  return months[Number(value) - 1] || "-";
-};
+  return months[Number(value) - 1] || "-"
+}
 
 watch(search, () => {
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  page.value = 1;
-  fetchData();
-});
+  selectedRows.value = []
+  selectAllPages.value = false
+  page.value = 1
+  fetchData()
+})
 
 watch(filterMode, () => {
-  tanggalHarian.value = null;
-  tanggalMulai.value = null;
-  tanggalAkhir.value = null;
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  page.value = 1;
-  fetchData();
-});
+  tanggalHarian.value = null
+  tanggalMulai.value = null
+  tanggalAkhir.value = null
+  selectedRows.value = []
+  selectAllPages.value = false
+  page.value = 1
+  fetchData()
+})
 
 watch([tanggalHarian, tanggalMulai, tanggalAkhir, periodeBulanTahun, selectedRekapId, selectedPetugasId], () => {
-  selectedRows.value = [];
-  selectAllPages.value = false;
-  page.value = 1;
-  fetchData();
-});
+  selectedRows.value = []
+  selectAllPages.value = false
+  page.value = 1
+  fetchData()
+})
 
-watch(selectAllPages, (enabled) => {
-  selectedRows.value = enabled ? dataTable.value.map(item => item.id) : [];
-});
+watch(selectAllPages, enabled => {
+  selectedRows.value = enabled ? dataTable.value.map(item => item.id) : []
+})
 
 watch(dataTable, () => {
   if (selectAllPages.value) {
-    selectedRows.value = dataTable.value.map(item => item.id);
+    selectedRows.value = dataTable.value.map(item => item.id)
   }
-});
+})
 
 onMounted(() => {
-  document.title = `${props.title} - SIMKEU`;
-  fetchPetugas();
-});
+  document.title = `${props.title} - SIMKEU`
+  fetchPetugas()
+})
 </script>
 
 <template>
@@ -508,7 +519,12 @@ onMounted(() => {
       </VCol>
 
       <template v-else>
-        <VCol cols="12" sm="6" md="2" class="filter-control-col">
+        <VCol
+          cols="12"
+          sm="6"
+          md="2"
+          class="filter-control-col"
+        >
           <AppDateTimePicker
             v-model="tanggalMulai"
             label="Dari Tanggal"
@@ -522,7 +538,12 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" sm="6" md="2" class="filter-control-col">
+        <VCol
+          cols="12"
+          sm="6"
+          md="2"
+          class="filter-control-col"
+        >
           <AppDateTimePicker
             v-model="tanggalAkhir"
             label="Sampai Tanggal"
@@ -589,7 +610,11 @@ onMounted(() => {
       v-else
       class="mb-3 filter-controls-row"
     >
-      <VCol cols="12" md="10" class="filter-control-col">
+      <VCol
+        cols="12"
+        md="10"
+        class="filter-control-col"
+      >
         <PengeluaranRekapSelect
           v-model="selectedRekapId"
           :endpoint="endpoint"
@@ -599,7 +624,11 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="2" class="filter-control-col">
+      <VCol
+        cols="12"
+        md="2"
+        class="filter-control-col"
+      >
         <VBtn
           color="primary"
           class="w-100 filter-reset-btn"
@@ -686,6 +715,9 @@ onMounted(() => {
       </VCardText>
 
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         show-select
         :headers="[
           { title: 'No', key: 'id' },
@@ -695,24 +727,21 @@ onMounted(() => {
           { title: 'Rekap', key: 'nama_rekap' },
           ...(isDosenBulanan
             ? [
-                { title: 'Dosen Tetap', key: 'barokah_dosen_tetap' },
-                { title: 'Struktural', key: 'barokah_struktural' },
-              ]
+              { title: 'Dosen Tetap', key: 'barokah_dosen_tetap' },
+              { title: 'Struktural', key: 'barokah_struktural' },
+            ]
             : [
-                { title: showPeriod ? 'Total Hari' : 'Hari', key: 'hari' },
-                { title: 'Barokah Harian', key: 'barokah_harian' },
-                { title: 'Subtotal Harian', key: 'subtotal_harian', sortable: false },
-                { title: 'Barokah Bulanan', key: 'barokah_bulanan' },
-              ]),
+              { title: showPeriod ? 'Total Hari' : 'Hari', key: 'hari' },
+              { title: 'Barokah Harian', key: 'barokah_harian' },
+              { title: 'Subtotal Harian', key: 'subtotal_harian', sortable: false },
+              { title: 'Barokah Bulanan', key: 'barokah_bulanan' },
+            ]),
           { title: 'Total', key: 'total' },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
           { title: 'Lampiran', key: 'lampiran', sortable: false },
           { title: 'Keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -720,15 +749,27 @@ onMounted(() => {
         item-value="id"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data.
+          </div>
         </template>
 
         <template #item.id="{ index }">
@@ -784,9 +825,7 @@ onMounted(() => {
         </template>
 
         <template #item.jenis_pembayaran="{ item }">
-          <div
-            class="d-flex flex-column align-start gap-1 py-1"
-          >
+          <div class="d-flex flex-column align-start gap-1 py-1">
             <VChip
               :color="item.jenis_pembayaran === 'Transfer' ? 'info' : 'success'"
               size="small"
@@ -847,7 +886,10 @@ onMounted(() => {
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
           variant="text"
@@ -856,7 +898,11 @@ onMounted(() => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
             dibatalkan.
@@ -871,8 +917,14 @@ onMounted(() => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

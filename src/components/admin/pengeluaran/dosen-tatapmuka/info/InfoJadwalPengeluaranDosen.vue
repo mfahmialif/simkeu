@@ -4,25 +4,26 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-});
+})
 
-const page = ref(1);
-const itemsPerPage = ref(25);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
+const page = ref(1)
+const itemsPerPage = ref(25)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
 
 const fetchData = async () => {
   if (props.refDataDosen.dosen.kode == '') {
-    return;
+    return
   }
 
   try {
-    loading.value = true;
+    loading.value = true
+
     const { data } = await $api("/admin/jadwal/dosenTable", {
       method: "GET",
       body: {
@@ -34,36 +35,38 @@ const fetchData = async () => {
         dosen_kode: props.refDataDosen.dosen.kode,
         th_akademik_kode: selectedThAkademik.value,
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   if (selectedThAkademik.value == null) {
-    loading.value = false;
-    return;
+    loading.value = false
+    
+    return
   }
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const selectedThAkademik = ref(null);
-const thAkademik = ref([]);
-const isLoadingThAkademik = ref(false);
+const selectedThAkademik = ref(null)
+const thAkademik = ref([])
+const isLoadingThAkademik = ref(false)
 
 const fetchThAkademik = async () => {
   try {
-    isLoadingThAkademik.value = true;
+    isLoadingThAkademik.value = true
+
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
       params: {
@@ -71,38 +74,39 @@ const fetchThAkademik = async () => {
         sort_key: "kode",
         sort_order: "desc",
       },
-    });
+    })
 
-    thAkademik.value = data.data.map((thAkademik) => {
+    thAkademik.value = data.data.map(thAkademik => {
       return {
         title: `${thAkademik.nama} - ${thAkademik.semester}`,
         value: thAkademik.kode,
         aktif: thAkademik.aktif,
-      };
-    });
+      }
+    })
 
-    const aktif = thAkademik.value.find((item) => item.aktif === "Y");
-    selectedThAkademik.value = (aktif ?? thAkademik.value[0])?.value ?? null;
+    const aktif = thAkademik.value.find(item => item.aktif === "Y")
+
+    selectedThAkademik.value = (aktif ?? thAkademik.value[0])?.value ?? null
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    isLoadingThAkademik.value = false;
+    isLoadingThAkademik.value = false
   }
-};
+}
 
-watch(selectedThAkademik, (newVal) => {
+watch(selectedThAkademik, newVal => {
   if (newVal) {
-    fetchData();
+    fetchData()
   }
-});
+})
 
 onMounted(() => {
-  fetchThAkademik();
-});
+  fetchThAkademik()
+})
 
 defineExpose({
   fetchData,
-});
+})
 </script>
 
 <template>
@@ -143,6 +147,9 @@ defineExpose({
 
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Mata Kuliah', key: 'nama_matkul' },
@@ -151,9 +158,6 @@ defineExpose({
           { title: 'Hari', key: 'hari_nama' },
           { title: 'Jam', key: 'jam_nama' },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -161,15 +165,27 @@ defineExpose({
         item-value="id"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data.
+          </div>
         </template>
 
         <template #item.id="{ index }">

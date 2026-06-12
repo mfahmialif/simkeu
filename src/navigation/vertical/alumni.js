@@ -6,4 +6,4 @@ export default [
     icon: { icon: "ri-graduation-cap-line" },
     to: "apps-ecommerce-product-list",
   },
-];
+]

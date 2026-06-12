@@ -1,8 +1,8 @@
 <script setup>
-import FormFormSchadule from "@/components/admin/form-schadule/FormFormSchadule.vue";
-import { useRouter } from "vue-router";
+import FormFormSchadule from "@/components/admin/form-schadule/FormFormSchadule.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -17,11 +17,11 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/setting/form-schadule"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Form Schedule Add - SIMKEU";
-});
+  document.title = "Form Schedule Add - SIMKEU"
+})
 </script>
 
 <template>
@@ -34,8 +34,8 @@ onMounted(() => {
 
         <VCardText>
           <FormFormSchadule
-            typeForm="add"
-            :url="'/admin/form-schadule'"
+            type-form="add"
+            url="/admin/form-schadule"
           />
         </VCardText>
       </VCard>

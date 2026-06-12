@@ -63,4 +63,4 @@ export default [
       { title: "Laporan", to: "admin-pemasukan-mahasiswa-laporan" },
     ],
   },
-];
+]

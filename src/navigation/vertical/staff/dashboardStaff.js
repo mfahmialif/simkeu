@@ -4,4 +4,4 @@ export default [
     icon: { icon: "ri-home-smile-line" },
     to: "admin-dashboard",
   },
-];
+]

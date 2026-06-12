@@ -1,7 +1,5 @@
 <script setup>
-import { showSnackbar } from "@/composables/snackbar";
-
-const router = useRouter();
+import { showSnackbar } from "@/composables/snackbar"
 
 const props = defineProps({
   typeForm: {
@@ -20,51 +18,53 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
-const refForm = ref(null);
+const router = useRouter()
 
-const kode = ref("");
-const konim = ref("");
-const alias = ref("");
-const nama = ref("");
-const aktif = ref("Y");
-const jenjang = ref("");
-const nidnKepala = ref("");
-const namaKepala = ref("");
-const akreditasi = ref("");
-const color = ref("");
-const maxSksSkripsi = ref(0);
-const disabled = ref(false);
+const refForm = ref(null)
+
+const kode = ref("")
+const konim = ref("")
+const alias = ref("")
+const nama = ref("")
+const aktif = ref("Y")
+const jenjang = ref("")
+const nidnKepala = ref("")
+const namaKepala = ref("")
+const akreditasi = ref("")
+const color = ref("")
+const maxSksSkripsi = ref(0)
+const disabled = ref(false)
 
 const aktifOptions = [
   { title: "Aktif", value: "Y" },
   { title: "Tidak Aktif", value: "N" },
-];
+]
 
 onMounted(() => {
   if (props.typeForm === "edit" && props.dataForm) {
-    kode.value = props.dataForm.kode || "";
-    konim.value = props.dataForm.konim || "";
-    alias.value = props.dataForm.alias || "";
-    nama.value = props.dataForm.nama || "";
-    aktif.value = props.dataForm.aktif || "Y";
-    jenjang.value = props.dataForm.jenjang || "";
-    nidnKepala.value = props.dataForm.nidn_kepala || "";
-    namaKepala.value = props.dataForm.nama_kepala || "";
-    akreditasi.value = props.dataForm.akreditasi || "";
-    color.value = props.dataForm.color || "";
-    maxSksSkripsi.value = props.dataForm.max_sks_skripsi || 0;
+    kode.value = props.dataForm.kode || ""
+    konim.value = props.dataForm.konim || ""
+    alias.value = props.dataForm.alias || ""
+    nama.value = props.dataForm.nama || ""
+    aktif.value = props.dataForm.aktif || "Y"
+    jenjang.value = props.dataForm.jenjang || ""
+    nidnKepala.value = props.dataForm.nidn_kepala || ""
+    namaKepala.value = props.dataForm.nama_kepala || ""
+    akreditasi.value = props.dataForm.akreditasi || ""
+    color.value = props.dataForm.color || ""
+    maxSksSkripsi.value = props.dataForm.max_sks_skripsi || 0
   }
-});
+})
 
 const onSubmit = async () => {
-  const valid = await refForm.value.validate();
-  if (!valid.valid) return;
+  const valid = await refForm.value.validate()
+  if (!valid.valid) return
 
-  const method = props.typeForm === "edit" ? "PUT" : "POST";
+  const method = props.typeForm === "edit" ? "PUT" : "POST"
 
-  disabled.value = true;
+  disabled.value = true
 
   try {
     const response = await $api(props.url, {
@@ -82,39 +82,46 @@ const onSubmit = async () => {
         color: color.value,
         max_sks_skripsi: maxSksSkripsi.value,
       },
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      router.push("/admin/setting/prodi");
+      router.push("/admin/setting/prodi")
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = typeof err.data?.message === 'object'
       ? Object.values(err.data.message).flat().join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
+
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    disabled.value = false;
+    disabled.value = false
   }
-};
+}
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="kode"
           :rules="[requiredValidator]"
@@ -124,7 +131,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="konim"
           label="Kode NIM"
@@ -133,7 +143,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="nama"
           :rules="[requiredValidator]"
@@ -143,7 +156,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="alias"
           label="Alias"
@@ -152,7 +168,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="jenjang"
           label="Jenjang"
@@ -161,7 +180,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VSelect
           v-model="aktif"
           label="Status"
@@ -170,7 +192,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="nidnKepala"
           label="NIDN Kepala Prodi"
@@ -179,7 +204,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="namaKepala"
           label="Nama Kepala Prodi"
@@ -188,7 +216,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="akreditasi"
           label="Akreditasi"
@@ -197,7 +228,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="maxSksSkripsi"
           label="Max SKS Skripsi"
@@ -207,7 +241,10 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="color"
           label="Color (Hex)"
@@ -216,14 +253,21 @@ const onSubmit = async () => {
         />
       </VCol>
 
-      <VCol cols="12" class="d-flex gap-4" v-if="!readOnly">
-        <VBtn type="submit" :disabled>
+      <VCol
+        v-if="!readOnly"
+        cols="12"
+        class="d-flex gap-4"
+      >
+        <VBtn
+          type="submit"
+          :disabled
+        >
           Submit
         </VBtn>
 
         <VBtn
-          type="reset"
           v-if="typeForm !== 'edit'"
+          type="reset"
           color="secondary"
           variant="tonal"
         >

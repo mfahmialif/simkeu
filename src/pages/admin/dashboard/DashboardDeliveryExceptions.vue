@@ -54,9 +54,11 @@ const financeDonutConfig = {
     fontSize: '13px',
     fontWeight: 400,
     labels: { colors: headingColor, useSeriesColors: false },
+
     // tampilkan nilai rupiah di legend
     formatter(seriesName, opts) {
       const val = opts.w.globals.series[opts.seriesIndex]
+      
       return `${seriesName} — ${fmtIDR(val)}`
     },
   },
@@ -67,6 +69,7 @@ const financeDonutConfig = {
       formatter(value, { w, seriesIndex }) {
         const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0)
         const pct = (value / (total || 1)) * 100
+        
         return `${fmtIDR(value)} (${pct.toFixed(1)}%)`
       },
     },
@@ -86,6 +89,7 @@ const financeDonutConfig = {
             color: headingColor,
             fontWeight: 600,
             offsetY: -23,
+
             // tampilkan % saat hover sektor
             formatter(val) {
               return fmtPct(val)
@@ -98,6 +102,7 @@ const financeDonutConfig = {
             color: labelColor,
             formatter(w) {
               const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+              
               return fmtIDR(total)
             },
           },
@@ -127,7 +132,12 @@ const moreList = [
     </VCardItem>
 
     <VCardText>
-      <VueApexCharts type="donut" height="428" :options="financeDonutConfig" :series="financeDonutSeries" />
+      <VueApexCharts
+        type="donut"
+        height="428"
+        :options="financeDonutConfig"
+        :series="financeDonutSeries"
+      />
     </VCardText>
   </VCard>
 </template>

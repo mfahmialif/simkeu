@@ -12,7 +12,7 @@ export const settingMenu = {
       to: "admin-setting-aktifkan-mahasiswa",
     },
   ],
-};
+}
 
 export const accountMenu = [
   {
@@ -25,11 +25,11 @@ export const accountMenu = [
     icon: { icon: "ri-logout-box-r-line" },
     to: "logout",
   },
-];
+]
 
 export const settingItemsForRole = roleName => [
   ...(String(roleName || "").toLowerCase() === "admin" ? [settingMenu] : []),
   ...accountMenu,
-];
+]
 
-export default settingItemsForRole();
+export default settingItemsForRole()

@@ -1,51 +1,55 @@
 <script setup>
-import { showSnackbar } from "@/composables/snackbar";
-import { computed, onMounted, ref } from "vue";
+import { showSnackbar } from "@/composables/snackbar"
+import { computed, onMounted, ref } from "vue"
 
-const router = useRouter();
+const router = useRouter()
 
 const summary = ref({
   modules: [],
   stats: {},
   charts: {},
   top_pegawai: [],
-});
-const isLoading = ref(false);
+})
 
-const currency = (value) => formatRupiah(Number(value || 0));
-const compactCurrency = (value) =>
+const isLoading = ref(false)
+
+const currency = value => formatRupiah(Number(value || 0))
+
+const compactCurrency = value =>
   new Intl.NumberFormat("id-ID", {
     notation: "compact",
     maximumFractionDigits: 1,
-  }).format(Number(value || 0));
+  }).format(Number(value || 0))
 
 const fetchData = async () => {
-  isLoading.value = true;
+  isLoading.value = true
   try {
-    const response = await $api("/admin/dashboard/barokah-summary");
+    const response = await $api("/admin/dashboard/barokah-summary")
 
     if (!response?.status) {
       showSnackbar({
         text: response?.message || "Gagal mengambil ringkasan barokah",
         color: "error",
-      });
-      return;
+      })
+      
+      return
     }
 
-    summary.value = response.data || summary.value;
+    summary.value = response.data || summary.value
   } catch (error) {
-    console.error(error);
+    console.error(error)
     showSnackbar({
       text: "Terjadi kesalahan saat mengambil ringkasan barokah",
       color: "error",
-    });
+    })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const statCards = computed(() => {
-  const stats = summary.value.stats || {};
+  const stats = summary.value.stats || {}
+
   const items = [
     {
       key: "hari_ini",
@@ -75,20 +79,20 @@ const statCards = computed(() => {
       color: "success",
       subtitle: "Akumulasi seluruh data",
     },
-  ];
+  ]
 
-  return items.map((item) => ({
+  return items.map(item => ({
     ...item,
     value: currency(stats[item.key]?.total),
     count: stats[item.key]?.jumlah || 0,
-  }));
-});
+  }))
+})
 
 const chartTheme = {
   danger: "#FF4C51",
   info: "#16B1FF",
   primary: "#666CFF",
-};
+}
 
 const makeChartOptions = (categories, color) => ({
   chart: {
@@ -126,7 +130,7 @@ const makeChartOptions = (categories, color) => ({
   },
   yaxis: {
     labels: {
-      formatter: (value) => compactCurrency(value),
+      formatter: value => compactCurrency(value),
       style: {
         colors: "rgba(var(--v-theme-on-background), var(--v-disabled-opacity))",
         fontSize: "12px",
@@ -135,14 +139,14 @@ const makeChartOptions = (categories, color) => ({
   },
   tooltip: {
     y: {
-      formatter: (value) => currency(value),
+      formatter: value => currency(value),
       title: { formatter: () => "Pengeluaran" },
     },
   },
-});
+})
 
 const chartCards = computed(() => {
-  const charts = summary.value.charts || {};
+  const charts = summary.value.charts || {}
 
   return [
     {
@@ -166,54 +170,77 @@ const chartCards = computed(() => {
       type: "bar",
       color: chartTheme.primary,
     },
-  ].map((item) => ({
+  ].map(item => ({
     ...item,
     categories: charts[item.key]?.categories || [],
     series: charts[item.key]?.series || [{ name: "Pengeluaran", data: [] }],
     options: makeChartOptions(charts[item.key]?.categories || [], item.color),
-  }));
-});
+  }))
+})
 
-const topPegawai = computed(() => summary.value.top_pegawai || []);
-const modules = computed(() => summary.value.modules || []);
-const primaryModulePath = computed(() => modules.value[0]?.path || null);
+const topPegawai = computed(() => summary.value.top_pegawai || [])
+const modules = computed(() => summary.value.modules || [])
+const primaryModulePath = computed(() => modules.value[0]?.path || null)
 
-const goToPath = (path) => {
+const goToPath = path => {
   if (path) {
-    router.push(path);
+    router.push(path)
   }
-};
+}
 
-onMounted(fetchData);
+onMounted(fetchData)
 </script>
 
 <template>
   <VRow class="match-height">
-    <VCol v-for="card in statCards" :key="card.key" cols="12" sm="6" md="3">
+    <VCol
+      v-for="card in statCards"
+      :key="card.key"
+      cols="12"
+      sm="6"
+      md="3"
+    >
       <VCard
         class="barokah-stat-card"
         :class="{ 'cursor-pointer': primaryModulePath }"
         @click="goToPath(primaryModulePath)"
       >
         <VCardText>
-          <VSkeletonLoader v-if="isLoading" type="paragraph" />
+          <VSkeletonLoader
+            v-if="isLoading"
+            type="paragraph"
+          />
           <template v-else>
             <div class="barokah-stat-content d-flex align-center gap-x-4 mb-3 min-w-0">
-              <VAvatar :color="card.color" variant="tonal" rounded="lg">
-                <VIcon :icon="card.icon" size="24" />
+              <VAvatar
+                :color="card.color"
+                variant="tonal"
+                rounded="lg"
+              >
+                <VIcon
+                  :icon="card.icon"
+                  size="24"
+                />
               </VAvatar>
               <div class="min-w-0">
                 <div class="text-body-2 text-disabled">
                   {{ card.subtitle }}
                 </div>
-                <h4 class="text-h5 text-truncate" :title="card.value">
+                <h4
+                  class="text-h5 text-truncate"
+                  :title="card.value"
+                >
                   {{ card.value }}
                 </h4>
               </div>
             </div>
             <div class="d-flex justify-space-between align-center">
               <span class="text-body-2">{{ card.title }}</span>
-              <VChip :color="card.color" size="small" variant="tonal">
+              <VChip
+                :color="card.color"
+                size="small"
+                variant="tonal"
+              >
                 {{ card.count }} Data
               </VChip>
             </div>
@@ -222,12 +249,26 @@ onMounted(fetchData);
       </VCard>
     </VCol>
 
-    <VCol v-for="chart in chartCards" :key="chart.key" cols="12" lg="4">
+    <VCol
+      v-for="chart in chartCards"
+      :key="chart.key"
+      cols="12"
+      lg="4"
+    >
       <VCard>
-        <VSkeletonLoader v-if="isLoading" type="card, paragraph" />
+        <VSkeletonLoader
+          v-if="isLoading"
+          type="card, paragraph"
+        />
         <template v-else>
-          <VCardItem :title="chart.title" :subtitle="chart.subtitle">
-            <template v-if="primaryModulePath" #append>
+          <VCardItem
+            :title="chart.title"
+            :subtitle="chart.subtitle"
+          >
+            <template
+              v-if="primaryModulePath"
+              #append
+            >
               <VBtn
                 icon
                 size="small"
@@ -236,7 +277,10 @@ onMounted(fetchData);
                 class="barokah-link-btn"
                 @click="goToPath(primaryModulePath)"
               >
-                <VIcon icon="ri-arrow-right-up-line" size="18" />
+                <VIcon
+                  icon="ri-arrow-right-up-line"
+                  size="18"
+                />
               </VBtn>
             </template>
           </VCardItem>
@@ -253,14 +297,20 @@ onMounted(fetchData);
       </VCard>
     </VCol>
 
-    <VCol cols="12" lg="8">
+    <VCol
+      cols="12"
+      lg="8"
+    >
       <VCard>
         <VCardItem
           title="Pegawai dengan Pengeluaran Terbanyak"
           subtitle="Diurutkan dari total pengeluaran barokah terbesar"
         />
         <VCardText>
-          <VSkeletonLoader v-if="isLoading" type="table" />
+          <VSkeletonLoader
+            v-if="isLoading"
+            type="table"
+          />
           <VAlert
             v-else-if="!topPegawai.length"
             color="secondary"
@@ -268,7 +318,10 @@ onMounted(fetchData);
           >
             Belum ada data pengeluaran barokah.
           </VAlert>
-          <div v-else class="barokah-table-wrapper">
+          <div
+            v-else
+            class="barokah-table-wrapper"
+          >
             <VTable density="comfortable">
               <thead>
                 <tr>
@@ -276,19 +329,28 @@ onMounted(fetchData);
                   <th>Kode</th>
                   <th>Tipe</th>
                   <th>Modul</th>
-                  <th class="text-end">Total</th>
-                  <th class="text-end">Data</th>
+                  <th class="text-end">
+                    Total
+                  </th>
+                  <th class="text-end">
+                    Data
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="item in topPegawai" :key="`${item.pegawai_id}-${item.kode}`">
+                <tr
+                  v-for="item in topPegawai"
+                  :key="`${item.pegawai_id}-${item.kode}`"
+                >
                   <td>
                     <div class="font-weight-medium">
                       {{ item.nama }}
                     </div>
                   </td>
                   <td>{{ item.kode }}</td>
-                  <td class="text-capitalize">{{ item.tipe }}</td>
+                  <td class="text-capitalize">
+                    {{ item.tipe }}
+                  </td>
                   <td>
                     <div class="d-flex flex-wrap gap-1">
                       <VChip
@@ -315,14 +377,20 @@ onMounted(fetchData);
       </VCard>
     </VCol>
 
-    <VCol cols="12" lg="4">
+    <VCol
+      cols="12"
+      lg="4"
+    >
       <VCard>
         <VCardItem
           title="Ringkasan Modul Barokah"
           subtitle="Total pengeluaran per modul yang bisa diakses"
         />
         <VCardText>
-          <VSkeletonLoader v-if="isLoading" type="list-item, list-item, list-item" />
+          <VSkeletonLoader
+            v-if="isLoading"
+            type="list-item, list-item, list-item"
+          />
           <VAlert
             v-else-if="!modules.length"
             color="secondary"
@@ -330,14 +398,24 @@ onMounted(fetchData);
           >
             Belum ada modul barokah untuk role ini.
           </VAlert>
-          <div v-else class="d-flex flex-column gap-y-4">
+          <div
+            v-else
+            class="d-flex flex-column gap-y-4"
+          >
             <div
               v-for="module in modules"
               :key="module.key"
               class="barokah-module-item d-flex align-center gap-x-3"
             >
-              <VAvatar :color="module.color" variant="tonal" rounded>
-                <VIcon :icon="module.icon" size="22" />
+              <VAvatar
+                :color="module.color"
+                variant="tonal"
+                rounded
+              >
+                <VIcon
+                  :icon="module.icon"
+                  size="22"
+                />
               </VAvatar>
               <div class="flex-grow-1 min-w-0">
                 <div class="font-weight-medium text-truncate">
@@ -358,7 +436,10 @@ onMounted(fetchData);
                 class="barokah-link-btn"
                 @click="goToPath(module.path)"
               >
-                <VIcon icon="ri-arrow-right-up-line" size="18" />
+                <VIcon
+                  icon="ri-arrow-right-up-line"
+                  size="18"
+                />
               </VBtn>
             </div>
           </div>

@@ -1,77 +1,83 @@
 <script setup>
-import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah";
-import { showSnackbar } from "@/composables/snackbar";
-import { ref, watch, onMounted, computed } from "vue";
+import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah"
+import { showSnackbar } from "@/composables/snackbar"
+import { ref, watch, onMounted, computed } from "vue"
 
 // ===== FILTER =====
-const thAkademikList = ref([]);
-const prodiList = ref([]);
+const thAkademikList = ref([])
+const prodiList = ref([])
 
-const selectedThAkademik = ref(null);
-const selectedProdi = ref(null);
-const selectedJk = ref(null);
+const selectedThAkademik = ref(null)
+const selectedProdi = ref(null)
+const selectedJk = ref(null)
 
 const jkList = [
   { title: "Laki-laki", value: 8 },
   { title: "Perempuan", value: 9 },
-];
+]
 
 const fetchThAkademik = async () => {
   try {
-    const response = await $api("/admin/th-akademik?limit=0&sort_key=kode&sort_order=desc");
-    const items = response.data?.data || response.data || [];
-    thAkademikList.value = items.map((i) => ({
+    const response = await $api("/admin/th-akademik?limit=0&sort_key=kode&sort_order=desc")
+    const items = response.data?.data || response.data || []
+
+    thAkademikList.value = items.map(i => ({
       title: `${i.nama} - ${i.semester}`,
       value: i.id,
       aktif: i.aktif,
-    }));
-    const aktif = thAkademikList.value.find((i) => i.aktif === "Y");
-    if (aktif) selectedThAkademik.value = aktif.value;
+    }))
+
+    const aktif = thAkademikList.value.find(i => i.aktif === "Y")
+    if (aktif) selectedThAkademik.value = aktif.value
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-};
+}
 
 const fetchProdi = async () => {
   try {
-    const response = await $api("/admin/prodi?limit=0&sort_key=kode&sort_order=desc");
-    const items = response.data?.data || response.data || [];
-    prodiList.value = items.map((i) => ({
+    const response = await $api("/admin/prodi?limit=0&sort_key=kode&sort_order=desc")
+    const items = response.data?.data || response.data || []
+
+    prodiList.value = items.map(i => ({
       title: i.nama,
       value: i.id,
-    }));
+    }))
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-};
+}
 
 // ===== SUMMARY DATA =====
-const isLoading = ref(false);
+const isLoading = ref(false)
+
 const summaryData = ref({
   total_mahasiswa_bayar: 0,
   total_amount: 0,
   total_amount_by_currency: [],
   total_lunas: 0,
   total_belum_lunas: 0,
-});
+})
 
 const fetchSummary = async () => {
-  if (!selectedThAkademik.value) return;
+  if (!selectedThAkademik.value) return
 
-  isLoading.value = true;
+  isLoading.value = true
   try {
-    const params = {};
-    params.th_akademik_id = selectedThAkademik.value;
-    if (selectedProdi.value) params.prodi_id = selectedProdi.value;
-    if (selectedJk.value) params.jk_id = selectedJk.value;
+    const params = {}
 
-    const queryString = new URLSearchParams(params).toString();
-    const url = `/admin/dashboard/krs-report-local${queryString ? '?' + queryString : ''}`;
-    const response = await $api(url);
+    params.th_akademik_id = selectedThAkademik.value
+    if (selectedProdi.value) params.prodi_id = selectedProdi.value
+    if (selectedJk.value) params.jk_id = selectedJk.value
+
+    const queryString = new URLSearchParams(params).toString()
+    const url = `/admin/dashboard/krs-report-local${queryString ? '?' + queryString : ''}`
+    const response = await $api(url)
 
     if (response.status === false) {
-      showSnackbar({ text: response.message, color: "error" });
-      return;
+      showSnackbar({ text: response.message, color: "error" })
+      
+      return
     }
 
     summaryData.value = response.data ?? {
@@ -80,121 +86,130 @@ const fetchSummary = async () => {
       total_amount_by_currency: [],
       total_lunas: 0,
       total_belum_lunas: 0,
-    };
+    }
   } catch (e) {
-    console.error(e);
-    showSnackbar({ text: "Gagal memuat data KRS", color: "error" });
+    console.error(e)
+    showSnackbar({ text: "Gagal memuat data KRS", color: "error" })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 // ===== DETAIL DIALOG =====
-const showDetailDialog = ref(false);
-const isLoadingDetail = ref(false);
-const detailData = ref([]);
+const showDetailDialog = ref(false)
+const isLoadingDetail = ref(false)
+const detailData = ref([])
+
 const detailPagination = ref({
   current_page: 1,
   last_page: 1,
   total: 0,
   per_page: 15,
-});
-const searchQuery = ref("");
-const currentPage = ref(1);
+})
+
+const searchQuery = ref("")
+const currentPage = ref(1)
 
 const fetchDetail = async () => {
-  if (!selectedThAkademik.value) return;
+  if (!selectedThAkademik.value) return
 
-  isLoadingDetail.value = true;
+  isLoadingDetail.value = true
   try {
-    const params = {};
-    params.th_akademik_id = selectedThAkademik.value;
-    params.per_page = detailPagination.value.per_page;
-    params.page = currentPage.value;
-    if (selectedProdi.value) params.prodi_id = selectedProdi.value;
-    if (selectedJk.value) params.jk_id = selectedJk.value;
-    if (searchQuery.value) params.search = searchQuery.value;
+    const params = {}
 
-    const queryString = new URLSearchParams(params).toString();
-    const url = `/admin/dashboard/krs-report-detail-local${queryString ? '?' + queryString : ''}`;
-    const response = await $api(url);
+    params.th_akademik_id = selectedThAkademik.value
+    params.per_page = detailPagination.value.per_page
+    params.page = currentPage.value
+    if (selectedProdi.value) params.prodi_id = selectedProdi.value
+    if (selectedJk.value) params.jk_id = selectedJk.value
+    if (searchQuery.value) params.search = searchQuery.value
+
+    const queryString = new URLSearchParams(params).toString()
+    const url = `/admin/dashboard/krs-report-detail-local${queryString ? '?' + queryString : ''}`
+    const response = await $api(url)
 
     if (!response.status) {
-      showSnackbar({ text: response.message, color: "error" });
-      return;
+      showSnackbar({ text: response.message, color: "error" })
+      
+      return
     }
 
-    const d = response.data;
-    detailData.value = d.data || [];
+    const d = response.data
+
+    detailData.value = d.data || []
     detailPagination.value = {
       current_page: d.current_page,
       last_page: d.last_page,
       total: d.total,
       per_page: d.per_page,
-    };
+    }
 
     // Fetch mahasiswa detail dari siakad
-    fetchMahasiswaDetail();
+    fetchMahasiswaDetail()
   } catch (e) {
-    console.error(e);
-    showSnackbar({ text: "Gagal memuat detail KRS", color: "error" });
+    console.error(e)
+    showSnackbar({ text: "Gagal memuat detail KRS", color: "error" })
   } finally {
-    isLoadingDetail.value = false;
+    isLoadingDetail.value = false
   }
-};
+}
 
 const fetchMahasiswaDetail = async () => {
-  if (!detailData.value.length) return;
+  if (!detailData.value.length) return
   try {
-    const nimList = detailData.value.map((item) => item.nim);
+    const nimList = detailData.value.map(item => item.nim)
+
     const res = await $api("/admin/mahasiswa/nim", {
       method: "GET",
       body: {
         nim: JSON.stringify(nimList),
         whereIn: true,
       },
-    });
-    detailData.value = detailData.value.map((item) => {
-      const mhs = res.find((m) => m.nim === item.nim);
+    })
+
+    detailData.value = detailData.value.map(item => {
+      const mhs = res.find(m => m.nim === item.nim)
+      
       return {
         ...item,
         mahasiswa: mhs ? mhs : false,
-      };
-    });
+      }
+    })
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-};
+}
 
 const openDetail = () => {
-  showDetailDialog.value = true;
-  currentPage.value = 1;
-  searchQuery.value = "";
-  fetchDetail();
-};
+  showDetailDialog.value = true
+  currentPage.value = 1
+  searchQuery.value = ""
+  fetchDetail()
+}
 
-let searchTimeout = null;
+let searchTimeout = null
 watch(searchQuery, () => {
-  clearTimeout(searchTimeout);
+  clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    currentPage.value = 1;
-    fetchDetail();
-  }, 400);
-});
+    currentPage.value = 1
+    fetchDetail()
+  }, 400)
+})
 
-watch(currentPage, () => fetchDetail());
+watch(currentPage, () => fetchDetail())
 
 // Watch filters
-const filtersInitialized = ref(false);
+const filtersInitialized = ref(false)
+
 watch([selectedThAkademik, selectedProdi, selectedJk], () => {
   if (filtersInitialized.value) {
-    fetchSummary();
+    fetchSummary()
     if (showDetailDialog.value) {
-      currentPage.value = 1;
-      fetchDetail();
+      currentPage.value = 1
+      fetchDetail()
     }
   }
-});
+})
 
 const statCards = computed(() => [
   {
@@ -225,13 +240,13 @@ const statCards = computed(() => [
     icon: "ri-time-line",
     color: "warning",
   },
-]);
+])
 
 onMounted(async () => {
-  await Promise.all([fetchThAkademik(), fetchProdi()]);
-  filtersInitialized.value = true;
-  fetchSummary();
-});
+  await Promise.all([fetchThAkademik(), fetchProdi()])
+  filtersInitialized.value = true
+  fetchSummary()
+})
 </script>
 
 <template>
@@ -243,8 +258,16 @@ onMounted(async () => {
     <template v-else>
       <VCardItem>
         <template #prepend>
-          <VAvatar color="info" variant="tonal" rounded="lg" class="me-2">
-            <VIcon icon="ri-wallet-3-line" size="24" />
+          <VAvatar
+            color="info"
+            variant="tonal"
+            rounded="lg"
+            class="me-2"
+          >
+            <VIcon
+              icon="ri-wallet-3-line"
+              size="24"
+            />
           </VAvatar>
         </template>
         <VCardTitle>Laporan KRS</VCardTitle>
@@ -258,9 +281,12 @@ onMounted(async () => {
             color="info"
             size="small"
             aria-label="Lihat detail pembayaran KRS"
-            @click="openDetail()"
+            @click="openDetail"
           >
-            <VIcon icon="ri-eye-line" size="18" />
+            <VIcon
+              icon="ri-eye-line"
+              size="18"
+            />
           </VBtn>
         </template>
       </VCardItem>
@@ -268,7 +294,10 @@ onMounted(async () => {
       <VCardText>
         <!-- Filter -->
         <VRow class="mb-4">
-          <VCol cols="12" sm="4">
+          <VCol
+            cols="12"
+            sm="4"
+          >
             <VSelect
               v-model="selectedThAkademik"
               :items="thAkademikList"
@@ -278,7 +307,10 @@ onMounted(async () => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" sm="4">
+          <VCol
+            cols="12"
+            sm="4"
+          >
             <VSelect
               v-model="selectedProdi"
               :items="prodiList"
@@ -289,7 +321,10 @@ onMounted(async () => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" sm="4">
+          <VCol
+            cols="12"
+            sm="4"
+          >
             <VSelect
               v-model="selectedJk"
               :items="jkList"
@@ -316,7 +351,10 @@ onMounted(async () => {
               class="krs-local-stat-card"
             >
               <VCardText class="pa-3">
-                <VSkeletonLoader v-if="isLoading" type="text, text" />
+                <VSkeletonLoader
+                  v-if="isLoading"
+                  type="text, text"
+                />
                 <template v-else>
                   <div class="d-flex align-center justify-space-between gap-2 mb-1">
                     <div class="krs-local-stat-content d-flex align-center gap-2 min-w-0">
@@ -326,7 +364,11 @@ onMounted(async () => {
                         size="36"
                         rounded="lg"
                       >
-                        <VIcon :icon="card.icon" size="20" color="white" />
+                        <VIcon
+                          :icon="card.icon"
+                          size="20"
+                          color="white"
+                        />
                       </VAvatar>
                       <div class="stat-value-wrap">
                         <div class="text-subtitle-1 font-weight-bold">
@@ -341,9 +383,12 @@ onMounted(async () => {
                       :color="card.color"
                       aria-label="Lihat detail pembayaran KRS"
                       class="krs-local-stat-link"
-                      @click="openDetail()"
+                      @click="openDetail"
                     >
-                      <VIcon icon="ri-arrow-right-up-line" size="18" />
+                      <VIcon
+                        icon="ri-arrow-right-up-line"
+                        size="18"
+                      />
                     </VBtn>
                   </div>
                   <div class="text-body-2 font-weight-medium">
@@ -362,14 +407,27 @@ onMounted(async () => {
   </VCard>
 
   <!-- Detail Dialog -->
-  <VDialog v-model="showDetailDialog" max-width="1080" scrollable>
+  <VDialog
+    v-model="showDetailDialog"
+    max-width="1080"
+    scrollable
+  >
     <VCard>
       <VCardTitle class="d-flex align-center justify-space-between pa-4 pb-2">
         <div class="d-flex align-center gap-2">
-          <VIcon icon="ri-wallet-3-line" size="22" color="info" />
+          <VIcon
+            icon="ri-wallet-3-line"
+            size="22"
+            color="info"
+          />
           <span>Detail Pembayaran KRS</span>
         </div>
-        <VBtn icon variant="text" size="small" @click="showDetailDialog = false">
+        <VBtn
+          icon
+          variant="text"
+          size="small"
+          @click="showDetailDialog = false"
+        >
           <VIcon icon="ri-close-line" />
         </VBtn>
       </VCardTitle>
@@ -388,14 +446,20 @@ onMounted(async () => {
           class="mb-4"
         />
 
-        <VSkeletonLoader v-if="isLoadingDetail" type="table-heading, table-tbody" />
+        <VSkeletonLoader
+          v-if="isLoadingDetail"
+          type="table-heading, table-tbody"
+        />
 
         <div v-else>
           <div class="text-body-2 text-disabled mb-2">
             Total: {{ detailPagination.total }} data
           </div>
 
-          <VTable class="text-no-wrap" density="compact">
+          <VTable
+            class="text-no-wrap"
+            density="compact"
+          >
             <thead>
               <tr>
                 <th>No</th>
@@ -410,11 +474,17 @@ onMounted(async () => {
             </thead>
             <tbody>
               <tr v-if="detailData.length === 0">
-                <td colspan="8" class="text-center text-disabled py-8">
+                <td
+                  colspan="8"
+                  class="text-center text-disabled py-8"
+                >
                   Tidak ada data
                 </td>
               </tr>
-              <tr v-for="(row, idx) in detailData" :key="idx">
+              <tr
+                v-for="(row, idx) in detailData"
+                :key="idx"
+              >
                 <td>{{ (detailPagination.current_page - 1) * detailPagination.per_page + idx + 1 }}</td>
                 <td>
                   <div>
@@ -428,7 +498,12 @@ onMounted(async () => {
                       <span class="text-caption text-disabled">Data tidak ditemukan di SIAKAD</span>
                     </template>
                     <template v-else>
-                      <VProgressCircular indeterminate color="primary" size="14" width="2" />
+                      <VProgressCircular
+                        indeterminate
+                        color="primary"
+                        size="14"
+                        width="2"
+                      />
                     </template>
                   </div>
                 </td>

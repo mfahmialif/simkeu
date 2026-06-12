@@ -1,9 +1,9 @@
 <script setup>
-import { formatRupiah } from "@/composables/formatRupiah";
-import { notifyPengeluaranRekapUpdated } from "@/composables/pengeluaranRekap";
-import { showSnackbar } from "@/composables/snackbar";
-import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js";
-import "flatpickr/dist/plugins/monthSelect/style.css";
+import { formatRupiah } from "@/composables/formatRupiah"
+import { notifyPengeluaranRekapUpdated } from "@/composables/pengeluaranRekap"
+import { showSnackbar } from "@/composables/snackbar"
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js"
+import "flatpickr/dist/plugins/monthSelect/style.css"
 
 const props = defineProps({
   title: {
@@ -26,82 +26,114 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
-const route = useRoute();
-const router = useRouter();
-const rekapId = computed(() => route.params.id);
+const route = useRoute()
+const router = useRouter()
+const rekapId = computed(() => route.params.id)
+
 const returnPath = computed(() => {
-  const path = route.query.return_to;
+  const path = route.query.return_to
 
   if (
     typeof path === "string"
     && (path === "/admin/laporan/rab" || path.startsWith("/admin/laporan/rab?"))
   ) {
-    return path;
+    return path
   }
 
-  return props.basePath;
-});
-const rekap = ref(null);
-const page = ref(1);
-const itemsPerPage = ref(10);
-const sortBy = ref({ key: "id", order: "desc" });
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const activeDataTab = ref("rab");
-const dialog = ref(false);
-const saving = ref(false);
-const actionDialog = ref(false);
-const actionLoading = ref(false);
-const lpjDialog = ref(false);
-const lpjLoading = ref(false);
-const lpj = ref(null);
-const lpjRows = ref([]);
-const namaInput = ref(null);
-const nama = ref("");
-const keterangan = ref("");
-const jumlahSementara = ref(0);
-const tanggalRekap = ref("");
-const bulanTahun = ref("");
+  return props.basePath
+})
+
+const rekap = ref(null)
+const page = ref(1)
+const itemsPerPage = ref(10)
+const sortBy = ref({ key: "id", order: "desc" })
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const activeDataTab = ref("rab")
+const dialog = ref(false)
+const saving = ref(false)
+const actionDialog = ref(false)
+const actionLoading = ref(false)
+const lpjDialog = ref(false)
+const lpjLoading = ref(false)
+const lpj = ref(null)
+const lpjRows = ref([])
+const namaInput = ref(null)
+const nama = ref("")
+const keterangan = ref("")
+const jumlahSementara = ref(0)
+const tanggalRekap = ref("")
+const bulanTahun = ref("")
+
+const selectedRabIds = ref([])
+const selectedLpjIds = ref([])
+const deleteItemsDialog = ref(false)
+const deletingItems = ref(false)
+const itemsToDelete = ref([])
+const selectedIds = computed(() => activeDataTab.value === "rab" ? selectedRabIds.value : selectedLpjIds.value)
+
 const tableHeaders = computed(() => {
   const headers = [
     { title: "No", key: "id" },
     { title: "Tanggal", key: "tanggal" },
-  ];
+  ]
 
   if (props.moduleType === "kegiatan") {
-    headers.push({ title: "Kategori", key: "kategori_detail" });
+    headers.push({ title: "Kategori", key: "kategori_detail" })
+  }
+
+  if (props.moduleType !== "rumah-tangga") {
+    headers.push({ title: "Pegawai", key: "pegawai", sortable: false })
+  }
+
+  const detailHeaders = [
+  ]
+
+  if (props.moduleType === "rumah-tangga") {
+    detailHeaders.push(
+      { title: "Kelompok Anggaran", key: "kelompok_anggaran" },
+      { title: "Uraian", key: "uraian", sortable: false },
+      { title: "Volume", key: "volume" },
+      { title: "Satuan", key: "satuan" },
+      { title: "Harga Satuan", key: "nominal" },
+    )
+  } else {
+    detailHeaders.push({ title: "Uraian", key: "uraian", sortable: false })
   }
 
   return [
     ...headers,
-    { title: "Pegawai", key: "pegawai", sortable: false },
-    { title: "Uraian", key: "uraian", sortable: false },
+    ...detailHeaders,
     { title: "Jenis Pembayaran", key: "jenis_pembayaran" },
     { title: "Total", key: "total" },
     { title: "Keterangan", key: "keterangan" },
     { title: "Actions", key: "actions", sortable: false },
-  ];
-});
-const lpjTableHeaders = computed(() => tableHeaders.value.filter(header => header.key !== "actions"));
-const editingHasDetails = computed(() => Number(rekap.value?.jumlah_data || 0) > 0);
-const canDeleteRekapWithDetails = computed(() => props.moduleType === "kegiatan");
+  ]
+})
+
+const lpjTableHeaders = computed(() => tableHeaders.value)
+const editingHasDetails = computed(() => Number(rekap.value?.jumlah_data || 0) > 0)
+const canDeleteRekapWithDetails = computed(() => ["kegiatan", "rumah-tangga"].includes(props.moduleType))
+
 const deleteRekapMessage = computed(() => {
   if (canDeleteRekapWithDetails.value && Number(rekap.value?.jumlah_data || 0) > 0) {
-    return `Rekap "${rekap.value?.nama || ""}" beserta ${rekap.value?.jumlah_data || 0} data pengeluaran di dalamnya akan dihapus permanen.`;
+    return `Rekap "${rekap.value?.nama || ""}" beserta ${rekap.value?.jumlah_data || 0} data pengeluaran di dalamnya akan dihapus permanen.`
   }
 
-  return `Rekap "${rekap.value?.nama || ""}" akan dihapus permanen.`;
-});
+  return `Rekap "${rekap.value?.nama || ""}" akan dihapus permanen.`
+})
+
 const lpjSelisihColor = computed(() => {
-  const value = Number(lpj.value?.selisih || 0);
+  const value = Number(lpj.value?.selisih || 0)
 
-  if (value === 0) return "success";
+  if (value === 0) return "success"
 
-  return value > 0 ? "warning" : "error";
-});
+  return value > 0 ? "warning" : "error"
+})
+
 const monthYearPickerConfig = {
   altInput: true,
   altFormat: "F Y",
@@ -114,95 +146,102 @@ const monthYearPickerConfig = {
       altFormat: "F Y",
     }),
   ],
-};
+}
+
 const datePickerConfig = {
   altInput: true,
   altFormat: "d F Y",
   dateFormat: "Y-m-d",
   disableMobile: true,
-};
+}
 
-const numberValue = value => Number(value ?? 0);
-const amountValue = (value, fallback = 0) => value ?? fallback ?? 0;
-const formatMonthYear = (value) => {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})/);
+const numberValue = value => Number(value ?? 0)
+const amountValue = (value, fallback = 0) => value ?? fallback ?? 0
 
-  if (!match) return "";
+const formatMonthYear = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})/)
+
+  if (!match) return ""
 
   return new Intl.DateTimeFormat("id-ID", {
     month: "long",
     year: "numeric",
-  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
-};
-const formatDate = (value) => {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1))
+}
 
-  if (!match) return "";
+const formatDate = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (!match) return ""
 
   return new Intl.DateTimeFormat("id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-};
-const subtotalTransport = (item) => {
-  const transportMotor = numberValue(amountValue(item.transport_motor, item.transport));
-  const hariMotor = numberValue(amountValue(item.hari_transport_motor, item.hari));
-  const transportMobil = numberValue(amountValue(item.transport_mobil, item.transport_mobil_tanpa_tol));
-  const hariMobil = numberValue(amountValue(item.hari_transport_mobil, item.hari_transport_mobil_tanpa_tol));
+  }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+}
 
-  return transportMotor * hariMotor + transportMobil * hariMobil;
-};
-const subtotalMengajar = (item) => {
-  const barokahBiasa = numberValue(amountValue(item.barokah_mengajar_biasa, item.barokah));
-  const jamBiasa = numberValue(item.jam);
-  const barokahDoubleDegree = numberValue(item.barokah_mengajar_double_degree);
-  const jamDoubleDegree = numberValue(amountValue(item.jam_mengajar_double_degree, item.jam));
+const subtotalTransport = item => {
+  const transportMotor = numberValue(amountValue(item.transport_motor, item.transport))
+  const hariMotor = numberValue(amountValue(item.hari_transport_motor, item.hari))
+  const transportMobil = numberValue(amountValue(item.transport_mobil, item.transport_mobil_tanpa_tol))
+  const hariMobil = numberValue(amountValue(item.hari_transport_mobil, item.hari_transport_mobil_tanpa_tol))
 
-  return Math.round((barokahBiasa * jamBiasa) + (barokahDoubleDegree * jamDoubleDegree));
-};
-const subtotalSempro = item => numberValue(item.barokah_sempro) * numberValue(amountValue(item.jam_sempro, item.barokah_sempro ? 1 : 0));
-const subtotalUas = item => numberValue(item.barokah_uas) * numberValue(item.jumlah_mahasiswa_uas);
+  return transportMotor * hariMotor + transportMobil * hariMobil
+}
 
-const errorMessage = (err) => {
+const subtotalMengajar = item => {
+  const barokahBiasa = numberValue(amountValue(item.barokah_mengajar_biasa, item.barokah))
+  const jamBiasa = numberValue(item.jam)
+  const barokahDoubleDegree = numberValue(item.barokah_mengajar_double_degree)
+  const jamDoubleDegree = numberValue(amountValue(item.jam_mengajar_double_degree, item.jam))
+
+  return Math.round((barokahBiasa * jamBiasa) + (barokahDoubleDegree * jamDoubleDegree))
+}
+
+const subtotalSempro = item => numberValue(item.barokah_sempro) * numberValue(amountValue(item.jam_sempro, item.barokah_sempro ? 1 : 0))
+const subtotalUas = item => numberValue(item.barokah_uas) * numberValue(item.jumlah_mahasiswa_uas)
+
+const errorMessage = err => {
   const message =
     err?.data?.message ||
     err?.response?._data?.message ||
     err?.response?.data?.message ||
-    err?.message;
+    err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
 const fetchRekap = async () => {
   const response = await $api(`${props.endpoint}/rekap/${rekapId.value}`, {
     method: "GET",
-  });
+  })
 
-  rekap.value = response.data;
-};
+  rekap.value = response.data
+}
 
 const fetchLpj = async () => {
   try {
     const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
       method: "GET",
-    });
+    })
 
-    lpj.value = response.data?.lpj || null;
-    lpjRows.value = response.data?.details || [];
+    lpj.value = response.data?.lpj || null
+    lpjRows.value = response.data?.details || []
   } catch {
-    lpj.value = null;
-    lpjRows.value = [];
+    lpj.value = null
+    lpjRows.value = []
   }
-};
+}
 
 const fetchData = async () => {
   try {
-    loading.value = true;
+    loading.value = true
+
     const response = await $api(props.endpoint, {
       method: "GET",
       body: {
@@ -212,63 +251,72 @@ const fetchData = async () => {
         sort_order: sortBy.value.order,
         rekap_id: rekapId.value,
       },
-    });
+    })
 
-    dataTable.value = response.data.data;
-    totalItems.value = response.data.total;
+    dataTable.value = response.data.data
+    totalItems.value = response.data.total
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isNonPegawai = item => item.kategori_detail === "non_pegawai";
+const isNonPegawai = item => item.kategori_detail === "non_pegawai"
+const isRumahTangga = computed(() => props.moduleType === "rumah-tangga")
+
 const pegawaiLabel = item => isNonPegawai(item)
   ? "Nonpegawai"
-  : item.nama_pegawai || item.nama_dosen || "-";
+  : item.nama_pegawai || item.nama_dosen || "-"
+
 const pegawaiMeta = item => isNonPegawai(item)
   ? "Tanpa pegawai"
   : [
-      item.kode_pegawai || item.kode_dosen,
-      item.tipe_pegawai === "staff" ? "Staff" : item.tipe_pegawai === "dosen" ? "Dosen" : null,
-      item.jabatan_staff || item.nama_prodi_dosen,
-    ].filter(Boolean).join(" - ");
+    item.kode_pegawai || item.kode_dosen,
+    item.tipe_pegawai === "staff" ? "Staff" : item.tipe_pegawai === "dosen" ? "Dosen" : null,
+    item.jabatan_staff || item.nama_prodi_dosen,
+  ].filter(Boolean).join(" - ")
 
-const uraian = (item) => {
+const uraian = item => {
+  if (isRumahTangga.value) {
+    return item.nama_kegiatan || "-"
+  }
+
   if (props.moduleType === "kegiatan") {
-    return item.nama_kegiatan || "-";
+    return item.nama_kegiatan || "-"
   }
 
   if (props.moduleType === "bulanan") {
-    return `${numberValue(item.hari)} hari, harian ${formatRupiah(item.barokah_harian)}, bulanan ${formatRupiah(item.barokah_bulanan)}`;
+    return `${numberValue(item.hari)} hari, harian ${formatRupiah(item.barokah_harian)}, bulanan ${formatRupiah(item.barokah_bulanan)}`
   }
 
   if (props.moduleType === "dosen-bulanan") {
-    return `Dosen Tetap ${formatRupiah(item.barokah_dosen_tetap)}, Struktural ${formatRupiah(item.barokah_struktural)}`;
+    return `Dosen Tetap ${formatRupiah(item.barokah_dosen_tetap)}, Struktural ${formatRupiah(item.barokah_struktural)}`
   }
 
-  return `Transport ${formatRupiah(subtotalTransport(item))}, mengajar ${formatRupiah(subtotalMengajar(item))}, sempro ${formatRupiah(subtotalSempro(item))}, UAS ${formatRupiah(subtotalUas(item))}`;
-};
+  return `Transport ${formatRupiah(subtotalTransport(item))}, mengajar ${formatRupiah(subtotalMengajar(item))}, sempro ${formatRupiah(subtotalSempro(item))}, UAS ${formatRupiah(subtotalUas(item))}`
+}
 
-const currentDetailPath = computed(() => route.fullPath);
+const currentDetailPath = computed(() => route.fullPath)
+
 const createPath = () => ({
   path: `${props.basePath}/add`,
   query: {
     rekap_id: rekapId.value,
     return_to: currentDetailPath.value,
   },
-});
+})
+
 const editBatchPath = () => ({
   path: `${props.basePath}/add`,
   query: {
@@ -276,54 +324,62 @@ const editBatchPath = () => ({
     return_to: currentDetailPath.value,
     edit_batch: "1",
   },
-});
+})
+
 const addRabPath = () => (
-  props.moduleType === "kegiatan"
+  ["kegiatan", "rumah-tangga"].includes(props.moduleType)
     ? editBatchPath()
     : createPath()
-);
+)
+
 const editPath = item => ({
   path: `${props.basePath}/edit/${item.id}`,
   query: {
     return_to: currentDetailPath.value,
   },
-});
+})
+
 const lpjDetailPath = () => ({
   path: `${props.basePath}/rekap/${rekapId.value}/lpj`,
   query: {
     return_to: currentDetailPath.value,
   },
-});
+})
+
 const paymentColor = value => {
-  if (value === "Transfer") return "info";
-  if (value === "Tunai") return "secondary";
+  if (value === "Transfer") return "info"
+  if (value === "Tunai") return "secondary"
 
-  return "success";
-};
+  return "success"
+}
+
 const openEditRekapDialog = () => {
-  nama.value = rekap.value?.nama || "";
-  bulanTahun.value = String(rekap.value?.bulan_tahun || "").slice(0, 7);
-  tanggalRekap.value = String(rekap.value?.tanggal_rekap || "").slice(0, 10);
-  jumlahSementara.value = Number(rekap.value?.jumlah_data > 0 ? rekap.value?.jumlah : (rekap.value?.jumlah_sementara ?? rekap.value?.jumlah ?? 0));
-  keterangan.value = rekap.value?.keterangan || "";
-  dialog.value = true;
-};
-const saveRekap = async () => {
-  if (saving.value) return;
+  nama.value = rekap.value?.nama || ""
+  bulanTahun.value = String(rekap.value?.bulan_tahun || "").slice(0, 7)
+  tanggalRekap.value = String(rekap.value?.tanggal_rekap || "").slice(0, 10)
+  jumlahSementara.value = Number(rekap.value?.jumlah_data > 0 ? rekap.value?.jumlah : (rekap.value?.jumlah_sementara ?? rekap.value?.jumlah ?? 0))
+  keterangan.value = rekap.value?.keterangan || ""
+  dialog.value = true
+}
 
-  const trimmedNama = nama.value.trim();
+const saveRekap = async () => {
+  if (saving.value) return
+
+  const trimmedNama = nama.value.trim()
 
   if (!trimmedNama) {
     showSnackbar({
       text: "Nama rekap harus diisi.",
       color: "warning",
-    });
-    namaInput.value?.focus();
-    return;
+    })
+    namaInput.value?.focus()
+    
+    return
   }
 
   try {
-    saving.value = true;
+    saving.value = true
+
     const response = await $api(`${props.endpoint}/rekap/${rekapId.value}`, {
       method: "PUT",
       body: {
@@ -333,104 +389,149 @@ const saveRekap = async () => {
         jumlah_sementara: editingHasDetails.value ? null : Number(jumlahSementara.value || 0),
         keterangan: keterangan.value,
       },
-    });
+    })
 
     if (response.status === true) {
-      dialog.value = false;
-      await fetchRekap();
-      notifyPengeluaranRekapUpdated(props.endpoint);
+      dialog.value = false
+      await fetchRekap()
+      notifyPengeluaranRekapUpdated(props.endpoint)
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    saving.value = false;
+    saving.value = false
   }
-};
+}
+
 const confirmDeleteRekap = async () => {
-  if (actionLoading.value) return;
+  if (actionLoading.value) return
 
   try {
-    actionLoading.value = true;
+    actionLoading.value = true
+
     const response = await $api(`${props.endpoint}/rekap/${rekapId.value}`, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
-      actionDialog.value = false;
-      notifyPengeluaranRekapUpdated(props.endpoint);
+      actionDialog.value = false
+      notifyPengeluaranRekapUpdated(props.endpoint)
       showSnackbar({
         text: response.message,
         color: "success",
-      });
-      router.push(returnPath.value);
+      })
+      router.push(returnPath.value)
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    actionLoading.value = false;
+    actionLoading.value = false
   }
-};
-const openLpjDialog = () => {
-  lpjDialog.value = true;
-};
-const submitLpj = async (sameAsRab) => {
-  if (lpjLoading.value) return;
+}
+
+const confirmDeleteItems = (items = null) => {
+  if (items) {
+    itemsToDelete.value = Array.isArray(items) ? items : [items]
+  } else {
+    itemsToDelete.value = selectedIds.value
+  }
+  deleteItemsDialog.value = true
+}
+
+const submitDeleteItems = async () => {
+  if (deletingItems.value || itemsToDelete.value.length === 0) return
 
   try {
-    lpjLoading.value = true;
+    deletingItems.value = true
+    const promises = itemsToDelete.value.map(id => $api(`${props.endpoint}/${id}`, { method: "DELETE" }))
+    await Promise.all(promises)
+    
+    deleteItemsDialog.value = false
+    selectedRabIds.value = []
+    selectedLpjIds.value = []
+    
+    showSnackbar({
+      text: `${itemsToDelete.value.length} data berhasil dihapus.`,
+      color: "success",
+    })
+    
+    await fetchRekap()
+    await fetchData()
+    await fetchLpj()
+    notifyPengeluaranRekapUpdated(props.endpoint)
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    deletingItems.value = false
+  }
+}
+
+const openLpjDialog = () => {
+  lpjDialog.value = true
+}
+
+const submitLpj = async sameAsRab => {
+  if (lpjLoading.value) return
+
+  try {
+    lpjLoading.value = true
+
     const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj/copy`, {
       method: "POST",
       body: {
         sama_dengan_rab: sameAsRab,
       },
-    });
+    })
 
     if (response.status === true) {
-      lpjDialog.value = false;
-      await fetchLpj();
-      notifyPengeluaranRekapUpdated(props.endpoint);
+      lpjDialog.value = false
+      await fetchLpj()
+      notifyPengeluaranRekapUpdated(props.endpoint)
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
       if (!sameAsRab) {
-        router.push(lpjDetailPath());
+        router.push(lpjDetailPath())
       }
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    lpjLoading.value = false;
+    lpjLoading.value = false
   }
-};
+}
 
 onMounted(async () => {
-  document.title = `Detail Rekap ${props.title} - SIMKEU`;
+  document.title = `Detail Rekap ${props.title} - SIMKEU`
 
   try {
-    await fetchRekap();
-    await fetchLpj();
+    await fetchRekap()
+    await fetchLpj()
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   }
-});
+})
 </script>
 
 <template>
@@ -452,13 +553,22 @@ onMounted(async () => {
             <div class="detail-title text-h5 font-weight-semibold">
               {{ rekap?.nama || "Detail Rekap" }}
             </div>
-            <div v-if="rekap?.keterangan" class="text-body-2 mt-1">
+            <div
+              v-if="rekap?.keterangan"
+              class="text-body-2 mt-1"
+            >
               {{ rekap.keterangan }}
             </div>
-            <div v-if="rekap?.bulan_tahun" class="text-caption text-medium-emphasis mt-1">
+            <div
+              v-if="rekap?.bulan_tahun"
+              class="text-caption text-medium-emphasis mt-1"
+            >
               Periode {{ formatMonthYear(rekap.bulan_tahun) }}
             </div>
-            <div v-if="rekap?.tanggal_rekap" class="text-caption text-medium-emphasis mt-1">
+            <div
+              v-if="rekap?.tanggal_rekap"
+              class="text-caption text-medium-emphasis mt-1"
+            >
               Tanggal rekap {{ formatDate(rekap.tanggal_rekap) }}
             </div>
           </div>
@@ -513,7 +623,6 @@ onMounted(async () => {
               </VBtn>
             </div>
           </div>
-
         </div>
 
         <VAlert
@@ -542,8 +651,20 @@ onMounted(async () => {
           </template>
         </VCardSubtitle>
 
-        <template v-if="allowCreate || activeDataTab === 'lpj'" #append>
+        <template
+          v-if="allowCreate || activeDataTab === 'lpj' || selectedIds.length > 0"
+          #append
+        >
           <div class="detail-data-actions">
+            <VBtn
+              v-if="selectedIds.length > 0"
+              color="error"
+              prepend-icon="ri-delete-bin-line"
+              class="mr-3"
+              @click="confirmDeleteItems(null)"
+            >
+              Hapus ({{ selectedIds.length }})
+            </VBtn>
             <template v-if="activeDataTab === 'rab' && allowCreate">
               <VBtn
                 color="primary"
@@ -591,9 +712,11 @@ onMounted(async () => {
       <VWindow v-model="activeDataTab">
         <VWindowItem value="rab">
           <VDataTableServer
-            :headers="tableHeaders"
             v-model:items-per-page="itemsPerPage"
             v-model:page="page"
+            v-model="selectedRabIds"
+            show-select
+            :headers="tableHeaders"
             :items="dataTable"
             :items-length="totalItems"
             :loading="loading"
@@ -601,7 +724,9 @@ onMounted(async () => {
             @update:options="loadItems"
           >
             <template #no-data>
-              <div class="text-center pa-4">Tidak ada data RAB.</div>
+              <div class="text-center pa-4">
+                Tidak ada data RAB.
+              </div>
             </template>
 
             <template #item.id="{ index }">
@@ -629,6 +754,22 @@ onMounted(async () => {
 
             <template #item.uraian="{ item }">
               {{ uraian(item) }}
+            </template>
+
+            <template #item.kelompok_anggaran="{ item }">
+              {{ item.kelompok_anggaran || "-" }}
+            </template>
+
+            <template #item.nominal="{ item }">
+              {{ formatRupiah(item.nominal) }}
+            </template>
+
+            <template #item.jumlah="{ item }">
+              {{ item.jumlah ?? "-" }}
+            </template>
+
+            <template #item.volume="{ item }">
+              {{ item.volume ?? "-" }}
             </template>
 
             <template #item.jenis_pembayaran="{ item }">
@@ -661,12 +802,21 @@ onMounted(async () => {
               >
                 Edit
               </VBtn>
+              <VBtn
+                variant="text"
+                size="small"
+                color="error"
+                icon="ri-delete-bin-line"
+                @click="confirmDeleteItems(item.id)"
+              />
             </template>
           </VDataTableServer>
         </VWindowItem>
 
         <VWindowItem value="lpj">
           <VDataTable
+            v-model="selectedLpjIds"
+            show-select
             :headers="lpjTableHeaders"
             :items="lpjRows"
             :items-per-page="itemsPerPage"
@@ -674,7 +824,9 @@ onMounted(async () => {
           >
             <template #no-data>
               <div class="text-center pa-6">
-                <div class="text-body-2 text-medium-emphasis mb-3">Belum ada data LPJ.</div>
+                <div class="text-body-2 text-medium-emphasis mb-3">
+                  Belum ada data LPJ.
+                </div>
                 <VBtn
                   color="success"
                   prepend-icon="ri-file-check-line"
@@ -712,6 +864,22 @@ onMounted(async () => {
               {{ uraian(item) }}
             </template>
 
+            <template #item.kelompok_anggaran="{ item }">
+              {{ item.kelompok_anggaran || "-" }}
+            </template>
+
+            <template #item.nominal="{ item }">
+              {{ formatRupiah(item.nominal) }}
+            </template>
+
+            <template #item.jumlah="{ item }">
+              {{ item.jumlah ?? "-" }}
+            </template>
+
+            <template #item.volume="{ item }">
+              {{ item.volume ?? "-" }}
+            </template>
+
             <template #item.jenis_pembayaran="{ item }">
               <VChip
                 v-if="item.jenis_pembayaran"
@@ -731,10 +899,61 @@ onMounted(async () => {
             <template #item.keterangan="{ item }">
               {{ item.keterangan || "-" }}
             </template>
+
+            <template #item.actions="{ item }">
+              <VBtn
+                variant="text"
+                size="small"
+                color="error"
+                icon="ri-delete-bin-line"
+                @click="confirmDeleteItems(item.id)"
+              />
+            </template>
           </VDataTable>
         </VWindowItem>
       </VWindow>
     </VCard>
+
+    <VDialog
+      v-model="deleteItemsDialog"
+      max-width="500"
+    >
+      <VCard>
+        <VCardItem class="text-center pb-6">
+          <div class="delete-icon-wrapper mb-4">
+            <VIcon
+              icon="ri-error-warning-line"
+              color="error"
+              size="48"
+            />
+          </div>
+          <VCardTitle class="text-h5 font-weight-bold mb-2">
+            Hapus Data
+          </VCardTitle>
+          <div class="text-body-1 text-medium-emphasis">
+            Anda yakin ingin menghapus {{ itemsToDelete.length }} data yang dipilih? Data yang dihapus tidak dapat dikembalikan.
+          </div>
+        </VCardItem>
+
+        <VCardText class="d-flex justify-center gap-3 pt-0 pb-6">
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            :disabled="deletingItems"
+            @click="deleteItemsDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="error"
+            :loading="deletingItems"
+            @click="submitDeleteItems"
+          >
+            Hapus
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
 
     <VDialog
       v-model="dialog"
@@ -760,7 +979,10 @@ onMounted(async () => {
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <AppDateTimePicker
                 v-model="tanggalRekap"
                 label="Tanggal Rekap *"
@@ -770,7 +992,10 @@ onMounted(async () => {
               />
             </VCol>
 
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="jumlahSementara"
                 :label="editingHasDetails ? 'Jumlah RAB dari Detail' : 'Jumlah Sementara *'"
@@ -826,7 +1051,10 @@ onMounted(async () => {
       </VCard>
     </VDialog>
 
-    <VDialog v-model="actionDialog" width="500">
+    <VDialog
+      v-model="actionDialog"
+      width="500"
+    >
       <VCard title="Hapus Rekap">
         <DialogCloseBtn
           variant="text"
@@ -860,7 +1088,10 @@ onMounted(async () => {
       </VCard>
     </VDialog>
 
-    <VDialog v-model="lpjDialog" width="560">
+    <VDialog
+      v-model="lpjDialog"
+      width="560"
+    >
       <VCard title="Input LPJ">
         <DialogCloseBtn
           variant="text"

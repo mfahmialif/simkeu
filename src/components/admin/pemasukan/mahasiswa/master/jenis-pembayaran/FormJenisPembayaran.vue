@@ -1,8 +1,6 @@
 <script setup>
 import { showSnackbar } from '@/composables/snackbar'
 
-const router = useRouter()
-
 const props = defineProps({
   typeForm: {
     type: String,
@@ -17,6 +15,8 @@ const props = defineProps({
     required: false,
   },
 })
+
+const router = useRouter()
 
 const refForm = ref(null)
 
@@ -45,6 +45,7 @@ const onSubmit = async () => {
   disabled.value = true
 
   const formData = new FormData()
+
   formData.append('nama', nama.value)
   formData.append('nomer_rekening', nomer_rekening.value)
   formData.append('kategori', kategori.value)
@@ -79,7 +80,8 @@ const onSubmit = async () => {
   } catch (err) {
     const message = Array.isArray(err.data.message)
       ? err.data.message.join('; ')
-      : err.data.message;
+      : err.data.message
+
     showSnackbar({
       text: message,
       color: 'error',
@@ -91,28 +93,62 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
       <VCol cols="12">
-        <VTextField v-model="nama" :rules="[requiredValidator]" label="Nama" placeholder="Fulan Fulanah" />
+        <VTextField
+          v-model="nama"
+          :rules="[requiredValidator]"
+          label="Nama"
+          placeholder="Fulan Fulanah"
+        />
       </VCol>
       <VCol cols="12">
-        <VTextField v-model="nomer_rekening" :rules="[requiredValidator]" label="Nomer Rekening"
-          placeholder="0000000000" />
+        <VTextField
+          v-model="nomer_rekening"
+          :rules="[requiredValidator]"
+          label="Nomer Rekening"
+          placeholder="0000000000"
+        />
       </VCol>
       <VCol cols="12">
-        <VTextField v-model="kategori" :rules="[requiredValidator]" label="Kategori" placeholder="Putra / Putri" />
+        <VTextField
+          v-model="kategori"
+          :rules="[requiredValidator]"
+          label="Kategori"
+          placeholder="Putra / Putri"
+        />
       </VCol>
       <VCol cols="12">
-        <VTextarea v-model="keterangan" label="Keterangan" placeholder="Type here..." auto-grow />
+        <VTextarea
+          v-model="keterangan"
+          label="Keterangan"
+          placeholder="Type here..."
+          auto-grow
+        />
       </VCol>
 
-      <VCol cols="12" class="d-flex gap-4">
-        <VBtn type="submit" :disabled @click="refForm?.validate()">
+      <VCol
+        cols="12"
+        class="d-flex gap-4"
+      >
+        <VBtn
+          type="submit"
+          :disabled
+          @click="refForm?.validate()"
+        >
           Submit
         </VBtn>
 
-        <VBtn type="reset" v-if="typeForm !== 'edit'" color="secondary" variant="tonal">
+        <VBtn
+          v-if="typeForm !== 'edit'"
+          type="reset"
+          color="secondary"
+          variant="tonal"
+        >
           Reset
         </VBtn>
       </VCol>

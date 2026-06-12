@@ -9,4 +9,4 @@ export default [
       { title: "Pemasukan UII Dalwa", to: "admin-laporan-pemasukan-uii-dalwa" },
     ],
   },
-];
+]

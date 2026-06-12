@@ -1,5 +1,5 @@
 <script setup>
-import { formatRupiah } from "@/composables/formatRupiah";
+import { formatRupiah } from "@/composables/formatRupiah"
 
 const props = defineProps({
   stats: {
@@ -18,9 +18,9 @@ const props = defineProps({
     type: String,
     default: "Pengeluaran Sesuai Filter",
   },
-});
+})
 
-const statNumber = (key, field) => Number(props.stats?.[key]?.[field] ?? 0);
+const statNumber = (key, field) => Number(props.stats?.[key]?.[field] ?? 0)
 
 const defaultStatCards = computed(() => [
   {
@@ -63,17 +63,15 @@ const defaultStatCards = computed(() => [
     icon: "ri-file-warning-line",
     color: "secondary",
   },
-]);
+])
 
 const statCards = computed(() => {
-  return defaultStatCards.value;
-});
+  return defaultStatCards.value
+})
 </script>
 
 <template>
-  <div
-    class="pengeluaran-stat-grid mb-4"
-  >
+  <div class="pengeluaran-stat-grid mb-4">
     <VCard
       v-for="item in statCards"
       :key="item.key"

@@ -1,8 +1,6 @@
 <script setup>
 import { showSnackbar } from '@/composables/snackbar'
 
-const router = useRouter()
-
 const props = defineProps({
   dataForm: {
     type: Object,
@@ -15,18 +13,25 @@ const props = defineProps({
   avatar: {
     type: String,
     required: true,
-  }
+  },
 })
+
+const emit = defineEmits(['update:avatar'])
+
+const router = useRouter()
 
 const passwordValidator = value => {
   if (value.length < 6) return 'Password must be at least 6 characters'
+  
   return true
 }
 
 const noSpaceValidator = value => {
   if (/\s/.test(value)) return 'Username cannot contain spaces, example: fulanah123'
+  
   return true
 }
+
 const refForm = ref(null)
 
 const username = ref('')
@@ -39,8 +44,9 @@ const isConfirmPasswordVisible = ref(false)
 const avatar = ref(null)
 const disabled = ref(false)
 
-const selectedJenisKelamin = ref();
-const jenisKelamin = ref([]);
+const selectedJenisKelamin = ref()
+const jenisKelamin = ref([])
+
 const fetchJenisKelamin = async () => {
   try {
     const response = await $api('/helper/get-enum-values', {
@@ -48,8 +54,9 @@ const fetchJenisKelamin = async () => {
       body: {
         table: 'users',
         column: 'jenis_kelamin',
+
         // 'delete_column[]': ["*"]
-      }
+      },
     })
 
     jenisKelamin.value = response.map(jenisKelamin => {
@@ -63,9 +70,7 @@ const fetchJenisKelamin = async () => {
   }
 }
 
-const emit = defineEmits(['update:avatar'])
-
-watch(avatar, (newFile) => {
+watch(avatar, newFile => {
   let url = null
 
   if (newFile instanceof File) {
@@ -96,6 +101,7 @@ const onSubmit = async () => {
   disabled.value = true
 
   const formData = new FormData()
+
   formData.append('username', username.value)
   formData.append('name', name.value)
   formData.append('email', email.value)
@@ -136,7 +142,8 @@ const onSubmit = async () => {
   } catch (err) {
     const message = Array.isArray(err.data.message)
       ? err.data.message.join('; ')
-      : err.data.message;
+      : err.data.message
+
     showSnackbar({
       text: message,
       color: 'error',
@@ -148,51 +155,110 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
       <VCol cols="12">
-        <VTextField v-model="username" :readonly="!isEditable" :rules="[requiredValidator, noSpaceValidator]"
-          label="Username" placeholder="fulanah123" />
+        <VTextField
+          v-model="username"
+          :readonly="!isEditable"
+          :rules="[requiredValidator, noSpaceValidator]"
+          label="Username"
+          placeholder="fulanah123"
+        />
       </VCol>
 
       <VCol cols="12">
-        <VTextField v-model="name" :readonly="!isEditable" :rules="[requiredValidator]" label="Name"
-          placeholder="Fulan Fulanah" />
+        <VTextField
+          v-model="name"
+          :readonly="!isEditable"
+          :rules="[requiredValidator]"
+          label="Name"
+          placeholder="Fulan Fulanah"
+        />
       </VCol>
 
       <VCol cols="12">
-        <VTextField v-model="email" :readonly="!isEditable" :rules="[requiredValidator, emailValidator]" label="Email"
-          type="email" placeholder="fulanah@example.com" />
+        <VTextField
+          v-model="email"
+          :readonly="!isEditable"
+          :rules="[requiredValidator, emailValidator]"
+          label="Email"
+          type="email"
+          placeholder="fulanah@example.com"
+        />
       </VCol>
 
       <VCol cols="12">
-        <VSelect v-model="selectedJenisKelamin" :readonly="!isEditable" label="Select Jenis Kelamin"
-          placeholder="Select Role" :items="jenisKelamin" :rules="[requiredValidator]" clearable
-          clear-icon="ri-close-line" />
+        <VSelect
+          v-model="selectedJenisKelamin"
+          :readonly="!isEditable"
+          label="Select Jenis Kelamin"
+          placeholder="Select Role"
+          :items="jenisKelamin"
+          :rules="[requiredValidator]"
+          clearable
+          clear-icon="ri-close-line"
+        />
       </VCol>
 
       <VCol cols="12">
-        <VFileInput v-model="avatar" :readonly="!isEditable" :prepend-icon="null" label="Upload Photo"
-          accept="image/png, image/jpeg" />
+        <VFileInput
+          v-model="avatar"
+          :readonly="!isEditable"
+          :prepend-icon="null"
+          label="Upload Photo"
+          accept="image/png, image/jpeg"
+        />
       </VCol>
 
-      <VCol cols="12" sm="6">
-        <VTextField v-model="password" :readonly="!isEditable" :type="isPasswordVisible ? 'text' : 'password'"
-          :append-inner-icon="isPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'" label="Password" autocomplete="on"
-          type="password" placeholder="············" @click:append-inner="isPasswordVisible = !isPasswordVisible" />
+      <VCol
+        cols="12"
+        sm="6"
+      >
+        <VTextField
+          v-model="password"
+          :readonly="!isEditable"
+          :type="isPasswordVisible ? 'text' : 'password'"
+          :append-inner-icon="isPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
+          label="Password"
+          autocomplete="on"
+          type="password"
+          placeholder="············"
+          @click:append-inner="isPasswordVisible = !isPasswordVisible"
+        />
       </VCol>
 
-      <VCol cols="12" sm="6">
-        <VTextField v-model="passwordConfirmation" :readonly="!isEditable"
+      <VCol
+        cols="12"
+        sm="6"
+      >
+        <VTextField
+          v-model="passwordConfirmation"
+          :readonly="!isEditable"
           :rules="[confirmedValidator(passwordConfirmation, password)]"
           :type="isConfirmPasswordVisible ? 'text' : 'password'"
           :append-inner-icon="isConfirmPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
-          label="Password Confirmation" autocomplete="on" type="password" placeholder="············"
-          @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible" />
+          label="Password Confirmation"
+          autocomplete="on"
+          type="password"
+          placeholder="············"
+          @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible"
+        />
       </VCol>
 
-      <VCol cols="12" class="d-flex gap-4" v-if="!!isEditable">
-        <VBtn type="submit" :disabled @click="refForm?.validate()">
+      <VCol
+        v-if="!!isEditable"
+        cols="12"
+        class="d-flex gap-4"
+      >
+        <VBtn
+          type="submit"
+          :disabled
+          @click="refForm?.validate()"
+        >
           Submit
         </VBtn>
       </VCol>

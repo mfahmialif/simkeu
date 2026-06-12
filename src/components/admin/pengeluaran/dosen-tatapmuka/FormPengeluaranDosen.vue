@@ -1,8 +1,8 @@
 <script setup>
-import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue";
-import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
-import { showSnackbar } from "@/composables/snackbar";
-import { appendLampiranFormData } from "@/utils/lampiran";
+import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue"
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue"
+import { showSnackbar } from "@/composables/snackbar"
+import { appendLampiranFormData } from "@/utils/lampiran"
 
 const props = defineProps({
   refDataDosen: {
@@ -17,9 +17,9 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-});
+})
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -34,191 +34,199 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/pengeluaran/dosen-tatapmuka"),
   },
-];
+]
 
-const refForm = ref(null);
+const refForm = ref(null)
 
-const tanggal = ref(null);
-const jam = ref(0);
-const jamMengajarDoubleDegree = ref(0);
-const hariTransportMotor = ref(0);
-const hariTransportMobil = ref(0);
-const transportMotor = ref(0);
-const transportMobil = ref(0);
-const barokahMengajarBiasa = ref(0);
-const barokahMengajarDoubleDegree = ref(0);
-const barokahUas = ref(0);
-const jumlahMahasiswaUas = ref(0);
-const barokahSempro = ref(0);
-const jamSempro = ref(0);
-const keteranganSempro = ref("");
-const jenisPembayaran = ref("CUS BSI");
-const rekapId = ref(null);
-const buktiTransfer = ref(null);
-const existingBuktiTransferUrl = ref(null);
-const lampiran = ref([]);
-const existingLampiran = ref([]);
-const removedLampiran = ref([]);
-const keterangan = ref("");
-const existingPengeluaran = ref(null);
+const tanggal = ref(null)
+const jam = ref(0)
+const jamMengajarDoubleDegree = ref(0)
+const hariTransportMotor = ref(0)
+const hariTransportMobil = ref(0)
+const transportMotor = ref(0)
+const transportMobil = ref(0)
+const barokahMengajarBiasa = ref(0)
+const barokahMengajarDoubleDegree = ref(0)
+const barokahUas = ref(0)
+const jumlahMahasiswaUas = ref(0)
+const barokahSempro = ref(0)
+const jamSempro = ref(0)
+const keteranganSempro = ref("")
+const jenisPembayaran = ref("CUS BSI")
+const rekapId = ref(null)
+const buktiTransfer = ref(null)
+const existingBuktiTransferUrl = ref(null)
+const lampiran = ref([])
+const existingLampiran = ref([])
+const removedLampiran = ref([])
+const keterangan = ref("")
+const existingPengeluaran = ref(null)
 
-const jenisPembayaranList = ["CUS BSI", "Transfer"];
+const jenisPembayaranList = ["CUS BSI", "Transfer"]
 
-const refJam = ref(null);
+const refJam = ref(null)
+
 const jamFocus = async () => {
-  await nextTick();
-  refJam.value?.focus();
-};
+  await nextTick()
+  refJam.value?.focus()
+}
 
-const title = ref("Silahkan diisi:");
-const isEditMode = computed(() => props.typeForm === "edit" || !!existingPengeluaran.value?.id);
-const isAddPageEditing = computed(() => props.typeForm === "add" && !!existingPengeluaran.value?.id);
-const showTanggalInForm = computed(() => props.typeForm === "edit");
-const sectionNumber = (number) => number + (showTanggalInForm.value ? 1 : 0);
-const refFormCard = ref(null);
-const refInlineFooter = ref(null);
-const showFloatingFooter = ref(false);
-const mobileSummaryHidden = ref(false);
-let floatingFooterFrame = null;
+const title = ref("Silahkan diisi:")
+const isEditMode = computed(() => props.typeForm === "edit" || !!existingPengeluaran.value?.id)
+const isAddPageEditing = computed(() => props.typeForm === "add" && !!existingPengeluaran.value?.id)
+const showTanggalInForm = computed(() => props.typeForm === "edit")
+const sectionNumber = number => number + (showTanggalInForm.value ? 1 : 0)
+const refFormCard = ref(null)
+const refInlineFooter = ref(null)
+const showFloatingFooter = ref(false)
+const mobileSummaryHidden = ref(false)
+let floatingFooterFrame = null
 
-const numberValue = (value) => Number(value || 0);
-const selectInput = (event) => event?.target?.select?.();
-const dayPresets = Array.from({ length: 7 }, (_, index) => index + 1);
-const jamPresets = Array.from({ length: 12 }, (_, index) => index + 1);
-const transportMotorPresets = Array.from({ length: 8 }, (_, index) => 15000 + (index * 5000));
-const transportMobilPresets = [100000, 150000, 200000, 250000];
-const barokahMengajarPresets = [50000, 75000, 100000, 125000, 150000, 175000, 200000, 225000];
-const barokahMengajarDoubleDegreePresets = [115000, 150000, 185000, 187500];
-const barokahSemproPresets = [50000, 75000, 100000, 125000, 150000];
-const barokahUasPresets = [2000, 5000, 10000, 15000, 20000, 25000];
-const formatPresetNominal = (value) => new Intl.NumberFormat("id-ID").format(value);
+const numberValue = value => Number(value || 0)
+const selectInput = event => event?.target?.select?.()
+const dayPresets = Array.from({ length: 7 }, (_, index) => index + 1)
+const jamPresets = Array.from({ length: 12 }, (_, index) => index + 1)
+const transportMotorPresets = Array.from({ length: 8 }, (_, index) => 15000 + (index * 5000))
+const transportMobilPresets = [100000, 150000, 200000, 250000]
+const barokahMengajarPresets = [50000, 75000, 100000, 125000, 150000, 175000, 200000, 225000]
+const barokahMengajarDoubleDegreePresets = [115000, 150000, 185000, 187500]
+const barokahSemproPresets = [50000, 75000, 100000, 125000, 150000]
+const barokahUasPresets = [2000, 5000, 10000, 15000, 20000, 25000]
+const formatPresetNominal = value => new Intl.NumberFormat("id-ID").format(value)
 
-const totalNominalMobil = computed(() => numberValue(transportMobil.value));
-const totalHariTransportMobil = computed(() => numberValue(hariTransportMobil.value));
-const totalNominalTransport = computed(() => numberValue(transportMotor.value) + totalNominalMobil.value);
-const totalHariTransport = computed(() => numberValue(hariTransportMotor.value) + totalHariTransportMobil.value);
-const subtotalTransportMotor = computed(() => numberValue(transportMotor.value) * numberValue(hariTransportMotor.value));
-const subtotalTransportMobil = computed(() => numberValue(transportMobil.value) * numberValue(hariTransportMobil.value));
+const totalNominalMobil = computed(() => numberValue(transportMobil.value))
+const totalHariTransportMobil = computed(() => numberValue(hariTransportMobil.value))
+const totalNominalTransport = computed(() => numberValue(transportMotor.value) + totalNominalMobil.value)
+const totalHariTransport = computed(() => numberValue(hariTransportMotor.value) + totalHariTransportMobil.value)
+const subtotalTransportMotor = computed(() => numberValue(transportMotor.value) * numberValue(hariTransportMotor.value))
+const subtotalTransportMobil = computed(() => numberValue(transportMobil.value) * numberValue(hariTransportMobil.value))
+
 const subtotalTransport = computed(() => (
   subtotalTransportMotor.value
     + subtotalTransportMobil.value
-));
-const subtotalMengajarBiasa = computed(() => numberValue(barokahMengajarBiasa.value) * numberValue(jam.value));
+))
+
+const subtotalMengajarBiasa = computed(() => numberValue(barokahMengajarBiasa.value) * numberValue(jam.value))
+
 const subtotalMengajarDoubleDegree = computed(() => (
   numberValue(barokahMengajarDoubleDegree.value) * numberValue(jamMengajarDoubleDegree.value)
-));
-const subtotalMengajar = computed(() => subtotalMengajarBiasa.value + subtotalMengajarDoubleDegree.value);
-const subtotalSempro = computed(() => numberValue(barokahSempro.value) * numberValue(jamSempro.value));
-const subtotalUas = computed(() => numberValue(barokahUas.value) * numberValue(jumlahMahasiswaUas.value));
+))
+
+const subtotalMengajar = computed(() => subtotalMengajarBiasa.value + subtotalMengajarDoubleDegree.value)
+const subtotalSempro = computed(() => numberValue(barokahSempro.value) * numberValue(jamSempro.value))
+const subtotalUas = computed(() => numberValue(barokahUas.value) * numberValue(jumlahMahasiswaUas.value))
 
 const total = computed(() => {
   return Math.round(
     subtotalTransport.value
       + subtotalMengajar.value
       + subtotalUas.value
-      + subtotalSempro.value
-  );
-});
+      + subtotalSempro.value,
+  )
+})
+
 const summaryItems = computed(() => [
   { label: "Transport", value: subtotalTransport.value },
   { label: "Mengajar", value: subtotalMengajar.value },
   { label: "Sempro", value: subtotalSempro.value },
   { label: "UAS", value: subtotalUas.value },
   { label: "Total", value: total.value, total: true },
-]);
+])
 
 const selectedBuktiTransferFile = computed(() => {
-  if (Array.isArray(buktiTransfer.value)) return buktiTransfer.value[0] ?? null;
-  return buktiTransfer.value;
-});
+  if (Array.isArray(buktiTransfer.value)) return buktiTransfer.value[0] ?? null
+  
+  return buktiTransfer.value
+})
 
 const buktiTransferRules = computed(() => {
   if (jenisPembayaran.value !== "Transfer" || existingBuktiTransferUrl.value) {
-    return [];
+    return []
   }
 
-  return [requiredValidator];
-});
+  return [requiredValidator]
+})
 
-watch(jenisPembayaran, (newValue) => {
+watch(jenisPembayaran, newValue => {
   if (newValue !== "Transfer") {
-    buktiTransfer.value = null;
+    buktiTransfer.value = null
   }
-});
+})
 
 const setAddTitle = () => {
-  title.value = "Tambah Barokah Dosen Tatapmuka";
-};
+  title.value = "Tambah Barokah Dosen Tatapmuka"
+}
 
 const resetFormValues = () => {
-  jam.value = 0;
-  jamMengajarDoubleDegree.value = 0;
-  hariTransportMotor.value = 0;
-  hariTransportMobil.value = 0;
-  transportMotor.value = 0;
-  transportMobil.value = 0;
-  barokahMengajarBiasa.value = 0;
-  barokahMengajarDoubleDegree.value = 0;
-  barokahUas.value = 0;
-  jumlahMahasiswaUas.value = 0;
-  barokahSempro.value = 0;
-  jamSempro.value = 0;
-  keteranganSempro.value = "";
-  jenisPembayaran.value = "CUS BSI";
-  rekapId.value = null;
-  buktiTransfer.value = null;
-  existingBuktiTransferUrl.value = null;
-  lampiran.value = [];
-  existingLampiran.value = [];
-  removedLampiran.value = [];
-  keterangan.value = "";
-};
+  jam.value = 0
+  jamMengajarDoubleDegree.value = 0
+  hariTransportMotor.value = 0
+  hariTransportMobil.value = 0
+  transportMotor.value = 0
+  transportMobil.value = 0
+  barokahMengajarBiasa.value = 0
+  barokahMengajarDoubleDegree.value = 0
+  barokahUas.value = 0
+  jumlahMahasiswaUas.value = 0
+  barokahSempro.value = 0
+  jamSempro.value = 0
+  keteranganSempro.value = ""
+  jenisPembayaran.value = "CUS BSI"
+  rekapId.value = null
+  buktiTransfer.value = null
+  existingBuktiTransferUrl.value = null
+  lampiran.value = []
+  existingLampiran.value = []
+  removedLampiran.value = []
+  keterangan.value = ""
+}
 
-const fillFormFromData = (data) => {
-  tanggal.value = data.tanggal ?? tanggal.value;
-  jam.value = data.jam ?? 0;
-  jamMengajarDoubleDegree.value = data.jam_mengajar_double_degree ?? data.jam ?? 0;
-  hariTransportMotor.value = data.hari_transport_motor ?? data.hari ?? 0;
-  hariTransportMobil.value = data.hari_transport_mobil ?? data.hari_transport_mobil_tanpa_tol ?? 0;
-  transportMotor.value = data.transport_motor ?? data.transport ?? 0;
-  transportMobil.value = data.transport_mobil ?? data.transport_mobil_tanpa_tol ?? 0;
-  barokahMengajarBiasa.value = data.barokah_mengajar_biasa ?? data.barokah ?? 0;
-  barokahMengajarDoubleDegree.value = data.barokah_mengajar_double_degree ?? 0;
-  barokahUas.value = data.barokah_uas ?? 0;
-  jumlahMahasiswaUas.value = data.jumlah_mahasiswa_uas ?? 0;
-  barokahSempro.value = data.barokah_sempro ?? 0;
-  jamSempro.value = data.jam_sempro ?? (numberValue(data.barokah_sempro) > 0 ? 1 : 0);
-  keteranganSempro.value = data.keterangan_sempro ?? "";
-  jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI";
-  rekapId.value = data.rekap_id ?? null;
-  buktiTransfer.value = null;
-  existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null;
-  lampiran.value = [];
-  existingLampiran.value = data.lampiran ?? [];
-  removedLampiran.value = [];
-  keterangan.value = data.keterangan ?? "";
-};
+const fillFormFromData = data => {
+  tanggal.value = data.tanggal ?? tanggal.value
+  jam.value = data.jam ?? 0
+  jamMengajarDoubleDegree.value = data.jam_mengajar_double_degree ?? data.jam ?? 0
+  hariTransportMotor.value = data.hari_transport_motor ?? data.hari ?? 0
+  hariTransportMobil.value = data.hari_transport_mobil ?? data.hari_transport_mobil_tanpa_tol ?? 0
+  transportMotor.value = data.transport_motor ?? data.transport ?? 0
+  transportMobil.value = data.transport_mobil ?? data.transport_mobil_tanpa_tol ?? 0
+  barokahMengajarBiasa.value = data.barokah_mengajar_biasa ?? data.barokah ?? 0
+  barokahMengajarDoubleDegree.value = data.barokah_mengajar_double_degree ?? 0
+  barokahUas.value = data.barokah_uas ?? 0
+  jumlahMahasiswaUas.value = data.jumlah_mahasiswa_uas ?? 0
+  barokahSempro.value = data.barokah_sempro ?? 0
+  jamSempro.value = data.jam_sempro ?? (numberValue(data.barokah_sempro) > 0 ? 1 : 0)
+  keteranganSempro.value = data.keterangan_sempro ?? ""
+  jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI"
+  rekapId.value = data.rekap_id ?? null
+  buktiTransfer.value = null
+  existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null
+  lampiran.value = []
+  existingLampiran.value = data.lampiran ?? []
+  removedLampiran.value = []
+  keterangan.value = data.keterangan ?? ""
+}
 
-const setTanggal = (value) => {
-  tanggal.value = value;
-};
+const setTanggal = value => {
+  tanggal.value = value
+}
 
 const resetExistingPengeluaran = () => {
-  if (props.typeForm === "edit") return;
+  if (props.typeForm === "edit") return
 
-  existingPengeluaran.value = null;
-  resetFormValues();
-  setAddTitle();
-};
+  existingPengeluaran.value = null
+  resetFormValues()
+  setAddTitle()
+}
 
 const lookupExistingPengeluaran = async (pegawaiId, selectedTanggal) => {
-  if (props.typeForm === "edit") return;
+  if (props.typeForm === "edit") return
 
-  tanggal.value = selectedTanggal;
+  tanggal.value = selectedTanggal
 
   if (!pegawaiId || !selectedTanggal) {
-    resetExistingPengeluaran();
-    return;
+    resetExistingPengeluaran()
+    
+    return
   }
 
   try {
@@ -228,81 +236,84 @@ const lookupExistingPengeluaran = async (pegawaiId, selectedTanggal) => {
         pegawai_id: pegawaiId,
         tanggal: selectedTanggal,
       },
-    });
+    })
 
     if (response.status === true && response.data) {
-      existingPengeluaran.value = response.data;
-      fillFormFromData(response.data);
-      title.value = "Update Barokah Dosen Tatapmuka: " + (response.data.kode_dosen || "");
+      existingPengeluaran.value = response.data
+      fillFormFromData(response.data)
+      title.value = "Update Barokah Dosen Tatapmuka: " + (response.data.kode_dosen || "")
     } else {
-      resetExistingPengeluaran();
-      tanggal.value = selectedTanggal;
+      resetExistingPengeluaran()
+      tanggal.value = selectedTanggal
     }
   } catch (err) {
-    resetExistingPengeluaran();
-    tanggal.value = selectedTanggal;
+    resetExistingPengeluaran()
+    tanggal.value = selectedTanggal
 
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
       : typeof err.data?.message === "object"
         ? Object.values(err.data.message).flat().join("; ")
-        : err.data?.message || "Gagal mengecek data barokah pada tanggal tersebut.";
+        : err.data?.message || "Gagal mengecek data barokah pada tanggal tersebut."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   }
-};
+}
 
-const disabled = ref(false);
+const disabled = ref(false)
 
-const elementFromRef = (target) => target?.$el ?? target;
+const elementFromRef = target => target?.$el ?? target
 
 const updateFloatingFooter = () => {
-  const formEl = elementFromRef(refFormCard.value);
-  const footerEl = elementFromRef(refInlineFooter.value);
+  const formEl = elementFromRef(refFormCard.value)
+  const footerEl = elementFromRef(refInlineFooter.value)
 
   if (!formEl || !footerEl) {
-    showFloatingFooter.value = false;
-    return;
+    showFloatingFooter.value = false
+    
+    return
   }
 
-  const formRect = formEl.getBoundingClientRect();
-  const footerRect = footerEl.getBoundingClientRect();
-  const formIsVisible = formRect.top < window.innerHeight && formRect.bottom > 0;
-  const inlineFooterIsVisible = footerRect.top < window.innerHeight && footerRect.bottom > 0;
+  const formRect = formEl.getBoundingClientRect()
+  const footerRect = footerEl.getBoundingClientRect()
+  const formIsVisible = formRect.top < window.innerHeight && formRect.bottom > 0
+  const inlineFooterIsVisible = footerRect.top < window.innerHeight && footerRect.bottom > 0
 
-  showFloatingFooter.value = formIsVisible && !inlineFooterIsVisible && footerRect.top > window.innerHeight;
-};
+  showFloatingFooter.value = formIsVisible && !inlineFooterIsVisible && footerRect.top > window.innerHeight
+}
 
 const queueFloatingFooterUpdate = () => {
-  if (floatingFooterFrame) return;
+  if (floatingFooterFrame) return
 
   floatingFooterFrame = window.requestAnimationFrame(() => {
-    floatingFooterFrame = null;
-    updateFloatingFooter();
-  });
-};
+    floatingFooterFrame = null
+    updateFloatingFooter()
+  })
+}
 
 const onSubmit = async () => {
-  const valid = await refForm.value.validate();
-  if (!valid.valid) return;
+  const valid = await refForm.value.validate()
+  if (!valid.valid) return
 
   if (props.typeForm === "add" && !props.refDataDosen?.dosen?.id) {
     showSnackbar({
       text: "Silakan pilih dosen terlebih dahulu.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
   if (!tanggal.value) {
     showSnackbar({
       text: "Tanggal harus diisi.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
   if (
@@ -313,123 +324,127 @@ const onSubmit = async () => {
     showSnackbar({
       text: "Bukti transfer wajib diupload.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
   const editId = props.typeForm === "edit"
     ? props.dataForm.id
-    : existingPengeluaran.value?.id;
-  const method = editId ? "PUT" : "POST";
-  disabled.value = true;
+    : existingPengeluaran.value?.id
 
-  const formData = new FormData();
+  const method = editId ? "PUT" : "POST"
+
+  disabled.value = true
+
+  const formData = new FormData()
+
   const url = editId
     ? "/admin/pengeluaran/dosen/" + editId
-    : "/admin/pengeluaran/dosen";
+    : "/admin/pengeluaran/dosen"
 
-  formData.append("tanggal", tanggal.value);
+  formData.append("tanggal", tanggal.value)
   if (props.typeForm === "add") {
-    formData.append("pegawai_id", props.refDataDosen.dosen.id);
+    formData.append("pegawai_id", props.refDataDosen.dosen.id)
   } else if (props.dataForm?.pegawai_id) {
-    formData.append("pegawai_id", props.dataForm.pegawai_id);
+    formData.append("pegawai_id", props.dataForm.pegawai_id)
   }
 
-  formData.append("jam", jam.value);
-  formData.append("jam_mengajar_double_degree", jamMengajarDoubleDegree.value ?? 0);
-  formData.append("hari", totalHariTransport.value);
-  formData.append("hari_transport_motor", hariTransportMotor.value ?? 0);
-  formData.append("hari_transport_mobil", totalHariTransportMobil.value);
-  formData.append("hari_transport_mobil_tol", 0);
-  formData.append("hari_transport_mobil_tanpa_tol", totalHariTransportMobil.value);
-  formData.append("transport_motor", transportMotor.value ?? 0);
-  formData.append("transport_mobil", totalNominalMobil.value);
-  formData.append("transport_mobil_tol", 0);
-  formData.append("transport_mobil_tanpa_tol", totalNominalMobil.value);
-  formData.append("transport", totalNominalTransport.value);
-  formData.append("barokah_mengajar_biasa", barokahMengajarBiasa.value ?? 0);
-  formData.append("barokah_mengajar_double_degree", barokahMengajarDoubleDegree.value ?? 0);
-  formData.append("barokah_uas", barokahUas.value ?? 0);
-  formData.append("jumlah_mahasiswa_uas", jumlahMahasiswaUas.value ?? 0);
-  formData.append("barokah_sempro", barokahSempro.value ?? 0);
-  formData.append("jam_sempro", jamSempro.value ?? 0);
-  formData.append("keterangan_sempro", keteranganSempro.value ?? "");
-  formData.append("jenis_pembayaran", jenisPembayaran.value);
-  formData.append("rekap_id", rekapId.value ?? "");
-  formData.append("keterangan", keterangan.value ?? "");
-  formData.append("total", total.value);
-  formData.append("_method", method);
+  formData.append("jam", jam.value)
+  formData.append("jam_mengajar_double_degree", jamMengajarDoubleDegree.value ?? 0)
+  formData.append("hari", totalHariTransport.value)
+  formData.append("hari_transport_motor", hariTransportMotor.value ?? 0)
+  formData.append("hari_transport_mobil", totalHariTransportMobil.value)
+  formData.append("hari_transport_mobil_tol", 0)
+  formData.append("hari_transport_mobil_tanpa_tol", totalHariTransportMobil.value)
+  formData.append("transport_motor", transportMotor.value ?? 0)
+  formData.append("transport_mobil", totalNominalMobil.value)
+  formData.append("transport_mobil_tol", 0)
+  formData.append("transport_mobil_tanpa_tol", totalNominalMobil.value)
+  formData.append("transport", totalNominalTransport.value)
+  formData.append("barokah_mengajar_biasa", barokahMengajarBiasa.value ?? 0)
+  formData.append("barokah_mengajar_double_degree", barokahMengajarDoubleDegree.value ?? 0)
+  formData.append("barokah_uas", barokahUas.value ?? 0)
+  formData.append("jumlah_mahasiswa_uas", jumlahMahasiswaUas.value ?? 0)
+  formData.append("barokah_sempro", barokahSempro.value ?? 0)
+  formData.append("jam_sempro", jamSempro.value ?? 0)
+  formData.append("keterangan_sempro", keteranganSempro.value ?? "")
+  formData.append("jenis_pembayaran", jenisPembayaran.value)
+  formData.append("rekap_id", rekapId.value ?? "")
+  formData.append("keterangan", keterangan.value ?? "")
+  formData.append("total", total.value)
+  formData.append("_method", method)
 
   if (selectedBuktiTransferFile.value instanceof File) {
-    formData.append("bukti_transfer", selectedBuktiTransferFile.value);
+    formData.append("bukti_transfer", selectedBuktiTransferFile.value)
   }
-  appendLampiranFormData(formData, lampiran.value, removedLampiran.value);
+  appendLampiranFormData(formData, lampiran.value, removedLampiran.value)
 
   try {
     const response = await $api(url, {
       method: "POST",
       body: formData,
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
-      router.push("/admin/pengeluaran/dosen-tatapmuka");
+      })
+      router.push("/admin/pengeluaran/dosen-tatapmuka")
     } else {
-      showSnackbar({ text: response.message, color: "error" });
+      showSnackbar({ text: response.message, color: "error" })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
       : typeof err.data?.message === "object"
         ? Object.values(err.data.message).flat().join("; ")
-        : err.data?.message || "Terjadi kesalahan";
+        : err.data?.message || "Terjadi kesalahan"
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    disabled.value = false;
+    disabled.value = false
   }
-};
+}
 
 watch(
   () => props.dataForm,
   () => {
     if (props.typeForm === "edit" && props.dataForm) {
-      existingPengeluaran.value = props.dataForm;
-      title.value = "Update Barokah Dosen Tatapmuka: " + (props.dataForm.kode_dosen || "");
-      fillFormFromData(props.dataForm);
+      existingPengeluaran.value = props.dataForm
+      title.value = "Update Barokah Dosen Tatapmuka: " + (props.dataForm.kode_dosen || "")
+      fillFormFromData(props.dataForm)
     }
   },
-  { deep: true, immediate: true }
-);
+  { deep: true, immediate: true },
+)
 
 onMounted(() => {
   if (props.typeForm !== "edit") {
-    tanggal.value = fDate(new Date());
+    tanggal.value = fDate(new Date())
   }
 
-  nextTick(updateFloatingFooter);
-  window.addEventListener("scroll", queueFloatingFooterUpdate, { passive: true });
-  window.addEventListener("resize", queueFloatingFooterUpdate);
-});
+  nextTick(updateFloatingFooter)
+  window.addEventListener("scroll", queueFloatingFooterUpdate, { passive: true })
+  window.addEventListener("resize", queueFloatingFooterUpdate)
+})
 
 onBeforeUnmount(() => {
-  window.removeEventListener("scroll", queueFloatingFooterUpdate);
-  window.removeEventListener("resize", queueFloatingFooterUpdate);
+  window.removeEventListener("scroll", queueFloatingFooterUpdate)
+  window.removeEventListener("resize", queueFloatingFooterUpdate)
 
   if (floatingFooterFrame) {
-    window.cancelAnimationFrame(floatingFooterFrame);
+    window.cancelAnimationFrame(floatingFooterFrame)
   }
-});
+})
 
 watch([jenisPembayaran, existingBuktiTransferUrl, mobileSummaryHidden], () => {
-  nextTick(queueFloatingFooterUpdate);
-});
+  nextTick(queueFloatingFooterUpdate)
+})
 
 defineExpose({
   jamFocus,
@@ -437,16 +452,23 @@ defineExpose({
   lookupExistingPengeluaran,
   resetExistingPengeluaran,
   setTanggal,
-});
+})
 </script>
 
 <template>
-  <VCard ref="refFormCard" class="mb-6 elder-form" :title="title">
+  <VCard
+    ref="refFormCard"
+    class="mb-6 elder-form"
+    :title="title"
+  >
     <template #append>
       <MoreBtnAction :menu-list="menuList" />
     </template>
     <VCardText>
-      <VForm ref="refForm" @submit.prevent="onSubmit">
+      <VForm
+        ref="refForm"
+        @submit.prevent="onSubmit"
+      >
         <div
           class="form-layout"
           :class="{
@@ -473,14 +495,22 @@ defineExpose({
             </VCol>
           </VRow>
 
-          <section v-if="showTanggalInForm" class="form-section">
+          <section
+            v-if="showTanggalInForm"
+            class="form-section"
+          >
             <div class="section-heading">
               <span class="section-number">1</span>
-              <div class="section-title">Data Utama</div>
+              <div class="section-title">
+                Data Utama
+              </div>
             </div>
             <div class="section-content">
               <VRow>
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <AppDateTimePicker
                     v-model="tanggal"
                     label="Tanggal"
@@ -499,11 +529,16 @@ defineExpose({
           <section class="form-section">
             <div class="section-heading">
               <span class="section-number">{{ sectionNumber(1) }}</span>
-              <div class="section-title">Transport Motor</div>
+              <div class="section-title">
+                Transport Motor
+              </div>
             </div>
             <div class="section-content">
               <VRow>
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="hariTransportMotor"
                     type="number"
@@ -530,7 +565,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="transportMotor"
                     type="number"
@@ -558,7 +596,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalTransportMotor)"
                     label="Subtotal Motor"
@@ -572,11 +613,16 @@ defineExpose({
           <section class="form-section">
             <div class="section-heading">
               <span class="section-number">{{ sectionNumber(2) }}</span>
-              <div class="section-title">Transport Mobil</div>
+              <div class="section-title">
+                Transport Mobil
+              </div>
             </div>
             <div class="section-content">
               <VRow>
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="hariTransportMobil"
                     type="number"
@@ -602,7 +648,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="transportMobil"
                     type="number"
@@ -630,7 +679,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalTransportMobil)"
                     label="Subtotal Mobil"
@@ -644,11 +696,16 @@ defineExpose({
           <section class="form-section">
             <div class="section-heading">
               <span class="section-number">{{ sectionNumber(3) }}</span>
-              <div class="section-title">Mengajar</div>
+              <div class="section-title">
+                Mengajar
+              </div>
             </div>
             <div class="section-content">
               <VRow>
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     ref="refJam"
                     v-model="jam"
@@ -676,7 +733,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="barokahMengajarBiasa"
                     type="number"
@@ -704,7 +764,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalMengajarBiasa)"
                     label="Subtotal Mengajar Biasa"
@@ -712,7 +775,10 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="jamMengajarDoubleDegree"
                     type="number"
@@ -738,7 +804,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="barokahMengajarDoubleDegree"
                     type="number"
@@ -766,7 +835,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalMengajarDoubleDegree)"
                     label="Subtotal Mengajar Double Degree"
@@ -780,11 +852,16 @@ defineExpose({
           <section class="form-section">
             <div class="section-heading">
               <span class="section-number">{{ sectionNumber(4) }}</span>
-              <div class="section-title">Sempro</div>
+              <div class="section-title">
+                Sempro
+              </div>
             </div>
-              <div class="section-content">
-                <VRow>
-                  <VCol cols="12" md="4">
+            <div class="section-content">
+              <VRow>
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="jamSempro"
                     type="number"
@@ -810,7 +887,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="barokahSempro"
                     type="number"
@@ -838,7 +918,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalSempro)"
                     label="Subtotal Sempro"
@@ -861,11 +944,16 @@ defineExpose({
           <section class="form-section">
             <div class="section-heading">
               <span class="section-number">{{ sectionNumber(5) }}</span>
-              <div class="section-title">UAS</div>
+              <div class="section-title">
+                UAS
+              </div>
             </div>
             <div class="section-content">
               <VRow>
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="barokahUas"
                     type="number"
@@ -893,7 +981,10 @@ defineExpose({
                   </div>
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     v-model="jumlahMahasiswaUas"
                     type="number"
@@ -905,7 +996,10 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol cols="12" md="4">
+                <VCol
+                  cols="12"
+                  md="4"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalUas)"
                     label="Subtotal UAS"
@@ -919,11 +1013,16 @@ defineExpose({
           <section class="form-section">
             <div class="section-heading">
               <span class="section-number">{{ sectionNumber(6) }}</span>
-              <div class="section-title">Keterangan dan Total</div>
+              <div class="section-title">
+                Keterangan dan Total
+              </div>
             </div>
             <div class="section-content">
               <VRow>
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalTransport)"
                     label="Subtotal Transport"
@@ -931,7 +1030,10 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalMengajar)"
                     label="Subtotal Mengajar"
@@ -939,7 +1041,10 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalSempro)"
                     label="Subtotal Sempro"
@@ -947,7 +1052,10 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     :model-value="formatRupiah(subtotalUas)"
                     label="Subtotal UAS"
@@ -955,7 +1063,10 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VTextField
                     :model-value="formatRupiah(total)"
                     label="Total"
@@ -964,7 +1075,10 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol cols="12" md="6">
+                <VCol
+                  cols="12"
+                  md="6"
+                >
                   <VSelect
                     v-model="jenisPembayaran"
                     label="Jenis Pembayaran"
@@ -973,7 +1087,11 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol v-if="jenisPembayaran === 'Transfer'" cols="12" md="6">
+                <VCol
+                  v-if="jenisPembayaran === 'Transfer'"
+                  cols="12"
+                  md="6"
+                >
                   <VFileInput
                     v-model="buktiTransfer"
                     :prepend-icon="null"
@@ -983,7 +1101,11 @@ defineExpose({
                   />
                 </VCol>
 
-                <VCol v-if="existingBuktiTransferUrl && jenisPembayaran === 'Transfer'" cols="12" md="6">
+                <VCol
+                  v-if="existingBuktiTransferUrl && jenisPembayaran === 'Transfer'"
+                  cols="12"
+                  md="6"
+                >
                   <VBtn
                     variant="outlined"
                     color="primary"
@@ -1039,7 +1161,13 @@ defineExpose({
                 <strong>{{ formatRupiah(item.value) }}</strong>
               </div>
             </div>
-            <VBtn type="submit" :disabled="disabled" :loading="disabled" size="large" class="submit-button">
+            <VBtn
+              type="submit"
+              :disabled="disabled"
+              :loading="disabled"
+              size="large"
+              class="submit-button"
+            >
               {{ isEditMode ? "Update" : "Simpan" }}
             </VBtn>
           </div>

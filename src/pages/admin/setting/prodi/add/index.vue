@@ -1,8 +1,8 @@
 <script setup>
-import FormProdi from "@/components/admin/prodi/FormProdi.vue";
-import { useRouter } from "vue-router";
+import FormProdi from "@/components/admin/prodi/FormProdi.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -17,11 +17,11 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/setting/prodi"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Prodi Add - SIMKEU";
-});
+  document.title = "Prodi Add - SIMKEU"
+})
 </script>
 
 <template>
@@ -34,8 +34,8 @@ onMounted(() => {
 
         <VCardText>
           <FormProdi
-            typeForm="add"
-            :url="'/admin/prodi'"
+            type-form="add"
+            url="/admin/prodi"
           />
         </VCardText>
       </VCard>

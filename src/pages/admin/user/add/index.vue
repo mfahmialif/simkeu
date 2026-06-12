@@ -1,8 +1,8 @@
 <script setup>
-import FormUser from "@/components/admin/user/FormUser.vue";
-import { useRouter } from "vue-router";
+import FormUser from "@/components/admin/user/FormUser.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 
 const menuList = [
   {
@@ -11,6 +11,7 @@ const menuList = [
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -20,13 +21,13 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/user"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Users Add - SIMKEU";
-});
+  document.title = "Users Add - SIMKEU"
+})
 
-onMounted(() => {});
+onMounted(() => {})
 </script>
 
 <template>
@@ -39,9 +40,9 @@ onMounted(() => {});
 
         <VCardText>
           <FormUser
-            typeForm="add"
-            :url="'/admin/users'"
-            :isRoleVisible="true"
+            type-form="add"
+            url="/admin/users"
+            :is-role-visible="true"
           />
         </VCardText>
       </VCard>

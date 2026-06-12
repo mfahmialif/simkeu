@@ -4,4 +4,4 @@ export default [
     icon: { icon: "ri-draft-line" },
     to: "admin-laporan-rab",
   },
-];
+]

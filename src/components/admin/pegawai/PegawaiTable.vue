@@ -1,5 +1,5 @@
 <script setup>
-import { downloadFileExport } from "@/composables/exportFile";
+import { downloadFileExport } from "@/composables/exportFile"
 
 const props = defineProps({
   title: {
@@ -9,40 +9,41 @@ const props = defineProps({
   fixedTipe: {
     type: String,
     default: null,
-    validator: (value) => value === null || ["dosen", "staff"].includes(value),
+    validator: value => value === null || ["dosen", "staff"].includes(value),
   },
   documentTitle: {
     type: String,
     default: "",
   },
-});
+})
 
-const router = useRouter();
+const router = useRouter()
 
-const userData = useCookie("userData").value ?? {};
+const userData = useCookie("userData").value ?? {}
+
 const isAdmin = computed(
-  () => String(userData.role?.name || "").toLowerCase() === "admin"
-);
+  () => String(userData.role?.name || "").toLowerCase() === "admin",
+)
 
-const page = ref(1);
-const itemsPerPage = ref(10);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
-const selectedTipe = ref(props.fixedTipe);
-const selectedJenisKelamin = ref(null);
-const selectedStatus = ref(null);
-const selectedProdi = ref(null);
-const prodiOptions = ref([]);
-const isLoadingExport = ref(false);
-const isImportDialogVisible = ref(false);
-const isImporting = ref(false);
-const importFile = ref(null);
-const importSummary = ref(null);
+const page = ref(1)
+const itemsPerPage = ref(10)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
+const selectedTipe = ref(props.fixedTipe)
+const selectedJenisKelamin = ref(null)
+const selectedStatus = ref(null)
+const selectedProdi = ref(null)
+const prodiOptions = ref([])
+const isLoadingExport = ref(false)
+const isImportDialogVisible = ref(false)
+const isImporting = ref(false)
+const importFile = ref(null)
+const importSummary = ref(null)
 
 const stats = ref({
   total: 0,
@@ -50,21 +51,22 @@ const stats = ref({
   staff: 0,
   aktif: 0,
   tidak_aktif: 0,
-});
+})
 
-const isTipeLocked = computed(() => Boolean(props.fixedTipe));
-const showProdiFilter = computed(() => props.fixedTipe === "dosen");
-const cardTitle = computed(() => props.title);
-const listNameLower = computed(() => props.title.toLowerCase());
-const addUrl = computed(() => "/admin/setting/pegawai/add");
+const isTipeLocked = computed(() => Boolean(props.fixedTipe))
+const showProdiFilter = computed(() => props.fixedTipe === "dosen")
+const cardTitle = computed(() => props.title)
+const listNameLower = computed(() => props.title.toLowerCase())
+const addUrl = computed(() => "/admin/setting/pegawai/add")
+
 const filterColMd = computed(() => {
-  if (props.fixedTipe === "staff") return 4;
+  if (props.fixedTipe === "staff") return 4
 
-  return 3;
-});
+  return 3
+})
 
 const currentFilterPayload = () => {
-  const tipe = props.fixedTipe || selectedTipe.value;
+  const tipe = props.fixedTipe || selectedTipe.value
 
   return {
     search: search.value,
@@ -75,23 +77,23 @@ const currentFilterPayload = () => {
     ...(selectedStatus.value && { status: selectedStatus.value }),
     ...(showProdiFilter.value &&
       selectedProdi.value && { prodi_id: selectedProdi.value }),
-  };
-};
+  }
+}
 
 const tipeOptions = [
   { title: "Dosen", value: "dosen" },
   { title: "Staff", value: "staff" },
-];
+]
 
 const jenisKelaminOptions = [
   { title: "Laki-laki", value: "Laki-laki" },
   { title: "Perempuan", value: "Perempuan" },
-];
+]
 
 const statusOptions = [
   { title: "Aktif", value: "aktif" },
   { title: "Tidak Aktif", value: "tidak aktif" },
-];
+]
 
 const statusStatCards = computed(() => [
   {
@@ -106,7 +108,7 @@ const statusStatCards = computed(() => [
     icon: "ri-close-circle-line",
     color: "error",
   },
-]);
+])
 
 const statCards = computed(() => {
   if (props.fixedTipe === "dosen") {
@@ -118,7 +120,7 @@ const statCards = computed(() => {
         color: "info",
       },
       ...statusStatCards.value,
-    ];
+    ]
   }
 
   if (props.fixedTipe === "staff") {
@@ -130,7 +132,7 @@ const statCards = computed(() => {
         color: "warning",
       },
       ...statusStatCards.value,
-    ];
+    ]
   }
 
   return [
@@ -153,8 +155,8 @@ const statCards = computed(() => {
       color: "warning",
     },
     ...statusStatCards.value,
-  ];
-});
+  ]
+})
 
 const fetchProdi = async () => {
   try {
@@ -165,20 +167,21 @@ const fetchProdi = async () => {
         sort_key: "nama",
         sort_order: "asc",
       },
-    });
+    })
 
-    prodiOptions.value = (response?.data?.data || []).map((item) => ({
+    prodiOptions.value = (response?.data?.data || []).map(item => ({
       title: `${item.kode} - ${item.nama}`,
       value: item.id,
-    }));
+    }))
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
 
 const fetchData = async () => {
   try {
-    loading.value = true;
+    loading.value = true
+
     const response = await $api("/admin/pegawai", {
       method: "GET",
       body: {
@@ -188,84 +191,85 @@ const fetchData = async () => {
         sort_order: sortBy.value.order,
         ...currentFilterPayload(),
       },
-    });
+    })
 
-    dataTable.value = response.data.data;
-    totalItems.value = response.data.total;
-    stats.value = response.stats || stats.value;
+    dataTable.value = response.data.data
+    totalItems.value = response.data.total
+    stats.value = response.stats || stats.value
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
-  loading.value = true;
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  loading.value = true
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id,
     name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message ||
     err?.response?._data?.message ||
     err?.response?.data?.message ||
-    err?.message;
+    err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api("/admin/pegawai/" + id, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 const exportData = async () => {
   try {
-    isLoadingExport.value = true;
+    isLoadingExport.value = true
+
     const response = await $api("/admin/pegawai/export-excel", {
       method: "GET",
       headers: {
@@ -277,111 +281,114 @@ const exportData = async () => {
         sort_order: sortBy.value.order,
         ...currentFilterPayload(),
       },
-    });
+    })
 
-    downloadFileExport(response, `Data ${props.title}.xlsx`);
+    downloadFileExport(response, `Data ${props.title}.xlsx`)
     showSnackbar({
       text: `Data ${listNameLower.value} berhasil di download.`,
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isLoadingExport.value = false;
+    isLoadingExport.value = false
   }
-};
+}
 
 const openImportDialog = () => {
-  importFile.value = null;
-  importSummary.value = null;
-  isImportDialogVisible.value = true;
-};
+  importFile.value = null
+  importSummary.value = null
+  isImportDialogVisible.value = true
+}
 
 const importData = async () => {
   const file = Array.isArray(importFile.value)
     ? importFile.value[0]
-    : importFile.value;
+    : importFile.value
 
   if (!file) {
     showSnackbar({
       text: "Pilih file Excel terlebih dahulu.",
       color: "warning",
-    });
-    return;
+    })
+    
+    return
   }
 
   try {
-    isImporting.value = true;
-    const formData = new FormData();
-    formData.append("file", file);
+    isImporting.value = true
 
-    const tipe = props.fixedTipe || selectedTipe.value;
+    const formData = new FormData()
+
+    formData.append("file", file)
+
+    const tipe = props.fixedTipe || selectedTipe.value
     if (tipe) {
-      formData.append("tipe", tipe);
+      formData.append("tipe", tipe)
     }
 
     const response = await $api("/admin/pegawai/import-excel", {
       method: "POST",
       body: formData,
-    });
+    })
 
-    importSummary.value = response.data || null;
+    importSummary.value = response.data || null
     showSnackbar({
       text: response.message || "Import data selesai.",
       color: "success",
-    });
-    fetchData();
+    })
+    fetchData()
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    isImporting.value = false;
+    isImporting.value = false
   }
-};
+}
 
 const resetFilters = () => {
-  selectedTipe.value = props.fixedTipe || null;
-  selectedJenisKelamin.value = null;
-  selectedStatus.value = null;
-  selectedProdi.value = null;
-  search.value = "";
-  page.value = 1;
-  fetchData();
-};
+  selectedTipe.value = props.fixedTipe || null
+  selectedJenisKelamin.value = null
+  selectedStatus.value = null
+  selectedProdi.value = null
+  search.value = ""
+  page.value = 1
+  fetchData()
+}
 
 watch(
   [selectedTipe, selectedJenisKelamin, selectedStatus, selectedProdi],
   () => {
-    page.value = 1;
-    fetchData();
-  }
-);
+    page.value = 1
+    fetchData()
+  },
+)
 
 watch(search, () => {
-  page.value = 1;
-  fetchData();
-});
+  page.value = 1
+  fetchData()
+})
 
 watch(
   () => props.fixedTipe,
-  (tipe) => {
-    selectedTipe.value = tipe || null;
-    selectedProdi.value = null;
-    page.value = 1;
-    fetchData();
-  }
-);
+  tipe => {
+    selectedTipe.value = tipe || null
+    selectedProdi.value = null
+    page.value = 1
+    fetchData()
+  },
+)
 
 onMounted(() => {
-  document.title = `${props.documentTitle || props.title} - SIMKEU`;
+  document.title = `${props.documentTitle || props.title} - SIMKEU`
 
-  if (showProdiFilter.value) fetchProdi();
-});
+  if (showProdiFilter.value) fetchProdi()
+})
 </script>
 
 <template>
@@ -403,7 +410,11 @@ onMounted(() => {
               {{ item.value }}
             </div>
           </div>
-          <VAvatar :color="item.color" variant="tonal" rounded>
+          <VAvatar
+            :color="item.color"
+            variant="tonal"
+            rounded
+          >
             <VIcon :icon="item.icon" />
           </VAvatar>
         </VCardText>
@@ -419,7 +430,10 @@ onMounted(() => {
 
       <VCardText>
         <VRow>
-          <VCol cols="12" :md="filterColMd">
+          <VCol
+            cols="12"
+            :md="filterColMd"
+          >
             <VTextField
               v-model="search"
               placeholder="Search Data"
@@ -429,7 +443,11 @@ onMounted(() => {
             />
           </VCol>
 
-          <VCol v-if="!isTipeLocked" cols="12" :md="filterColMd">
+          <VCol
+            v-if="!isTipeLocked"
+            cols="12"
+            :md="filterColMd"
+          >
             <VSelect
               v-model="selectedTipe"
               :items="tipeOptions"
@@ -440,7 +458,10 @@ onMounted(() => {
             />
           </VCol>
 
-          <VCol cols="12" :md="filterColMd">
+          <VCol
+            cols="12"
+            :md="filterColMd"
+          >
             <VSelect
               v-model="selectedJenisKelamin"
               :items="jenisKelaminOptions"
@@ -451,7 +472,10 @@ onMounted(() => {
             />
           </VCol>
 
-          <VCol cols="12" :md="filterColMd">
+          <VCol
+            cols="12"
+            :md="filterColMd"
+          >
             <VSelect
               v-model="selectedStatus"
               :items="statusOptions"
@@ -462,7 +486,11 @@ onMounted(() => {
             />
           </VCol>
 
-          <VCol v-if="showProdiFilter" cols="12" :md="filterColMd">
+          <VCol
+            v-if="showProdiFilter"
+            cols="12"
+            :md="filterColMd"
+          >
             <VSelect
               v-model="selectedProdi"
               :items="prodiOptions"
@@ -520,6 +548,9 @@ onMounted(() => {
       </VCardText>
 
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id', width: 60 },
           { title: 'Nama', key: 'nama' },
@@ -532,9 +563,6 @@ onMounted(() => {
           { title: 'Status', key: 'status' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -542,14 +570,24 @@ onMounted(() => {
         item-value="id"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data {{ listNameLower }}...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
+        <template
+          v-else
+          #no-data
+        >
           <div class="text-center pa-4">
             Tidak ada data {{ listNameLower }}.
           </div>
@@ -645,7 +683,10 @@ onMounted(() => {
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
           variant="text"
@@ -654,7 +695,11 @@ onMounted(() => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data pegawai ini? Penghapusan data tidak
             dapat dibatalkan.
@@ -669,15 +714,25 @@ onMounted(() => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>
       </VCard>
     </VDialog>
 
-    <VDialog v-if="isAdmin" v-model="isImportDialogVisible" width="560">
+    <VDialog
+      v-if="isAdmin"
+      v-model="isImportDialogVisible"
+      width="560"
+    >
       <VCard :title="`Import Data ${title}`">
         <DialogCloseBtn
           variant="text"

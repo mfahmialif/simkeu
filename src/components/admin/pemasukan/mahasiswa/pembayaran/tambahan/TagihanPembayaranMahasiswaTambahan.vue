@@ -1,5 +1,5 @@
 <script setup>
-import { watch } from "vue";
+import { watch } from "vue"
 
 const props = defineProps({
   mahasiswa: {
@@ -16,7 +16,7 @@ const props = defineProps({
     type: Object,
     required: false,
   },
-});
+})
 
 const rows = ref([
   {
@@ -25,11 +25,11 @@ const rows = ref([
     dibayar: 0,
     jumlah: 0,
   },
-]);
+])
 
 /** Hapus baris */
 function removeRow(id) {
-  rows.value = rows.value.filter((r) => r.id !== id);
+  rows.value = rows.value.filter(r => r.id !== id)
 }
 
 /** Tambah baris */
@@ -39,40 +39,47 @@ function addRow() {
     display: "Tagihan " + (rows.value.length + 1),
     dibayar: 0,
     jumlah: 0,
-  });
+  })
 }
 
 
 watch(
   rows,
   () => {
-    props.mahasiswa.tagihan = rows;
+    props.mahasiswa.tagihan = rows
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 
 const handleJumlahChange = (idx, field) => {
-  const row = rows.value[idx];
-  if (!row) return;
+  const row = rows.value[idx]
+  if (!row) return
 
   if (field === "jumlah") {
-    row.dibayar = row.jumlah; // jika jumlah berubah → update dibayar
+    row.dibayar = row.jumlah // jika jumlah berubah → update dibayar
   } else if (field === "dibayar") {
-    row.jumlah = row.dibayar; // jika dibayar berubah → update jumlah
+    row.jumlah = row.dibayar // jika dibayar berubah → update jumlah
   }
-};
-
-
-
+}
 </script>
 
 <template>
   <!-- Pembayaran -->
-  <VCard class="mt-4" title="Pembayaran">
+  <VCard
+    class="mt-4"
+    title="Pembayaran"
+  >
     <VCardText>
-      <VRow v-for="(row, idx) in rows" :key="row.id" class="align-center">
-        <VCol cols="12" md="6">
+      <VRow
+        v-for="(row, idx) in rows"
+        :key="row.id"
+        class="align-center"
+      >
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="row.display"
             label="Tagihan"
@@ -83,7 +90,10 @@ const handleJumlahChange = (idx, field) => {
           />
         </VCol>
 
-        <VCol cols="12" md="2">
+        <VCol
+          cols="12"
+          md="2"
+        >
           <VTextField
             v-model.number="row.jumlah"
             label="Jumlah"
@@ -97,7 +107,10 @@ const handleJumlahChange = (idx, field) => {
           />
         </VCol>
 
-        <VCol cols="12" md="3">
+        <VCol
+          cols="12"
+          md="3"
+        >
           <VTextField
             v-model.number="row.dibayar"
             label="Dibayar"
@@ -111,9 +124,19 @@ const handleJumlahChange = (idx, field) => {
           />
         </VCol>
 
-        <VCol cols="12" md="1" class="d-flex justify-end align-center mb-5">
-          <VBtnGroup divided density="comfortable">
-            <VTooltip text="Hapus baris" location="top">
+        <VCol
+          cols="12"
+          md="1"
+          class="d-flex justify-end align-center mb-5"
+        >
+          <VBtnGroup
+            divided
+            density="comfortable"
+          >
+            <VTooltip
+              text="Hapus baris"
+              location="top"
+            >
               <template #activator="{ props }">
                 <VBtn
                   v-bind="props"
@@ -121,13 +144,16 @@ const handleJumlahChange = (idx, field) => {
                   color="error"
                   icon="ri-delete-bin-line"
                   size="small"
-                  @click="removeRow(row.id)"
                   :aria-label="`Hapus ${row.display}`"
+                  @click="removeRow(row.id)"
                 />
               </template>
             </VTooltip>
 
-            <VTooltip text="Tambah baris" location="top">
+            <VTooltip
+              text="Tambah baris"
+              location="top"
+            >
               <template #activator="{ props }">
                 <VBtn
                   v-bind="props"
@@ -135,8 +161,8 @@ const handleJumlahChange = (idx, field) => {
                   color="primary"
                   icon="ri-add-line"
                   size="small"
-                  @click="addRow"
                   :aria-label="`Tambah ${row.display}`"
+                  @click="addRow"
                 />
               </template>
             </VTooltip>
@@ -152,13 +178,12 @@ const handleJumlahChange = (idx, field) => {
         <VBtn
           class="mt-2"
           color="primary"
+          aria-label="Tambah Tagihan"
           @click="addRow"
-          :aria-label="`Tambah Tagihan`"
         >
           Tambah Tagihan
         </VBtn>
       </div>
     </VCardText>
   </VCard>
-
 </template>

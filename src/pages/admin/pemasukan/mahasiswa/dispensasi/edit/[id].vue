@@ -1,38 +1,40 @@
 <script setup>
-import FormDispensasi from "@/components/admin/pemasukan/mahasiswa/dispensasi/FormDispensasi.vue";
-import { onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import FormDispensasi from "@/components/admin/pemasukan/mahasiswa/dispensasi/FormDispensasi.vue"
+import { onMounted, ref } from "vue"
+import { useRoute, useRouter } from "vue-router"
 
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 
-const id = route.params.id;
+const id = route.params.id
 
-const user = ref({});
-const isLoading = ref(false);
+const user = ref({})
+const isLoading = ref(false)
 
 const fetchUser = async () => {
   try {
-    isLoading.value = true;
+    isLoading.value = true
 
     const response = await $api("/admin/pemasukan/mahasiswa/dispensasi/" + id, {
       method: "GET",
-    });
-    user.value = response.data;
-    console.log(user.value);
+    })
+
+    user.value = response.data
+    console.log(user.value)
 
   } catch (err) {
-    console.log(err);
+    console.log(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
-watch(user, (newVal) => {
-  console.log("User dari parent:", newVal);
-});
+}
+
+watch(user, newVal => {
+  console.log("User dari parent:", newVal)
+})
 
 const menuList = [
   {
@@ -41,6 +43,7 @@ const menuList = [
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
+
   // {
   //   value: 'hr', // untuk divider
   // },
@@ -50,13 +53,13 @@ const menuList = [
     icon: "ri-eye-line",
     clickHandler: () => router.push("/admin/pemasukan/mahasiswa/dispensasi"),
   },
-];
+]
 
 onMounted(() => {
-  document.title = "Catatan Dispensasi Edit - SIMKEU";
-  console.log("edit Catatan Dispensasi  id", id);
-  fetchUser();
-});
+  document.title = "Catatan Dispensasi Edit - SIMKEU"
+  console.log("edit Catatan Dispensasi  id", id)
+  fetchUser()
+})
 </script>
 
 <template>
@@ -68,11 +71,19 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <div v-if="isLoading" class="text-center">
+          <div
+            v-if="isLoading"
+            class="text-center"
+          >
             <VProgressLinear indeterminate />
           </div>
-          <FormDispensasi v-else typeForm="edit" :dataForm="user" :url="'/admin/pemasukan/mahasiswa/dispensasi/' + id"
-            :is-role-visible="true" />
+          <FormDispensasi
+            v-else
+            type-form="edit"
+            :data-form="user"
+            :url="'/admin/pemasukan/mahasiswa/dispensasi/' + id"
+            :is-role-visible="true"
+          />
         </VCardText>
       </VCard>
     </VCol>

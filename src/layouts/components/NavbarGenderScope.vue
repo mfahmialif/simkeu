@@ -1,43 +1,44 @@
 <script setup>
-const userData = useCookie("userData");
+const userData = useCookie("userData")
+
 const jkScope = useCookie("simkeuJkScope", {
   default: () => "semua",
-});
+})
 
 const scopeItems = [
   { title: "Semua", value: "semua", icon: "ri-group-line" },
   { title: "Putra", value: "putra", icon: "ri-user-line" },
   { title: "Putri", value: "putri", icon: "ri-user-heart-line" },
-];
+]
 
 const isAdmin = computed(() => {
-  const roleName = String(userData.value?.role?.name || "").toLowerCase();
+  const roleName = String(userData.value?.role?.name || "").toLowerCase()
 
-  return roleName === "admin" || Number(userData.value?.role_id) === 1;
-});
+  return roleName === "admin" || Number(userData.value?.role_id) === 1
+})
 
 const userScopeLabel = computed(() => {
-  const jenisKelamin = String(userData.value?.jenis_kelamin || "").toLowerCase();
+  const jenisKelamin = String(userData.value?.jenis_kelamin || "").toLowerCase()
 
   if (jenisKelamin.includes("perempuan")) {
-    return "Putri";
+    return "Putri"
   }
 
-  return "Putra";
-});
+  return "Putra"
+})
 
 const selectedScopeLabel = computed(() => {
-  return scopeItems.find((item) => item.value === (jkScope.value || "semua"))?.title || "Semua";
-});
+  return scopeItems.find(item => item.value === (jkScope.value || "semua"))?.title || "Semua"
+})
 
-const setScope = (value) => {
-  const nextScope = value || "semua";
+const setScope = value => {
+  const nextScope = value || "semua"
 
   if (jkScope.value !== nextScope) {
-    jkScope.value = nextScope;
-    window.location.reload();
+    jkScope.value = nextScope
+    window.location.reload()
   }
-};
+}
 </script>
 
 <template>

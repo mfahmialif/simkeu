@@ -1,11 +1,11 @@
 <script setup>
-import FormTagihan from '@/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue';
-import { useRoute, useRouter } from 'vue-router';
+import FormTagihan from '@/components/admin/pemasukan/mahasiswa/master/tagihan/FormTagihan.vue'
+import { useRoute, useRouter } from 'vue-router'
 
-const route = useRoute();
-const router = useRouter();
+const route = useRoute()
+const router = useRouter()
 
-const nim = computed(() => String(route.query.nim || ""));
+const nim = computed(() => String(route.query.nim || ""))
 
 const menuList = [
   {
@@ -20,11 +20,11 @@ const menuList = [
     icon: 'ri-eye-line',
     clickHandler: () => router.push('/admin/pemasukan/mahasiswa/tagihan-perorangan'),
   },
-];
+]
 
 onMounted(() => {
-  document.title = 'Tagihan Perorangan Add - SIMKEU';
-});
+  document.title = 'Tagihan Perorangan Add - SIMKEU'
+})
 </script>
 
 <template>

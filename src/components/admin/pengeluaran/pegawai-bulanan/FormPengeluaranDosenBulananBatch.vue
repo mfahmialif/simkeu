@@ -1,9 +1,9 @@
 <script setup>
-import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue";
-import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue";
-import { formatRupiah } from "@/composables/formatRupiah";
-import { showSnackbar } from "@/composables/snackbar";
-import { appendLampiranFormData } from "@/utils/lampiran";
+import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue"
+import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue"
+import { formatRupiah } from "@/composables/formatRupiah"
+import { showSnackbar } from "@/composables/snackbar"
+import { appendLampiranFormData } from "@/utils/lampiran"
 
 const props = defineProps({
   endpoint: {
@@ -14,137 +14,147 @@ const props = defineProps({
     type: String,
     required: true,
   },
-});
+})
 
-const router = useRouter();
-const refForm = ref(null);
-const rekapId = ref(null);
-const tanggal = ref(fDate(new Date()));
-const jenisPembayaran = ref("CUS BSI");
-const lampiran = ref([]);
-const search = ref("");
-const rows = ref([]);
-const loading = ref(false);
-const saving = ref(false);
+const router = useRouter()
+const refForm = ref(null)
+const rekapId = ref(null)
+const tanggal = ref(fDate(new Date()))
+const jenisPembayaran = ref("CUS BSI")
+const lampiran = ref([])
+const search = ref("")
+const rows = ref([])
+const loading = ref(false)
+const saving = ref(false)
 
-const jenisPembayaranList = ["CUS BSI", "Transfer"];
-const normalizedSearch = computed(() => search.value.trim().toLowerCase());
+const jenisPembayaranList = ["CUS BSI", "Transfer"]
+const normalizedSearch = computed(() => search.value.trim().toLowerCase())
+
 const filteredRows = computed(() => {
-  if (!normalizedSearch.value) return rows.value;
+  if (!normalizedSearch.value) return rows.value
 
-  return rows.value.filter((item) => [
+  return rows.value.filter(item => [
     item.kode,
     item.nama,
     item.prodi,
     item.status,
-  ].some(value => String(value || "").toLowerCase().includes(normalizedSearch.value)));
-});
+  ].some(value => String(value || "").toLowerCase().includes(normalizedSearch.value)))
+})
+
 const totalDosen = computed(() => rows.value.filter(item =>
   Number(item.barokah_dosen_tetap || 0) > 0
-  || Number(item.barokah_struktural || 0) > 0
-).length);
+  || Number(item.barokah_struktural || 0) > 0,
+).length)
+
 const totalBarokah = computed(() => rows.value.reduce((total, item) =>
   total
   + Number(item.barokah_dosen_tetap || 0)
-  + Number(item.barokah_struktural || 0), 0
-));
+  + Number(item.barokah_struktural || 0), 0,
+))
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message
     || err?.response?._data?.message
     || err?.response?.data?.message
-    || err?.message;
+    || err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
 const fetchRows = async () => {
   if (!rekapId.value) {
-    rows.value = [];
-    return;
+    rows.value = []
+    
+    return
   }
 
   try {
-    loading.value = true;
+    loading.value = true
+
     const response = await $api(`${props.endpoint}/form-data`, {
       method: "GET",
       body: {
         rekap_id: rekapId.value,
       },
-    });
+    })
 
     rows.value = (response.data || []).map(item => ({
       ...item,
       barokah_dosen_tetap: Number(item.barokah_dosen_tetap || 0),
       barokah_struktural: Number(item.barokah_struktural || 0),
-    }));
+    }))
   } catch (err) {
-    rows.value = [];
+    rows.value = []
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const onSubmit = async () => {
-  const validation = await refForm.value?.validate();
-  if (!validation?.valid || saving.value) return;
+  const validation = await refForm.value?.validate()
+  if (!validation?.valid || saving.value) return
 
   try {
-    saving.value = true;
-    const formData = new FormData();
-    formData.append("rekap_id", rekapId.value);
-    formData.append("tanggal", tanggal.value);
-    formData.append("jenis_pembayaran", jenisPembayaran.value);
+    saving.value = true
+
+    const formData = new FormData()
+
+    formData.append("rekap_id", rekapId.value)
+    formData.append("tanggal", tanggal.value)
+    formData.append("jenis_pembayaran", jenisPembayaran.value)
     rows.value.forEach((item, index) => {
-      formData.append(`items[${index}][pegawai_id]`, item.pegawai_id);
+      formData.append(`items[${index}][pegawai_id]`, item.pegawai_id)
       formData.append(
         `items[${index}][barokah_dosen_tetap]`,
-        Number(item.barokah_dosen_tetap || 0)
-      );
+        Number(item.barokah_dosen_tetap || 0),
+      )
       formData.append(
         `items[${index}][barokah_struktural]`,
-        Number(item.barokah_struktural || 0)
-      );
-    });
-    appendLampiranFormData(formData, lampiran.value);
+        Number(item.barokah_struktural || 0),
+      )
+    })
+    appendLampiranFormData(formData, lampiran.value)
 
     const response = await $api(`${props.endpoint}/batch-store`, {
       method: "POST",
       body: formData,
-    });
+    })
 
     showSnackbar({
       text: response.message,
       color: "success",
-    });
-    router.push(props.basePath);
+    })
+    router.push(props.basePath)
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    saving.value = false;
+    saving.value = false
   }
-};
+}
 
 watch(rekapId, () => {
-  search.value = "";
-  fetchRows();
-});
+  search.value = ""
+  fetchRows()
+})
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VCard class="mb-6">
       <VCardItem>
         <VCardTitle>Tambah Barokah Dosen Bulanan</VCardTitle>
@@ -163,7 +173,10 @@ watch(rekapId, () => {
             />
           </VCol>
 
-          <VCol cols="12" md="6">
+          <VCol
+            cols="12"
+            md="6"
+          >
             <AppDateTimePicker
               v-model="tanggal"
               label="Tanggal *"
@@ -176,7 +189,10 @@ watch(rekapId, () => {
             />
           </VCol>
 
-          <VCol cols="12" md="6">
+          <VCol
+            cols="12"
+            md="6"
+          >
             <VSelect
               v-model="jenisPembayaran"
               label="Jenis Pembayaran *"
@@ -218,17 +234,32 @@ watch(rekapId, () => {
 
       <VDivider />
 
-      <div v-if="!rekapId" class="empty-state">
-        <VIcon icon="ri-folder-open-line" size="36" />
+      <div
+        v-if="!rekapId"
+        class="empty-state"
+      >
+        <VIcon
+          icon="ri-folder-open-line"
+          size="36"
+        />
         <span>Pilih rekap tujuan untuk menampilkan semua dosen.</span>
       </div>
 
-      <div v-else-if="loading" class="empty-state">
-        <VProgressCircular indeterminate color="primary" />
+      <div
+        v-else-if="loading"
+        class="empty-state"
+      >
+        <VProgressCircular
+          indeterminate
+          color="primary"
+        />
         <span>Memuat daftar dosen...</span>
       </div>
 
-      <div v-else class="dosen-list">
+      <div
+        v-else
+        class="dosen-list"
+      >
         <div class="dosen-list-header">
           <span>Dosen</span>
           <span>Dosen Tetap</span>
@@ -242,7 +273,9 @@ watch(rekapId, () => {
           class="dosen-row"
         >
           <div class="dosen-identity">
-            <div class="font-weight-medium">{{ item.nama }}</div>
+            <div class="font-weight-medium">
+              {{ item.nama }}
+            </div>
             <div class="text-caption text-medium-emphasis">
               {{ item.kode || "-" }}<span v-if="item.prodi"> · {{ item.prodi }}</span>
             </div>
@@ -283,15 +316,24 @@ watch(rekapId, () => {
           </div>
         </div>
 
-        <div v-if="filteredRows.length === 0" class="empty-state">
-          <VIcon icon="ri-search-line" size="32" />
+        <div
+          v-if="filteredRows.length === 0"
+          class="empty-state"
+        >
+          <VIcon
+            icon="ri-search-line"
+            size="32"
+          />
           <span>Dosen tidak ditemukan.</span>
         </div>
       </div>
 
       <VDivider v-if="rekapId && !loading" />
 
-      <VCardActions v-if="rekapId && !loading" class="pa-5">
+      <VCardActions
+        v-if="rekapId && !loading"
+        class="pa-5"
+      >
         <VBtn
           variant="outlined"
           color="secondary"

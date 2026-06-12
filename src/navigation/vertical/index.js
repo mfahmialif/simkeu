@@ -1,34 +1,34 @@
-import { computed } from "vue";
-import dashboard from "./dashboard";
-import mahasiswa from "./mahasiswa";
-import pemasukan from "./pemasukan";
-import pengeluaran from "./pengeluaran";
+import { computed } from "vue"
+import dashboard from "./dashboard"
+import mahasiswa from "./mahasiswa"
+import pemasukan from "./pemasukan"
+import pengeluaran from "./pengeluaran"
 import pengeluaranDosen, {
   pengeluaranDosenBulanan,
   pengeluaranDosenKegiatan,
   pengeluaranStaffBulanan,
   pengeluaranDosenTatapmuka,
-} from "./pengeluaran-dosen";
-import pengeluaranHeading from "./pengeluaran-heading";
-import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga";
-import pengeluaranRumahTangga from "./rumahtangga/pengeluaranRumahTangga";
-import pegawai from "./pegawai";
-import { settingItemsForRole } from "./setting";
-import settingHeading from "./setting-heading";
-import dashboardStaff from "./staff/dashboardStaff";
-import pemasukanStaff from "./staff/pemasukanStaff";
-import user from "./user";
-import laporan from "./laporan";
-import rab from "./rab";
+} from "./pengeluaran-dosen"
+import pengeluaranHeading from "./pengeluaran-heading"
+import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga"
+import pegawai from "./pegawai"
+import { settingItemsForRole } from "./setting"
+import settingHeading from "./setting-heading"
+import dashboardStaff from "./staff/dashboardStaff"
+import pemasukanStaff from "./staff/pemasukanStaff"
+import user from "./user"
+import laporan from "./laporan"
+import rab from "./rab"
+import rumahTangga from "./rumah-tangga"
 
-const userData = useCookie("userData");
+const userData = useCookie("userData")
 
 const currentRole = computed(() =>
   String(userData.value?.role?.name || "").toLowerCase(),
-);
+)
 
 const routesByRole = roleName => {
-  const setting = settingItemsForRole(roleName);
+  const setting = settingItemsForRole(roleName)
 
   return {
     admin: [
@@ -38,6 +38,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...pengeluaran,
       ...pengeluaranDosen,
+      ...rumahTangga,
       ...rab,
       ...laporan,
       ...user,
@@ -50,6 +51,7 @@ const routesByRole = roleName => {
       ...pengeluaranHeading,
       ...pengeluaran,
       ...pengeluaranDosen,
+      ...rumahTangga,
       ...rab,
       ...laporan,
       ...user,
@@ -74,7 +76,7 @@ const routesByRole = roleName => {
       ...dashboard,
       ...mahasiswa,
       ...pemasukanRumahTangga,
-      ...pengeluaranRumahTangga,
+      ...rumahTangga,
       ...setting,
     ],
 
@@ -108,7 +110,7 @@ const routesByRole = roleName => {
       ...settingHeading,
       ...setting,
     ],
-  };
-};
+  }
+}
 
-export default computed(() => routesByRole(currentRole.value)[currentRole.value] ?? []);
+export default computed(() => routesByRole(currentRole.value)[currentRole.value] ?? [])

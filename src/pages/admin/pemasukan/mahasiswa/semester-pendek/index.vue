@@ -1,52 +1,54 @@
 <script setup>
-import { ref, onMounted, watch } from "vue";
-import WidgetSemesterPendek from "@/components/admin/pemasukan/mahasiswa/SemesterPendek/WidgetSemesterPendek.vue";
-import { openFileExport } from "@/composables/exportFile";
+import { ref, onMounted, watch } from "vue"
+import WidgetSemesterPendek from "@/components/admin/pemasukan/mahasiswa/SemesterPendek/WidgetSemesterPendek.vue"
+import { openFileExport } from "@/composables/exportFile"
 
-const router = useRouter();
-const redirectPath = "/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add";
+const router = useRouter()
+const redirectPath = "/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/add"
 
-const page = ref(1);
-const itemsPerPage = ref(10);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
-let fetchRequestId = 0;
+const page = ref(1)
+const itemsPerPage = ref(10)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
+let fetchRequestId = 0
 
-const filterPeriode = ref(null);
-const filterJenisPembayaran = ref(null);
-const filterPetugas = ref(null);
-const filterTanggalMulai = ref("");
-const filterTanggalAkhir = ref("");
+const filterPeriode = ref(null)
+const filterJenisPembayaran = ref(null)
+const filterPetugas = ref(null)
+const filterTanggalMulai = ref("")
+const filterTanggalAkhir = ref("")
 
-const listPeriode = ref([]);
-const listJenisPembayaran = ref([]);
-const listPetugas = ref([]);
+const listPeriode = ref([])
+const listJenisPembayaran = ref([])
+const listPetugas = ref([])
 
-const widgetRef = ref(null);
-let searchTimeout = null;
+const widgetRef = ref(null)
+let searchTimeout = null
 
-const resolvePaginatedResponse = (response) => {
-  const isPaginator = (value) =>
-    value && typeof value === "object" && ("total" in value || "current_page" in value || "last_page" in value);
+const resolvePaginatedResponse = response => {
+  const isPaginator = value =>
+    value && typeof value === "object" && ("total" in value || "current_page" in value || "last_page" in value)
 
-  const payload = isPaginator(response) ? response : (response?.data ?? response);
+  const payload = isPaginator(response) ? response : (response?.data ?? response)
+
   const paginator = payload?.data && !Array.isArray(payload.data)
     ? payload.data
-    : payload;
+    : payload
 
   return {
     items: Array.isArray(paginator?.data) ? paginator.data : (Array.isArray(paginator) ? paginator : []),
     total: Number(paginator?.total ?? (Array.isArray(paginator) ? paginator.length : 0)),
-  };
-};
+  }
+}
 
 const fetchSemesterPendek = async () => {
-  const requestId = ++fetchRequestId;
-  loading.value = true;
+  const requestId = ++fetchRequestId
+
+  loading.value = true
 
   try {
     const response = await $api(
@@ -65,110 +67,117 @@ const fetchSemesterPendek = async () => {
           ...(filterTanggalMulai.value && { tanggal_mulai: filterTanggalMulai.value }),
           ...(filterTanggalAkhir.value && { tanggal_akhir: filterTanggalAkhir.value }),
         },
-      }
-    );
+      },
+    )
 
-    if (requestId !== fetchRequestId) return;
+    if (requestId !== fetchRequestId) return
 
-    const result = resolvePaginatedResponse(response);
-    dataTable.value = result.items;
-    totalItems.value = result.total;
+    const result = resolvePaginatedResponse(response)
+
+    dataTable.value = result.items
+    totalItems.value = result.total
 
     // Fetch KRS detail from SIAKAD
     if (dataTable.value.length > 0) {
-      fetchDetailData();
+      fetchDetailData()
     }
   } catch (err) {
-    console.error("Gagal fetch data semester pendek:", err);
+    console.error("Gagal fetch data semester pendek:", err)
   } finally {
     if (requestId === fetchRequestId) {
-      loading.value = false;
-      if (initialLoading.value) initialLoading.value = false;
+      loading.value = false
+      if (initialLoading.value) initialLoading.value = false
     }
   }
-};
+}
 
 const fetchDetailData = async () => {
   try {
-    const krsIdList = dataTable.value.map((item) => item.krs_id);
+    const krsIdList = dataTable.value.map(item => item.krs_id)
+
     const res = await $api("/admin/pemasukan/mahasiswa/semester-pendek/search-krs-data", {
       method: "GET",
       params: {
         krs_id: JSON.stringify(krsIdList),
       },
-    });
+    })
 
-    const krsItems = Array.isArray(res) ? res : (res?.data ?? []);
-    dataTable.value = dataTable.value.map((item) => {
-      const krs = krsItems.find((k) => k.id === item.krs_id);
+    const krsItems = Array.isArray(res) ? res : (res?.data ?? [])
+
+    dataTable.value = dataTable.value.map(item => {
+      const krs = krsItems.find(k => k.id === item.krs_id)
+      
       return {
         ...item,
         krs_detail: krs ? krs : false,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.error("Gagal fetch KRS detail data:", err);
+    console.error("Gagal fetch KRS detail data:", err)
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb && sb.length) sortBy.value = sb[0];
-  fetchSemesterPendek();
-};
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb && sb.length) sortBy.value = sb[0]
+  fetchSemesterPendek()
+}
 
 const applySearch = () => {
-  page.value = 1;
-  fetchSemesterPendek();
-};
+  page.value = 1
+  fetchSemesterPendek()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, nomor) => {
-  deleteData.value = { id, nomor };
-  isDialogDeleteVisible.value = true;
-};
+  deleteData.value = { id, nomor }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api(`/admin/pemasukan/mahasiswa/semester-pendek/${id}`, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === "true") {
-      showSnackbar({ text: response.message, color: "success" });
-      fetchSemesterPendek();
+      showSnackbar({ text: response.message, color: "success" })
+      fetchSemesterPendek()
     } else {
-      showSnackbar({ text: response.message, color: "error" });
+      showSnackbar({ text: response.message, color: "error" })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
-    showSnackbar({ text: message, color: "error" });
-  } finally {
-    isDialogDeleteVisible.value = false;
-  }
-};
+      : err.data?.message || "Terjadi kesalahan."
 
-const cetakKwitansi = async (id) => {
+    showSnackbar({ text: message, color: "error" })
+  } finally {
+    isDialogDeleteVisible.value = false
+  }
+}
+
+const cetakKwitansi = async id => {
   try {
-    showSnackbar({ text: "Loading cetak kwitansi...", color: "info" });
+    showSnackbar({ text: "Loading cetak kwitansi...", color: "info" })
+
     const blob = await $api(
       "/admin/pemasukan/mahasiswa/semester-pendek/kwitansi/" + id,
       {
         method: "GET",
         headers: { Accept: "application/pdf" },
-      }
-    );
-    openFileExport(blob);
+      },
+    )
+
+    openFileExport(blob)
   } catch (err) {
-    console.info(err);
-    showSnackbar({ text: "Gagal cetak kwitansi.", color: "error" });
+    console.info(err)
+    showSnackbar({ text: "Gagal cetak kwitansi.", color: "error" })
   }
-};
+}
 
 const fetchOptions = async () => {
   try {
@@ -176,49 +185,52 @@ const fetchOptions = async () => {
       $api("/admin/pemasukan/mahasiswa/semester-pendek/get-periode", { method: "GET" }),
       $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", { method: "GET", body: { limit: 100, manual_only: 1 } }),
       $api("/helper/petugas-pembayaran", { method: "GET" }),
-    ]);
+    ])
     
-    const periodeItems = resPeriode?.data?.data ?? resPeriode?.data ?? [];
+    const periodeItems = resPeriode?.data?.data ?? resPeriode?.data ?? []
+
     listPeriode.value = periodeItems.map(p => ({
       title: p.periode,
-      value: p.id
-    }));
+      value: p.id,
+    }))
 
-    const jpItems = resJp?.data?.data ?? resJp?.data ?? [];
+    const jpItems = resJp?.data?.data ?? resJp?.data ?? []
+
     listJenisPembayaran.value = jpItems.map(jp => ({
       title: jp.nama + " - " + jp.kategori,
-      value: jp.id
-    }));
+      value: jp.id,
+    }))
 
-    const petugasItems = resPetugas?.data?.data ?? resPetugas?.data ?? [];
+    const petugasItems = resPetugas?.data?.data ?? resPetugas?.data ?? []
+
     listPetugas.value = petugasItems.map(u => ({
       title: `${u.name} (${u.jenis_kelamin})`,
-      value: u.id
-    }));
+      value: u.id,
+    }))
   } catch (err) {
-    console.error("Gagal fetch options filter", err);
+    console.error("Gagal fetch options filter", err)
   }
-};
+}
 
 watch(
   [filterPeriode, filterJenisPembayaran, filterPetugas, filterTanggalMulai, filterTanggalAkhir],
   () => {
-    page.value = 1;
-    fetchSemesterPendek();
-    widgetRef.value?.fetchStatistics();
-  }
-);
+    page.value = 1
+    fetchSemesterPendek()
+    widgetRef.value?.fetchStatistics()
+  },
+)
 
 watch(search, () => {
-  clearTimeout(searchTimeout);
+  clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    applySearch();
-  }, 400);
-});
+    applySearch()
+  }, 400)
+})
 
 onMounted(() => {
-  router.replace(redirectPath);
-});
+  router.replace(redirectPath)
+})
 </script>
 
 <template>
@@ -242,7 +254,10 @@ onMounted(() => {
       <VCardText class="d-flex flex-column gap-4">
         <!-- Filter Panel -->
         <VRow>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="filterPeriode"
               :items="listPeriode"
@@ -252,7 +267,10 @@ onMounted(() => {
               variant="outlined"
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="filterJenisPembayaran"
               :items="listJenisPembayaran"
@@ -262,7 +280,10 @@ onMounted(() => {
               variant="outlined"
             />
           </VCol>
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VSelect
               v-model="filterPetugas"
               :items="listPetugas"
@@ -272,7 +293,10 @@ onMounted(() => {
               variant="outlined"
             />
           </VCol>
-          <VCol cols="12" md="3">
+          <VCol
+            cols="12"
+            md="3"
+          >
             <VTextField
               v-model="filterTanggalMulai"
               type="date"
@@ -282,7 +306,10 @@ onMounted(() => {
               variant="outlined"
             />
           </VCol>
-          <VCol cols="12" md="3">
+          <VCol
+            cols="12"
+            md="3"
+          >
             <VTextField
               v-model="filterTanggalAkhir"
               type="date"
@@ -310,19 +337,21 @@ onMounted(() => {
 
           <VSpacer />
 
-        <div class="d-flex gap-x-4 align-center">
-          <VBtn
-            color="primary"
-            prepend-icon="ri-add-line"
-            @click="$router.push('/admin/pemasukan/mahasiswa/semester-pendek/add')"
-          >
-            Add Data
-          </VBtn>
-        </div>
+          <div class="d-flex gap-x-4 align-center">
+            <VBtn
+              color="primary"
+              prepend-icon="ri-add-line"
+              @click="$router.push('/admin/pemasukan/mahasiswa/semester-pendek/add')"
+            >
+              Add Data
+            </VBtn>
+          </div>
         </div>
       </VCardText>
 
       <VDataTableServer
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'index', sortable: false },
           { title: 'Pembayaran', key: 'pembayaran', sortable: false },
@@ -332,22 +361,32 @@ onMounted(() => {
           { title: 'Petugas', key: 'user_id', sortable: false },
           { title: 'Aksi', key: 'actions', sortable: false },
         ]"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
         
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data.
+          </div>
         </template>
 
         <template #item.index="{ index }">
@@ -356,10 +395,19 @@ onMounted(() => {
 
         <template #item.pembayaran="{ item }">
           <div style="margin: 10px 0">
-            <VChip color="info" size="x-small" label class="me-1">
+            <VChip
+              color="info"
+              size="x-small"
+              label
+              class="me-1"
+            >
               {{ item.krs_detail?.periode_semester_pendek?.periode ?? '-' }}
             </VChip>
-            <VChip color="primary" size="x-small" label>
+            <VChip
+              color="primary"
+              size="x-small"
+              label
+            >
               {{ item.nomor }}
             </VChip>
             <div class="mt-1">
@@ -373,7 +421,13 @@ onMounted(() => {
                 <span class="text-error text-caption">Data KRS tidak ditemukan di SIAKAD.</span>
               </template>
               <template v-else>
-                <VProgressCircular indeterminate color="primary" size="16" width="2" style="vertical-align: middle" />
+                <VProgressCircular
+                  indeterminate
+                  color="primary"
+                  size="16"
+                  width="2"
+                  style="vertical-align: middle"
+                />
               </template>
             </div>
           </div>
@@ -428,7 +482,10 @@ onMounted(() => {
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <VCard :title="'Hapus Data: ' + deleteData.nomor">
         <DialogCloseBtn
           variant="text"
@@ -437,7 +494,11 @@ onMounted(() => {
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data pembayaran semester pendek ini? Penghapusan
             ini juga akan mengurangi total pembayaran di SIAKAD.
@@ -452,8 +513,14 @@ onMounted(() => {
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

@@ -1,51 +1,54 @@
 <script setup>
-import DashboardBarokahRole from "./DashboardBarokahRole.vue";
-import DashboardCardStatistics from "./DashboardCardStatistics.vue";
-import DashboardFinanceOverview from "./DashboardFinanceOverview.vue";
-import DashboardFinanceStatistics from "./DashboardFinanceStatistics.vue";
-import DashboardKRSReport from "./DashboardKRSReport.vue";
-import DashboardKRSReportLocal from "./DashboardKRSReportLocal.vue";
-import DashboardUASReport from "./DashboardUASReport.vue";
+import DashboardBarokahRole from "./DashboardBarokahRole.vue"
+import DashboardCardStatistics from "./DashboardCardStatistics.vue"
+import DashboardFinanceOverview from "./DashboardFinanceOverview.vue"
+import DashboardFinanceStatistics from "./DashboardFinanceStatistics.vue"
+import DashboardKRSReport from "./DashboardKRSReport.vue"
+import DashboardKRSReportLocal from "./DashboardKRSReportLocal.vue"
+import DashboardUASReport from "./DashboardUASReport.vue"
 
-const userData = useCookie("userData").value ?? {};
-const role = computed(() => String(userData.role?.name || "").toLowerCase());
+const userData = useCookie("userData").value ?? {}
+const role = computed(() => String(userData.role?.name || "").toLowerCase())
 
-const allAccessRoles = ["admin", "pimpinan", "keuangan", "kabag"];
-const staffRoles = ["staff"];
+const allAccessRoles = ["admin", "pimpinan", "keuangan", "kabag"]
+const staffRoles = ["staff"]
+
 const barokahRoles = [
   "barokahdosen_tatapmuka",
   "barokahdosen_kegiatan",
   "barokahdosen_bulanan",
-];
+]
 
-const canSeeAllDashboard = computed(() => allAccessRoles.includes(role.value));
-const isStaffDashboard = computed(() => staffRoles.includes(role.value));
-const isBarokahDashboard = computed(() => barokahRoles.includes(role.value));
+const canSeeAllDashboard = computed(() => allAccessRoles.includes(role.value))
+const isStaffDashboard = computed(() => staffRoles.includes(role.value))
+const isBarokahDashboard = computed(() => barokahRoles.includes(role.value))
+
 const shouldShowEmptyDashboard = computed(
   () =>
     !canSeeAllDashboard.value &&
     !isStaffDashboard.value &&
     !isBarokahDashboard.value,
-);
+)
 
 const displayName = computed(
   () => userData.nama || userData.name || userData.username || "Pengguna",
-);
+)
+
 const roleLabel = computed(() =>
   role.value ? role.value.replaceAll("_", " ") : "tanpa role",
-);
+)
 
 const emptyDashboardMessage = computed(() => {
   if (role.value === "rumahtangga") {
-    return "Dashboard rumah tangga belum memiliki ringkasan khusus, jadi seluruh card disembunyikan.";
+    return "Dashboard rumah tangga belum memiliki ringkasan khusus, jadi seluruh card disembunyikan."
   }
 
   if (role.value === "user") {
-    return "Role user belum memiliki akses dashboard operasional.";
+    return "Role user belum memiliki akses dashboard operasional."
   }
 
-  return "Role ini belum memiliki ringkasan dashboard.";
-});
+  return "Role ini belum memiliki ringkasan dashboard."
+})
 </script>
 
 <template>
@@ -65,7 +68,11 @@ const emptyDashboardMessage = computed(() => {
                 Semoga Allah mudahkan amanah pengelolaan keuangan hari ini.
               </div>
             </div>
-            <VChip color="primary" variant="tonal" class="text-capitalize">
+            <VChip
+              color="primary"
+              variant="tonal"
+              class="text-capitalize"
+            >
               {{ roleLabel }}
             </VChip>
           </div>
@@ -82,23 +89,38 @@ const emptyDashboardMessage = computed(() => {
         <DashboardBarokahRole />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardFinanceOverview />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardFinanceStatistics />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardKRSReportLocal />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardKRSReport />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardUASReport />
       </VCol>
     </template>
@@ -108,19 +130,31 @@ const emptyDashboardMessage = computed(() => {
         <DashboardCardStatistics :visible-cards="['pemasukan']" />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardFinanceOverview />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardKRSReportLocal />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardKRSReport />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <DashboardUASReport />
       </VCol>
     </template>
@@ -131,8 +165,14 @@ const emptyDashboardMessage = computed(() => {
       </VCol>
     </template>
 
-    <VCol v-else-if="shouldShowEmptyDashboard" cols="12">
-      <VAlert color="secondary" variant="tonal">
+    <VCol
+      v-else-if="shouldShowEmptyDashboard"
+      cols="12"
+    >
+      <VAlert
+        color="secondary"
+        variant="tonal"
+      >
         {{ emptyDashboardMessage }}
       </VAlert>
     </VCol>

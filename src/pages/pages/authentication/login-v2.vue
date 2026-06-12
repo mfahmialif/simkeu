@@ -36,9 +36,11 @@ const isPasswordVisible = ref(false)
 const authV2LoginMask = useGenerateImageVariant(authV2LoginMaskLight, authV2LoginMaskDark)
 
 const authV2LoginIllustration = useGenerateImageVariant(authV2LoginIllustrationLight, authV2LoginIllustrationDark, authV2LoginIllustrationBorderedLight, authV2LoginIllustrationBorderedDark, true)
+
 const login = async () => {
   try {
     isDisabled.value = true
+
     const res = await $api('/auth/login', {
       method: 'POST',
       body: {
@@ -49,9 +51,11 @@ const login = async () => {
 
     const { token, user, abilities } = res
 
-    console.log(res);
+    console.log(res)
+
     const userAbilityRules = abilities.map(str => {
       const [action, subject] = str.split(':')
+      
       return { action, subject }
     })
 
@@ -64,7 +68,8 @@ const login = async () => {
     showSnackbar({
       text: 'Login successful',
       color: 'success',
-    });
+    })
+
     // Redirect to `to` query if exist or redirect to index route
 
     // ❗ nextTick is required to wait for DOM updates and later redirect
@@ -75,11 +80,12 @@ const login = async () => {
   catch (err) {
     const message = Array.isArray(err.data.message)
       ? err.data.message.join('; ')
-      : err.data.message;
+      : err.data.message
+
     showSnackbar({
       text: message,
       color: 'error',
-    });
+    })
   }
   finally {
     isDisabled.value = false
@@ -104,16 +110,38 @@ const onSubmit = () => {
     </div>
   </RouterLink>
 
-  <VRow no-gutters class="auth-wrapper">
-    <VCol md="8" class="d-none d-md-flex align-center justify-center position-relative">
+  <VRow
+    no-gutters
+    class="auth-wrapper"
+  >
+    <VCol
+      md="8"
+      class="d-none d-md-flex align-center justify-center position-relative"
+    >
       <div class="d-flex align-center justify-center pa-10">
-        <img :src="authV2LoginIllustration" class="auth-illustration w-100" alt="auth-illustration">
+        <img
+          :src="authV2LoginIllustration"
+          class="auth-illustration w-100"
+          alt="auth-illustration"
+        >
       </div>
-      <VImg :src="authV2LoginMask" class="d-none d-md-flex auth-footer-mask" alt="auth-mask" />
+      <VImg
+        :src="authV2LoginMask"
+        class="d-none d-md-flex auth-footer-mask"
+        alt="auth-mask"
+      />
     </VCol>
-    <VCol cols="12" md="4" class="auth-card-v2 d-flex align-center justify-center"
-      style="background-color: rgb(var(--v-theme-surface));">
-      <VCard flat :max-width="500" class="mt-12 mt-sm-0 pa-5 pa-lg-7">
+    <VCol
+      cols="12"
+      md="4"
+      class="auth-card-v2 d-flex align-center justify-center"
+      style="background-color: rgb(var(--v-theme-surface));"
+    >
+      <VCard
+        flat
+        :max-width="500"
+        class="mt-12 mt-sm-0 pa-5 pa-lg-7"
+      >
         <VCardText>
           <h4 class="text-h4 mb-1">
             Welcome to <span class="text-capitalize">{{ themeConfig.app.title }}! 👋🏻</span>
@@ -125,26 +153,46 @@ const onSubmit = () => {
         </VCardText>
 
         <VCardText>
-          <VForm ref="refVForm" @submit.prevent="onSubmit">
+          <VForm
+            ref="refVForm"
+            @submit.prevent="onSubmit"
+          >
             <VRow>
               <!-- username -->
               <VCol cols="12">
-                <VTextField v-model="credentials.username" autofocus label="Username" type="text"
-                  placeholder="type here..." :rules="[requiredValidator]" :error-messages="errors.username" />
+                <VTextField
+                  v-model="credentials.username"
+                  autofocus
+                  label="Username"
+                  type="text"
+                  placeholder="type here..."
+                  :rules="[requiredValidator]"
+                  :error-messages="errors.username"
+                />
               </VCol>
 
               <!-- password -->
               <VCol cols="12">
-                <VTextField v-model="credentials.password" label="Password" placeholder="············"
-                  :rules="[requiredValidator]" :type="isPasswordVisible ? 'text' : 'password'" autocomplete="password"
+                <VTextField
+                  v-model="credentials.password"
+                  label="Password"
+                  placeholder="············"
+                  :rules="[requiredValidator]"
+                  :type="isPasswordVisible ? 'text' : 'password'"
+                  autocomplete="password"
                   :append-inner-icon="isPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
-                  @click:append-inner="isPasswordVisible = !isPasswordVisible" />
+                  @click:append-inner="isPasswordVisible = !isPasswordVisible"
+                />
                 <!-- login button -->
-                <VBtn block type="submit" :disabled="isDisabled" class="mt-5">
+                <VBtn
+                  block
+                  type="submit"
+                  :disabled="isDisabled"
+                  class="mt-5"
+                >
                   {{ isDisabled ? 'Please wait...' : 'Login' }}
                 </VBtn>
               </VCol>
-
             </VRow>
           </VForm>
         </VCardText>

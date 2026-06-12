@@ -1,22 +1,25 @@
 <script setup>
-import DataPegawaiPengeluaranBulanan from "@/components/admin/pengeluaran/pegawai-bulanan/DataPegawaiPengeluaranBulanan.vue";
-import FormPengeluaranPegawaiBulanan from "@/components/admin/pengeluaran/pegawai-bulanan/FormPengeluaranPegawaiBulanan.vue";
-import InfoPengeluaranPegawaiBulanan from "@/components/admin/pengeluaran/pegawai-bulanan/InfoPengeluaranPegawaiBulanan.vue";
-import { useRouter } from "vue-router";
+import DataPegawaiPengeluaranBulanan from "@/components/admin/pengeluaran/pegawai-bulanan/DataPegawaiPengeluaranBulanan.vue"
+import FormPengeluaranPegawaiBulanan from "@/components/admin/pengeluaran/pegawai-bulanan/FormPengeluaranPegawaiBulanan.vue"
+import InfoPengeluaranPegawaiBulanan from "@/components/admin/pengeluaran/pegawai-bulanan/InfoPengeluaranPegawaiBulanan.vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
-const refDataPegawai = ref(null);
-const refInfo = ref(null);
-const refForm = ref(null);
+const router = useRouter()
+const refDataPegawai = ref(null)
+const refInfo = ref(null)
+const refForm = ref(null)
 
 onMounted(() => {
-  document.title = "Tambah Barokah Staff Bulanan - SIMKEU";
-});
+  document.title = "Tambah Barokah Staff Bulanan - SIMKEU"
+})
 </script>
 
 <template>
   <VRow>
-    <VCol cols="12" class="pb-0">
+    <VCol
+      cols="12"
+      class="pb-0"
+    >
       <VBtn
         variant="outlined"
         color="secondary"

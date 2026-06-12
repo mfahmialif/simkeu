@@ -371,7 +371,10 @@ watch(
 
 <template>
   <div>
-    <div v-if="isAdmin" class="d-flex justify-end mb-4">
+    <div
+      v-if="isAdmin"
+      class="d-flex justify-end mb-4"
+    >
       <VBtn
         color="primary"
         prepend-icon="ri-loop-right-line"

@@ -1,15 +1,16 @@
 <script setup>
-import LaporanBayarMahasiswa from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanBayarMahasiswa.vue";
-import LaporanBulanan from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanBulanan.vue";
-import LaporanHarian from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanHarian.vue";
-import LaporanRekap from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanRekap.vue";
-import LaporanRekapTahun from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanRekapTahun.vue";
-import LaporanTahunan from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanTahunan.vue";
-import { ref } from "vue";
+import LaporanBayarMahasiswa from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanBayarMahasiswa.vue"
+import LaporanBulanan from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanBulanan.vue"
+import LaporanHarian from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanHarian.vue"
+import LaporanRekap from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanRekap.vue"
+import LaporanRekapTahun from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanRekapTahun.vue"
+import LaporanTahunan from "@/components/admin/pemasukan/mahasiswa/laporan/LaporanTahunan.vue"
+import { ref } from "vue"
 
-const prodi = ref([]);
-const tahunAkademik = ref([]);
-const jenisPembayaran = ref([]);
+const prodi = ref([])
+const tahunAkademik = ref([])
+const jenisPembayaran = ref([])
+
 const jenisKelamin = ref([
   {
     title: "Laki-laki",
@@ -19,103 +20,106 @@ const jenisKelamin = ref([
     title: "Perempuan",
     value: 9,
   },
-]);
+])
 
-const isLoadingProdi = ref(false);
-const isLoadingTahunAkademik = ref(false);
-const isLoadingJenisPembayaran = ref(false);
-const isLoadingJenisKelamin = ref(false);
-const includeWisudaSemesterPendek = ref(false);
+const isLoadingProdi = ref(false)
+const isLoadingTahunAkademik = ref(false)
+const isLoadingJenisPembayaran = ref(false)
+const isLoadingJenisKelamin = ref(false)
+const includeWisudaSemesterPendek = ref(false)
 
 const fetchProdi = async () => {
   try {
-    isLoadingProdi.value = true;
+    isLoadingProdi.value = true
+
     const { data } = await $api("/admin/prodi", {
       method: "GET",
       body: {
         limit: 0,
         sort_key: 'strata',
-        sort_order: 'asc'
+        sort_order: 'asc',
       },
-    });
+    })
 
-    prodi.value = data.data.map((prodi) => {
+    prodi.value = data.data.map(prodi => {
       return {
         title: `${prodi.nama}`,
         value: prodi.id,
-      };
-    });
+      }
+    })
   } catch (err) {
     showSnackbar({
       text: err.message,
       color: "error",
-    });
+    })
   } finally {
-    isLoadingProdi.value = false;
+    isLoadingProdi.value = false
   }
-};
+}
 
 const fetchTahunAkademik = async () => {
   try {
-    isLoadingTahunAkademik.value = true;
+    isLoadingTahunAkademik.value = true
+
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
       body: {
         limit: 0,
       },
-    });
+    })
 
-    tahunAkademik.value = data.data.map((tahunAkademik) => {
+    tahunAkademik.value = data.data.map(tahunAkademik => {
       return {
         title: `${tahunAkademik.nama} - ${tahunAkademik.semester}`,
         value: tahunAkademik.id,
-      };
-    });
+      }
+    })
   } catch (err) {
     showSnackbar({
       text: err.message,
       color: "error",
-    });
+    })
   } finally {
-    isLoadingTahunAkademik.value = false;
+    isLoadingTahunAkademik.value = false
   }
-};
+}
 
 const fetchJenisPembayaran = async () => {
   try {
-    isLoadingJenisPembayaran.value = true;
+    isLoadingJenisPembayaran.value = true
+
     const { data } = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
       method: "GET",
       body: {
         limit: 0,
       },
-    });
+    })
 
-    jenisPembayaran.value = data.data.map((jenisPembayaran) => {
+    jenisPembayaran.value = data.data.map(jenisPembayaran => {
       return {
         title: `${jenisPembayaran.nama} - ${jenisPembayaran.kategori}`,
         value: jenisPembayaran.id,
-      };
-    });
+      }
+    })
   } catch (err) {
-    console.log(err);
+    console.log(err)
     showSnackbar({
       text: err.message,
       color: "error",
-    });
+    })
   } finally {
-    isLoadingJenisPembayaran.value = false;
+    isLoadingJenisPembayaran.value = false
   }
-};
+}
 
 onMounted(() => {
   // title
-  document.title = "Laporan Pembayaran Mahasiswa";
+  document.title = "Laporan Pembayaran Mahasiswa"
 
-  fetchProdi();
-  fetchTahunAkademik();
-  fetchJenisPembayaran();
-});
+  fetchProdi()
+  fetchTahunAkademik()
+  fetchJenisPembayaran()
+})
 </script>
 
 <template>
@@ -131,46 +135,45 @@ onMounted(() => {
 
     <LaporanHarian
       :prodi="prodi"
-      :tahunAkademik="tahunAkademik"
-      :jenisPembayaran="jenisPembayaran"
-      :isLoadingProdi="isLoadingProdi"
-      :isLoadingTahunAkademik="isLoadingTahunAkademik"
-      :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
-      :includeWisudaSemesterPendek="includeWisudaSemesterPendek"
+      :tahun-akademik="tahunAkademik"
+      :jenis-pembayaran="jenisPembayaran"
+      :is-loading-prodi="isLoadingProdi"
+      :is-loading-tahun-akademik="isLoadingTahunAkademik"
+      :is-loading-jenis-pembayaran="isLoadingJenisPembayaran"
+      :include-wisuda-semester-pendek="includeWisudaSemesterPendek"
     />
 
     <LaporanBulanan
       :prodi="prodi"
-      :tahunAkademik="tahunAkademik"
-      :jenisPembayaran="jenisPembayaran"
-      :isLoadingProdi="isLoadingProdi"
-      :isLoadingTahunAkademik="isLoadingTahunAkademik"
-      :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
-      :includeWisudaSemesterPendek="includeWisudaSemesterPendek"
+      :tahun-akademik="tahunAkademik"
+      :jenis-pembayaran="jenisPembayaran"
+      :is-loading-prodi="isLoadingProdi"
+      :is-loading-tahun-akademik="isLoadingTahunAkademik"
+      :is-loading-jenis-pembayaran="isLoadingJenisPembayaran"
+      :include-wisuda-semester-pendek="includeWisudaSemesterPendek"
     />
 
     <LaporanTahunan
       :prodi="prodi"
-      :tahunAkademik="tahunAkademik"
-      :jenisPembayaran="jenisPembayaran"
-      :isLoadingProdi="isLoadingProdi"
-      :isLoadingTahunAkademik="isLoadingTahunAkademik"
-      :isLoadingJenisPembayaran="isLoadingJenisPembayaran"
-      :includeWisudaSemesterPendek="includeWisudaSemesterPendek"
+      :tahun-akademik="tahunAkademik"
+      :jenis-pembayaran="jenisPembayaran"
+      :is-loading-prodi="isLoadingProdi"
+      :is-loading-tahun-akademik="isLoadingTahunAkademik"
+      :is-loading-jenis-pembayaran="isLoadingJenisPembayaran"
+      :include-wisuda-semester-pendek="includeWisudaSemesterPendek"
     />
 
-    <LaporanRekap :includeWisudaSemesterPendek="includeWisudaSemesterPendek" />
+    <LaporanRekap :include-wisuda-semester-pendek="includeWisudaSemesterPendek" />
 
-    <LaporanRekapTahun :includeWisudaSemesterPendek="includeWisudaSemesterPendek" />
+    <LaporanRekapTahun :include-wisuda-semester-pendek="includeWisudaSemesterPendek" />
 
     <LaporanBayarMahasiswa
       :prodi="prodi"
-      :tahunAkademik="tahunAkademik"
-      :jenisKelamin="jenisKelamin"
-      :isLoadingProdi="isLoadingProdi"
-      :isLoadingTahunAkademik="isLoadingTahunAkademik"
-      :isLoadingJenisKelamin="isLoadingJenisKelamin"
+      :tahun-akademik="tahunAkademik"
+      :jenis-kelamin="jenisKelamin"
+      :is-loading-prodi="isLoadingProdi"
+      :is-loading-tahun-akademik="isLoadingTahunAkademik"
+      :is-loading-jenis-kelamin="isLoadingJenisKelamin"
     />
-
   </div>
 </template>

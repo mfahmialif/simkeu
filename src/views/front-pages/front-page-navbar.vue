@@ -144,71 +144,105 @@ const isPageActive = computed(() => menuItems.some(item => item.navItems.some(li
 
 <template>
   <!-- 👉 Navigation drawer for mobile devices  -->
-  <VNavigationDrawer v-model="sidebar" data-allow-mismatch disable-resize-watcher>
-    <PerfectScrollbar :options="{ wheelPropagation: false }" class="h-100">
+  <VNavigationDrawer
+    v-model="sidebar"
+    data-allow-mismatch
+    disable-resize-watcher
+  >
+    <PerfectScrollbar
+      :options="{ wheelPropagation: false }"
+      class="h-100"
+    >
       <!-- Nav items -->
       <div>
         <div class="d-flex flex-column gap-y-4 pa-4">
-          <RouterLink v-for="(item, index) in ['Home', 'Features', 'Team', 'FAQ', 'Contact us']" :key="index"
+          <RouterLink
+            v-for="(item, index) in ['Home', 'Features', 'Team', 'FAQ', 'Contact us']"
+            :key="index"
             :to="{ name: 'front-pages-landing-page', hash: `#${item.toLowerCase().replace(' ', '-')}` }"
             class="font-weight-medium"
-            :class="[props.activeId?.toLocaleLowerCase().replace('-', ' ') === item.toLocaleLowerCase() ? 'active-link' : 'text-high-emphasis']">
+            :class="[props.activeId?.toLocaleLowerCase().replace('-', ' ') === item.toLocaleLowerCase() ? 'active-link' : 'text-high-emphasis']"
+          >
             {{ item }}
           </RouterLink>
-          <!--<div class="text-high-emphasis font-weight-medium cursor-pointer"
+          <!--
+            <div class="text-high-emphasis font-weight-medium cursor-pointer"
             :class="isPageActive ? 'active-link' : 'text-high-emphasis'">
             <div :class="isMenuOpen ? 'mb-6' : ''" @click="isMenuOpen = !isMenuOpen">
-              Pages
-              <VIcon :icon="isMenuOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" />
+            Pages
+            <VIcon :icon="isMenuOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" />
             </div>
             <div v-for="(item, index) in menuItems" :key="index" :class="isMenuOpen ? 'd-block' : 'd-none'">
-              <div class="d-flex align-center gap-x-3 mb-4">
-                <VAvatar variant="tonal" color="primary" rounded :icon="item.listIcon" />
-                <div class="text-body-1 text-high-emphasis font-weight-medium">
-                  {{ item.listTitle }}
-                </div>
-              </div>
-              <ul class="mb-6">
-                <li v-for="listItem in item.navItems" :key="listItem.name" style="list-style: none;"
-                  class="text-body-1 mb-4">
-                  <RouterLink :to="listItem.to" :target="item.listTitle === 'Page' ? '_self' : '_blank'"
-                    class="mega-menu-item" :class="isCurrentRoute(listItem.to) ? 'active-link' : ''">
-                    <VIcon icon="ri-circle-line" :size="10" class="me-2" />
-                    <span> {{ listItem.name }}</span>
-                  </RouterLink>
-                </li>
-              </ul>
+            <div class="d-flex align-center gap-x-3 mb-4">
+            <VAvatar variant="tonal" color="primary" rounded :icon="item.listIcon" />
+            <div class="text-body-1 text-high-emphasis font-weight-medium">
+            {{ item.listTitle }}
             </div>
-          </div>-->
+            </div>
+            <ul class="mb-6">
+            <li v-for="listItem in item.navItems" :key="listItem.name" style="list-style: none;"
+            class="text-body-1 mb-4">
+            <RouterLink :to="listItem.to" :target="item.listTitle === 'Page' ? '_self' : '_blank'"
+            class="mega-menu-item" :class="isCurrentRoute(listItem.to) ? 'active-link' : ''">
+            <VIcon icon="ri-circle-line" :size="10" class="me-2" />
+            <span> {{ listItem.name }}</span>
+            </RouterLink>
+            </li>
+            </ul>
+            </div>
+            </div>
+          -->
 
-          <!-- <RouterLink to="/" target="_blank" class="text-body-1 font-weight-medium nav-link px-0">
+          <!--
+            <RouterLink to="/" target="_blank" class="text-body-1 font-weight-medium nav-link px-0">
             Admin
-          </RouterLink>-->
+            </RouterLink>
+          -->
         </div>
       </div>
       <!-- Navigation drawer close icon -->
-      <VIcon id="navigation-drawer-close-btn" icon="ri-close-line" size="20" @click="sidebar = !sidebar" />
+      <VIcon
+        id="navigation-drawer-close-btn"
+        icon="ri-close-line"
+        size="20"
+        @click="sidebar = !sidebar"
+      />
     </PerfectScrollbar>
   </VNavigationDrawer>
 
   <!-- 👉 Navbar for desktop devices  -->
   <div class="front-page-navbar">
-    <VAppBar :class="y > 20 ? 'front-page-navbar-box-shadow' : ''"
-      :border="y < 20 ? '1px solid rgba(var(--v-theme-surface), 0.78)' : 'none'" elevation="0" class="rounded-b-xl"
-      :style="y > 20 ? '' : `background-color: rgba(var(--v-theme-surface),${props.navbarInitialOpacity})`" height="62">
+    <VAppBar
+      :class="y > 20 ? 'front-page-navbar-box-shadow' : ''"
+      :border="y < 20 ? '1px solid rgba(var(--v-theme-surface), 0.78)' : 'none'"
+      elevation="0"
+      class="rounded-b-xl"
+      :style="y > 20 ? '' : `background-color: rgba(var(--v-theme-surface),${props.navbarInitialOpacity})`"
+      height="62"
+    >
       <!-- toggle icon for mobile device -->
-      <VAppBarNavIcon :class="$vuetify.display.mdAndUp ? 'd-none' : 'd-inline-block'" class="ms-0 me-1"
-        color="high-emphasis" @click="() => sidebar = !sidebar" />
+      <VAppBarNavIcon
+        :class="$vuetify.display.mdAndUp ? 'd-none' : 'd-inline-block'"
+        class="ms-0 me-1"
+        color="high-emphasis"
+        @click="() => sidebar = !sidebar"
+      />
 
       <!-- Title and Landing page sections -->
       <div class="d-flex align-center">
         <VAppBarTitle class="me-3 me-sm-6">
-          <RouterLink to="/" class="d-flex gap-x-4" :class="$vuetify.display.mdAndUp ? 'd-none' : 'd-block'">
+          <RouterLink
+            to="/"
+            class="d-flex gap-x-4"
+            :class="$vuetify.display.mdAndUp ? 'd-none' : 'd-block'"
+          >
             <div class="d-flex gap-x-3 align-center">
               <VNodeRenderer :nodes="themeConfig.app.logo" />
 
-              <div class="nav-title text-truncate"
-                :class="[$vuetify.display.lgAndUp ? 'd-block' : 'd-none', $vuetify.display.mdAndUp ? 'd-none' : 'd-block']">
+              <div
+                class="nav-title text-truncate"
+                :class="[$vuetify.display.lgAndUp ? 'd-block' : 'd-none', $vuetify.display.mdAndUp ? 'd-none' : 'd-block']"
+              >
                 {{ themeConfig.app.title }}
               </div>
             </div>
@@ -216,62 +250,71 @@ const isPageActive = computed(() => menuItems.some(item => item.navItems.some(li
         </VAppBarTitle>
 
         <!-- landing page sections -->
-        <div :class="$vuetify.display.mdAndUp ? 'd-flex' : 'd-none'" class="text-base align-center gap-x-2">
-          <RouterLink v-for="(item, index) in ['Home', 'Features', 'Team', 'Contact us']" :key="index"
+        <div
+          :class="$vuetify.display.mdAndUp ? 'd-flex' : 'd-none'"
+          class="text-base align-center gap-x-2"
+        >
+          <RouterLink
+            v-for="(item, index) in ['Home', 'Features', 'Team', 'Contact us']"
+            :key="index"
             :to="{ name: 'front-pages-landing-page', hash: `#${item.toLowerCase().replace(' ', '-')}` }"
             class="nav-link font-weight-medium"
-            :class="[props.activeId?.toLocaleLowerCase().replace('-', ' ') === item.toLocaleLowerCase() ? 'active-link' : '']">
+            :class="[props.activeId?.toLocaleLowerCase().replace('-', ' ') === item.toLocaleLowerCase() ? 'active-link' : '']"
+          >
             {{ item }}
           </RouterLink>
 
           <!-- Pages Menu -->
-          <!-- <span class="font-weight-medium cursor-pointer nav-link"
+          <!--
+            <span class="font-weight-medium cursor-pointer nav-link"
             :class="isPageActive ? 'active-link' : 'text-high-emphasis'">
             Pages
             <VIcon icon="ri-arrow-down-s-line" size="20" class="ms-2" />
 
             <VMenu open-on-hover activator="parent" transition="slide-y-transition" location="bottom center" offset="16"
-              content-class="mega-menu" location-strategy="static" close-on-content-click>
-              <VCard max-width="1000">
-                <VCardText class="pa-8">
-                  <div class="nav-menu">
-                    <div v-for="(item, index) in menuItems" :key="index">
-                      <div class="d-flex align-center gap-x-3 mb-6">
-                        <VAvatar variant="tonal" color="primary" rounded :icon="item.listIcon" />
-                        <div class="text-body-1 text-high-emphasis font-weight-medium">
-                          {{ item.listTitle }}
-                        </div>
-                      </div>
-                      <ul>
-                        <li v-for="listItem in item.navItems" :key="listItem.name" style="list-style: none;"
-                          class="text-body-1 mb-4 text-no-wrap">
-                          <RouterLink class="mega-menu-item" :to="listItem.to"
-                            :target="item.listTitle === 'Page' ? '_self' : '_blank'"
-                            :class="isCurrentRoute(listItem.to) ? 'active-link' : ''">
-                            <div class="d-flex align-center">
-                              <VIcon icon="ri-circle-line" :size="10" class="me-2" />
-                              <span>{{ listItem.name }}</span>
-                            </div>
-                          </RouterLink>
-                        </li>
-                      </ul>
-                    </div>
-                    <img :src="navImg" alt="Navigation Image" class="d-inline-block rounded-lg"
-                      style="border: 10px solid rgb(var(--v-theme-background));"
-                      :width="$vuetify.display.lgAndUp ? '330' : '250'"
-                      :height="$vuetify.display.lgAndUp ? '330' : '250'">
-                  </div>
-                </VCardText>
-              </VCard>
+            content-class="mega-menu" location-strategy="static" close-on-content-click>
+            <VCard max-width="1000">
+            <VCardText class="pa-8">
+            <div class="nav-menu">
+            <div v-for="(item, index) in menuItems" :key="index">
+            <div class="d-flex align-center gap-x-3 mb-6">
+            <VAvatar variant="tonal" color="primary" rounded :icon="item.listIcon" />
+            <div class="text-body-1 text-high-emphasis font-weight-medium">
+            {{ item.listTitle }}
+            </div>
+            </div>
+            <ul>
+            <li v-for="listItem in item.navItems" :key="listItem.name" style="list-style: none;"
+            class="text-body-1 mb-4 text-no-wrap">
+            <RouterLink class="mega-menu-item" :to="listItem.to"
+            :target="item.listTitle === 'Page' ? '_self' : '_blank'"
+            :class="isCurrentRoute(listItem.to) ? 'active-link' : ''">
+            <div class="d-flex align-center">
+            <VIcon icon="ri-circle-line" :size="10" class="me-2" />
+            <span>{{ listItem.name }}</span>
+            </div>
+            </RouterLink>
+            </li>
+            </ul>
+            </div>
+            <img :src="navImg" alt="Navigation Image" class="d-inline-block rounded-lg"
+            style="border: 10px solid rgb(var(--v-theme-background));"
+            :width="$vuetify.display.lgAndUp ? '330' : '250'"
+            :height="$vuetify.display.lgAndUp ? '330' : '250'">
+            </div>
+            </VCardText>
+            </VCard>
             </VMenu>
 
-          </span>-->
+            </span>
+          -->
 
 
-          <!-- <RouterLink to="/" target="_blank" class="nav-link font-weight-medium">
+          <!--
+            <RouterLink to="/" target="_blank" class="nav-link font-weight-medium">
             Admin
-          </RouterLink>
-        -->
+            </RouterLink>
+          -->
         </div>
       </div>
 
@@ -280,14 +323,26 @@ const isPageActive = computed(() => menuItems.some(item => item.navItems.some(li
       <div class="d-flex gap-x-4 align-center">
         <NavbarThemeSwitcher class="me-0 me-sm-2" />
 
-        <VBtn :to="{ name: 'login' }" v-if="$vuetify.display.lgAndUp"
-          prepend-icon="ri-login-box-line" variant="elevated" color="primary"
-          rel="noopener noreferrer">
+        <VBtn
+          v-if="$vuetify.display.lgAndUp"
+          :to="{ name: 'login' }"
+          prepend-icon="ri-login-box-line"
+          variant="elevated"
+          color="primary"
+          rel="noopener noreferrer"
+        >
           Login
         </VBtn>
 
-        <VBtn :to="{ name: 'login' }" v-else icon rounded variant="elevated"
-          color="primary" rel="noopener noreferrer">
+        <VBtn
+          v-else
+          :to="{ name: 'login' }"
+          icon
+          rounded
+          variant="elevated"
+          color="primary"
+          rel="noopener noreferrer"
+        >
           <VIcon icon="ri-login-box-line" />
         </VBtn>
       </div>

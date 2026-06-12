@@ -1,7 +1,7 @@
 <script setup>
-import { formatMoney, formatRupiah } from "@/composables/formatRupiah";
-import { ref, computed, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
+import { formatMoney, formatRupiah } from "@/composables/formatRupiah"
+import { ref, computed, onMounted, watch } from "vue"
+import { useRouter } from "vue-router"
 
 const props = defineProps({
   thAkademikId: {
@@ -28,102 +28,105 @@ const props = defineProps({
     type: String,
     default: null,
   },
-});
+})
 
-const loading = ref(true);
-const statistics = ref(null);
-const harianDetailData = ref([]);
-const semuaDetailData = ref([]);
-const router = useRouter();
+const loading = ref(true)
+const statistics = ref(null)
+const harianDetailData = ref([])
+const semuaDetailData = ref([])
+const router = useRouter()
 
-const isModalOpen = ref(false);
-const selectedData = ref(null);
+const isModalOpen = ref(false)
+const selectedData = ref(null)
 
-const openDetail = (data) => {
-  selectedData.value = data;
-  isModalOpen.value = true;
-};
+const openDetail = data => {
+  selectedData.value = data
+  isModalOpen.value = true
+}
 
-const selectedCategory = ref(null);
-const selectedPaymentMethod = ref(null);
-const detailProdiData = ref([]);
-const loadingDetailProdi = ref(false);
+const selectedCategory = ref(null)
+const selectedPaymentMethod = ref(null)
+const detailProdiData = ref([])
+const loadingDetailProdi = ref(false)
 
-const defaultMataUang = { kode: "IDR", nama: "Rupiah", simbol: "Rp" };
+const defaultMataUang = { kode: "IDR", nama: "Rupiah", simbol: "Rp" }
 
 const normalizeMataUang = (item = {}) => ({
   kode: String(item?.mata_uang?.kode ?? item?.mata_uang_kode ?? defaultMataUang.kode).toUpperCase(),
   nama: item?.mata_uang?.nama ?? item?.mata_uang_nama ?? defaultMataUang.nama,
   simbol: item?.mata_uang?.simbol ?? item?.mata_uang_simbol ?? defaultMataUang.simbol,
-});
+})
 
 const formatByCurrency = (rows, fallbackValue = 0) => {
-  const data = Array.isArray(rows) ? rows : [];
-  const filtered = data.filter((row) => Number(row.total || 0) > 0);
+  const data = Array.isArray(rows) ? rows : []
+  const filtered = data.filter(row => Number(row.total || 0) > 0)
 
   if (!filtered.length) {
-    return formatRupiah(fallbackValue || 0);
+    return formatRupiah(fallbackValue || 0)
   }
 
   return filtered
-    .map((row) => {
-      const mataUang = normalizeMataUang(row);
-      return `${mataUang.kode}: ${formatMoney(row.total, mataUang)}`;
+    .map(row => {
+      const mataUang = normalizeMataUang(row)
+      
+      return `${mataUang.kode}: ${formatMoney(row.total, mataUang)}`
     })
-    .join(" | ");
-};
+    .join(" | ")
+}
 
 const getCurrencyRows = (rows, fallbackValue = 0) => {
-  const data = Array.isArray(rows) ? rows : [];
-  const filtered = data.filter(row => Number(row.total || 0) > 0);
+  const data = Array.isArray(rows) ? rows : []
+  const filtered = data.filter(row => Number(row.total || 0) > 0)
+
   const source = filtered.length
     ? filtered
-    : [{ mata_uang: defaultMataUang, total: fallbackValue || 0 }];
+    : [{ mata_uang: defaultMataUang, total: fallbackValue || 0 }]
 
   return source
     .map(row => {
-      const mataUang = normalizeMataUang(row);
+      const mataUang = normalizeMataUang(row)
 
       return {
         key: mataUang.kode,
         kode: mataUang.kode,
         amount: formatMoney(row.total, mataUang),
-      };
+      }
     })
     .sort((left, right) => {
-      if (left.kode === right.kode) return 0;
-      if (left.kode === "IDR") return -1;
-      if (right.kode === "IDR") return 1;
+      if (left.kode === right.kode) return 0
+      if (left.kode === "IDR") return -1
+      if (right.kode === "IDR") return 1
 
-      return left.kode.localeCompare(right.kode);
-    });
-};
+      return left.kode.localeCompare(right.kode)
+    })
+}
 
 const formatRowMoney = (row, field) =>
-  formatMoney(row?.[field] || 0, normalizeMataUang(row));
+  formatMoney(row?.[field] || 0, normalizeMataUang(row))
 
 const sumRowsByCurrency = (rows, field) => {
-  const map = new Map();
+  const map = new Map()
 
   for (const row of rows || []) {
-    const mataUang = normalizeMataUang(row);
-    const key = mataUang.kode;
-    const current = map.get(key) || { mata_uang: mataUang, total: 0 };
-    current.total += Number(row?.[field] || 0);
-    map.set(key, current);
+    const mataUang = normalizeMataUang(row)
+    const key = mataUang.kode
+    const current = map.get(key) || { mata_uang: mataUang, total: 0 }
+
+    current.total += Number(row?.[field] || 0)
+    map.set(key, current)
   }
 
-  return Array.from(map.values());
-};
+  return Array.from(map.values())
+}
 
-const openDetailProdi = async (row) => {
-  const category = typeof row === 'string' ? row : row?.tagihan_nama;
-  const paymentMethod = typeof row === 'string' ? null : row?.jp_nama;
-  const mataUangKode = typeof row === 'string' ? null : row?.mata_uang?.kode;
+const openDetailProdi = async row => {
+  const category = typeof row === 'string' ? row : row?.tagihan_nama
+  const paymentMethod = typeof row === 'string' ? null : row?.jp_nama
+  const mataUangKode = typeof row === 'string' ? null : row?.mata_uang?.kode
 
-  selectedCategory.value = category;
-  selectedPaymentMethod.value = paymentMethod;
-  loadingDetailProdi.value = true;
+  selectedCategory.value = category
+  selectedPaymentMethod.value = paymentMethod
+  loadingDetailProdi.value = true
   
   try {
     const params = {
@@ -136,40 +139,40 @@ const openDetailProdi = async (row) => {
       ...(mataUangKode && { mata_uang_kode: mataUangKode }),
       ...(props.tanggalMulai && { tanggal_mulai: props.tanggalMulai }),
       ...(props.tanggalAkhir && { tanggal_akhir: props.tanggalAkhir }),
-      period: selectedData.value?.title || 'Harian'
-    };
+      period: selectedData.value?.title || 'Harian',
+    }
 
     const { data: response } = await $api(`/admin/pemasukan/mahasiswa/pembayaran-statistic-detail-prodi`, {
       method: "GET",
-      params
-    });
+      params,
+    })
     
     // Log response to help debug
-    console.log("Detail Prodi API Response:", response);
+    console.log("Detail Prodi API Response:", response)
 
     // Handle different response structures
     if (response && response.data) {
-      detailProdiData.value = response.data;
+      detailProdiData.value = response.data
     } else if (Array.isArray(response)) {
-      detailProdiData.value = response;
+      detailProdiData.value = response
     } else {
-      detailProdiData.value = [];
+      detailProdiData.value = []
     }
   } catch (error) {
-    console.error("Failed to fetch detail prodi:", error);
-    detailProdiData.value = [];
+    console.error("Failed to fetch detail prodi:", error)
+    detailProdiData.value = []
   } finally {
-    loadingDetailProdi.value = false;
+    loadingDetailProdi.value = false
   }
-};
+}
 
-watch(isModalOpen, (val) => {
+watch(isModalOpen, val => {
   if (!val) {
-    selectedCategory.value = null;
-    selectedPaymentMethod.value = null;
-    detailProdiData.value = [];
+    selectedCategory.value = null
+    selectedPaymentMethod.value = null
+    detailProdiData.value = []
   }
-});
+})
 
 const widgetData = ref([
   {
@@ -204,10 +207,10 @@ const widgetData = ref([
     breakdown: {},
     currencies: [],
   },
-]);
+])
 
 const fetchStatistics = async () => {
-  loading.value = true;
+  loading.value = true
   try {
     const response = await $api("/admin/pemasukan/mahasiswa/pembayaran-statistic", {
       method: "GET",
@@ -219,149 +222,154 @@ const fetchStatistics = async () => {
         ...(props.tanggalMulai && { tanggal_mulai: props.tanggalMulai }),
         ...(props.tanggalAkhir && { tanggal_akhir: props.tanggalAkhir }),
       },
-    });
+    })
 
     if (response && response.data) {
-      statistics.value = response.data;
+      statistics.value = response.data
 
       // Assign to widgetData
       const mapPeriod = (periodName, index) => {
-        const periodData = response.data[periodName];
+        const periodData = response.data[periodName]
         if (periodData) {
           widgetData.value[index].currencies = getCurrencyRows(
             periodData.Keseluruhan?.by_currency,
-            periodData.Keseluruhan?.value || 0
-          );
+            periodData.Keseluruhan?.value || 0,
+          )
           widgetData.value[index].value = formatByCurrency(
             periodData.Keseluruhan?.by_currency,
-            periodData.Keseluruhan?.value || 0
-          );
-          widgetData.value[index].change = periodData.Keseluruhan?.change || 0;
-          widgetData.value[index].breakdown = {};
+            periodData.Keseluruhan?.value || 0,
+          )
+          widgetData.value[index].change = periodData.Keseluruhan?.change || 0
+          widgetData.value[index].breakdown = {}
           
           for (const [gender, item] of Object.entries(periodData)) {
             widgetData.value[index].breakdown[gender] = {
               value: formatByCurrency(item.by_currency, item.value || 0),
               by_currency: item.by_currency || [],
-              change: item.change || 0
-            };
+              change: item.change || 0,
+            }
           }
         }
-      };
+      }
 
-      mapPeriod('Harian', 0);
-      mapPeriod('Mingguan', 1);
-      mapPeriod('Bulanan', 2);
-      mapPeriod('Semua', 3);
+      mapPeriod('Harian', 0)
+      mapPeriod('Mingguan', 1)
+      mapPeriod('Bulanan', 2)
+      mapPeriod('Semua', 3)
 
       if (response.data['Harian_Detail']) {
-        harianDetailData.value = response.data['Harian_Detail'];
+        harianDetailData.value = response.data['Harian_Detail']
       }
       if (response.data['Semua_Detail']) {
-        semuaDetailData.value = response.data['Semua_Detail'];
+        semuaDetailData.value = response.data['Semua_Detail']
       }
     }
   } catch (err) {
-    console.error("Failed to fetch statistics:", err);
+    console.error("Failed to fetch statistics:", err)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 onMounted(() => {
-  fetchStatistics();
-});
+  fetchStatistics()
+})
 
 watch(
   () => props.thAkademikId,
   () => {
-    fetchStatistics();
-  }
-);
+    fetchStatistics()
+  },
+)
 
 watch(
   () => props.prodiId,
   () => {
-    fetchStatistics();
-  }
-);
+    fetchStatistics()
+  },
+)
 
 watch(
   () => props.jenisPembayaranId,
   () => {
-    fetchStatistics();
-  }
-);
+    fetchStatistics()
+  },
+)
 
 watch(
   () => props.tanggalMulai,
   () => {
-    fetchStatistics();
-  }
-);
+    fetchStatistics()
+  },
+)
 
 watch(
   () => props.tanggalAkhir,
   () => {
-    fetchStatistics();
-  }
-);
+    fetchStatistics()
+  },
+)
 
 watch(
   () => props.userId,
   () => {
-    fetchStatistics();
-  }
-);
+    fetchStatistics()
+  },
+)
 
 
 
-const hasDateFilter = computed(() => !!props.tanggalMulai || !!props.tanggalAkhir);
+const hasDateFilter = computed(() => !!props.tanggalMulai || !!props.tanggalAkhir)
 
 const filteredWidgetData = computed(() => {
   if (hasDateFilter.value) {
-    return widgetData.value.filter(d => d.title !== 'Mingguan' && d.title !== 'Bulanan');
+    return widgetData.value.filter(d => d.title !== 'Mingguan' && d.title !== 'Bulanan')
   }
-  return widgetData.value;
-});
+  
+  return widgetData.value
+})
 
-const widgetColSize = computed(() => hasDateFilter.value ? 6 : 3);
+const widgetColSize = computed(() => hasDateFilter.value ? 6 : 3)
 
-defineExpose({ fetchStatistics });
+defineExpose({ fetchStatistics })
 
-const formatTanggal = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-};
+const formatTanggal = dateStr => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+}
 
 const todayFormatted = computed(() => {
-  return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-});
+  return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+})
 
-const getDateInfo = (title) => {
+const getDateInfo = title => {
   if (title === 'Harian') {
     if (props.tanggalMulai) {
-      return `📅 ${formatTanggal(props.tanggalMulai)}`;
+      return `📅 ${formatTanggal(props.tanggalMulai)}`
     }
-    return `📅 Hari ini, ${todayFormatted.value}`;
+    
+    return `📅 Hari ini, ${todayFormatted.value}`
   }
   if (title === 'Keseluruhan') {
     if (props.tanggalMulai && props.tanggalAkhir) {
-      return `📅 ${formatTanggal(props.tanggalMulai)} - ${formatTanggal(props.tanggalAkhir)}`;
+      return `📅 ${formatTanggal(props.tanggalMulai)} - ${formatTanggal(props.tanggalAkhir)}`
     }
     if (props.tanggalMulai) {
-      return `📅 Dari ${formatTanggal(props.tanggalMulai)}`;
+      return `📅 Dari ${formatTanggal(props.tanggalMulai)}`
     }
     if (props.tanggalAkhir) {
-      return `📅 Sampai ${formatTanggal(props.tanggalAkhir)}`;
+      return `📅 Sampai ${formatTanggal(props.tanggalAkhir)}`
     }
-    return '📅 Semua waktu';
+    
+    return '📅 Semua waktu'
   }
-  if (title === 'Mingguan') return '📅 Minggu ini';
-  if (title === 'Bulanan') return '📅 Bulan ini';
-  return '';
-};
+  if (title === 'Mingguan') return '📅 Minggu ini'
+  if (title === 'Bulanan') return '📅 Bulan ini'
+  
+  return ''
+}
 </script>
 
 <template>
@@ -370,37 +378,68 @@ const getDateInfo = (title) => {
     <VCard class="mb-6">
       <VCardText class="px-2">
         <VRow v-if="loading">
-          <template v-for="i in (hasDateFilter ? 2 : 4)" :key="i">
-            <VCol cols="12" sm="6" :md="widgetColSize" class="px-6">
+          <template
+            v-for="i in (hasDateFilter ? 2 : 4)"
+            :key="i"
+          >
+            <VCol
+              cols="12"
+              sm="6"
+              :md="widgetColSize"
+              class="px-6"
+            >
               <div class="d-flex justify-space-between align-center py-2">
                 <div class="d-flex flex-column gap-y-2 flex-grow-1">
-                  <VSkeletonLoader type="text" width="120" />
-                  <VSkeletonLoader type="heading" width="180" />
-                  <VSkeletonLoader type="text" width="100" />
+                  <VSkeletonLoader
+                    type="text"
+                    width="120"
+                  />
+                  <VSkeletonLoader
+                    type="heading"
+                    width="180"
+                  />
+                  <VSkeletonLoader
+                    type="text"
+                    width="100"
+                  />
                 </div>
                 <VSkeletonLoader type="avatar" />
               </div>
             </VCol>
-            <VDivider v-if="i < (hasDateFilter ? 2 : 4)" vertical inset length="92" class="d-none d-md-block" />
+            <VDivider
+              v-if="i < (hasDateFilter ? 2 : 4)"
+              vertical
+              inset
+              length="92"
+              class="d-none d-md-block"
+            />
           </template>
         </VRow>
         <VRow v-else>
-          <template v-for="(data, index) in filteredWidgetData" :key="index">
-            <VCol cols="12" sm="6" :md="widgetColSize" class="stat-widget-col px-3 px-lg-4">
+          <template
+            v-for="(data, index) in filteredWidgetData"
+            :key="index"
+          >
+            <VCol
+              cols="12"
+              sm="6"
+              :md="widgetColSize"
+              class="stat-widget-col px-3 px-lg-4"
+            >
               <div
                 class="stat-widget d-flex justify-space-between cursor-pointer"
-                @click="openDetail(data)"
                 :class="
                   $vuetify.display.xs
                     ? index !== filteredWidgetData.length - 1
                       ? 'border-b pb-4'
                       : ''
                     : $vuetify.display.sm
-                    ? index < filteredWidgetData.length / 2
-                      ? 'border-b pb-4'
+                      ? index < filteredWidgetData.length / 2
+                        ? 'border-b pb-4'
+                        : ''
                       : ''
-                    : ''
                 "
+                @click="openDetail(data)"
               >
                 <div class="stat-widget-content d-flex flex-column gap-y-1">
                   <p class="stat-widget-title text-capitalize mb-0">
@@ -411,7 +450,10 @@ const getDateInfo = (title) => {
                     {{ getDateInfo(data.title) }}
                   </div>
 
-                  <div class="stat-currency-list" :title="data.value">
+                  <div
+                    class="stat-currency-list"
+                    :title="data.value"
+                  >
                     <div
                       v-for="currency in data.currencies"
                       :key="currency.key"
@@ -436,8 +478,17 @@ const getDateInfo = (title) => {
                   </div>
                 </div>
 
-                <VAvatar class="stat-widget-icon" variant="tonal" rounded="lg" size="44" color="primary">
-                  <VIcon :icon="data.icon" size="28" />
+                <VAvatar
+                  class="stat-widget-icon"
+                  variant="tonal"
+                  rounded="lg"
+                  size="44"
+                  color="primary"
+                >
+                  <VIcon
+                    :icon="data.icon"
+                    size="28"
+                  />
                 </VAvatar>
               </div>
             </VCol>
@@ -446,8 +497,8 @@ const getDateInfo = (title) => {
                 $vuetify.display.mdAndUp
                   ? index !== filteredWidgetData.length - 1
                   : $vuetify.display.smAndUp
-                  ? index % 2 === 0
-                  : false
+                    ? index % 2 === 0
+                    : false
               "
               vertical
               inset
@@ -460,7 +511,10 @@ const getDateInfo = (title) => {
 
 
 
-    <VDialog v-model="isModalOpen" :max-width="selectedData?.title === 'Harian' ? 700 : 400">
+    <VDialog
+      v-model="isModalOpen"
+      :max-width="selectedData?.title === 'Harian' ? 700 : 400"
+    >
       <VCard>
         <VCardItem class="pb-2">
           <VCardTitle class="text-h5 text-primary">
@@ -469,18 +523,40 @@ const getDateInfo = (title) => {
         </VCardItem>
         <VCardText>
           <div class="d-flex flex-column gap-y-4 mt-2">
-            <template v-for="(item, key) in selectedData?.breakdown" :key="key">
+            <template
+              v-for="(item, key) in selectedData?.breakdown"
+              :key="key"
+            >
               <div class="d-flex align-center gap-x-3">
-                <VAvatar color="primary" variant="tonal" rounded>
-                  <VIcon :icon="selectedData?.icon" size="24" />
+                <VAvatar
+                  color="primary"
+                  variant="tonal"
+                  rounded
+                >
+                  <VIcon
+                    :icon="selectedData?.icon"
+                    size="24"
+                  />
                 </VAvatar>
-                <div class="flex-grow-1" style="min-width: 0;">
-                  <div class="text-body-1 font-weight-medium text-capitalize">{{ key }}</div>
-                  <h5 class="text-h5 font-weight-bold text-truncate" :title="item.value">{{ item.value }}</h5>
+                <div
+                  class="flex-grow-1"
+                  style="min-width: 0;"
+                >
+                  <div class="text-body-1 font-weight-medium text-capitalize">
+                    {{ key }}
+                  </div>
+                  <h5
+                    class="text-h5 font-weight-bold text-truncate"
+                    :title="item.value"
+                  >
+                    {{ item.value }}
+                  </h5>
                 </div>
                 <div class="text-right">
                   <span class="text-body-2 text-disabled">Total Data</span>
-                  <div class="text-h6">{{ item.change }}</div>
+                  <div class="text-h6">
+                    {{ item.change }}
+                  </div>
                 </div>
               </div>
               <VDivider v-if="key !== 'Keseluruhan'" />
@@ -488,25 +564,40 @@ const getDateInfo = (title) => {
           </div>
 
           <!-- Detail Harian Summary -->
-          <div v-if="!selectedCategory && (selectedData?.title === 'Harian' && harianDetailData.length > 0)" class="mt-6">
-            <h6 class="text-h6 mb-3">Rincian Berdasarkan Jenis Pembayaran</h6>
+          <div
+            v-if="!selectedCategory && (selectedData?.title === 'Harian' && harianDetailData.length > 0)"
+            class="mt-6"
+          >
+            <h6 class="text-h6 mb-3">
+              Rincian Berdasarkan Jenis Pembayaran
+            </h6>
             <VTable class="text-no-wrap border rounded">
               <thead>
                 <tr style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
-                  <th class="ps-4 text-uppercase">Tagihan</th>
-                  <th class="text-uppercase">Jenis Pembayaran</th>
-                  <th class="text-uppercase">Laki-laki</th>
-                  <th class="text-uppercase">Perempuan</th>
-                  <th class="text-uppercase text-primary">Keseluruhan</th>
+                  <th class="ps-4 text-uppercase">
+                    Tagihan
+                  </th>
+                  <th class="text-uppercase">
+                    Jenis Pembayaran
+                  </th>
+                  <th class="text-uppercase">
+                    Laki-laki
+                  </th>
+                  <th class="text-uppercase">
+                    Perempuan
+                  </th>
+                  <th class="text-uppercase text-primary">
+                    Keseluruhan
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <tr 
                   v-for="(row, idx) in harianDetailData" 
                   :key="idx" 
-                  @click="openDetailProdi(row)"
                   style="cursor: pointer;"
                   class="hover-row"
+                  @click="openDetailProdi(row)"
                 >
                   <td class="ps-4">
                     <span class="text-body-1 font-weight-medium">{{ row.tagihan_nama }}</span>
@@ -516,38 +607,62 @@ const getDateInfo = (title) => {
                   </td>
                   <td>{{ formatRowMoney(row, "laki_laki") }}</td>
                   <td>{{ formatRowMoney(row, "perempuan") }}</td>
-                  <td class="text-primary font-weight-bold">{{ formatRowMoney(row, "keseluruhan") }}</td>
+                  <td class="text-primary font-weight-bold">
+                    {{ formatRowMoney(row, "keseluruhan") }}
+                  </td>
                 </tr>
                 <tr style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
-                  <td class="ps-4" colspan="2"><strong>Total</strong></td>
+                  <td
+                    class="ps-4"
+                    colspan="2"
+                  >
+                    <strong>Total</strong>
+                  </td>
                   <td><strong>{{ formatByCurrency(sumRowsByCurrency(harianDetailData, "laki_laki")) }}</strong></td>
                   <td><strong>{{ formatByCurrency(sumRowsByCurrency(harianDetailData, "perempuan")) }}</strong></td>
-                  <td class="text-primary"><strong>{{ formatByCurrency(sumRowsByCurrency(harianDetailData, "keseluruhan")) }}</strong></td>
+                  <td class="text-primary">
+                    <strong>{{ formatByCurrency(sumRowsByCurrency(harianDetailData, "keseluruhan")) }}</strong>
+                  </td>
                 </tr>
               </tbody>
             </VTable>
           </div>
 
           <!-- Detail Keseluruhan Summary -->
-          <div v-if="!selectedCategory && (selectedData?.title === 'Keseluruhan' && semuaDetailData.length > 0)" class="mt-6">
-            <h6 class="text-h6 mb-3">Rincian Berdasarkan Jenis Pembayaran</h6>
+          <div
+            v-if="!selectedCategory && (selectedData?.title === 'Keseluruhan' && semuaDetailData.length > 0)"
+            class="mt-6"
+          >
+            <h6 class="text-h6 mb-3">
+              Rincian Berdasarkan Jenis Pembayaran
+            </h6>
             <VTable class="text-no-wrap border rounded">
               <thead>
                 <tr style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
-                  <th class="ps-4 text-uppercase">Tagihan</th>
-                  <th class="text-uppercase">Jenis Pembayaran</th>
-                  <th class="text-uppercase">Laki-laki</th>
-                  <th class="text-uppercase">Perempuan</th>
-                  <th class="text-uppercase text-primary">Keseluruhan</th>
+                  <th class="ps-4 text-uppercase">
+                    Tagihan
+                  </th>
+                  <th class="text-uppercase">
+                    Jenis Pembayaran
+                  </th>
+                  <th class="text-uppercase">
+                    Laki-laki
+                  </th>
+                  <th class="text-uppercase">
+                    Perempuan
+                  </th>
+                  <th class="text-uppercase text-primary">
+                    Keseluruhan
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <tr 
                   v-for="(row, idx) in semuaDetailData" 
                   :key="idx" 
-                  @click="openDetailProdi(row)"
                   style="cursor: pointer;"
                   class="hover-row"
+                  @click="openDetailProdi(row)"
                 >
                   <td class="ps-4">
                     <span class="text-body-1 font-weight-medium">{{ row.tagihan_nama }}</span>
@@ -557,61 +672,118 @@ const getDateInfo = (title) => {
                   </td>
                   <td>{{ formatRowMoney(row, "laki_laki") }}</td>
                   <td>{{ formatRowMoney(row, "perempuan") }}</td>
-                  <td class="text-primary font-weight-bold">{{ formatRowMoney(row, "keseluruhan") }}</td>
+                  <td class="text-primary font-weight-bold">
+                    {{ formatRowMoney(row, "keseluruhan") }}
+                  </td>
                 </tr>
                 <tr style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
-                  <td class="ps-4" colspan="2"><strong>Total</strong></td>
+                  <td
+                    class="ps-4"
+                    colspan="2"
+                  >
+                    <strong>Total</strong>
+                  </td>
                   <td><strong>{{ formatByCurrency(sumRowsByCurrency(semuaDetailData, "laki_laki")) }}</strong></td>
                   <td><strong>{{ formatByCurrency(sumRowsByCurrency(semuaDetailData, "perempuan")) }}</strong></td>
-                  <td class="text-primary"><strong>{{ formatByCurrency(sumRowsByCurrency(semuaDetailData, "keseluruhan")) }}</strong></td>
+                  <td class="text-primary">
+                    <strong>{{ formatByCurrency(sumRowsByCurrency(semuaDetailData, "keseluruhan")) }}</strong>
+                  </td>
                 </tr>
               </tbody>
             </VTable>
           </div>
 
           <!-- Detail per Prodi -->
-          <div v-if="selectedCategory" class="mt-6">
+          <div
+            v-if="selectedCategory"
+            class="mt-6"
+          >
             <div class="d-flex justify-space-between align-center mb-3">
               <h6 class="text-h6">
                 Detail Pemasukan per Prodi: {{ selectedCategory }}
-                <span v-if="selectedPaymentMethod" class="text-body-2 text-disabled">
+                <span
+                  v-if="selectedPaymentMethod"
+                  class="text-body-2 text-disabled"
+                >
                   - {{ selectedPaymentMethod }}
                 </span>
               </h6>
-              <VBtn size="small" variant="tonal" color="primary" @click="selectedCategory = null">
-                <VIcon icon="ri-arrow-left-line" start /> Kembali
+              <VBtn
+                size="small"
+                variant="tonal"
+                color="primary"
+                @click="selectedCategory = null"
+              >
+                <VIcon
+                  icon="ri-arrow-left-line"
+                  start
+                /> Kembali
               </VBtn>
             </div>
             
-            <div v-if="loadingDetailProdi" class="d-flex justify-center py-4">
-              <VProgressCircular indeterminate color="primary" />
+            <div
+              v-if="loadingDetailProdi"
+              class="d-flex justify-center py-4"
+            >
+              <VProgressCircular
+                indeterminate
+                color="primary"
+              />
             </div>
-            <VTable v-else class="text-no-wrap border rounded">
+            <VTable
+              v-else
+              class="text-no-wrap border rounded"
+            >
               <thead>
                 <tr style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
-                  <th class="ps-4 text-uppercase">Prodi</th>
-                  <th class="text-uppercase">Laki-laki</th>
-                  <th class="text-uppercase">Perempuan</th>
-                  <th class="text-uppercase text-primary">Keseluruhan</th>
+                  <th class="ps-4 text-uppercase">
+                    Prodi
+                  </th>
+                  <th class="text-uppercase">
+                    Laki-laki
+                  </th>
+                  <th class="text-uppercase">
+                    Perempuan
+                  </th>
+                  <th class="text-uppercase text-primary">
+                    Keseluruhan
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(row, idx) in detailProdiData" :key="idx">
+                <tr
+                  v-for="(row, idx) in detailProdiData"
+                  :key="idx"
+                >
                   <td class="ps-4">
                     <span class="text-body-1 font-weight-medium">{{ row.prodi_nama }}</span>
                   </td>
                   <td>{{ formatRowMoney(row, "laki_laki") }}</td>
                   <td>{{ formatRowMoney(row, "perempuan") }}</td>
-                  <td class="text-primary font-weight-bold">{{ formatRowMoney(row, "keseluruhan") }}</td>
+                  <td class="text-primary font-weight-bold">
+                    {{ formatRowMoney(row, "keseluruhan") }}
+                  </td>
                 </tr>
                 <tr v-if="detailProdiData.length === 0">
-                  <td colspan="4" class="text-center text-disabled py-4">Tidak ada data.</td>
+                  <td
+                    colspan="4"
+                    class="text-center text-disabled py-4"
+                  >
+                    Tidak ada data.
+                  </td>
                 </tr>
-                <tr v-else style="background-color: rgba(var(--v-theme-on-surface), 0.04);">
-                  <td class="ps-4"><strong>Total</strong></td>
+                <tr
+                  v-else
+                  style="background-color: rgba(var(--v-theme-on-surface), 0.04);"
+                >
+                  <td class="ps-4">
+                    <strong>Total</strong>
+                  </td>
                   <td><strong>{{ formatByCurrency(sumRowsByCurrency(detailProdiData, "laki_laki")) }}</strong></td>
                   <td><strong>{{ formatByCurrency(sumRowsByCurrency(detailProdiData, "perempuan")) }}</strong></td>
-                  <td class="text-primary"><strong>{{ formatByCurrency(sumRowsByCurrency(detailProdiData, "keseluruhan")) }}</strong></td>
+                  <td class="text-primary">
+                    <strong>{{ formatByCurrency(sumRowsByCurrency(detailProdiData, "keseluruhan")) }}</strong>
+                  </td>
                 </tr>
               </tbody>
             </VTable>
@@ -619,7 +791,11 @@ const getDateInfo = (title) => {
         </VCardText>
         <VCardActions>
           <VSpacer />
-          <VBtn variant="tonal" color="secondary" @click="isModalOpen = false">
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            @click="isModalOpen = false"
+          >
             Tutup
           </VBtn>
         </VCardActions>

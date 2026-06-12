@@ -9,4 +9,4 @@ export default [
       { title: "Staff Bulanan", to: "admin-pengeluaran-staff-bulanan" },
     ],
   },
-];
+]

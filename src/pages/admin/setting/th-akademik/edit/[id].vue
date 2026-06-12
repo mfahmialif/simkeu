@@ -1,7 +1,7 @@
 <script setup>
-import FormThAkademik from '@/components/admin/th-akademik/FormThAkademik.vue';
-import { onMounted, ref, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import FormThAkademik from '@/components/admin/th-akademik/FormThAkademik.vue'
+import { onMounted, ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,8 +12,8 @@ const thAkademik = ref({})
 const isLoading = ref(false)
 
 // Get user role for conditional rendering
-const userData = useCookie("userData").value ?? {};
-const isAdmin = computed(() => userData.role?.name === "admin");
+const userData = useCookie("userData").value ?? {}
+const isAdmin = computed(() => userData.role?.name === "admin")
 
 const fetchThAkademik = async () => {
   try {
@@ -22,11 +22,12 @@ const fetchThAkademik = async () => {
     const response = await $api('/admin/th-akademik/' + id, {
       method: "GET",
     })
-    thAkademik.value = response;
+
+    thAkademik.value = response
   } catch (err) {
-    console.log(err);
+    console.log(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
     isLoading.value = false
@@ -52,7 +53,6 @@ onMounted(() => {
   document.title = isAdmin.value ? 'Tahun Akademik Edit - SIMKEU' : 'Tahun Akademik View - SIMKEU'
   fetchThAkademik()
 })
-
 </script>
 
 <template>
@@ -64,15 +64,18 @@ onMounted(() => {
         </template>
 
         <VCardText>
-          <div v-if="isLoading" class="text-center">
+          <div
+            v-if="isLoading"
+            class="text-center"
+          >
             <VProgressLinear indeterminate />
           </div>
           <FormThAkademik 
             v-else 
-            typeForm="edit" 
-            :dataForm="thAkademik" 
+            type-form="edit" 
+            :data-form="thAkademik" 
             :url="'/admin/th-akademik/' + id" 
-            :readOnly="!isAdmin"
+            :read-only="!isAdmin"
           />
         </VCardText>
       </VCard>

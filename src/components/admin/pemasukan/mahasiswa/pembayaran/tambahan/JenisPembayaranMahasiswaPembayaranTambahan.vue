@@ -9,48 +9,49 @@ const props = defineProps({
     type: Object,
     required: false,
   },
-});
+})
 
-const jenisPembayaran = ref([]);
-const selectedJenisPembayaran = ref();
-const loadingJenisPembayaran = ref(false);
+const jenisPembayaran = ref([])
+const selectedJenisPembayaran = ref()
+const loadingJenisPembayaran = ref(false)
 
 const fetchJenisPembayaran = async () => {
   try {
-    loadingJenisPembayaran.value = true;
-    jenisPembayaran.value = [];
+    loadingJenisPembayaran.value = true
+    jenisPembayaran.value = []
+
     const res = await $api(`/admin/pemasukan/mahasiswa/jenis-pembayaran`, {
       method: "GET",
       body: {
         limit: 0,
         manual_only: 1,
       },
-    });
+    })
 
-    jenisPembayaran.value = res.data.data.map((item) => ({
+    jenisPembayaran.value = res.data.data.map(item => ({
       display: `${item.nama} - ${item.kategori}`,
       value: item.nama,
-    }));
+    }))
   } catch (error) {
     showSnackbar({
       text: error,
       color: "error",
-    });
+    })
   } finally {
-    loadingJenisPembayaran.value = false;
+    loadingJenisPembayaran.value = false
   }
-};
+}
 
-defineExpose({ selectedJenisPembayaran });
+defineExpose({ selectedJenisPembayaran })
 
 onMounted(async () => {
-  await fetchJenisPembayaran();
+  await fetchJenisPembayaran()
   if (props.typeForm === 'edit') {
     selectedJenisPembayaran.value = jenisPembayaran.value.find(
-      (item) => item.value === props.dataForm.jenis_pembayaran
-    );
+      item => item.value === props.dataForm.jenis_pembayaran,
+    )
   }
-});
+})
 
 // watch(
 //   () => props.dataForm,
@@ -64,7 +65,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <VCard class="mt-4" title="Metode Pembayaran">
+  <VCard
+    class="mt-4"
+    title="Metode Pembayaran"
+  >
     <VCardText>
       <VRow>
         <VCol cols="12">

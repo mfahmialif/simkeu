@@ -1,7 +1,5 @@
 <script setup>
-import { showSnackbar } from "@/composables/snackbar";
-
-const router = useRouter();
+import { showSnackbar } from "@/composables/snackbar"
 
 const props = defineProps({
   typeForm: {
@@ -20,11 +18,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
-const refForm = ref(null);
-const disabled = ref(false);
-const prodiOptions = ref([]);
+const router = useRouter()
+
+const refForm = ref(null)
+const disabled = ref(false)
+const prodiOptions = ref([])
 
 const form = reactive({
   nama: "",
@@ -46,36 +46,36 @@ const form = reactive({
   gelar_belakang: "",
   prodi_id: null,
   jabatan: "",
-});
+})
 
 const jenisKelaminOptions = [
   { title: "Laki-laki", value: "Laki-laki" },
   { title: "Perempuan", value: "Perempuan" },
-];
+]
 
 const tipeOptions = [
   { title: "Dosen", value: "dosen" },
   { title: "Staff", value: "staff" },
-];
+]
 
 const statusOptions = [
   { title: "Aktif", value: "aktif" },
   { title: "Tidak Aktif", value: "tidak aktif" },
-];
+]
 
-const errorMessage = (err) => {
+const errorMessage = err => {
   const message =
     err?.data?.message ||
     err?.response?._data?.message ||
     err?.response?.data?.message ||
-    err?.message;
+    err?.message
 
   if (typeof message === "object") {
-    return Object.values(message).flat().join("; ");
+    return Object.values(message).flat().join("; ")
   }
 
-  return message || "Terjadi kesalahan.";
-};
+  return message || "Terjadi kesalahan."
+}
 
 const fetchProdi = async () => {
   try {
@@ -86,77 +86,78 @@ const fetchProdi = async () => {
         sort_key: "nama",
         sort_order: "asc",
       },
-    });
+    })
 
-    const rows = response?.data?.data || [];
-    prodiOptions.value = rows.map((item) => ({
+    const rows = response?.data?.data || []
+
+    prodiOptions.value = rows.map(item => ({
       title: `${item.kode} - ${item.nama}`,
       value: item.id,
-    }));
+    }))
   } catch (err) {
-    console.error(err);
+    console.error(err)
   }
-};
+}
 
-const applyData = (data) => {
-  form.nama = data?.nama || "";
-  form.jenis_kelamin = data?.jenis_kelamin || "Laki-laki";
-  form.tipe = data?.tipe || "dosen";
-  form.kode = data?.kode || "";
-  form.tempat_lahir = data?.tempat_lahir || "";
-  form.tanggal_lahir = data?.tanggal_lahir || "";
-  form.alamat = data?.alamat || "";
-  form.email = data?.email || "";
-  form.hp = data?.hp || "";
-  form.nomer_rekening = data?.nomer_rekening || "";
-  form.nama_pemilik_rekening = data?.nama_pemilik_rekening || "";
-  form.bank = data?.bank || "";
-  form.status = data?.status || "aktif";
-  form.dosen_kode = data?.dosen?.kode || data?.kode || "";
-  form.nidn = data?.dosen?.nidn || "";
-  form.gelar_depan = data?.dosen?.gelar_depan || "";
-  form.gelar_belakang = data?.dosen?.gelar_belakang || "";
-  form.prodi_id = data?.dosen?.prodi_id || null;
-  form.jabatan = data?.staff?.jabatan || "";
-};
+const applyData = data => {
+  form.nama = data?.nama || ""
+  form.jenis_kelamin = data?.jenis_kelamin || "Laki-laki"
+  form.tipe = data?.tipe || "dosen"
+  form.kode = data?.kode || ""
+  form.tempat_lahir = data?.tempat_lahir || ""
+  form.tanggal_lahir = data?.tanggal_lahir || ""
+  form.alamat = data?.alamat || ""
+  form.email = data?.email || ""
+  form.hp = data?.hp || ""
+  form.nomer_rekening = data?.nomer_rekening || ""
+  form.nama_pemilik_rekening = data?.nama_pemilik_rekening || ""
+  form.bank = data?.bank || ""
+  form.status = data?.status || "aktif"
+  form.dosen_kode = data?.dosen?.kode || data?.kode || ""
+  form.nidn = data?.dosen?.nidn || ""
+  form.gelar_depan = data?.dosen?.gelar_depan || ""
+  form.gelar_belakang = data?.dosen?.gelar_belakang || ""
+  form.prodi_id = data?.dosen?.prodi_id || null
+  form.jabatan = data?.staff?.jabatan || ""
+}
 
 watch(
   () => props.dataForm,
-  (data) => {
+  data => {
     if (props.typeForm === "edit" && data) {
-      applyData(data);
+      applyData(data)
     }
   },
-  { immediate: true }
-);
+  { immediate: true },
+)
 
 watch(
   () => form.kode,
-  (kode) => {
+  kode => {
     if (form.tipe === "dosen" && !form.dosen_kode) {
-      form.dosen_kode = kode;
+      form.dosen_kode = kode
     }
-  }
-);
+  },
+)
 
 watch(
   () => form.tipe,
-  (tipe) => {
+  tipe => {
     if (tipe === "dosen" && !form.dosen_kode) {
-      form.dosen_kode = form.kode;
+      form.dosen_kode = form.kode
     }
-  }
-);
+  },
+)
 
 const onSubmit = async () => {
-  if (props.readOnly) return;
+  if (props.readOnly) return
 
-  const valid = await refForm.value.validate();
-  if (!valid.valid) return;
+  const valid = await refForm.value.validate()
+  if (!valid.valid) return
 
-  const method = props.typeForm === "edit" ? "PUT" : "POST";
+  const method = props.typeForm === "edit" ? "PUT" : "POST"
 
-  disabled.value = true;
+  disabled.value = true
 
   const body = {
     nama: form.nama,
@@ -178,46 +179,52 @@ const onSubmit = async () => {
     gelar_belakang: form.tipe === "dosen" ? form.gelar_belakang || null : null,
     prodi_id: form.tipe === "dosen" ? form.prodi_id || null : null,
     jabatan: form.tipe === "staff" ? form.jabatan : null,
-  };
+  }
 
   try {
     const response = await $api(props.url, {
       method,
       body,
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      router.push("/admin/pegawai");
+      router.push("/admin/pegawai")
     } else {
       showSnackbar({
         text: errorMessage(response),
         color: "error",
-      });
+      })
     }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
       color: "error",
-    });
+    })
   } finally {
-    disabled.value = false;
+    disabled.value = false
   }
-};
+}
 
 onMounted(() => {
-  fetchProdi();
-});
+  fetchProdi()
+})
 </script>
 
 <template>
-  <VForm ref="refForm" @submit.prevent="onSubmit">
+  <VForm
+    ref="refForm"
+    @submit.prevent="onSubmit"
+  >
     <VRow>
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="form.nama"
           :rules="[requiredValidator]"
@@ -227,7 +234,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="form.kode"
           :rules="[requiredValidator]"
@@ -237,7 +247,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VSelect
           v-model="form.jenis_kelamin"
           :items="jenisKelaminOptions"
@@ -248,7 +261,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VSelect
           v-model="form.tipe"
           :items="tipeOptions"
@@ -259,7 +275,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VSelect
           v-model="form.status"
           :items="statusOptions"
@@ -270,7 +289,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="form.tempat_lahir"
           label="Tempat Lahir"
@@ -279,7 +301,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="form.tanggal_lahir"
           type="date"
@@ -298,7 +323,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="form.email"
           :rules="[emailValidator]"
@@ -309,7 +337,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="6">
+      <VCol
+        cols="12"
+        md="6"
+      >
         <VTextField
           v-model="form.hp"
           label="HP"
@@ -318,7 +349,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VTextField
           v-model="form.nomer_rekening"
           label="Nomer Rekening"
@@ -327,7 +361,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VTextField
           v-model="form.nama_pemilik_rekening"
           label="Nama Pemilik Rekening"
@@ -336,7 +373,10 @@ onMounted(() => {
         />
       </VCol>
 
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VTextField
           v-model="form.bank"
           label="Bank"
@@ -346,7 +386,10 @@ onMounted(() => {
       </VCol>
 
       <template v-if="form.tipe === 'dosen'">
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="form.dosen_kode"
             label="Kode Dosen"
@@ -355,7 +398,10 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="form.nidn"
             label="NIDN"
@@ -364,7 +410,10 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="form.gelar_depan"
             label="Gelar Depan"
@@ -373,7 +422,10 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" md="6">
+        <VCol
+          cols="12"
+          md="6"
+        >
           <VTextField
             v-model="form.gelar_belakang"
             label="Gelar Belakang"
@@ -408,14 +460,21 @@ onMounted(() => {
         </VCol>
       </template>
 
-      <VCol cols="12" class="d-flex gap-4" v-if="!readOnly">
-        <VBtn type="submit" :disabled="disabled">
+      <VCol
+        v-if="!readOnly"
+        cols="12"
+        class="d-flex gap-4"
+      >
+        <VBtn
+          type="submit"
+          :disabled="disabled"
+        >
           Submit
         </VBtn>
 
         <VBtn
-          type="reset"
           v-if="typeForm !== 'edit'"
+          type="reset"
           color="secondary"
           variant="tonal"
         >

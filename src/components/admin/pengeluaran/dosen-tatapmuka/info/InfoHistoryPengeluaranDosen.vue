@@ -1,40 +1,43 @@
 <script setup>
+const page = ref(1)
+const itemsPerPage = ref(5)
+const sortBy = ref({ key: "id", order: "desc" })
+const search = ref("")
+const selectedRows = ref([])
+const dataTable = ref([])
+const totalItems = ref(0)
+const loading = ref(true)
+const initialLoading = ref(true)
 
-const page = ref(1);
-const itemsPerPage = ref(5);
-const sortBy = ref({ key: "id", order: "desc" });
-const search = ref("");
-const selectedRows = ref([]);
-const dataTable = ref([]);
-const totalItems = ref(0);
-const loading = ref(true);
-const initialLoading = ref(true);
+const numberValue = value => Number(value ?? 0)
+const amountValue = (value, fallback = 0) => value ?? fallback ?? 0
 
-const numberValue = (value) => Number(value ?? 0);
-const amountValue = (value, fallback = 0) => value ?? fallback ?? 0;
-const subtotalTransport = (item) => {
-  const transportMotor = numberValue(amountValue(item.transport_motor, item.transport));
-  const hariMotor = numberValue(amountValue(item.hari_transport_motor, item.hari));
-  const transportMobil = numberValue(amountValue(item.transport_mobil, item.transport_mobil_tanpa_tol));
-  const hariMobil = numberValue(amountValue(item.hari_transport_mobil, item.hari_transport_mobil_tanpa_tol));
+const subtotalTransport = item => {
+  const transportMotor = numberValue(amountValue(item.transport_motor, item.transport))
+  const hariMotor = numberValue(amountValue(item.hari_transport_motor, item.hari))
+  const transportMobil = numberValue(amountValue(item.transport_mobil, item.transport_mobil_tanpa_tol))
+  const hariMobil = numberValue(amountValue(item.hari_transport_mobil, item.hari_transport_mobil_tanpa_tol))
 
   return transportMotor * hariMotor
-    + transportMobil * hariMobil;
-};
-const subtotalMengajar = (item) => {
-  const barokahBiasa = numberValue(amountValue(item.barokah_mengajar_biasa, item.barokah));
-  const jamBiasa = numberValue(item.jam);
-  const barokahDoubleDegree = numberValue(item.barokah_mengajar_double_degree);
-  const jamDoubleDegree = numberValue(amountValue(item.jam_mengajar_double_degree, item.jam));
+    + transportMobil * hariMobil
+}
 
-  return Math.round((barokahBiasa * jamBiasa) + (barokahDoubleDegree * jamDoubleDegree));
-};
-const subtotalSempro = (item) => numberValue(item.barokah_sempro) * numberValue(amountValue(item.jam_sempro, item.barokah_sempro ? 1 : 0));
-const subtotalUas = (item) => numberValue(item.barokah_uas) * numberValue(item.jumlah_mahasiswa_uas);
+const subtotalMengajar = item => {
+  const barokahBiasa = numberValue(amountValue(item.barokah_mengajar_biasa, item.barokah))
+  const jamBiasa = numberValue(item.jam)
+  const barokahDoubleDegree = numberValue(item.barokah_mengajar_double_degree)
+  const jamDoubleDegree = numberValue(amountValue(item.jam_mengajar_double_degree, item.jam))
+
+  return Math.round((barokahBiasa * jamBiasa) + (barokahDoubleDegree * jamDoubleDegree))
+}
+
+const subtotalSempro = item => numberValue(item.barokah_sempro) * numberValue(amountValue(item.jam_sempro, item.barokah_sempro ? 1 : 0))
+const subtotalUas = item => numberValue(item.barokah_uas) * numberValue(item.jumlah_mahasiswa_uas)
 
 const fetchData = async (kode = "9999999") => {
   try {
-    loading.value = true;
+    loading.value = true
+
     const { data } = await $api("/admin/pengeluaran/dosen", {
       method: "GET",
       body: {
@@ -43,74 +46,74 @@ const fetchData = async (kode = "9999999") => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         search: search.value,
-        kode: kode
+        kode: kode,
       },
-    });
+    })
 
-    dataTable.value = data.data;
-    totalItems.value = data.total;
+    dataTable.value = data.data
+    totalItems.value = data.total
   } catch (err) {
-    console.error(err);
+    console.error(err)
   } finally {
-    loading.value = false;
-    if (initialLoading.value) initialLoading.value = false;
+    loading.value = false
+    if (initialLoading.value) initialLoading.value = false
   }
-};
+}
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
-  page.value = p;
-  itemsPerPage.value = ipp;
-  if (sb.length) sortBy.value = sb[0];
-  fetchData();
-};
+  page.value = p
+  itemsPerPage.value = ipp
+  if (sb.length) sortBy.value = sb[0]
+  fetchData()
+}
 
-const isDialogDeleteVisible = ref(false);
-const deleteData = ref({});
+const isDialogDeleteVisible = ref(false)
+const deleteData = ref({})
 
 const showDialogDelete = (id, name) => {
   deleteData.value = {
     id: id,
     name: name,
-  };
-  isDialogDeleteVisible.value = true;
-};
+  }
+  isDialogDeleteVisible.value = true
+}
 
-const deleteDataSubmit = async (id) => {
+const deleteDataSubmit = async id => {
   try {
     const response = await $api("/admin/pengeluaran/dosen/" + id, {
       method: "DELETE",
-    });
+    })
 
     if (response.status === true) {
       showSnackbar({
         text: response.message,
         color: "success",
-      });
+      })
 
-      fetchData();
+      fetchData()
     } else {
       showSnackbar({
         text: response.message,
         color: "error",
-      });
+      })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan.";
+      : err.data?.message || "Terjadi kesalahan."
 
     showSnackbar({
       text: message,
       color: "error",
-    });
+    })
   } finally {
-    isDialogDeleteVisible.value = false;
+    isDialogDeleteVisible.value = false
   }
-};
+}
 
 defineExpose({
   fetchData,
-});
+})
 </script>
 
 <template>
@@ -134,11 +137,13 @@ defineExpose({
         </div>
 
         <VSpacer />
-        
       </VCardText>
 
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:model-value="selectedRows"
+        v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="[
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
@@ -150,9 +155,6 @@ defineExpose({
           { title: 'Total', key: 'total' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
-        v-model:model-value="selectedRows"
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -160,15 +162,27 @@ defineExpose({
         item-value="id"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Tidak ada data.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Tidak ada data.
+          </div>
         </template>
 
         <template #item.id="{ index }">
@@ -230,7 +244,10 @@ defineExpose({
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="isDialogDeleteVisible" width="500">
+    <VDialog
+      v-model="isDialogDeleteVisible"
+      width="500"
+    >
       <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
@@ -240,7 +257,11 @@ defineExpose({
         />
 
         <VCardText class="d-flex align-center">
-          <VIcon icon="ri-alert-line" size="32" class="me-2" />
+          <VIcon
+            icon="ri-alert-line"
+            size="32"
+            class="me-2"
+          />
           <span>
             Anda yakin ingin menghapus data ini? Penghapusan data tidak dapat
             dibatalkan.
@@ -255,8 +276,14 @@ defineExpose({
           >
             Batal
           </VBtn>
-          <VBtn color="error" @click="deleteDataSubmit(deleteData.id)">
-            <VIcon icon="ri-delete-bin-line" class="me-1" />
+          <VBtn
+            color="error"
+            @click="deleteDataSubmit(deleteData.id)"
+          >
+            <VIcon
+              icon="ri-delete-bin-line"
+              class="me-1"
+            />
             Hapus
           </VBtn>
         </VCardText>

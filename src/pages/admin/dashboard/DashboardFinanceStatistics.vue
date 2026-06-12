@@ -1,51 +1,53 @@
 <script setup>
-import { formatMoney } from "@/composables/formatRupiah";
-import { ref, reactive, computed, watch, onMounted } from "vue";
+import { formatMoney } from "@/composables/formatRupiah"
+import { ref, reactive, computed, watch, onMounted } from "vue"
 
 const chartColors = {
   penerimaan: "#666CFF",
   pengeluaran: "#FF4C51",
-};
+}
 
 const headingColor =
-  "rgba(var(--v-theme-on-background), var(--v-high-emphasis-opacity))";
+  "rgba(var(--v-theme-on-background), var(--v-high-emphasis-opacity))"
+
 const labelColor =
-  "rgba(var(--v-theme-on-background), var(--v-disabled-opacity))";
-const borderColor = "rgba(var(--v-border-color), var(--v-border-opacity))";
+  "rgba(var(--v-theme-on-background), var(--v-disabled-opacity))"
+
+const borderColor = "rgba(var(--v-border-color), var(--v-border-opacity))"
 
 // ==== STATE REAKTIF DARI API ====
-const categories = ref([]);
-const seriesByCurrency = ref([]);
-const selectedCurrency = ref("IDR");
+const categories = ref([])
+const seriesByCurrency = ref([])
+const selectedCurrency = ref("IDR")
 
 const currencyOptions = computed(() =>
-  seriesByCurrency.value.map((item) => ({
+  seriesByCurrency.value.map(item => ({
     title: `${item.mata_uang?.kode || "IDR"} - ${item.mata_uang?.nama || "Rupiah"}`,
     value: String(item.mata_uang?.kode || "IDR").toUpperCase(),
   })),
-);
+)
 
 const activeCurrency = computed(() =>
   seriesByCurrency.value.find(
-    (item) =>
+    item =>
       String(item.mata_uang?.kode || "IDR").toUpperCase() === selectedCurrency.value,
   ) || {
     mata_uang: { kode: "IDR", simbol: "Rp" },
     penerimaan: [],
     pengeluaran: [],
   },
-);
+)
 
-const penerimaan = computed(() => activeCurrency.value.penerimaan || []);
-const pengeluaran = computed(() => activeCurrency.value.pengeluaran || []);
+const penerimaan = computed(() => activeCurrency.value.penerimaan || [])
+const pengeluaran = computed(() => activeCurrency.value.pengeluaran || [])
 
 // Series mengikuti state di atas
 const series = computed(() => [
   { name: `Pemasukan (${selectedCurrency.value})`, type: "column", data: penerimaan.value },
   { name: `Pengeluaran (${selectedCurrency.value})`, type: "line", data: pengeluaran.value },
-]);
+])
 
-const fmtMoney = (value) => formatMoney(value, activeCurrency.value.mata_uang);
+const fmtMoney = value => formatMoney(value, activeCurrency.value.mata_uang)
 
 // Opsi chart reactive
 const shipmentConfig = reactive({
@@ -111,7 +113,7 @@ const shipmentConfig = reactive({
           fontFamily: "Inter",
           fontWeight: 400,
         },
-        formatter: (val) => fmtMoney(val),
+        formatter: val => fmtMoney(val),
       },
       tooltip: { enabled: true },
     },
@@ -125,14 +127,14 @@ const shipmentConfig = reactive({
           fontFamily: "Inter",
           fontWeight: 400,
         },
-        formatter: (val) => fmtMoney(val),
+        formatter: val => fmtMoney(val),
       },
     },
   ],
   tooltip: {
     shared: true,
     intersect: false,
-    y: { formatter: (val) => fmtMoney(val) },
+    y: { formatter: val => fmtMoney(val) },
   },
   responsive: [
     {
@@ -151,37 +153,39 @@ const shipmentConfig = reactive({
     { breakpoint: 982,  options: { plotOptions: { bar: { columnWidth: "30%" } } } },
     { breakpoint: 480,  options: { chart: { height: 250 }, legend: { offsetY: 7 } } },
   ],
-});
+})
 
 // Sinkronkan categories dengan xaxis
-watch(categories, (cats) => {
-  shipmentConfig.xaxis.categories = cats || [];
-  shipmentConfig.xaxis.tickAmount = (cats?.length || 10);
-});
+watch(categories, cats => {
+  shipmentConfig.xaxis.categories = cats || []
+  shipmentConfig.xaxis.tickAmount = (cats?.length || 10)
+})
 
-watch(selectedCurrency, (kode) => {
-  shipmentConfig.yaxis[0].seriesName = `Pemasukan (${kode})`;
-  shipmentConfig.yaxis[1].seriesName = `Pengeluaran (${kode})`;
-});
+watch(selectedCurrency, kode => {
+  shipmentConfig.yaxis[0].seriesName = `Pemasukan (${kode})`
+  shipmentConfig.yaxis[1].seriesName = `Pengeluaran (${kode})`
+})
 
 // FETCH DATA DARI API
-const isLoading = ref(false);
+const isLoading = ref(false)
+
 const fetchData = async () => {
-  isLoading.value = true;
+  isLoading.value = true
   try {
-    const response = await $api("/admin/dashboard/statistic");
+    const response = await $api("/admin/dashboard/statistic")
 
     if (!response || !response.status) {
-      showSnackbar({ text: response?.message || "Gagal mengambil data", color: "error" });
-      return;
+      showSnackbar({ text: response?.message || "Gagal mengambil data", color: "error" })
+      
+      return
     }
 
-    categories.value = response.categories || [];
-    seriesByCurrency.value = (response.series_by_currency || []).map((item) => ({
+    categories.value = response.categories || []
+    seriesByCurrency.value = (response.series_by_currency || []).map(item => ({
       ...item,
       penerimaan: (item.penerimaan || []).map(Number),
       pengeluaran: (item.pengeluaran || []).map(Number),
-    }));
+    }))
 
     if (!seriesByCurrency.value.length) {
       seriesByCurrency.value = [{
@@ -189,26 +193,26 @@ const fetchData = async () => {
         mata_uang: { kode: "IDR", nama: "Rupiah", simbol: "Rp" },
         penerimaan: (response.penerimaan || []).map(Number),
         pengeluaran: (response.pengeluaran || []).map(Number),
-      }];
+      }]
     }
 
-    if (!currencyOptions.value.some((item) => item.value === selectedCurrency.value)) {
+    if (!currencyOptions.value.some(item => item.value === selectedCurrency.value)) {
       selectedCurrency.value =
-        currencyOptions.value.find((item) => item.value === "IDR")?.value
+        currencyOptions.value.find(item => item.value === "IDR")?.value
         || currencyOptions.value[0]?.value
-        || "IDR";
+        || "IDR"
     }
   } catch (e) {
-    console.error(e);
-    showSnackbar({ text: "Terjadi kesalahan jaringan", color: "error" });
+    console.error(e)
+    showSnackbar({ text: "Terjadi kesalahan jaringan", color: "error" })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
-const month = new Date().toLocaleString("default", { month: "long" });
+const month = new Date().toLocaleString("default", { month: "long" })
 
-onMounted(fetchData);
+onMounted(fetchData)
 </script>
 
 <template>
@@ -233,7 +237,12 @@ onMounted(fetchData);
               style="inline-size: 150px"
               :disabled="currencyOptions.length <= 1"
             />
-            <VChip color="primary" variant="tonal">{{ month }}</VChip>
+            <VChip
+              color="primary"
+              variant="tonal"
+            >
+              {{ month }}
+            </VChip>
           </div>
         </template>
       </VCardItem>

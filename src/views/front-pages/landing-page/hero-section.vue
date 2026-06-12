@@ -32,8 +32,15 @@ const translateMouse = computed(() => speed => {
 </script>
 
 <template>
-  <section id="home" :style="{ 'background-color': 'rgb(var(--v-theme-surface))' }">
-    <div id="landingHero" class="landing-hero" :style="{ backgroundImage: `url(${heroBgUrl})` }">
+  <section
+    id="home"
+    :style="{ 'background-color': 'rgb(var(--v-theme-surface))' }"
+  >
+    <div
+      id="landingHero"
+      class="landing-hero"
+      :style="{ backgroundImage: `url(${heroBgUrl})` }"
+    >
       <VContainer>
         <div class="text-center pt-6 pb-16">
           <div class="mb-4 landing-page-title">
@@ -52,23 +59,42 @@ const translateMouse = computed(() => speed => {
               keuangan dengan akurat dan efisien.
             </p>
           </div>
-          <VBtn :to="{ name: 'login' }" size="large" :active="false">
+          <VBtn
+            :to="{ name: 'login' }"
+            size="large"
+            :active="false"
+          >
             Login
           </VBtn>
         </div>
 
         <div class="position-relative hero-animation-img">
           <div class="hero-dashboard-img text-center">
-            <RouterLink to="/" target="_blank">
-              <img :src="heroDashboardImg" data-allow-mismatch class="mx-auto cursor-pointer"
-                :style="translateMouse(3)">
+            <RouterLink
+              to="/"
+              target="_blank"
+            >
+              <img
+                :src="heroDashboardImg"
+                data-allow-mismatch
+                class="mx-auto cursor-pointer"
+                :style="translateMouse(3)"
+              >
             </RouterLink>
           </div>
 
           <div class="hero-elements-img">
-            <RouterLink to="/" target="_blank">
-              <img class="cursor-pointer" data-allow-mismatch :src="heroElementsImg" :style="translateMouse(5)"
-                target="_blank">
+            <RouterLink
+              to="/"
+              target="_blank"
+            >
+              <img
+                class="cursor-pointer"
+                data-allow-mismatch
+                :src="heroElementsImg"
+                :style="translateMouse(5)"
+                target="_blank"
+              >
             </RouterLink>
           </div>
         </div>

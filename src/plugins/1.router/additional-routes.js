@@ -1,9 +1,9 @@
-import { useLogout } from "@/composables/logout";
+import { useLogout } from "@/composables/logout"
 
-const emailRouteComponent = () => import("@/pages/apps/email/index.vue");
-const lpjRouteComponent = () => import("@/components/admin/pengeluaran/PengeluaranLpjDetail.vue");
+const emailRouteComponent = () => import("@/pages/apps/email/index.vue")
+const lpjRouteComponent = () => import("@/components/admin/pengeluaran/PengeluaranLpjDetail.vue")
 
-const { logout } = useLogout();
+const { logout } = useLogout()
 
 // 👉 Redirects
 export const redirects = [
@@ -21,28 +21,30 @@ export const redirects = [
   {
     path: "/logout",
     name: "logout",
-    redirect: (to) => {
-      logout();
-      return { name: "login", query: to.query };
+    redirect: to => {
+      logout()
+      
+      return { name: "login", query: to.query }
     },
   },
   {
     path: "/home",
     name: "home",
-    redirect: (to) => {
+    redirect: to => {
       // TODO: Get type from backend
-      const userData = useCookie("userData");
-      const userRole = userData.value?.role.name;
+      const userData = useCookie("userData")
+      const userRole = userData.value?.role.name
       
       if (!userRole) {
-        return { name: "login", query: to.query };        
+        return { name: "login", query: to.query }        
       }
       
       if (userRole === "user") {
-        return { name: "access-control" };
+        return { name: "access-control" }
       } else {
-        return { name: "admin-dashboard" };
+        return { name: "admin-dashboard" }
       }
+
       // if (userRole === "client") return { name: "access-control" };
       // if (userRole === "admin") return { name: "admin-dashboard" };
 
@@ -64,7 +66,7 @@ export const redirects = [
       params: { tab: "account" },
     }),
   },
-];
+]
 export const routes = [
   {
     path: "/admin/pengeluaran/dosen-tatapmuka/rekap/:id/lpj",
@@ -86,6 +88,17 @@ export const routes = [
       endpoint: "/admin/pengeluaran/dosen-kegiatan",
       basePath: "/admin/pengeluaran/dosen-kegiatan",
       moduleType: "kegiatan",
+    },
+  },
+  {
+    path: "/admin/pengeluaran/rumah-tangga/rekap/:id/lpj",
+    name: "admin-pengeluaran-rumah-tangga-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Rumah Tangga",
+      endpoint: "/admin/pengeluaran/rumah-tangga",
+      basePath: "/admin/pengeluaran/rumah-tangga",
+      moduleType: "rumah-tangga",
     },
   },
   {
@@ -148,4 +161,4 @@ export const routes = [
     name: "apps-ecommerce-dashboard",
     component: () => import("@/pages/dashboards/ecommerce.vue"),
   },
-];
+]

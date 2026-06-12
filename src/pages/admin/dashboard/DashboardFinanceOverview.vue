@@ -1,14 +1,14 @@
 <script setup>
-import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah";
-import { showSnackbar } from "@/composables/snackbar";
-import { computed, onMounted, ref, watch } from "vue";
+import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah"
+import { showSnackbar } from "@/composables/snackbar"
+import { computed, onMounted, ref, watch } from "vue"
 
 // Palette warna dan ikon untuk kategori dinamis
 const colorPalette = [
   { bg: "rgb(var(--v-theme-primary))", text: "rgb(var(--v-theme-on-primary))" },
   { bg: "rgb(var(--v-theme-info))", text: "rgb(var(--v-theme-on-primary))" },
   { bg: "rgba(var(--v-theme-on-surface), var(--v-hover-opacity))", text: "rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity))" },
-];
+]
 
 const iconPalette = [
   "ri-wallet-3-line",
@@ -20,96 +20,99 @@ const iconPalette = [
   "ri-exchange-funds-line",
   "ri-gift-line",
   "ri-file-list-3-line",
-];
+]
 
-const rawFinanceData = ref([]);
-const totalsByCurrency = ref([]);
-const selectedCurrency = ref("IDR");
+const rawFinanceData = ref([])
+const totalsByCurrency = ref([])
+const selectedCurrency = ref("IDR")
 
 // ===== FILTER =====
-const thAkademikList = ref([]);
-const prodiList = ref([]);
+const thAkademikList = ref([])
+const prodiList = ref([])
 
-const selectedThAkademik = ref(null);
-const selectedProdi = ref(null);
-const selectedJk = ref(null);
+const selectedThAkademik = ref(null)
+const selectedProdi = ref(null)
+const selectedJk = ref(null)
 
 const currencyOptions = computed(() =>
-  totalsByCurrency.value.map((item) => ({
+  totalsByCurrency.value.map(item => ({
     title: `${item.mata_uang?.kode || "IDR"} - ${item.mata_uang?.nama || "Rupiah"}`,
     value: String(item.mata_uang?.kode || "IDR").toUpperCase(),
   })),
-);
+)
 
 const selectedCurrencyTotal = computed(() =>
   totalsByCurrency.value.find(
-    (item) =>
+    item =>
       String(item.mata_uang?.kode || "IDR").toUpperCase() === selectedCurrency.value,
   ),
-);
+)
 
 const selectedMataUang = computed(
   () => selectedCurrencyTotal.value?.mata_uang || {
     kode: selectedCurrency.value,
     simbol: selectedCurrency.value === "IDR" ? "Rp" : selectedCurrency.value,
   },
-);
+)
 
 const fetchThAkademik = async () => {
   try {
     const { data } = await $api("/admin/th-akademik", {
       method: "GET",
       body: { limit: 0, sort_key: "kode", sort_order: "desc" },
-    });
-    thAkademikList.value = (data.data || []).map((i) => ({
+    })
+
+    thAkademikList.value = (data.data || []).map(i => ({
       title: `${i.nama} - ${i.semester}`,
       value: i.id,
-    }));
+    }))
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-};
+}
 
 const fetchProdi = async () => {
   try {
     const { data } = await $api("/admin/prodi", {
       method: "GET",
       body: { limit: 0, sort_key: "kode", sort_order: "desc" },
-    });
-    prodiList.value = (data.data || []).map((i) => ({
+    })
+
+    prodiList.value = (data.data || []).map(i => ({
       title: i.nama,
       value: i.id,
-    }));
+    }))
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-};
+}
 
 const jkList = [
   { title: "Laki-laki", value: 8 },
   { title: "Perempuan", value: 9 },
-];
+]
 
 // Watch filter changes -> refetch
 watch([selectedThAkademik, selectedProdi, selectedJk], () => {
-  fetchData();
-});
+  fetchData()
+})
 
 // ===== DATA =====
-const totalAmount = computed(() => Number(selectedCurrencyTotal.value?.total || 0));
-const totalLakiLaki = computed(() => Number(selectedCurrencyTotal.value?.laki_laki || 0));
-const totalPerempuan = computed(() => Number(selectedCurrencyTotal.value?.perempuan || 0));
-const totalSummary = computed(() => formatCurrencyTotals(totalsByCurrency.value));
-const money = (amount) => formatMoney(amount, selectedMataUang.value);
+const totalAmount = computed(() => Number(selectedCurrencyTotal.value?.total || 0))
+const totalLakiLaki = computed(() => Number(selectedCurrencyTotal.value?.laki_laki || 0))
+const totalPerempuan = computed(() => Number(selectedCurrencyTotal.value?.perempuan || 0))
+const totalSummary = computed(() => formatCurrencyTotals(totalsByCurrency.value))
+const money = amount => formatMoney(amount, selectedMataUang.value)
 
 const allFinanceData = computed(() => {
-  const total = totalAmount.value || 1;
+  const total = totalAmount.value || 1
+  
   return rawFinanceData.value
-    .map((item) => {
+    .map(item => {
       const currency = item.by_currency.find(
-        (row) =>
+        row =>
           String(row.mata_uang?.kode || "IDR").toUpperCase() === selectedCurrency.value,
-      );
+      )
 
       return {
         name: item.name,
@@ -117,30 +120,31 @@ const allFinanceData = computed(() => {
         laki_laki: Number(currency?.laki_laki || 0),
         perempuan: Number(currency?.perempuan || 0),
         percentage: Number(currency?.percent ?? 0),
-      };
+      }
     })
-    .filter((item) => item.amount > 0)
+    .filter(item => item.amount > 0)
     .sort((left, right) => right.amount - left.amount)
     .map((item, index) => ({
       ...item,
       icon: iconPalette[index % iconPalette.length],
       color: colorPalette[Math.min(index, colorPalette.length - 1)],
       percentage: item.percentage || +((item.amount / total) * 100).toFixed(1),
-    }));
-});
+    }))
+})
 
 // Data untuk card: top 2 + Lainnya
 const financeData = computed(() => {
-  const total = totalAmount.value || 1;
-  const all = allFinanceData.value;
+  const total = totalAmount.value || 1
+  const all = allFinanceData.value
 
-  if (all.length <= 3) return all;
+  if (all.length <= 3) return all
 
-  const top2 = all.slice(0, 2);
+  const top2 = all.slice(0, 2)
 
-  const lainnyaAmount = all.slice(2).reduce((s, i) => s + i.amount, 0);
-  const lainnyaLakiLaki = all.slice(2).reduce((s, i) => s + (i.laki_laki || 0), 0);
-  const lainnyaPerempuan = all.slice(2).reduce((s, i) => s + (i.perempuan || 0), 0);
+  const lainnyaAmount = all.slice(2).reduce((s, i) => s + i.amount, 0)
+  const lainnyaLakiLaki = all.slice(2).reduce((s, i) => s + (i.laki_laki || 0), 0)
+  const lainnyaPerempuan = all.slice(2).reduce((s, i) => s + (i.perempuan || 0), 0)
+
   const lainnya = {
     icon: "ri-more-line",
     name: "Lainnya",
@@ -150,105 +154,109 @@ const financeData = computed(() => {
     color: colorPalette[2],
     percentage: +((lainnyaAmount / total) * 100).toFixed(1),
     isLainnya: true,
-  };
+  }
 
-  return [...top2, lainnya];
-});
+  return [...top2, lainnya]
+})
 
-const lainnyaDetails = computed(() => allFinanceData.value.slice(2));
+const lainnyaDetails = computed(() => allFinanceData.value.slice(2))
 
 // Modal state
-const showLainnyaModal = ref(false);
+const showLainnyaModal = ref(false)
 
 // Router untuk navigasi ke detail
-const router = useRouter();
+const router = useRouter()
 
 const goToDetail = (category = null) => {
-  const query = {};
-  if (category) query.category = category;
-  if (selectedThAkademik.value) query.th_akademik_id = selectedThAkademik.value;
-  if (selectedProdi.value) query.prodi_id = selectedProdi.value;
-  if (selectedJk.value) query.jk_id = selectedJk.value;
-  query.mata_uang_kode = selectedCurrency.value;
-  router.push({ path: '/admin/dashboard/finance-detail', query });
-};
+  const query = {}
+  if (category) query.category = category
+  if (selectedThAkademik.value) query.th_akademik_id = selectedThAkademik.value
+  if (selectedProdi.value) query.prodi_id = selectedProdi.value
+  if (selectedJk.value) query.jk_id = selectedJk.value
+  query.mata_uang_kode = selectedCurrency.value
+  router.push({ path: '/admin/dashboard/finance-detail', query })
+}
 
-const handleRowAction = (row) => {
+const handleRowAction = row => {
   if (row.isLainnya) {
-    showLainnyaModal.value = true;
+    showLainnyaModal.value = true
   } else {
-    goToDetail(row.name);
+    goToDetail(row.name)
   }
-};
+}
 
-const openModalRowDetail = (row) => {
-  showLainnyaModal.value = false;
-  goToDetail(row.name);
-};
+const openModalRowDetail = row => {
+  showLainnyaModal.value = false
+  goToDetail(row.name)
+}
 
-const isLoading = ref(false);
+const isLoading = ref(false)
+
 const fetchData = async () => {
-  isLoading.value = true;
+  isLoading.value = true
 
   // Build query params
-  const params = {};
-  if (selectedThAkademik.value) params.th_akademik_id = selectedThAkademik.value;
-  if (selectedProdi.value) params.prodi_id = selectedProdi.value;
-  if (selectedJk.value) params.jk_id = selectedJk.value;
+  const params = {}
+  if (selectedThAkademik.value) params.th_akademik_id = selectedThAkademik.value
+  if (selectedProdi.value) params.prodi_id = selectedProdi.value
+  if (selectedJk.value) params.jk_id = selectedJk.value
 
-  const queryString = new URLSearchParams(params).toString();
-  const url = `/admin/dashboard/finance-overview${queryString ? '?' + queryString : ''}`;
+  const queryString = new URLSearchParams(params).toString()
+  const url = `/admin/dashboard/finance-overview${queryString ? '?' + queryString : ''}`
 
-  const response = await $api(url);
-  isLoading.value = false;
+  const response = await $api(url)
+
+  isLoading.value = false
   if (!response.status) {
     showSnackbar({
       text: response.message,
       color: "error",
-    });
-    return;
+    })
+    
+    return
   }
 
-  totalsByCurrency.value = (response.totals_by_currency || []).map((item) => ({
+  totalsByCurrency.value = (response.totals_by_currency || []).map(item => ({
     ...item,
     total: Number(item.total || 0),
     laki_laki: Number(item.laki_laki || 0),
     perempuan: Number(item.perempuan || 0),
-  }));
-  rawFinanceData.value = (response.data || []).map((item) => ({
+  }))
+  rawFinanceData.value = (response.data || []).map(item => ({
     name: item.name,
-    by_currency: (item.by_currency || []).map((currency) => ({
+    by_currency: (item.by_currency || []).map(currency => ({
       ...currency,
       amount: Number(currency.amount || 0),
       laki_laki: Number(currency.laki_laki || 0),
       perempuan: Number(currency.perempuan || 0),
       percent: Number(currency.percent || 0),
     })),
-  }));
+  }))
 
-  if (!currencyOptions.value.some((item) => item.value === selectedCurrency.value)) {
+  if (!currencyOptions.value.some(item => item.value === selectedCurrency.value)) {
     selectedCurrency.value =
-      currencyOptions.value.find((item) => item.value === "IDR")?.value
+      currencyOptions.value.find(item => item.value === "IDR")?.value
       || currencyOptions.value[0]?.value
-      || "IDR";
+      || "IDR"
   }
-};
+}
 
 onMounted(() => {
-  fetchThAkademik();
-  fetchProdi();
-  fetchData();
-});
+  fetchThAkademik()
+  fetchProdi()
+  fetchData()
+})
 </script>
 
 <template>
   <VCard>
-    <VSkeletonLoader v-if=isLoading
+    <VSkeletonLoader
+      v-if="isLoading"
       type="card, list-item, paragraph, paragraph"
-    ></VSkeletonLoader>
+    />
     <template v-else>
       <VCardItem
-        :title="`Distribusi Pemasukan Keuangan UII Dalwa`"
+        title="Distribusi Pemasukan Keuangan UII Dalwa"
         :subtitle="`Total semua mata uang: ${totalSummary}`"
       >
         <template #append>
@@ -258,9 +266,12 @@ onMounted(() => {
             variant="tonal"
             color="primary"
             aria-label="Lihat detail distribusi pemasukan"
-            @click="goToDetail()"
+            @click="goToDetail"
           >
-            <VIcon icon="ri-arrow-right-up-line" size="18" />
+            <VIcon
+              icon="ri-arrow-right-up-line"
+              size="18"
+            />
           </VBtn>
         </template>
       </VCardItem>
@@ -268,7 +279,11 @@ onMounted(() => {
       <VCardText>
         <!-- Filter -->
         <VRow class="mb-4">
-          <VCol cols="12" sm="6" lg="3">
+          <VCol
+            cols="12"
+            sm="6"
+            lg="3"
+          >
             <VSelect
               v-model="selectedThAkademik"
               :items="thAkademikList"
@@ -279,7 +294,11 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" sm="6" lg="3">
+          <VCol
+            cols="12"
+            sm="6"
+            lg="3"
+          >
             <VSelect
               v-model="selectedProdi"
               :items="prodiList"
@@ -290,7 +309,11 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" sm="6" lg="3">
+          <VCol
+            cols="12"
+            sm="6"
+            lg="3"
+          >
             <VSelect
               v-model="selectedJk"
               :items="jkList"
@@ -301,7 +324,11 @@ onMounted(() => {
               hide-details
             />
           </VCol>
-          <VCol cols="12" sm="6" lg="3">
+          <VCol
+            cols="12"
+            sm="6"
+            lg="3"
+          >
             <VSelect
               v-model="selectedCurrency"
               :items="currencyOptions"
@@ -339,7 +366,10 @@ onMounted(() => {
           </div>
 
           <!-- Bar gabungan -->
-          <div class="finance-progress-bar d-flex rounded-lg overflow-hidden" style="block-size: 46px;">
+          <div
+            class="finance-progress-bar d-flex rounded-lg overflow-hidden"
+            style="block-size: 46px;"
+          >
             <div
               v-for="(item, index) in financeData"
               :key="'bar-' + item.name"
@@ -382,12 +412,16 @@ onMounted(() => {
         <VTable class="text-no-wrap">
           <thead>
             <tr>
-              <th class="ps-0">Jenis Tagihan</th>
+              <th class="ps-0">
+                Jenis Tagihan
+              </th>
               <th>Laki-laki</th>
               <th>Perempuan</th>
               <th>Jumlah</th>
               <th>Persentase</th>
-              <th class="text-end">Aksi</th>
+              <th class="text-end">
+                Aksi
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -395,9 +429,17 @@ onMounted(() => {
               v-for="(row, idx) in financeData"
               :key="idx"
             >
-              <td width="40%" class="ps-0" style="block-size: 48px">
+              <td
+                width="40%"
+                class="ps-0"
+                style="block-size: 48px"
+              >
                 <div class="d-flex align-center text-high-emphasis">
-                  <VIcon :icon="row.icon" size="24" class="me-2" />
+                  <VIcon
+                    :icon="row.icon"
+                    size="24"
+                    class="me-2"
+                  />
                   <h6 class="text-h6 font-weight-regular">
                     {{ row.name }}
                   </h6>
@@ -410,7 +452,9 @@ onMounted(() => {
                 <span class="text-body-2">{{ money(row.perempuan || 0) }}</span>
               </td>
               <td width="20%">
-                <h6 class="text-h6">{{ money(row.amount) }}</h6>
+                <h6 class="text-h6">
+                  {{ money(row.amount) }}
+                </h6>
               </td>
               <td width="10%">
                 <span class="text-body-1">{{ row.percentage }}%</span>
@@ -458,11 +502,19 @@ onMounted(() => {
   </VCard>
 
   <!-- Modal detail Lainnya -->
-  <VDialog v-model="showLainnyaModal" max-width="900">
+  <VDialog
+    v-model="showLainnyaModal"
+    max-width="900"
+  >
     <VCard>
       <VCardTitle class="d-flex align-center justify-space-between pa-4">
         <span>Detail Pemasukan Lainnya</span>
-        <VBtn icon variant="text" size="small" @click="showLainnyaModal = false">
+        <VBtn
+          icon
+          variant="text"
+          size="small"
+          @click="showLainnyaModal = false"
+        >
           <VIcon icon="ri-close-line" />
         </VBtn>
       </VCardTitle>
@@ -471,12 +523,16 @@ onMounted(() => {
         <VTable class="text-no-wrap">
           <thead>
             <tr>
-              <th class="ps-0">Jenis Tagihan</th>
+              <th class="ps-0">
+                Jenis Tagihan
+              </th>
               <th>Laki-laki</th>
               <th>Perempuan</th>
               <th>Jumlah</th>
               <th>Persentase</th>
-              <th class="text-end">Aksi</th>
+              <th class="text-end">
+                Aksi
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -484,9 +540,16 @@ onMounted(() => {
               v-for="(row, idx) in lainnyaDetails"
               :key="idx"
             >
-              <td class="ps-0" style="block-size: 48px">
+              <td
+                class="ps-0"
+                style="block-size: 48px"
+              >
                 <div class="d-flex align-center text-high-emphasis">
-                  <VIcon :icon="row.icon" size="24" class="me-2" />
+                  <VIcon
+                    :icon="row.icon"
+                    size="24"
+                    class="me-2"
+                  />
                   <span class="text-body-1 font-weight-medium">
                     {{ row.name }}
                   </span>
@@ -513,7 +576,10 @@ onMounted(() => {
                   aria-label="Lihat detail jenis tagihan"
                   @click="openModalRowDetail(row)"
                 >
-                  <VIcon icon="ri-arrow-right-up-line" size="18" />
+                  <VIcon
+                    icon="ri-arrow-right-up-line"
+                    size="18"
+                  />
                 </VBtn>
               </td>
             </tr>

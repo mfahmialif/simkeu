@@ -1,54 +1,58 @@
 <script setup>
-import FormPengeluaranDosenKegiatan from "@/components/admin/pengeluaran/dosen-kegiatan/FormPengeluaranDosenKegiatan.vue";
-import { useRoute, useRouter } from "vue-router";
+import FormPengeluaranDosenKegiatan from "@/components/admin/pengeluaran/dosen-kegiatan/FormPengeluaranDosenKegiatan.vue"
+import { useRoute, useRouter } from "vue-router"
 
-const route = useRoute();
-const router = useRouter();
-const id = route.params.id;
+const route = useRoute()
+const router = useRouter()
+const id = route.params.id
+
 const returnPath = computed(() => {
-  const value = route.query.return_to;
-  const path = Array.isArray(value) ? value[0] : value;
+  const value = route.query.return_to
+  const path = Array.isArray(value) ? value[0] : value
 
   if (
     typeof path === "string"
     && path.startsWith("/admin/pengeluaran/dosen-kegiatan")
   ) {
-    return path;
+    return path
   }
 
-  return "/admin/pengeluaran/dosen-kegiatan";
-});
+  return "/admin/pengeluaran/dosen-kegiatan"
+})
 
-const dataForm = ref(null);
-const isLoading = ref(false);
+const dataForm = ref(null)
+const isLoading = ref(false)
 
 const fetchDataForm = async () => {
-  isLoading.value = true;
+  isLoading.value = true
   try {
     const { data } = await $api("/admin/pengeluaran/dosen-kegiatan/" + id, {
       method: "GET",
-    });
+    })
 
-    dataForm.value = data;
+    dataForm.value = data
   } catch (err) {
-    console.log(err);
+    console.log(err)
     if (err.status === 404) {
-      router.replace("/not-found");
+      router.replace("/not-found")
     }
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 onMounted(() => {
-  document.title = "Edit Pengeluaran Kegiatan - SIMKEU";
-  fetchDataForm();
-});
+  document.title = "Edit Pengeluaran Kegiatan - SIMKEU"
+  fetchDataForm()
+})
 </script>
 
 <template>
   <VRow>
-    <VCol cols="12" class="pb-0">
+    <VCol
+      cols="12"
+      class="pb-0"
+    >
       <VBtn
         variant="outlined"
         color="secondary"
@@ -60,7 +64,10 @@ onMounted(() => {
     </VCol>
 
     <VCol cols="12">
-      <div v-if="isLoading" class="text-center">
+      <div
+        v-if="isLoading"
+        class="text-center"
+      >
         <VProgressLinear indeterminate />
       </div>
       <FormPengeluaranDosenKegiatan

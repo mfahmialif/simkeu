@@ -1,5 +1,5 @@
 <script setup>
-import "@/assets/styles/default.css";
+import "@styles/default.css"
 
 import { useConfigStore } from '@core/stores/config'
 import { AppContentLayoutNav } from '@layouts/enums'
@@ -35,14 +35,26 @@ watch([
 </script>
 
 <template>
-  <Component v-bind="layoutAttrs"
-    :is="configStore.appContentLayoutNav === AppContentLayoutNav.Vertical ? DefaultLayoutWithVerticalNav : DefaultLayoutWithHorizontalNav">
+  <Component
+    v-bind="layoutAttrs"
+    :is="configStore.appContentLayoutNav === AppContentLayoutNav.Vertical ? DefaultLayoutWithVerticalNav : DefaultLayoutWithHorizontalNav"
+  >
     <AppLoadingIndicator ref="refLoadingIndicator" />
 
     <RouterView v-slot="{ Component, route }">
-      <Transition name="fade-page" mode="out-in">
-        <Suspense :timeout="0" @fallback="isFallbackStateActive = true" @resolve="isFallbackStateActive = false">
-          <Component :is="Component" :key="route.path" />
+      <Transition
+        name="fade-page"
+        mode="out-in"
+      >
+        <Suspense
+          :timeout="0"
+          @fallback="isFallbackStateActive = true"
+          @resolve="isFallbackStateActive = false"
+        >
+          <Component
+            :is="Component"
+            :key="route.path"
+          />
         </Suspense>
       </Transition>
     </RouterView>

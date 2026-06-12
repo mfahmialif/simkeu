@@ -1,5 +1,5 @@
 <script setup>
-import { showSnackbar } from "@/composables/snackbar";
+import { showSnackbar } from "@/composables/snackbar"
 
 const props = defineProps({
   mahasiswa: {
@@ -11,76 +11,80 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
 const form = ref({
   simpan: 0,
-});
+})
 
-const editMode = ref(false);
-const loadingSimpan = ref(false);
-const loadingCurrent = ref(false);
+const editMode = ref(false)
+const loadingSimpan = ref(false)
+const loadingCurrent = ref(false)
 
 const fetchDeposit = async () => {
   try {
-    loadingCurrent.value = true;
+    loadingCurrent.value = true
+
     const res = await $api(
       `/admin/pemasukan/mahasiswa/catatan-deposit/nim/${props.mahasiswa.nim}`,
-      { method: "GET" }
-    );
-    props.mahasiswa.deposit = res.jumlah;
+      { method: "GET" },
+    )
+
+    props.mahasiswa.deposit = res.jumlah
+
     // Auto-set dipakai plafon = full balance (agar mode tagihan bisa pakai deposit)
-    props.mahasiswa.dipakai = res.jumlah;
+    props.mahasiswa.dipakai = res.jumlah
   } catch (error) {
-    showSnackbar({ text: error, color: "error" });
+    showSnackbar({ text: error, color: "error" })
   } finally {
-    loadingCurrent.value = false;
+    loadingCurrent.value = false
   }
-};
+}
 
 const clearDeposit = () => {
-  props.mahasiswa.deposit = 0;
-  props.mahasiswa.dipakai = 0;
-  props.mahasiswa.autoSimpanDeposit = 0;
-  form.value.simpan = 0;
-  editMode.value = false;
-};
+  props.mahasiswa.deposit = 0
+  props.mahasiswa.dipakai = 0
+  props.mahasiswa.autoSimpanDeposit = 0
+  form.value.simpan = 0
+  editMode.value = false
+}
 
 /** Auto-fill simpan deposit dari kelebihan nominal pembayaran */
 watch(
   () => props.mahasiswa?.autoSimpanDeposit,
-  (val) => {
-    form.value.simpan = Number(val) || 0;
-  }
-);
+  val => {
+    form.value.simpan = Number(val) || 0
+  },
+)
 
 defineExpose({
   fetchDeposit,
   clearDeposit,
-});
+})
 
 async function onSimpan() {
-  if ((form.value.simpan ?? 0) <= 0) return;
+  if ((form.value.simpan ?? 0) <= 0) return
   try {
-    loadingSimpan.value = true;
+    loadingSimpan.value = true
+
     const res = await $api(`/admin/pemasukan/mahasiswa/catatan-deposit`, {
       method: "POST",
       body: {
         nim: props.mahasiswa.nim,
         jumlah: form.value.simpan,
       },
-    });
+    })
 
-    props.mahasiswa.deposit = Number(res.data.jumlah);
-    props.mahasiswa.dipakai = Number(res.data.jumlah);
-    form.value.simpan = 0;
-    editMode.value = false;
+    props.mahasiswa.deposit = Number(res.data.jumlah)
+    props.mahasiswa.dipakai = Number(res.data.jumlah)
+    form.value.simpan = 0
+    editMode.value = false
 
-    showSnackbar({ text: "Deposit berhasil disimpan.", color: "success" });
+    showSnackbar({ text: "Deposit berhasil disimpan.", color: "success" })
   } catch (error) {
-    showSnackbar({ text: error, color: "error" });
+    showSnackbar({ text: error, color: "error" })
   } finally {
-    loadingSimpan.value = false;
+    loadingSimpan.value = false
   }
 }
 </script>
@@ -122,7 +126,10 @@ async function onSimpan() {
           block
           @click="editMode = true"
         >
-          <VIcon icon="ri-add-line" class="me-1" />
+          <VIcon
+            icon="ri-add-line"
+            class="me-1"
+          />
           Tambah Deposit Manual
         </VBtn>
 

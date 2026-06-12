@@ -8,6 +8,6 @@ export const pegawaiMenu = [
       { title: "Staff", to: "admin-pegawai-staff" },
     ],
   },
-];
+]
 
-export default pegawaiMenu;
+export default pegawaiMenu

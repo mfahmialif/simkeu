@@ -27,27 +27,29 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
-});
+})
 
-const selectedProdi = ref(null);
-const selectedTahunAkademik = ref(null);
-const selectedJenisKelamin = ref(null);
+const selectedProdi = ref(null)
+const selectedTahunAkademik = ref(null)
+const selectedJenisKelamin = ref(null)
 
 const downloadExcel = async () => {
   download(
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "Laporan Jumlah Mahasiswa yang Belum dan Sudah Membayar.xlsx"
-  );
-};
+    "Laporan Jumlah Mahasiswa yang Belum dan Sudah Membayar.xlsx",
+  )
+}
 
-const isLoading = ref(false);
+const isLoading = ref(false)
+
 const download = async (accept, filename) => {
   try {
-    isLoading.value = true;
+    isLoading.value = true
     showSnackbar({
       text: "Loading...",
       color: "info",
-    });
+    })
+
     const response = await $api("/admin/pemasukan/mahasiswa/laporan/jumlah-mahasiswa-bayar", {
       method: "GET",
       headers: {
@@ -62,23 +64,22 @@ const download = async (accept, filename) => {
           jenis_kelamin: selectedJenisKelamin.value.value,
         }),
       },
-    });
+    })
 
-    downloadFileExport(response, filename);
+    downloadFileExport(response, filename)
     showSnackbar({
       text: "Laporan berhasil di download.",
       color: "success",
-    });
+    })
   } catch (err) {
     showSnackbar({
       text: err.message,
       color: "error",
-    });
+    })
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
-
+}
 </script>
 
 <template>
@@ -90,9 +91,11 @@ const download = async (accept, filename) => {
     <VDivider />
 
     <VRow class="pa-4">
-
       <!-- Combobox Prodi -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedProdi"
           :items="props.prodi"
@@ -103,7 +106,10 @@ const download = async (accept, filename) => {
         />
       </VCol>
       <!-- Combobox Tahun Akademik -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedTahunAkademik"
           :items="props.tahunAkademik"
@@ -114,7 +120,10 @@ const download = async (accept, filename) => {
         />
       </VCol>
       <!-- Combobox Jenis Kelamin -->
-      <VCol cols="12" md="12">
+      <VCol
+        cols="12"
+        md="12"
+      >
         <VCombobox
           v-model="selectedJenisKelamin"
           :items="props.jenisKelamin"
@@ -124,10 +133,21 @@ const download = async (accept, filename) => {
           :loading="props.isLoadingJenisKelamin"
         />
       </VCol>
-      <VCol cols="12" md="12">
-        <VBtn block color="success" @click="downloadExcel" :loading="isLoading">
+      <VCol
+        cols="12"
+        md="12"
+      >
+        <VBtn
+          block
+          color="success"
+          :loading="isLoading"
+          @click="downloadExcel"
+        >
           Download Excel
-          <VIcon end icon="ri-arrow-down-circle-line" />
+          <VIcon
+            end
+            icon="ri-arrow-down-circle-line"
+          />
         </VBtn>
       </VCol>
     </VRow>

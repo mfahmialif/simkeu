@@ -1,67 +1,71 @@
 <script setup>
-import { formatMoney, formatRupiah } from "@/composables/formatRupiah";
+import { formatMoney, formatRupiah } from "@/composables/formatRupiah"
 
 const props = defineProps({
   mahasiswa: { type: Object, required: true, default: () => ({}) },
-});
+})
 
-const ukuranBajuWisuda = ["S", "M", "L", "XL", "XXL", "XXXL"];
-const jenisKelaminWisuda = ["Laki-Laki", "Perempuan"];
-const WISUDA_TANPA_BAYAR = false;
-const wisudaTahunOptions = ref([]);
-const loadingWisudaTahun = ref(false);
-const prodiWisudaOptions = ref([]);
-const loadingProdiWisuda = ref(false);
+const ukuranBajuWisuda = ["S", "M", "L", "XL", "XXL", "XXXL"]
+const jenisKelaminWisuda = ["Laki-Laki", "Perempuan"]
+const WISUDA_TANPA_BAYAR = false
+const wisudaTahunOptions = ref([])
+const loadingWisudaTahun = ref(false)
+const prodiWisudaOptions = ref([])
+const loadingProdiWisuda = ref(false)
 
 const todayInputDate = () => {
-  const now = new Date();
-  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return localDate.toISOString().slice(0, 10);
-};
+  const now = new Date()
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+  
+  return localDate.toISOString().slice(0, 10)
+}
 
-const normalizeWisudaJenisKelamin = (value) => {
-  const text = String(value || "").toLowerCase();
+const normalizeWisudaJenisKelamin = value => {
+  const text = String(value || "").toLowerCase()
+  
   return text.includes("perempuan") || text.includes("wanita") || text.includes("putri")
     ? "Perempuan"
-    : "Laki-Laki";
-};
+    : "Laki-Laki"
+}
 
-const getPayloadItems = (payload) => {
-  const data = payload?.data?.data ?? payload?.data ?? payload;
+const getPayloadItems = payload => {
+  const data = payload?.data?.data ?? payload?.data ?? payload
 
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === "object") return Object.values(data);
+  if (Array.isArray(data)) return data
+  if (data && typeof data === "object") return Object.values(data)
 
-  return [];
-};
+  return []
+}
 
-const getWisudaTahunValue = (tahun) => Number(tahun?.id ?? tahun?.value ?? tahun?.tahun_id);
+const getWisudaTahunValue = tahun => Number(tahun?.id ?? tahun?.value ?? tahun?.tahun_id)
 
-const isWisudaTahunAktif = (tahun) => {
-  const value = tahun?.aktif ?? tahun?.is_active ?? tahun?.active ?? tahun?.status;
+const isWisudaTahunAktif = tahun => {
+  const value = tahun?.aktif ?? tahun?.is_active ?? tahun?.active ?? tahun?.status
 
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value === 1;
+  if (typeof value === "boolean") return value
+  if (typeof value === "number") return value === 1
 
-  const text = String(value || "").trim().toLowerCase();
-  return ["1", "y", "ya", "yes", "true", "aktif", "active"].includes(text);
-};
+  const text = String(value || "").trim().toLowerCase()
+  
+  return ["1", "y", "ya", "yes", "true", "aktif", "active"].includes(text)
+}
 
-const getWisudaTahunTitle = (tahun) => {
+const getWisudaTahunTitle = tahun => {
   const parts = [
     tahun?.nama,
     tahun?.tahun,
     tahun?.kode,
     tahun?.semester,
-  ].filter((item) => item != null && String(item).trim() !== "");
+  ].filter(item => item != null && String(item).trim() !== "")
 
-  return parts.length ? parts.join(" - ") : `Tahun ${tahun?.id ?? ""}`.trim();
-};
+  return parts.length ? parts.join(" - ") : `Tahun ${tahun?.id ?? ""}`.trim()
+}
 
 const defaultWisudaTahunId = () => {
-  const tahunAktif = wisudaTahunOptions.value.find((tahun) => tahun.aktif);
-  return Number(tahunAktif?.value ?? wisudaTahunOptions.value[0]?.value) || 1;
-};
+  const tahunAktif = wisudaTahunOptions.value.find(tahun => tahun.aktif)
+  
+  return Number(tahunAktif?.value ?? wisudaTahunOptions.value[0]?.value) || 1
+}
 
 const createDefaultWisudaForm = () => ({
   nim: "",
@@ -74,139 +78,143 @@ const createDefaultWisudaForm = () => ({
   prodi: "",
   ukuran_baju: "M",
   is_bayar: WISUDA_TANPA_BAYAR,
-});
+})
 
-const wisudaForm = ref(createDefaultWisudaForm());
+const wisudaForm = ref(createDefaultWisudaForm())
 
-const getWisudaProdiValue = (prodi) => (
+const getWisudaProdiValue = prodi => (
   prodi?.alias
   ?? prodi?.kode
   ?? prodi?.nama
   ?? prodi?.value
   ?? ""
-);
+)
 
-const getWisudaProdiTitle = (prodi) => {
-  const value = getWisudaProdiValue(prodi);
-  const nama = prodi?.nama ?? prodi?.title ?? "";
+const getWisudaProdiTitle = prodi => {
+  const value = getWisudaProdiValue(prodi)
+  const nama = prodi?.nama ?? prodi?.title ?? ""
 
-  if (value && nama && value !== nama) return `${value} - ${nama}`;
+  if (value && nama && value !== nama) return `${value} - ${nama}`
 
-  return nama || value;
-};
+  return nama || value
+}
 
-const ensureWisudaProdiOption = (value) => {
-  const prodiValue = String(value || "").trim();
-  if (!prodiValue) return;
+const ensureWisudaProdiOption = value => {
+  const prodiValue = String(value || "").trim()
+  if (!prodiValue) return
 
-  if (!prodiWisudaOptions.value.some((item) => item.value === prodiValue)) {
+  if (!prodiWisudaOptions.value.some(item => item.value === prodiValue)) {
     prodiWisudaOptions.value = [
       { title: prodiValue, value: prodiValue },
       ...prodiWisudaOptions.value,
-    ];
+    ]
   }
-};
+}
 
 const setDefaultWisudaTahun = () => {
-  if (!wisudaTahunOptions.value.length) return;
+  if (!wisudaTahunOptions.value.length) return
 
-  const selected = Number(wisudaForm.value.tahun_id);
-  const selectedOption = wisudaTahunOptions.value.find((item) => Number(item.value) === selected);
-  const activeOption = wisudaTahunOptions.value.find((item) => item.aktif);
+  const selected = Number(wisudaForm.value.tahun_id)
+  const selectedOption = wisudaTahunOptions.value.find(item => Number(item.value) === selected)
+  const activeOption = wisudaTahunOptions.value.find(item => item.aktif)
 
   if (activeOption && !selectedOption?.aktif) {
-    wisudaForm.value.tahun_id = activeOption.value;
+    wisudaForm.value.tahun_id = activeOption.value
   } else if (!selectedOption) {
-    wisudaForm.value.tahun_id = wisudaTahunOptions.value[0].value;
+    wisudaForm.value.tahun_id = wisudaTahunOptions.value[0].value
   }
-};
+}
 
 const fetchWisudaTahun = async () => {
   try {
-    loadingWisudaTahun.value = true;
+    loadingWisudaTahun.value = true
 
     const res = await $api("/admin/pemasukan/mahasiswa/wisuda/tahun", {
       method: "GET",
-    });
+    })
 
     if (res?.status === false) {
-      throw new Error(res.message || "Gagal mengambil data tahun wisuda.");
+      throw new Error(res.message || "Gagal mengambil data tahun wisuda.")
     }
 
-    const seen = new Set();
+    const seen = new Set()
+
     wisudaTahunOptions.value = getPayloadItems(res)
-      .map((tahun) => ({
+      .map(tahun => ({
         title: getWisudaTahunTitle(tahun),
         value: getWisudaTahunValue(tahun),
         aktif: isWisudaTahunAktif(tahun),
       }))
-      .filter((tahun) => Number.isFinite(tahun.value) && tahun.value > 0)
-      .filter((tahun) => {
-        if (seen.has(tahun.value)) return false;
-        seen.add(tahun.value);
-        return true;
-      });
+      .filter(tahun => Number.isFinite(tahun.value) && tahun.value > 0)
+      .filter(tahun => {
+        if (seen.has(tahun.value)) return false
+        seen.add(tahun.value)
+        
+        return true
+      })
 
-    setDefaultWisudaTahun();
+    setDefaultWisudaTahun()
   } catch (error) {
     showSnackbar({
       text: error?.data?.message || error?.message || "Gagal mengambil data tahun wisuda.",
       color: "error",
-    });
+    })
   } finally {
-    loadingWisudaTahun.value = false;
+    loadingWisudaTahun.value = false
   }
-};
+}
 
 const fetchProdiWisuda = async () => {
   try {
-    loadingProdiWisuda.value = true;
+    loadingProdiWisuda.value = true
 
     const res = await $api("/admin/prodi?limit=0&sort_key=kode&sort_order=asc", {
       method: "GET",
-    });
+    })
 
     if (res?.status === false) {
-      throw new Error(res.message || "Gagal mengambil data prodi.");
+      throw new Error(res.message || "Gagal mengambil data prodi.")
     }
 
-    const seen = new Set();
+    const seen = new Set()
+
     prodiWisudaOptions.value = getPayloadItems(res)
-      .map((prodi) => ({
+      .map(prodi => ({
         title: getWisudaProdiTitle(prodi),
         value: String(getWisudaProdiValue(prodi)).trim(),
       }))
-      .filter((prodi) => prodi.value)
-      .filter((prodi) => {
-        if (seen.has(prodi.value)) return false;
-        seen.add(prodi.value);
-        return true;
-      });
+      .filter(prodi => prodi.value)
+      .filter(prodi => {
+        if (seen.has(prodi.value)) return false
+        seen.add(prodi.value)
+        
+        return true
+      })
 
-    ensureWisudaProdiOption(wisudaForm.value.prodi);
+    ensureWisudaProdiOption(wisudaForm.value.prodi)
   } catch (error) {
     showSnackbar({
       text: error?.data?.message || error?.message || "Gagal mengambil data prodi.",
       color: "error",
-    });
+    })
   } finally {
-    loadingProdiWisuda.value = false;
+    loadingProdiWisuda.value = false
   }
-};
+}
 
 const ensureWisudaOptionsLoaded = () => {
   if (!loadingWisudaTahun.value && !wisudaTahunOptions.value.length) {
-    fetchWisudaTahun();
+    fetchWisudaTahun()
   }
 
   if (!loadingProdiWisuda.value && !prodiWisudaOptions.value.length) {
-    fetchProdiWisuda();
+    fetchProdiWisuda()
   }
-};
+}
 
 const resetWisudaFormFromMahasiswa = () => {
-  const mahasiswa = props.mahasiswa ?? {};
-  const prodi = mahasiswa.prodiAlias ?? mahasiswa.prodi_alias ?? mahasiswa.prodi ?? "";
+  const mahasiswa = props.mahasiswa ?? {}
+  const prodi = mahasiswa.prodiAlias ?? mahasiswa.prodi_alias ?? mahasiswa.prodi ?? ""
 
   wisudaForm.value = {
     ...createDefaultWisudaForm(),
@@ -215,166 +223,171 @@ const resetWisudaFormFromMahasiswa = () => {
     nama_ayah: mahasiswa.namaAyah ?? mahasiswa.nama_ayah ?? "-",
     jenis_kelamin: normalizeWisudaJenisKelamin(mahasiswa.jenisKelamin ?? mahasiswa.jenis_kelamin),
     prodi,
-  };
-
-  ensureWisudaProdiOption(prodi);
-};
-
-const tagihan = ref([]);
-const selectedTagihan = ref([]); // <-- array untuk multiple
-const loadingTagihan = ref(false);
-
-/** ──── Payment Mode Toggle ──── */
-const paymentMode = ref("tagihan"); // 'nominal' | 'tagihan'
-const nominalInput = ref({});
-const sisaNominal = ref({});
-const showDetailTagihan = ref(false);
-const useDeposit = ref(false);
-const depositUsed = ref(0);
-const lastPaymentScope = ref("semua");
-
-const mahasiswaSemester = computed(() => {
-  const semester = Number(props.mahasiswa?.semester);
-  return Number.isFinite(semester) && semester > 0 ? semester : null;
-});
-
-const angkatanTahun = computed(() => {
-  const kode = String(props.mahasiswa?.angkatan || "");
-  const tahun = Number(kode.slice(0, 4));
-  return Number.isFinite(tahun) && tahun > 0 ? tahun : null;
-});
-
-const calculateSemesterMahasiswa = (tahunTagihan, semesterKode) => {
-  if (!angkatanTahun.value) return null;
-  if (!Number.isFinite(tahunTagihan) || ![1, 2].includes(semesterKode)) return null;
-
-  return (tahunTagihan - angkatanTahun.value) * 2 + semesterKode;
-};
-
-const getTagihanSemester = (item) => {
-  const kodeTahunAkademik = String(item?.th_akademik_kode || item?.th_akademik?.kode || "");
-  if (angkatanTahun.value && /^\d{5}$/.test(kodeTahunAkademik)) {
-    const tahunTagihan = Number(kodeTahunAkademik.slice(0, 4));
-    const semesterKode = Number(kodeTahunAkademik.slice(4, 5));
-    const semesterMahasiswa = calculateSemesterMahasiswa(tahunTagihan, semesterKode);
-    if (semesterMahasiswa) return semesterMahasiswa;
   }
 
-  return null;
-};
+  ensureWisudaProdiOption(prodi)
+}
 
-const isTagihanBlocked = (item) =>
+const tagihan = ref([])
+const selectedTagihan = ref([]) // <-- array untuk multiple
+const loadingTagihan = ref(false)
+
+/** ──── Payment Mode Toggle ──── */
+const paymentMode = ref("tagihan") // 'nominal' | 'tagihan'
+const nominalInput = ref({})
+const sisaNominal = ref({})
+const showDetailTagihan = ref(false)
+const useDeposit = ref(false)
+const depositUsed = ref(0)
+const lastPaymentScope = ref("semua")
+
+const mahasiswaSemester = computed(() => {
+  const semester = Number(props.mahasiswa?.semester)
+  
+  return Number.isFinite(semester) && semester > 0 ? semester : null
+})
+
+const angkatanTahun = computed(() => {
+  const kode = String(props.mahasiswa?.angkatan || "")
+  const tahun = Number(kode.slice(0, 4))
+  
+  return Number.isFinite(tahun) && tahun > 0 ? tahun : null
+})
+
+const calculateSemesterMahasiswa = (tahunTagihan, semesterKode) => {
+  if (!angkatanTahun.value) return null
+  if (!Number.isFinite(tahunTagihan) || ![1, 2].includes(semesterKode)) return null
+
+  return (tahunTagihan - angkatanTahun.value) * 2 + semesterKode
+}
+
+const getTagihanSemester = item => {
+  const kodeTahunAkademik = String(item?.th_akademik_kode || item?.th_akademik?.kode || "")
+  if (angkatanTahun.value && /^\d{5}$/.test(kodeTahunAkademik)) {
+    const tahunTagihan = Number(kodeTahunAkademik.slice(0, 4))
+    const semesterKode = Number(kodeTahunAkademik.slice(4, 5))
+    const semesterMahasiswa = calculateSemesterMahasiswa(tahunTagihan, semesterKode)
+    if (semesterMahasiswa) return semesterMahasiswa
+  }
+
+  return null
+}
+
+const isTagihanBlocked = item =>
   Boolean(item?.tidak_bisa_dibayar)
-  || (!cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi"));
+  || (!cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi"))
 
-const isPayableTagihan = (item) =>
-  !isGroupTagihanItem(item) && !isTagihanBlocked(item);
+const isPayableTagihan = item =>
+  !isGroupTagihanItem(item) && !isTagihanBlocked(item)
 
-const hasDispensasiTagihan = (item) =>
-  Boolean(item?.status_dispensasi) && Number(item?.jumlah_dispensasi || 0) > 0;
+const hasDispensasiTagihan = item =>
+  Boolean(item?.status_dispensasi) && Number(item?.jumlah_dispensasi || 0) > 0
 
 const defaultMataUang = {
   id: null,
   kode: "IDR",
   nama: "Rupiah",
   simbol: "Rp",
-};
+}
 
 const normalizeMataUang = (item = {}) => {
-  const mataUang = item?.mata_uang || {};
+  const mataUang = item?.mata_uang || {}
 
   return {
     id: mataUang.id ?? item.mata_uang_id ?? null,
     kode: String(mataUang.kode ?? item.mata_uang_kode ?? defaultMataUang.kode).toUpperCase(),
     nama: mataUang.nama ?? item.mata_uang_nama ?? defaultMataUang.nama,
     simbol: mataUang.simbol ?? item.mata_uang_simbol ?? defaultMataUang.simbol,
-  };
-};
+  }
+}
 
 const getCurrencyKey = (item = {}) => {
-  const mataUang = normalizeMataUang(item);
+  const mataUang = normalizeMataUang(item)
 
-  return mataUang.id ? `id:${mataUang.id}` : `kode:${mataUang.kode}`;
-};
+  return mataUang.id ? `id:${mataUang.id}` : `kode:${mataUang.kode}`
+}
 
-const isIdrCurrency = (item = {}) => normalizeMataUang(item).kode === "IDR";
+const isIdrCurrency = (item = {}) => normalizeMataUang(item).kode === "IDR"
 
-const formatTagihanMoney = (item, value) => formatMoney(value, normalizeMataUang(item));
+const formatTagihanMoney = (item, value) => formatMoney(value, normalizeMataUang(item))
 
-const formatBatasDispensasi = (value) => {
-  if (!value) return "-";
+const formatBatasDispensasi = value => {
+  if (!value) return "-"
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleDateString("id-ID", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  });
-};
+  })
+}
 
-const getTagihanDisplay = (item) => {
+const getTagihanDisplay = item => {
   const dibayarText = Number(item?.dibayar || 0) > 0
     ? ` (Dibayar: ${formatTagihanMoney(item, item.dibayar)})`
-    : "";
+    : ""
+
   const dispensasiText = hasDispensasiTagihan(item)
     ? ` (Dispensasi: ${formatTagihanMoney(item, item.jumlah_dispensasi)}, Batas: ${formatBatasDispensasi(item.batas_dispensasi)})`
-    : "";
+    : ""
 
-  return `${item.nama} - ${formatTagihanMoney(item, item.sisa)}${dibayarText}${dispensasiText}`;
-};
+  return `${item.nama} - ${formatTagihanMoney(item, item.sisa)}${dibayarText}${dispensasiText}`
+}
 
-const getRawTagihanItem = (item) => item?.raw || item;
+const getRawTagihanItem = item => item?.raw || item
 
-const isGroupTagihanItem = (item) =>
-  String(getRawTagihanItem(item)?.id || "").startsWith("__group_");
+const isGroupTagihanItem = item =>
+  String(getRawTagihanItem(item)?.id || "").startsWith("__group_")
 
-const getTagihanItemProps = (item) => {
-  const rawItem = getRawTagihanItem(item);
+const getTagihanItemProps = item => {
+  const rawItem = getRawTagihanItem(item)
 
   return {
     ...(rawItem?.itemProps || {}),
     disabled: !isPayableTagihan(rawItem),
-  };
-};
+  }
+}
 
 const scopedTagihan = computed(() => {
-  return tagihan.value;
-});
+  return tagihan.value
+})
 
 const semesterIniTagihan = computed(() => {
-  if (!mahasiswaSemester.value) return scopedTagihan.value;
+  if (!mahasiswaSemester.value) return scopedTagihan.value
 
-  return scopedTagihan.value.filter((item) => {
-    const semester = getTagihanSemester(item);
-    return !semester || semester <= mahasiswaSemester.value;
-  });
-});
+  return scopedTagihan.value.filter(item => {
+    const semester = getTagihanSemester(item)
+    
+    return !semester || semester <= mahasiswaSemester.value
+  })
+})
 
 const semesterDepanTagihan = computed(() => {
-  if (!mahasiswaSemester.value) return [];
+  if (!mahasiswaSemester.value) return []
 
   return scopedTagihan.value.filter(
-    (item) => {
-      const semester = getTagihanSemester(item);
-      return semester && semester > mahasiswaSemester.value;
-    }
-  );
-});
+    item => {
+      const semester = getTagihanSemester(item)
+      
+      return semester && semester > mahasiswaSemester.value
+    },
+  )
+})
 
 const groupedTagihanItems = computed(() => {
-  if (!mahasiswaSemester.value) return scopedTagihan.value;
+  if (!mahasiswaSemester.value) return scopedTagihan.value
 
-  const groups = [];
+  const groups = []
 
   if (semesterIniTagihan.value.length) {
     groups.push({
       id: "__group_semester_ini",
       display: `Semester ini (s/d semester ${mahasiswaSemester.value})`,
       itemProps: { disabled: true },
-    });
-    groups.push(...semesterIniTagihan.value);
+    })
+    groups.push(...semesterIniTagihan.value)
   }
 
   if (semesterDepanTagihan.value.length) {
@@ -382,16 +395,16 @@ const groupedTagihanItems = computed(() => {
       id: "__group_semester_depan",
       display: `Semester depan (> semester ${mahasiswaSemester.value})`,
       itemProps: { disabled: true },
-    });
-    groups.push(...semesterDepanTagihan.value);
+    })
+    groups.push(...semesterDepanTagihan.value)
   }
 
-  return groups;
-});
+  return groups
+})
 
 const detailTagihanGroups = computed(() => {
   if (!mahasiswaSemester.value) {
-    return [{ key: "semua", label: "Semua Tagihan", items: scopedTagihan.value }];
+    return [{ key: "semua", label: "Semua Tagihan", items: scopedTagihan.value }]
   }
 
   return [
@@ -405,217 +418,224 @@ const detailTagihanGroups = computed(() => {
       label: `Semester depan (> semester ${mahasiswaSemester.value})`,
       items: semesterDepanTagihan.value,
     },
-  ].filter((group) => group.items.length);
-});
+  ].filter(group => group.items.length)
+})
 
-const cekPelanggaran = ref(false);
-const fetchCekPelanggaran = async (nim) => {
+const cekPelanggaran = ref(false)
+
+const fetchCekPelanggaran = async nim => {
   try {
-    cekPelanggaran.value = false;
-    loadingTagihan.value = true;
-    tagihan.value = [];
+    cekPelanggaran.value = false
+    loadingTagihan.value = true
+    tagihan.value = []
+
     const res = await $api(`/admin/mahasiswa/cek-pelanggaran/${nim}`, {
       method: "GET",
-    });
+    })
 
     if (!res.status) {
-      showSnackbar({ text: res.message, color: "error" });
-      cekPelanggaran.value = true;
-      return;
+      showSnackbar({ text: res.message, color: "error" })
+      cekPelanggaran.value = true
+      
+      return
     }
   } catch (error) {
-    showSnackbar({ text: error, color: "error" });
+    showSnackbar({ text: error, color: "error" })
   } finally {
-    loadingTagihan.value = false;
+    loadingTagihan.value = false
   }
-};
+}
 
-const cekNilai = ref(true);
-const fetchTagihan = async (nim) => {
-  clearTagihan();
+const cekNilai = ref(true)
+
+const fetchTagihan = async nim => {
+  clearTagihan()
   try {
-    await fetchCekPelanggaran(nim);
+    await fetchCekPelanggaran(nim)
 
     if (cekPelanggaran.value) {
-      return;
+      return
     }
-    loadingTagihan.value = true;
-    tagihan.value = [];
+    loadingTagihan.value = true
+    tagihan.value = []
+
     const res = await $api(`/admin/pemasukan/mahasiswa/cek-tagihan`, {
       method: "GET",
       body: {
         nim: nim,
         cekNilai: 1,
       },
-    });
+    })
 
     if (!res.status) {
-      showSnackbar({ text: res.message, color: "error" });
-      return;
+      showSnackbar({ text: res.message, color: "error" })
+      
+      return
     }
 
-    cekNilai.value = res.cekNilai;
+    cekNilai.value = res.cekNilai
 
-    tagihan.value = res.data.list_tagihan.map((item) => ({
+    tagihan.value = res.data.list_tagihan.map(item => ({
       ...item,
       display: getTagihanDisplay(item),
       itemProps: {},
-    }));
+    }))
   } catch (error) {
-    showSnackbar({ text: error, color: "error" });
+    showSnackbar({ text: error, color: "error" })
   } finally {
-    loadingTagihan.value = false;
+    loadingTagihan.value = false
   }
-};
+}
 
 const clearTagihan = () => {
-  rows.value = [];
-  selectedTagihan.value = [];
-  nominalInput.value = {};
-  sisaNominal.value = {};
-  depositUsed.value = 0;
-  lastPaymentScope.value = "semua";
-  props.mahasiswa.dipakai = 0;
-  props.mahasiswa.autoSimpanDeposit = 0;
-  props.mahasiswa.wisuda = null;
-};
+  rows.value = []
+  selectedTagihan.value = []
+  nominalInput.value = {}
+  sisaNominal.value = {}
+  depositUsed.value = 0
+  lastPaymentScope.value = "semua"
+  props.mahasiswa.dipakai = 0
+  props.mahasiswa.autoSimpanDeposit = 0
+  props.mahasiswa.wisuda = null
+}
 
 const selectAllTagihan = () => {
-  selectedTagihan.value = eligibleTagihan.value;
-};
+  selectedTagihan.value = eligibleTagihan.value
+}
 
-const hasScopedTagihan = computed(() => scopedTagihan.value.length > 0);
+const hasScopedTagihan = computed(() => scopedTagihan.value.length > 0)
 
 /** Total sisa seluruh tagihan yang eligible */
 const eligibleTagihan = computed(() =>
-  scopedTagihan.value.filter((item) => isPayableTagihan(item))
-);
+  scopedTagihan.value.filter(item => isPayableTagihan(item)),
+)
 
 const eligibleSemesterIniTagihan = computed(() => {
-  const semesterIniIds = new Set(semesterIniTagihan.value.map((item) => item.id));
+  const semesterIniIds = new Set(semesterIniTagihan.value.map(item => item.id))
 
-  return eligibleTagihan.value.filter((item) => semesterIniIds.has(item.id));
-});
+  return eligibleTagihan.value.filter(item => semesterIniIds.has(item.id))
+})
 
 const groupAmountsByCurrency = (items, field = "sisa") => {
-  const map = new Map();
+  const map = new Map()
 
   for (const item of items || []) {
-    const key = getCurrencyKey(item);
-    const mataUang = normalizeMataUang(item);
+    const key = getCurrencyKey(item)
+    const mataUang = normalizeMataUang(item)
+
     const current = map.get(key) || {
       key,
       mata_uang: mataUang,
       total: 0,
       count: 0,
       items: [],
-    };
+    }
 
-    current.total += Number(item?.[field] || 0);
-    current.count += 1;
-    current.items.push(item);
-    map.set(key, current);
+    current.total += Number(item?.[field] || 0)
+    current.count += 1
+    current.items.push(item)
+    map.set(key, current)
   }
 
-  return Array.from(map.values());
-};
+  return Array.from(map.values())
+}
 
 const totalSisaTagihan = computed(() =>
-  eligibleTagihan.value.reduce((sum, t) => sum + (Number(t.sisa) || 0), 0)
-);
+  eligibleTagihan.value.reduce((sum, t) => sum + (Number(t.sisa) || 0), 0),
+)
 
 const totalSisaSemesterIni = computed(() =>
-  eligibleSemesterIniTagihan.value.reduce((sum, t) => sum + (Number(t.sisa) || 0), 0)
-);
+  eligibleSemesterIniTagihan.value.reduce((sum, t) => sum + (Number(t.sisa) || 0), 0),
+)
 
 const totalSisaTagihanByCurrency = computed(() =>
-  groupAmountsByCurrency(eligibleTagihan.value)
-);
+  groupAmountsByCurrency(eligibleTagihan.value),
+)
 
 const totalSisaSemesterIniByCurrency = computed(() =>
-  groupAmountsByCurrency(eligibleSemesterIniTagihan.value)
-);
+  groupAmountsByCurrency(eligibleSemesterIniTagihan.value),
+)
 
 const activePaymentCurrencyGroups = computed(() => {
-  const scope = lastPaymentScope.value === "semester_ini" && totalSisaSemesterIniByCurrency.value.length
+  return lastPaymentScope.value === "semester_ini" && totalSisaSemesterIniByCurrency.value.length
     ? totalSisaSemesterIniByCurrency.value
-    : totalSisaTagihanByCurrency.value;
-
-  return scope;
-});
+    : totalSisaTagihanByCurrency.value
+})
 
 const idrCurrencyKey = computed(() =>
-  totalSisaTagihanByCurrency.value.find((group) => group.mata_uang.kode === "IDR")?.key
-  || rows.value.find((row) => row.mata_uang_kode === "IDR")?.currency_key
-  || "kode:IDR"
-);
+  totalSisaTagihanByCurrency.value.find(group => group.mata_uang.kode === "IDR")?.key
+  || rows.value.find(row => row.mata_uang_kode === "IDR")?.currency_key
+  || "kode:IDR",
+)
 
-const formatCurrencyTotals = (groups) =>
+const formatCurrencyTotals = groups =>
   (groups || [])
-    .filter((group) => Number(group.total || 0) > 0)
-    .map((group) => `${group.mata_uang.kode}: ${formatMoney(group.total, group.mata_uang)}`)
-    .join(" | ");
+    .filter(group => Number(group.total || 0) > 0)
+    .map(group => `${group.mata_uang.kode}: ${formatMoney(group.total, group.mata_uang)}`)
+    .join(" | ")
 
-const getNominalInput = (currencyKey) => Number(nominalInput.value?.[currencyKey] || 0);
+const getNominalInput = currencyKey => Number(nominalInput.value?.[currencyKey] || 0)
 
 const setNominalInput = (currencyKey, value) => {
   nominalInput.value = {
     ...nominalInput.value,
     [currencyKey]: Math.max(0, Number(value) || 0),
-  };
-};
+  }
+}
 
 const hasProcessableNominal = computed(() =>
-  activePaymentCurrencyGroups.value.some((group) => getNominalInput(group.key) > 0)
+  activePaymentCurrencyGroups.value.some(group => getNominalInput(group.key) > 0)
   || (
     useDeposit.value
     && Number(props.mahasiswa?.deposit || 0) > 0
-    && activePaymentCurrencyGroups.value.some((group) => group.mata_uang.kode === "IDR")
-  )
-);
+    && activePaymentCurrencyGroups.value.some(group => group.mata_uang.kode === "IDR")
+  ),
+)
 
 const sisaNominalGroups = computed(() =>
   activePaymentCurrencyGroups.value
-    .map((group) => ({
+    .map(group => ({
       ...group,
       total: Number(sisaNominal.value?.[group.key] || 0),
     }))
-    .filter((group) => group.total > 0)
-);
+    .filter(group => group.total > 0),
+)
 
 const hasEligibleSemesterIniTagihan = computed(() =>
-  eligibleSemesterIniTagihan.value.length > 0
-);
+  eligibleSemesterIniTagihan.value.length > 0,
+)
 
 const canBayarLunasSemesterIni = computed(() =>
   Boolean(mahasiswaSemester.value)
     && hasEligibleSemesterIniTagihan.value
-    && totalSisaSemesterIni.value > 0
-);
+    && totalSisaSemesterIni.value > 0,
+)
 
 const canBayarLunasSemua = computed(() =>
-  totalSisaTagihan.value > 0
-);
+  totalSisaTagihan.value > 0,
+)
 
-defineExpose({ fetchTagihan, clearTagihan, paymentMode });
+defineExpose({ fetchTagihan, clearTagihan, paymentMode })
 
 /** Daftar baris yang dipilih */
-const rows = ref([]);
+const rows = ref([])
 
 const keringananOptions = [
   { title: "Tanpa Keringanan", value: "" },
   { title: "Samahah", value: "samahah" },
   { title: "Dhomin", value: "dhomin" },
-];
-const DEFAULT_KERINGANAN_BATAS = "9999-12-31";
+]
 
-const normalizeKeringananJenis = (value) => {
-  const jenis = String(value || "").toLowerCase();
-  return ["samahah", "dhomin"].includes(jenis) ? jenis : "";
-};
+const DEFAULT_KERINGANAN_BATAS = "9999-12-31"
+
+const normalizeKeringananJenis = value => {
+  const jenis = String(value || "").toLowerCase()
+  
+  return ["samahah", "dhomin"].includes(jenis) ? jenis : ""
+}
 
 const createPaymentRow = (item, dibayar, deposit = 0) => {
-  const mataUang = normalizeMataUang(item);
+  const mataUang = normalizeMataUang(item)
 
   return {
     id: item.id,
@@ -632,93 +652,94 @@ const createPaymentRow = (item, dibayar, deposit = 0) => {
     keringanan_jenis: "",
     keringanan_jumlah: 0,
     keringanan_batas: null,
-  };
-};
+  }
+}
 
-const isDhominRow = (row) => normalizeKeringananJenis(row?.keringanan_jenis) === "dhomin";
-const isSamahahRow = (row) => normalizeKeringananJenis(row?.keringanan_jenis) === "samahah";
+const isDhominRow = row => normalizeKeringananJenis(row?.keringanan_jenis) === "dhomin"
+const isSamahahRow = row => normalizeKeringananJenis(row?.keringanan_jenis) === "samahah"
 
-const getSisaSetelahPembayaran = (row) => Math.max(
+const getSisaSetelahPembayaran = row => Math.max(
   0,
-  (Number(row?.nominal) || 0) - (Number(row?.dibayar) || 0) - (Number(row?.deposit) || 0)
-);
+  (Number(row?.nominal) || 0) - (Number(row?.dibayar) || 0) - (Number(row?.deposit) || 0),
+)
 
 function syncDhominKeringanan(row) {
-  row.dibayar = Math.max(0, Number(row.dibayar || 0));
-  row.dibayar = Math.min(row.dibayar, Number(row.nominal) || 0);
-  row.deposit = Math.max(0, Number(row.deposit || 0));
-  row.deposit = Math.min(row.deposit, Math.max(0, (Number(row.nominal) || 0) - row.dibayar));
-  row.keringanan_jumlah = getSisaSetelahPembayaran(row);
-  row.keringanan_batas = DEFAULT_KERINGANAN_BATAS;
+  row.dibayar = Math.max(0, Number(row.dibayar || 0))
+  row.dibayar = Math.min(row.dibayar, Number(row.nominal) || 0)
+  row.deposit = Math.max(0, Number(row.deposit || 0))
+  row.deposit = Math.min(row.deposit, Math.max(0, (Number(row.nominal) || 0) - row.dibayar))
+  row.keringanan_jumlah = getSisaSetelahPembayaran(row)
+  row.keringanan_batas = DEFAULT_KERINGANAN_BATAS
 }
 
 function syncPaymentTotalsState() {
   const totalDepositRows = rows.value.reduce(
     (sum, row) => sum + (Number(row.deposit) || 0),
-    0
-  );
+    0,
+  )
 
-  props.mahasiswa.dipakai = totalDepositRows;
+  props.mahasiswa.dipakai = totalDepositRows
 
   if (paymentMode.value === "nominal") {
-    depositUsed.value = totalDepositRows;
-    const nextSisa = {};
+    depositUsed.value = totalDepositRows
+
+    const nextSisa = {}
 
     for (const group of activePaymentCurrencyGroups.value) {
       const totalCashRows = rows.value
-        .filter((row) => row.currency_key === group.key)
-        .reduce((sum, row) => sum + (Number(row.dibayar) || 0), 0);
+        .filter(row => row.currency_key === group.key)
+        .reduce((sum, row) => sum + (Number(row.dibayar) || 0), 0)
 
-      nextSisa[group.key] = Math.max(0, getNominalInput(group.key) - totalCashRows);
+      nextSisa[group.key] = Math.max(0, getNominalInput(group.key) - totalCashRows)
     }
 
-    sisaNominal.value = nextSisa;
-    props.mahasiswa.autoSimpanDeposit = nextSisa[idrCurrencyKey.value] || 0;
+    sisaNominal.value = nextSisa
+    props.mahasiswa.autoSimpanDeposit = nextSisa[idrCurrencyKey.value] || 0
   } else {
-    props.mahasiswa.autoSimpanDeposit = 0;
+    props.mahasiswa.autoSimpanDeposit = 0
   }
 }
 
-const semesterPendekKrsDetails = ref({});
-const semesterPendekKrsLoading = ref({});
-const semesterPendekKrsErrors = ref({});
-const semesterPendekKeringananKeys = ref({});
+const semesterPendekKrsDetails = ref({})
+const semesterPendekKrsLoading = ref({})
+const semesterPendekKrsErrors = ref({})
+const semesterPendekKeringananKeys = ref({})
 
-const parseSemesterPendekTagihanName = (nama) => {
+const parseSemesterPendekTagihanName = nama => {
   const parts = String(nama || "")
     .split(" - ")
-    .map((part) => part.trim());
+    .map(part => part.trim())
 
   if (parts.length < 3 || parts[0].toUpperCase() !== "SEMESTER PENDEK") {
-    return null;
+    return null
   }
 
-  const krsId = Number(parts[parts.length - 1]);
+  const krsId = Number(parts[parts.length - 1])
   if (!Number.isFinite(krsId) || krsId <= 0) {
-    return null;
+    return null
   }
 
   return {
     krsId,
     periode: parts.slice(1, -1).join(" - "),
-  };
-};
+  }
+}
 
-const getTagihanByRow = (row) =>
-  tagihan.value.find((item) => String(item.id) === String(row.id));
+const getTagihanByRow = row =>
+  tagihan.value.find(item => String(item.id) === String(row.id))
 
-const isWisudaTagihan = (item) =>
-  String(item?.nama || item?.display || "").toLowerCase().includes("wisuda");
+const isWisudaTagihan = item =>
+  String(item?.nama || item?.display || "").toLowerCase().includes("wisuda")
 
 const hasWisudaTagihan = computed(() =>
-  rows.value.some((row) => isWisudaTagihan(getTagihanByRow(row) || row))
-);
+  rows.value.some(row => isWisudaTagihan(getTagihanByRow(row) || row)),
+)
 
-watch(hasWisudaTagihan, (selected) => {
+watch(hasWisudaTagihan, selected => {
   if (selected) {
-    ensureWisudaOptionsLoaded();
+    ensureWisudaOptionsLoaded()
   }
-});
+})
 
 const buildWisudaPayload = () => ({
   nim: wisudaForm.value.nim ?? "",
@@ -731,11 +752,11 @@ const buildWisudaPayload = () => ({
   prodi: wisudaForm.value.prodi ?? "",
   ukuran_baju: wisudaForm.value.ukuran_baju || "M",
   is_bayar: WISUDA_TANPA_BAYAR,
-});
+})
 
 const syncWisudaToMahasiswa = () => {
-  props.mahasiswa.wisuda = hasWisudaTagihan.value ? buildWisudaPayload() : null;
-};
+  props.mahasiswa.wisuda = hasWisudaTagihan.value ? buildWisudaPayload() : null
+}
 
 watch(
   () => [
@@ -750,211 +771,218 @@ watch(
     props.mahasiswa?.prodi_alias,
   ],
   () => {
-    resetWisudaFormFromMahasiswa();
-    syncWisudaToMahasiswa();
+    resetWisudaFormFromMahasiswa()
+    syncWisudaToMahasiswa()
   },
-  { immediate: true }
-);
+  { immediate: true },
+)
 
-watch(wisudaForm, syncWisudaToMahasiswa, { deep: true });
+watch(wisudaForm, syncWisudaToMahasiswa, { deep: true })
 
 const semesterPendekKrsRows = computed(() => {
-  const seenKrsIds = new Set();
+  const seenKrsIds = new Set()
 
   return rows.value
-    .map((row) => {
-      const tagihanItem = getTagihanByRow(row);
-      const parsed = parseSemesterPendekTagihanName(tagihanItem?.nama);
+    .map(row => {
+      const tagihanItem = getTagihanByRow(row)
+      const parsed = parseSemesterPendekTagihanName(tagihanItem?.nama)
 
       if (!parsed || seenKrsIds.has(parsed.krsId)) {
-        return null;
+        return null
       }
 
-      seenKrsIds.add(parsed.krsId);
+      seenKrsIds.add(parsed.krsId)
 
       return {
         krsId: parsed.krsId,
         tagihanId: row.id,
         periode: parsed.periode,
         tagihanNama: tagihanItem.nama,
-      };
+      }
     })
-    .filter(Boolean);
-});
+    .filter(Boolean)
+})
 
-const fetchSemesterPendekKrsDetail = async (krsId) => {
-  const key = String(krsId);
+const fetchSemesterPendekKrsDetail = async krsId => {
+  const key = String(krsId)
 
   if (semesterPendekKrsDetails.value[key] || semesterPendekKrsLoading.value[key]) {
-    return;
+    return
   }
 
   semesterPendekKrsLoading.value = {
     ...semesterPendekKrsLoading.value,
     [key]: true,
-  };
+  }
   semesterPendekKrsErrors.value = {
     ...semesterPendekKrsErrors.value,
     [key]: null,
-  };
+  }
 
   try {
     const res = await $api(`/admin/pemasukan/mahasiswa/semester-pendek/krs-detail/${krsId}`, {
       method: "GET",
-    });
+    })
 
     if (res?.status === false) {
-      throw new Error(res.message || "Gagal memuat detail KRS Semester Pendek.");
+      throw new Error(res.message || "Gagal memuat detail KRS Semester Pendek.")
     }
 
     semesterPendekKrsDetails.value = {
       ...semesterPendekKrsDetails.value,
       [key]: res?.data ?? res,
-    };
+    }
   } catch (error) {
     semesterPendekKrsErrors.value = {
       ...semesterPendekKrsErrors.value,
       [key]: error?.data?.message || error?.message || "Gagal memuat detail KRS Semester Pendek.",
-    };
+    }
   } finally {
     semesterPendekKrsLoading.value = {
       ...semesterPendekKrsLoading.value,
       [key]: false,
-    };
+    }
   }
-};
+}
 
 watch(
   semesterPendekKrsRows,
-  (items) => {
-    const allowedKrsIds = new Set(items.map((item) => String(item.krsId)));
+  items => {
+    const allowedKrsIds = new Set(items.map(item => String(item.krsId)))
+
     const activeKeys = Object.fromEntries(
       Object.entries(semesterPendekKeringananKeys.value).filter(([krsId]) =>
-        allowedKrsIds.has(krsId)
-      )
-    );
+        allowedKrsIds.has(krsId),
+      ),
+    )
+
     if (Object.keys(activeKeys).length !== Object.keys(semesterPendekKeringananKeys.value).length) {
-      semesterPendekKeringananKeys.value = activeKeys;
+      semesterPendekKeringananKeys.value = activeKeys
     }
 
-    items.forEach((item) => fetchSemesterPendekKrsDetail(item.krsId));
+    items.forEach(item => fetchSemesterPendekKrsDetail(item.krsId))
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
-const getSemesterPendekDetails = (krsData) => {
-  const details = krsData?.details ?? krsData?.krs_detail ?? krsData?.detail ?? [];
-  return Array.isArray(details) ? details : [];
-};
+const getSemesterPendekDetails = krsData => {
+  const details = krsData?.details ?? krsData?.krs_detail ?? krsData?.detail ?? []
+  
+  return Array.isArray(details) ? details : []
+}
 
-const getMataKuliah = (detail) =>
-  detail?.mata_kuliah ?? detail?.matakuliah ?? detail?.mk ?? {};
+const getMataKuliah = detail =>
+  detail?.mata_kuliah ?? detail?.matakuliah ?? detail?.mk ?? {}
 
-const getMkNama = (detail) => {
-  const mataKuliah = getMataKuliah(detail);
+const getMkNama = detail => {
+  const mataKuliah = getMataKuliah(detail)
 
   return mataKuliah?.nama
     ?? detail?.nama_mk
     ?? detail?.nama_matakuliah
     ?? detail?.nama
-    ?? "-";
-};
+    ?? "-"
+}
 
-const getMkSks = (detail) => {
-  const mataKuliah = getMataKuliah(detail);
+const getMkSks = detail => {
+  const mataKuliah = getMataKuliah(detail)
 
   return mataKuliah?.sks
     ?? detail?.sks
-    ?? "-";
-};
+    ?? "-"
+}
 
-const getMkSemester = (detail) => {
-  const mataKuliah = getMataKuliah(detail);
+const getMkSemester = detail => {
+  const mataKuliah = getMataKuliah(detail)
 
   return mataKuliah?.smt
     ?? mataKuliah?.semester
     ?? detail?.smt
     ?? detail?.semester
-    ?? "-";
-};
+    ?? "-"
+}
 
-const getBiayaPerMk = (krsData) => {
+const getBiayaPerMk = krsData => {
   const value = krsData?.biaya_per_mk
     ?? krsData?.periode_semester_pendek?.biaya_per_mk
     ?? krsData?.search_krs?.biaya_per_mk
     ?? krsData?.search_krs?.periode_semester_pendek?.biaya_per_mk
-    ?? 0;
+    ?? 0
 
-  const biaya = Number(value);
-  return Number.isFinite(biaya) ? biaya : 0;
-};
+  const biaya = Number(value)
+  
+  return Number.isFinite(biaya) ? biaya : 0
+}
 
 const getSemesterPendekKeringananKey = (detail, idx) =>
-  String(detail?.id ?? detail?.krs_detail_id ?? detail?.matakuliah_id ?? detail?.mata_kuliah_id ?? `${getMkNama(detail)}-${idx}`);
+  String(detail?.id ?? detail?.krs_detail_id ?? detail?.matakuliah_id ?? detail?.mata_kuliah_id ?? `${getMkNama(detail)}-${idx}`)
 
-const getSemesterPendekKeringananKeys = (krsId) =>
-  semesterPendekKeringananKeys.value[String(krsId)] ?? [];
+const getSemesterPendekKeringananKeys = krsId =>
+  semesterPendekKeringananKeys.value[String(krsId)] ?? []
 
 const isSemesterPendekKeringananSelected = (card, detail, idx) =>
-  getSemesterPendekKeringananKeys(card.krsId).includes(getSemesterPendekKeringananKey(detail, idx));
+  getSemesterPendekKeringananKeys(card.krsId).includes(getSemesterPendekKeringananKey(detail, idx))
 
 function applySemesterPendekKeringanan(card) {
-  const rowIndex = rows.value.findIndex((row) => String(row.id) === String(card.tagihanId));
-  if (rowIndex < 0) return;
+  const rowIndex = rows.value.findIndex(row => String(row.id) === String(card.tagihanId))
+  if (rowIndex < 0) return
 
-  const row = rows.value[rowIndex];
-  const selectedCount = getSemesterPendekKeringananKeys(card.krsId).length;
-  const biayaPerMk = getBiayaPerMk(card.krsData);
+  const row = rows.value[rowIndex]
+  const selectedCount = getSemesterPendekKeringananKeys(card.krsId).length
+  const biayaPerMk = getBiayaPerMk(card.krsData)
 
   if (selectedCount <= 0) {
     if (isSamahahRow(row)) {
-      row.keringanan_jenis = "";
-      row.keringanan_jumlah = 0;
-      row.keringanan_batas = null;
+      row.keringanan_jenis = ""
+      row.keringanan_jumlah = 0
+      row.keringanan_batas = null
       if (paymentMode.value === "tagihan") {
-        row.deposit = 0;
-        row.dibayar = Number(row.nominal) || 0;
+        row.deposit = 0
+        row.dibayar = Number(row.nominal) || 0
       }
     }
-    syncPaymentTotalsState();
-    return;
+    syncPaymentTotalsState()
+    
+    return
   }
 
-  row.keringanan_jenis = "samahah";
-  row.keringanan_jumlah = selectedCount * biayaPerMk;
+  row.keringanan_jenis = "samahah"
+  row.keringanan_jumlah = selectedCount * biayaPerMk
   if (!row.keringanan_batas) {
-    row.keringanan_batas = DEFAULT_KERINGANAN_BATAS;
+    row.keringanan_batas = DEFAULT_KERINGANAN_BATAS
   }
-  recalcKeringanan(rowIndex);
+  recalcKeringanan(rowIndex)
 }
 
 function toggleSemesterPendekKeringanan(card, detail, idx) {
   if (!card.biayaPerMk) {
-    showSnackbar({ text: "Biaya per MK Semester Pendek tidak tersedia", color: "warning" });
-    return;
+    showSnackbar({ text: "Biaya per MK Semester Pendek tidak tersedia", color: "warning" })
+    
+    return
   }
 
-  const key = getSemesterPendekKeringananKey(detail, idx);
-  const currentKeys = getSemesterPendekKeringananKeys(card.krsId);
+  const key = getSemesterPendekKeringananKey(detail, idx)
+  const currentKeys = getSemesterPendekKeringananKeys(card.krsId)
+
   const nextKeys = currentKeys.includes(key)
-    ? currentKeys.filter((item) => item !== key)
-    : [...currentKeys, key];
+    ? currentKeys.filter(item => item !== key)
+    : [...currentKeys, key]
 
   semesterPendekKeringananKeys.value = {
     ...semesterPendekKeringananKeys.value,
     [String(card.krsId)]: nextKeys,
-  };
+  }
 
-  applySemesterPendekKeringanan(card);
+  applySemesterPendekKeringanan(card)
 }
 
 const semesterPendekKrsCards = computed(() =>
-  semesterPendekKrsRows.value.map((item) => {
-    const key = String(item.krsId);
-    const krsData = semesterPendekKrsDetails.value[key] ?? null;
-    const details = getSemesterPendekDetails(krsData);
-    const biayaPerMk = getBiayaPerMk(krsData);
-    const keringananCount = getSemesterPendekKeringananKeys(item.krsId).length;
+  semesterPendekKrsRows.value.map(item => {
+    const key = String(item.krsId)
+    const krsData = semesterPendekKrsDetails.value[key] ?? null
+    const details = getSemesterPendekDetails(krsData)
+    const biayaPerMk = getBiayaPerMk(krsData)
+    const keringananCount = getSemesterPendekKeringananKeys(item.krsId).length
 
     return {
       ...item,
@@ -966,325 +994,349 @@ const semesterPendekKrsCards = computed(() =>
       loading: Boolean(semesterPendekKrsLoading.value[key]),
       error: semesterPendekKrsErrors.value[key],
       totalSks: details.reduce((sum, detail) => {
-        const sks = Number(getMkSks(detail));
-        return sum + (Number.isFinite(sks) ? sks : 0);
+        const sks = Number(getMkSks(detail))
+        
+        return sum + (Number.isFinite(sks) ? sks : 0)
       }, 0),
-    };
-  })
-);
+    }
+  }),
+)
 
-const normalizePaymentScope = (scope) =>
-  scope === "semester_ini" ? "semester_ini" : "semua";
+const normalizePaymentScope = scope =>
+  scope === "semester_ini" ? "semester_ini" : "semua"
 
 const getPaymentTargetItems = (scope = "semua") =>
-  scope === "semester_ini" ? eligibleSemesterIniTagihan.value : eligibleTagihan.value;
+  scope === "semester_ini" ? eligibleSemesterIniTagihan.value : eligibleTagihan.value
 
 const getPaymentTargetGroups = (scope = "semua") =>
-  groupAmountsByCurrency(getPaymentTargetItems(scope));
+  groupAmountsByCurrency(getPaymentTargetItems(scope))
 
 /** ──── MODE NOMINAL: Distribusi otomatis FIFO ──── */
 function distributePayment(scope = "semua") {
-  const paymentScope = normalizePaymentScope(scope);
-  rows.value = [];
-  depositUsed.value = 0;
-  lastPaymentScope.value = paymentScope;
+  const paymentScope = normalizePaymentScope(scope)
 
-  const targetGroups = getPaymentTargetGroups(paymentScope);
-  const hasNominal = targetGroups.some((group) => getNominalInput(group.key) > 0);
+  rows.value = []
+  depositUsed.value = 0
+  lastPaymentScope.value = paymentScope
+
+  const targetGroups = getPaymentTargetGroups(paymentScope)
+  const hasNominal = targetGroups.some(group => getNominalInput(group.key) > 0)
+
   const hasDeposit = useDeposit.value
     && Number(props.mahasiswa?.deposit || 0) > 0
-    && targetGroups.some((group) => group.mata_uang.kode === "IDR");
+    && targetGroups.some(group => group.mata_uang.kode === "IDR")
 
   if (!hasNominal && !hasDeposit) {
-    showSnackbar({ text: "Nominal harus lebih dari 0", color: "error" });
-    return;
+    showSnackbar({ text: "Nominal harus lebih dari 0", color: "error" })
+    
+    return
   }
 
-  let depoRemaining = hasDeposit ? Number(props.mahasiswa?.deposit || 0) : 0;
+  let depoRemaining = hasDeposit ? Number(props.mahasiswa?.deposit || 0) : 0
 
   for (const group of targetGroups) {
-    let cashRemaining = getNominalInput(group.key);
-    const allowDeposit = group.mata_uang.kode === "IDR";
+    let cashRemaining = getNominalInput(group.key)
+    const allowDeposit = group.mata_uang.kode === "IDR"
 
     for (const item of group.items) {
-      if (cashRemaining <= 0 && (!allowDeposit || depoRemaining <= 0)) break;
+      if (cashRemaining <= 0 && (!allowDeposit || depoRemaining <= 0)) break
 
-      const sisa = Number(item.sisa) || 0;
-      if (sisa <= 0) continue;
+      const sisa = Number(item.sisa) || 0
+      if (sisa <= 0) continue
 
-      const fromDepo = allowDeposit ? Math.min(depoRemaining, sisa) : 0;
-      const sisaAfterDepo = sisa - fromDepo;
-      const fromCash = Math.min(cashRemaining, sisaAfterDepo);
+      const fromDepo = allowDeposit ? Math.min(depoRemaining, sisa) : 0
+      const sisaAfterDepo = sisa - fromDepo
+      const fromCash = Math.min(cashRemaining, sisaAfterDepo)
 
-      if (fromCash + fromDepo <= 0) continue;
+      if (fromCash + fromDepo <= 0) continue
 
-      rows.value.push(createPaymentRow(item, fromCash, fromDepo));
+      rows.value.push(createPaymentRow(item, fromCash, fromDepo))
 
-      if (allowDeposit) depoRemaining -= fromDepo;
-      cashRemaining -= fromCash;
+      if (allowDeposit) depoRemaining -= fromDepo
+      cashRemaining -= fromCash
     }
   }
 
-  syncPaymentTotalsState();
+  syncPaymentTotalsState()
 
   if (rows.value.length === 0) {
-    showSnackbar({ text: "Tidak ada tagihan yang bisa dibayarkan", color: "warning" });
+    showSnackbar({ text: "Tidak ada tagihan yang bisa dibayarkan", color: "warning" })
   }
 }
 
 /** Bayar lunas: hitung nominal yang diperlukan (dikurangi deposit jika aktif) */
 function bayarLunas(scope = "semua") {
-  const paymentScope = normalizePaymentScope(scope);
-  const depositBalance = useDeposit.value ? Number(props.mahasiswa?.deposit || 0) : 0;
-  let depositRemaining = depositBalance;
-  const nextNominal = {};
+  const paymentScope = normalizePaymentScope(scope)
+  const depositBalance = useDeposit.value ? Number(props.mahasiswa?.deposit || 0) : 0
+  let depositRemaining = depositBalance
+  const nextNominal = {}
 
   for (const group of getPaymentTargetGroups(paymentScope)) {
-    const useDepositForGroup = group.mata_uang.kode === "IDR" ? Math.min(depositRemaining, group.total) : 0;
-    depositRemaining -= useDepositForGroup;
-    nextNominal[group.key] = Math.max(0, group.total - useDepositForGroup);
+    const useDepositForGroup = group.mata_uang.kode === "IDR" ? Math.min(depositRemaining, group.total) : 0
+
+    depositRemaining -= useDepositForGroup
+    nextNominal[group.key] = Math.max(0, group.total - useDepositForGroup)
   }
 
-  nominalInput.value = nextNominal;
-  distributePayment(paymentScope);
+  nominalInput.value = nextNominal
+  distributePayment(paymentScope)
 }
 
 /** Clear distribusi saat mode berubah */
 watch(paymentMode, () => {
-  rows.value = [];
-  selectedTagihan.value = [];
-  nominalInput.value = {};
-  sisaNominal.value = {};
-  syncPaymentTotalsState();
-});
+  rows.value = []
+  selectedTagihan.value = []
+  nominalInput.value = {}
+  sisaNominal.value = {}
+  syncPaymentTotalsState()
+})
 
-watch(scopedTagihan, (newArr) => {
-  const allowedIds = new Set(newArr.filter((item) => isPayableTagihan(item)).map((item) => item.id));
-  selectedTagihan.value = selectedTagihan.value.filter((item) =>
-    allowedIds.has(item.id)
-  );
-  rows.value = rows.value.filter((row) => allowedIds.has(row.id));
-  syncPaymentTotalsState();
-});
+watch(scopedTagihan, newArr => {
+  const allowedIds = new Set(newArr.filter(item => isPayableTagihan(item)).map(item => item.id))
+
+  selectedTagihan.value = selectedTagihan.value.filter(item =>
+    allowedIds.has(item.id),
+  )
+  rows.value = rows.value.filter(row => allowedIds.has(row.id))
+  syncPaymentTotalsState()
+})
 
 /** Auto re-distribute saat toggle deposit berubah */
-watch(useDeposit, (enabled) => {
+watch(useDeposit, enabled => {
   if (paymentMode.value === "nominal" && rows.value.length > 0) {
-    const depositBalance = Number(props.mahasiswa?.deposit || 0);
-    const key = idrCurrencyKey.value;
+    const depositBalance = Number(props.mahasiswa?.deposit || 0)
+    const key = idrCurrencyKey.value
     if (enabled) {
       // Kurangi nominal karena deposit membantu
-      setNominalInput(key, Math.max(0, getNominalInput(key) - depositBalance));
+      setNominalInput(key, Math.max(0, getNominalInput(key) - depositBalance))
     } else {
       // Kembalikan nominal karena deposit tidak dipakai
-      setNominalInput(key, getNominalInput(key) + depositUsed.value);
+      setNominalInput(key, getNominalInput(key) + depositUsed.value)
     }
-    distributePayment(lastPaymentScope.value);
+    distributePayment(lastPaymentScope.value)
   }
-});
+})
 
 /** ──── MODE TAGIHAN: Sinkronkan rows dengan selectedTagihan (multiple) ──── */
 watch(
   selectedTagihan,
   (newArr, oldArr) => {
-    if (paymentMode.value !== "tagihan") return;
+    if (paymentMode.value !== "tagihan") return
 
-    const nextSelected = newArr.filter((item) => isPayableTagihan(item));
-    const previousSelected = (oldArr || []).filter((item) => isPayableTagihan(item));
+    const nextSelected = newArr.filter(item => isPayableTagihan(item))
+    const previousSelected = (oldArr || []).filter(item => isPayableTagihan(item))
     if (nextSelected.length !== newArr.length) {
-      selectedTagihan.value = nextSelected;
+      selectedTagihan.value = nextSelected
       showSnackbar({
         text: "Tagihan yang belum memenuhi syarat tidak bisa dipilih.",
         color: "warning",
-      });
+      })
     }
 
     // Tambahkan baris utk item yang baru dipilih
-    const added = nextSelected.filter((n) => !previousSelected.some((o) => o.id === n.id));
+    const added = nextSelected.filter(n => !previousSelected.some(o => o.id === n.id))
     for (const item of added) {
-      if (!rows.value.some((r) => r.id === item.id)) {
-        rows.value.push(createPaymentRow(item, item.sisa ?? 0));
+      if (!rows.value.some(r => r.id === item.id)) {
+        rows.value.push(createPaymentRow(item, item.sisa ?? 0))
       }
     }
 
     // Hapus baris utk item yang dihapus dari pilihan
     const removed = previousSelected.filter(
-      (o) => !nextSelected.some((n) => n.id === o.id)
-    );
+      o => !nextSelected.some(n => n.id === o.id),
+    )
+
     if (removed.length) {
       rows.value = rows.value.filter(
-        (r) => !removed.some((rem) => rem.id === r.id)
-      );
-      syncPaymentTotalsState();
+        r => !removed.some(rem => rem.id === r.id),
+      )
+      syncPaymentTotalsState()
     }
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 /** Hapus baris (sekalian sync ke combobox) */
 function removeRow(id) {
-  rows.value = rows.value.filter((r) => r.id !== id);
-  selectedTagihan.value = selectedTagihan.value.filter((s) => s.id !== id);
-  syncPaymentTotalsState();
+  rows.value = rows.value.filter(r => r.id !== id)
+  selectedTagihan.value = selectedTagihan.value.filter(s => s.id !== id)
+  syncPaymentTotalsState()
 }
 
 /** Recalc per-baris */
 /** Recalc saat admin ubah field DIBAYAR */
 function recalcDibayar(idx) {
-  const r = rows.value[idx];
+  const r = rows.value[idx]
   if (isDhominRow(r)) {
-    syncDhominKeringanan(r);
-    syncPaymentTotalsState();
-    return;
+    syncDhominKeringanan(r)
+    syncPaymentTotalsState()
+    
+    return
   }
 
-  const keringanan = isSamahahRow(r) ? Number(r.keringanan_jumlah || 0) : 0;
-  r.dibayar = Math.max(0, Number(r.dibayar || 0));
-  r.dibayar = Math.min(r.dibayar, Math.max(0, r.nominal - keringanan));
+  const keringanan = isSamahahRow(r) ? Number(r.keringanan_jumlah || 0) : 0
+
+  r.dibayar = Math.max(0, Number(r.dibayar || 0))
+  r.dibayar = Math.min(r.dibayar, Math.max(0, r.nominal - keringanan))
 
   // Limit deposit agar dibayar + deposit + keringanan tidak melebihi nominal
-  const sisaNominal = Math.max(0, r.nominal - r.dibayar - keringanan);
-  r.deposit = Math.min(r.deposit, sisaNominal);
+  const sisaNominal = Math.max(0, r.nominal - r.dibayar - keringanan)
 
-  syncPaymentTotalsState();
+  r.deposit = Math.min(r.deposit, sisaNominal)
+
+  syncPaymentTotalsState()
 }
 
 /** Recalc saat admin ubah field DEPOSIT */
 function recalcDeposit(idx) {
-  const r = rows.value[idx];
+  const r = rows.value[idx]
   if (!isIdrCurrency(r)) {
-    r.deposit = 0;
+    r.deposit = 0
     showSnackbar({
       text: "Deposit hanya bisa dipakai untuk tagihan mata uang IDR.",
       color: "warning",
-    });
-    syncPaymentTotalsState();
-    return;
+    })
+    syncPaymentTotalsState()
+    
+    return
   }
 
   if (isDhominRow(r)) {
-    syncDhominKeringanan(r);
-    syncPaymentTotalsState();
-    return;
+    syncDhominKeringanan(r)
+    syncPaymentTotalsState()
+    
+    return
   }
 
-  const keringanan = isSamahahRow(r) ? Number(r.keringanan_jumlah || 0) : 0;
-  r.deposit = Math.max(0, Number(r.deposit || 0));
+  const keringanan = isSamahahRow(r) ? Number(r.keringanan_jumlah || 0) : 0
+
+  r.deposit = Math.max(0, Number(r.deposit || 0))
 
   // Limit deposit: tidak melebihi saldo catatan deposit dikurangi deposit baris lain
-  const saldoDeposit = Number(props.mahasiswa?.deposit || 0);
-  const totalDepositLain = rows.value.reduce((sum, row, i) => {
-    return i === idx ? sum : sum + (Number(row.deposit) || 0);
-  }, 0);
+  const saldoDeposit = Number(props.mahasiswa?.deposit || 0)
 
-  const sisaPlafon = Math.max(0, saldoDeposit - totalDepositLain);
-  r.deposit = Math.min(r.deposit, sisaPlafon);
-  r.deposit = Math.min(r.deposit, Math.max(0, r.nominal - keringanan));
+  const totalDepositLain = rows.value.reduce((sum, row, i) => {
+    return i === idx ? sum : sum + (Number(row.deposit) || 0)
+  }, 0)
+
+  const sisaPlafon = Math.max(0, saldoDeposit - totalDepositLain)
+
+  r.deposit = Math.min(r.deposit, sisaPlafon)
+  r.deposit = Math.min(r.deposit, Math.max(0, r.nominal - keringanan))
 
   // Dibayar = sisa nominal setelah deposit dan keringanan
-  r.dibayar = Math.max(0, r.nominal - r.deposit - keringanan);
+  r.dibayar = Math.max(0, r.nominal - r.deposit - keringanan)
 
-  syncPaymentTotalsState();
+  syncPaymentTotalsState()
 }
 
 function recalcKeringanan(idx) {
-  const r = rows.value[idx];
-  if (!r) return;
+  const r = rows.value[idx]
+  if (!r) return
 
   if (isDhominRow(r)) {
-    syncDhominKeringanan(r);
-    syncPaymentTotalsState();
-    return;
+    syncDhominKeringanan(r)
+    syncPaymentTotalsState()
+    
+    return
   }
 
   if (!isSamahahRow(r)) {
-    r.keringanan_jumlah = 0;
-    r.keringanan_batas = null;
-    syncPaymentTotalsState();
-    return;
+    r.keringanan_jumlah = 0
+    r.keringanan_batas = null
+    syncPaymentTotalsState()
+    
+    return
   }
 
-  r.keringanan_jumlah = Math.max(0, Number(r.keringanan_jumlah || 0));
-  r.keringanan_jumlah = Math.min(r.keringanan_jumlah, Number(r.nominal) || 0);
+  r.keringanan_jumlah = Math.max(0, Number(r.keringanan_jumlah || 0))
+  r.keringanan_jumlah = Math.min(r.keringanan_jumlah, Number(r.nominal) || 0)
   if (!r.keringanan_batas) {
-    r.keringanan_batas = DEFAULT_KERINGANAN_BATAS;
+    r.keringanan_batas = DEFAULT_KERINGANAN_BATAS
   }
-  r.deposit = Math.min(Number(r.deposit) || 0, Math.max(0, r.nominal - r.keringanan_jumlah));
-  r.dibayar = Math.max(0, r.nominal - r.deposit - r.keringanan_jumlah);
+  r.deposit = Math.min(Number(r.deposit) || 0, Math.max(0, r.nominal - r.keringanan_jumlah))
+  r.dibayar = Math.max(0, r.nominal - r.deposit - r.keringanan_jumlah)
 
-  syncPaymentTotalsState();
+  syncPaymentTotalsState()
 }
 
 function onKeringananChange(idx) {
-  const r = rows.value[idx];
-  if (!r) return;
+  const r = rows.value[idx]
+  if (!r) return
 
-  r.keringanan_jenis = normalizeKeringananJenis(r.keringanan_jenis);
+  r.keringanan_jenis = normalizeKeringananJenis(r.keringanan_jenis)
 
   if (isDhominRow(r)) {
-    r.dibayar = 0;
-    r.deposit = 0;
-    syncDhominKeringanan(r);
+    r.dibayar = 0
+    r.deposit = 0
+    syncDhominKeringanan(r)
   } else if (isSamahahRow(r)) {
     if (!r.keringanan_batas) {
-      r.keringanan_batas = DEFAULT_KERINGANAN_BATAS;
+      r.keringanan_batas = DEFAULT_KERINGANAN_BATAS
     }
-    recalcKeringanan(idx);
+    recalcKeringanan(idx)
   } else {
-    r.keringanan_jumlah = 0;
-    r.keringanan_batas = null;
+    r.keringanan_jumlah = 0
+    r.keringanan_batas = null
     if (paymentMode.value === "tagihan") {
-      r.deposit = 0;
-      r.dibayar = Number(r.nominal) || 0;
+      r.deposit = 0
+      r.dibayar = Number(r.nominal) || 0
     }
   }
 
-  syncPaymentTotalsState();
+  syncPaymentTotalsState()
 }
 
 /** Ringkasan */
 const totalRowsByCurrency = computed(() => {
-  const map = new Map();
+  const map = new Map()
 
   for (const row of rows.value) {
-    const key = row.currency_key || getCurrencyKey(row);
-    const mataUang = normalizeMataUang(row);
+    const key = row.currency_key || getCurrencyKey(row)
+    const mataUang = normalizeMataUang(row)
+
     const current = map.get(key) || {
       key,
       mata_uang: mataUang,
       dibayar: 0,
       deposit: 0,
       total: 0,
-    };
+    }
 
-    current.dibayar += Number(row.dibayar) || 0;
-    current.deposit += Number(row.deposit) || 0;
-    current.total = current.dibayar + current.deposit;
-    map.set(key, current);
+    current.dibayar += Number(row.dibayar) || 0
+    current.deposit += Number(row.deposit) || 0
+    current.total = current.dibayar + current.deposit
+    map.set(key, current)
   }
 
-  return Array.from(map.values());
-});
+  return Array.from(map.values())
+})
 
 /** Propagate ke parent */
 watch(
   rows,
   () => {
-    props.mahasiswa.tagihan = rows;
-    syncWisudaToMahasiswa();
+    props.mahasiswa.tagihan = rows
+    syncWisudaToMahasiswa()
   },
-  { deep: true }
-);
+  { deep: true },
+)
 
 // formatRupiah asumsi sudah ada di scope-mu
 </script>
 
 <template>
   <!-- Pembayaran -->
-  <VCard class="mt-4" title="Pembayaran">
+  <VCard
+    class="mt-4"
+    title="Pembayaran"
+  >
     <!-- Toggle Mode -->
     <VCardText class="pb-0">
-      <VRow class="mb-4" dense>
+      <VRow
+        class="mb-4"
+        dense
+      >
         <VCol cols="6">
           <VBtn
             block
@@ -1292,7 +1344,10 @@ watch(
             :variant="paymentMode === 'tagihan' ? 'elevated' : 'outlined'"
             @click="paymentMode = 'tagihan'"
           >
-            <VIcon icon="ri-list-check-2" class="me-2" />
+            <VIcon
+              icon="ri-list-check-2"
+              class="me-2"
+            />
             Mode Tagihan
           </VBtn>
         </VCol>
@@ -1303,14 +1358,20 @@ watch(
             :variant="paymentMode === 'nominal' ? 'elevated' : 'outlined'"
             @click="paymentMode = 'nominal'"
           >
-            <VIcon icon="ri-money-dollar-circle-line" class="me-2" />
+            <VIcon
+              icon="ri-money-dollar-circle-line"
+              class="me-2"
+            />
             Mode Bayar
           </VBtn>
         </VCol>
       </VRow>
 
       <!-- Info total sisa tagihan (expandable) -->
-      <div v-if="hasScopedTagihan" class="mb-4">
+      <div
+        v-if="hasScopedTagihan"
+        class="mb-4"
+      >
         <VAlert
           type="info"
           variant="tonal"
@@ -1333,19 +1394,34 @@ watch(
         <!-- Detail tagihan -->
         <VExpandTransition>
           <div v-show="showDetailTagihan">
-            <VTable density="compact" class="border rounded mt-1">
+            <VTable
+              density="compact"
+              class="border rounded mt-1"
+            >
               <thead>
                 <tr>
                   <th>Tagihan</th>
-                  <th class="text-end">Jumlah</th>
-                  <th class="text-end">Dibayar</th>
-                  <th class="text-end">Sisa</th>
+                  <th class="text-end">
+                    Jumlah
+                  </th>
+                  <th class="text-end">
+                    Dibayar
+                  </th>
+                  <th class="text-end">
+                    Sisa
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <template v-for="group in detailTagihanGroups" :key="group.key">
+                <template
+                  v-for="group in detailTagihanGroups"
+                  :key="group.key"
+                >
                   <tr>
-                    <td colspan="4" class="bg-grey-lighten-4 font-weight-medium">
+                    <td
+                      colspan="4"
+                      class="bg-grey-lighten-4 font-weight-medium"
+                    >
                       {{ group.label }}
                     </td>
                   </tr>
@@ -1356,10 +1432,21 @@ watch(
                   >
                     <td>
                       {{ t.nama }}
-                      <VChip v-if="isTagihanBlocked(t)" size="x-small" color="warning" class="ms-2">Belum memenuhi syarat</VChip>
+                      <VChip
+                        v-if="isTagihanBlocked(t)"
+                        size="x-small"
+                        color="warning"
+                        class="ms-2"
+                      >
+                        Belum memenuhi syarat
+                      </VChip>
                     </td>
-                    <td class="text-end">{{ formatTagihanMoney(t, t.jumlah) }}</td>
-                    <td class="text-end">{{ formatTagihanMoney(t, t.dibayar) }}</td>
+                    <td class="text-end">
+                      {{ formatTagihanMoney(t, t.jumlah) }}
+                    </td>
+                    <td class="text-end">
+                      {{ formatTagihanMoney(t, t.dibayar) }}
+                    </td>
                     <td class="text-end font-weight-medium">
                       <div>{{ formatTagihanMoney(t, t.sisa) }}</div>
                       <div
@@ -1398,12 +1485,24 @@ watch(
     <!-- ═══ MODE NOMINAL ═══ -->
     <VCardText v-if="paymentMode === 'nominal'">
       <!-- Loading state -->
-      <div v-if="loadingTagihan" class="text-center py-6">
-        <VProgressCircular indeterminate color="primary" size="40" />
-        <p class="text-medium-emphasis mt-3 mb-0">Memuat data tagihan...</p>
+      <div
+        v-if="loadingTagihan"
+        class="text-center py-6"
+      >
+        <VProgressCircular
+          indeterminate
+          color="primary"
+          size="40"
+        />
+        <p class="text-medium-emphasis mt-3 mb-0">
+          Memuat data tagihan...
+        </p>
       </div>
 
-      <VRow v-else class="align-center">
+      <VRow
+        v-else
+        class="align-center"
+      >
         <VCol
           v-for="group in activePaymentCurrencyGroups"
           :key="group.key"
@@ -1420,14 +1519,21 @@ watch(
             :hint="formatMoney(getNominalInput(group.key), group.mata_uang)"
             persistent-hint
             :placeholder="`Masukkan nominal ${group.mata_uang.kode}`"
-            @update:modelValue="setNominalInput(group.key, $event)"
+            @update:model-value="setNominalInput(group.key, $event)"
             @keyup.enter="distributePayment"
           />
         </VCol>
 
         <!-- Gunakan Deposit -->
-        <VCol cols="12" v-if="props.mahasiswa?.deposit > 0">
-          <VAlert type="success" variant="tonal" density="compact">
+        <VCol
+          v-if="props.mahasiswa?.deposit > 0"
+          cols="12"
+        >
+          <VAlert
+            type="success"
+            variant="tonal"
+            density="compact"
+          >
             <div class="d-flex align-center justify-space-between w-100">
               <span>
                 Saldo deposit IDR: <strong>{{ formatRupiah(props.mahasiswa.deposit) }}</strong>
@@ -1444,7 +1550,10 @@ watch(
           </VAlert>
         </VCol>
 
-        <VCol cols="12" :md="paymentMode === 'tagihan' ? 4 : 4">
+        <VCol
+          cols="12"
+          :md="paymentMode === 'tagihan' ? 4 : 4"
+        >
           <VBtn
             color="success"
             variant="elevated"
@@ -1452,11 +1561,17 @@ watch(
             :disabled="!canBayarLunasSemesterIni"
             @click="bayarLunas('semester_ini')"
           >
-            <VIcon icon="ri-check-double-line" class="me-2" />
+            <VIcon
+              icon="ri-check-double-line"
+              class="me-2"
+            />
             Lunas Semester Ini
           </VBtn>
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VBtn
             color="success"
             variant="outlined"
@@ -1464,11 +1579,17 @@ watch(
             :disabled="!canBayarLunasSemua"
             @click="bayarLunas('semua')"
           >
-            <VIcon icon="ri-check-double-line" class="me-2" />
+            <VIcon
+              icon="ri-check-double-line"
+              class="me-2"
+            />
             Lunas Semua
           </VBtn>
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VBtn
             color="primary"
             variant="elevated"
@@ -1476,7 +1597,10 @@ watch(
             :disabled="!eligibleTagihan.length || !hasProcessableNominal"
             @click="distributePayment"
           >
-            <VIcon icon="ri-arrow-right-line" class="me-2" />
+            <VIcon
+              icon="ri-arrow-right-line"
+              class="me-2"
+            />
             Proses Pembayaran
           </VBtn>
         </VCol>
@@ -1501,7 +1625,10 @@ watch(
         density="compact"
         class="mt-4"
       >
-        <div v-for="group in sisaNominalGroups" :key="group.key">
+        <div
+          v-for="group in sisaNominalGroups"
+          :key="group.key"
+        >
           Kelebihan {{ group.mata_uang.kode }}:
           <strong>{{ formatMoney(group.total, group.mata_uang) }}</strong>
           <span v-if="group.mata_uang.kode === 'IDR'">akan otomatis masuk ke catatan deposit mahasiswa.</span>
@@ -1513,7 +1640,10 @@ watch(
     <!-- ═══ MODE TAGIHAN (LAMA) ═══ -->
     <VCardText v-if="paymentMode === 'tagihan'">
       <VRow>
-        <VCol cols="6" v-if="hasScopedTagihan">
+        <VCol
+          v-if="hasScopedTagihan"
+          cols="6"
+        >
           <VBtn
             class="w-100"
             color="primary"
@@ -1524,7 +1654,10 @@ watch(
             Bayar semua tagihan
           </VBtn>
         </VCol>
-        <VCol cols="6" v-if="hasScopedTagihan">
+        <VCol
+          v-if="hasScopedTagihan"
+          cols="6"
+        >
           <VBtn
             class="w-100"
             color="error"
@@ -1564,13 +1697,20 @@ watch(
         Preview Distribusi Pembayaran
       </div>
 
-      <div v-for="(row, idx) in rows" :key="row.id" class="py-3">
+      <div
+        v-for="(row, idx) in rows"
+        :key="row.id"
+        class="py-3"
+      >
         <div class="text-body-1 font-weight-medium mb-3">
           {{ idx + 1 }}. {{ row.display }}
         </div>
 
         <VRow class="align-center">
-          <VCol cols="12" md="2">
+          <VCol
+            cols="12"
+            md="2"
+          >
             <VTextField
               v-model.number="row.dibayar"
               label="Dibayar"
@@ -1581,11 +1721,15 @@ watch(
               :hint="formatMoney(row.dibayar, row.mata_uang)"
               persistent-hint
               :readonly="paymentMode === 'nominal'"
-              @update:modelValue="recalcDibayar(idx)"
+              @update:model-value="recalcDibayar(idx)"
             />
           </VCol>
 
-          <VCol v-if="(paymentMode === 'tagihan' && row.mata_uang_kode === 'IDR') || row.deposit > 0" cols="12" md="2">
+          <VCol
+            v-if="(paymentMode === 'tagihan' && row.mata_uang_kode === 'IDR') || row.deposit > 0"
+            cols="12"
+            md="2"
+          >
             <VTextField
               v-model.number="row.deposit"
               label="Deposit"
@@ -1596,7 +1740,7 @@ watch(
               :hint="formatMoney(row.deposit, row.mata_uang)"
               persistent-hint
               :readonly="paymentMode === 'nominal' || isDhominRow(row)"
-              @update:modelValue="recalcDeposit(idx)"
+              @update:model-value="recalcDeposit(idx)"
             />
           </VCol>
 
@@ -1605,7 +1749,10 @@ watch(
             :md="paymentMode === 'tagihan' ? 7 : row.deposit > 0 ? 8 : 10"
           >
             <VRow dense>
-              <VCol cols="12" :md="isSamahahRow(row) ? 4 : isDhominRow(row) ? 6 : 12">
+              <VCol
+                cols="12"
+                :md="isSamahahRow(row) ? 4 : isDhominRow(row) ? 6 : 12"
+              >
                 <VSelect
                   v-model="row.keringanan_jenis"
                   :items="keringananOptions"
@@ -1616,11 +1763,15 @@ watch(
                   density="comfortable"
                   hint="Dhomin/Samahah"
                   persistent-hint
-                  @update:modelValue="onKeringananChange(idx)"
+                  @update:model-value="onKeringananChange(idx)"
                 />
               </VCol>
 
-              <VCol v-if="isSamahahRow(row) || isDhominRow(row)" cols="12" :md="isSamahahRow(row) ? 4 : 6">
+              <VCol
+                v-if="isSamahahRow(row) || isDhominRow(row)"
+                cols="12"
+                :md="isSamahahRow(row) ? 4 : 6"
+              >
                 <VTextField
                   v-model.number="row.keringanan_jumlah"
                   label="Jumlah Keringanan"
@@ -1631,11 +1782,15 @@ watch(
                   :hint="formatMoney(row.keringanan_jumlah, row.mata_uang)"
                   persistent-hint
                   :readonly="isDhominRow(row)"
-                  @update:modelValue="recalcKeringanan(idx)"
+                  @update:model-value="recalcKeringanan(idx)"
                 />
               </VCol>
 
-              <VCol v-if="isSamahahRow(row)" cols="12" md="4">
+              <VCol
+                v-if="isSamahahRow(row)"
+                cols="12"
+                md="4"
+              >
                 <VTextField
                   v-model="row.keringanan_batas"
                   label="Batas Keringanan"
@@ -1647,21 +1802,29 @@ watch(
             </VRow>
           </VCol>
 
-          <VCol v-if="paymentMode === 'tagihan'" cols="12" md="1" class="d-flex mb-5">
+          <VCol
+            v-if="paymentMode === 'tagihan'"
+            cols="12"
+            md="1"
+            class="d-flex mb-5"
+          >
             <VBtn
               color="error"
               icon="ri-delete-bin-line"
               variant="elevated"
               class="ml-auto"
-              @click="removeRow(row.id)"
               :aria-label="`Hapus ${row.display}`"
               hint="delete"
               persistent-hint
+              @click="removeRow(row.id)"
             />
           </VCol>
         </VRow>
 
-        <VDivider v-if="idx < rows.length - 1" class="mt-1" />
+        <VDivider
+          v-if="idx < rows.length - 1"
+          class="mt-1"
+        />
       </div>
 
       <div
@@ -1678,7 +1841,10 @@ watch(
       </div>
 
       <VExpandTransition>
-        <div v-if="hasWisudaTagihan" class="border rounded pa-4 mt-4">
+        <div
+          v-if="hasWisudaTagihan"
+          class="border rounded pa-4 mt-4"
+        >
           <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-3">
             <div class="text-subtitle-1 font-weight-medium">
               Detail Input Wisuda
@@ -1686,7 +1852,10 @@ watch(
           </div>
 
           <VRow>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="wisudaForm.nim"
                 label="NIM"
@@ -1694,7 +1863,10 @@ watch(
                 density="comfortable"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="wisudaForm.nama"
                 label="Nama"
@@ -1702,7 +1874,10 @@ watch(
                 density="comfortable"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VTextField
                 v-model="wisudaForm.nama_ayah"
                 label="Nama Ayah"
@@ -1710,7 +1885,10 @@ watch(
                 density="comfortable"
               />
             </VCol>
-            <VCol cols="12" md="6">
+            <VCol
+              cols="12"
+              md="6"
+            >
               <VTextField
                 v-model="wisudaForm.judul"
                 label="Judul"
@@ -1718,7 +1896,10 @@ watch(
                 density="comfortable"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VTextField
                 v-model="wisudaForm.tanggal_sidang"
                 label="Tanggal Sidang"
@@ -1727,7 +1908,10 @@ watch(
                 density="comfortable"
               />
             </VCol>
-            <VCol cols="12" md="3">
+            <VCol
+              cols="12"
+              md="3"
+            >
               <VSelect
                 v-model="wisudaForm.tahun_id"
                 :items="wisudaTahunOptions"
@@ -1740,7 +1924,10 @@ watch(
                 density="comfortable"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VSelect
                 v-model="wisudaForm.jenis_kelamin"
                 :items="jenisKelaminWisuda"
@@ -1749,7 +1936,10 @@ watch(
                 density="comfortable"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VSelect
                 v-model="wisudaForm.prodi"
                 :items="prodiWisudaOptions"
@@ -1762,7 +1952,10 @@ watch(
                 density="comfortable"
               />
             </VCol>
-            <VCol cols="12" md="4">
+            <VCol
+              cols="12"
+              md="4"
+            >
               <VSelect
                 v-model="wisudaForm.ukuran_baju"
                 :items="ukuranBajuWisuda"
@@ -1775,7 +1968,10 @@ watch(
         </div>
       </VExpandTransition>
 
-      <div v-if="semesterPendekKrsCards.length" class="mt-4">
+      <div
+        v-if="semesterPendekKrsCards.length"
+        class="mt-4"
+      >
         <div
           v-for="card in semesterPendekKrsCards"
           :key="card.krsId"
@@ -1791,10 +1987,18 @@ watch(
               </div>
             </div>
             <div class="d-flex flex-wrap align-center gap-2">
-              <VChip color="primary" variant="tonal" size="small">
+              <VChip
+                color="primary"
+                variant="tonal"
+                size="small"
+              >
                 {{ card.totalSks }} SKS
               </VChip>
-              <VChip color="success" variant="tonal" size="small">
+              <VChip
+                color="success"
+                variant="tonal"
+                size="small"
+              >
                 Biaya/MK {{ formatRupiah(card.biayaPerMk) }}
               </VChip>
               <VChip
@@ -1808,8 +2012,16 @@ watch(
             </div>
           </div>
 
-          <div v-if="card.loading" class="d-flex align-center justify-center py-6">
-            <VProgressCircular indeterminate color="primary" size="28" class="me-3" />
+          <div
+            v-if="card.loading"
+            class="d-flex align-center justify-center py-6"
+          >
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              size="28"
+              class="me-3"
+            />
             <span class="text-medium-emphasis">Memuat detail KRS...</span>
           </div>
 
@@ -1822,22 +2034,43 @@ watch(
             {{ card.error }}
           </VAlert>
 
-          <VTable v-else-if="card.details.length" density="compact" class="border rounded">
+          <VTable
+            v-else-if="card.details.length"
+            density="compact"
+            class="border rounded"
+          >
             <thead>
               <tr>
-                <th class="text-left">No</th>
-                <th class="text-left">Nama MK</th>
-                <th class="text-center">SKS</th>
-                <th class="text-center">SMT MK</th>
-                <th class="text-center">Keringanan</th>
+                <th class="text-left">
+                  No
+                </th>
+                <th class="text-left">
+                  Nama MK
+                </th>
+                <th class="text-center">
+                  SKS
+                </th>
+                <th class="text-center">
+                  SMT MK
+                </th>
+                <th class="text-center">
+                  Keringanan
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(detail, idx) in card.details" :key="detail.id ?? idx">
+              <tr
+                v-for="(detail, idx) in card.details"
+                :key="detail.id ?? idx"
+              >
                 <td>{{ idx + 1 }}</td>
                 <td>{{ getMkNama(detail) }}</td>
-                <td class="text-center">{{ getMkSks(detail) }}</td>
-                <td class="text-center">{{ getMkSemester(detail) }}</td>
+                <td class="text-center">
+                  {{ getMkSks(detail) }}
+                </td>
+                <td class="text-center">
+                  {{ getMkSemester(detail) }}
+                </td>
                 <td class="text-center">
                   <VBtn
                     size="small"
@@ -1853,7 +2086,10 @@ watch(
             </tbody>
           </VTable>
 
-          <div v-else class="text-medium-emphasis text-center py-6">
+          <div
+            v-else
+            class="text-medium-emphasis text-center py-6"
+          >
             Detail KRS Semester Pendek tidak tersedia.
           </div>
         </div>
@@ -1862,31 +2098,60 @@ watch(
   </VCard>
 
   <!-- Total -->
-  <VCard class="mt-4" title="Total">
+  <VCard
+    class="mt-4"
+    title="Total"
+  >
     <VCardText>
-      <VTable v-if="totalRowsByCurrency.length" density="compact" class="border rounded">
+      <VTable
+        v-if="totalRowsByCurrency.length"
+        density="compact"
+        class="border rounded"
+      >
         <thead>
           <tr>
             <th>Mata Uang</th>
-            <th class="text-end">Total Dibayar</th>
-            <th class="text-end">Total Deposit</th>
-            <th class="text-end">Total Dibayar + Deposit</th>
+            <th class="text-end">
+              Total Dibayar
+            </th>
+            <th class="text-end">
+              Total Deposit
+            </th>
+            <th class="text-end">
+              Total Dibayar + Deposit
+            </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="group in totalRowsByCurrency" :key="group.key">
+          <tr
+            v-for="group in totalRowsByCurrency"
+            :key="group.key"
+          >
             <td>
-              <VChip size="small" color="primary" variant="tonal">
+              <VChip
+                size="small"
+                color="primary"
+                variant="tonal"
+              >
                 {{ group.mata_uang.kode }}
               </VChip>
             </td>
-            <td class="text-end">{{ formatMoney(group.dibayar, group.mata_uang) }}</td>
-            <td class="text-end">{{ formatMoney(group.deposit, group.mata_uang) }}</td>
-            <td class="text-end font-weight-medium">{{ formatMoney(group.total, group.mata_uang) }}</td>
+            <td class="text-end">
+              {{ formatMoney(group.dibayar, group.mata_uang) }}
+            </td>
+            <td class="text-end">
+              {{ formatMoney(group.deposit, group.mata_uang) }}
+            </td>
+            <td class="text-end font-weight-medium">
+              {{ formatMoney(group.total, group.mata_uang) }}
+            </td>
           </tr>
         </tbody>
       </VTable>
-      <div v-else class="text-medium-emphasis text-center py-4">
+      <div
+        v-else
+        class="text-medium-emphasis text-center py-4"
+      >
         Belum ada total pembayaran.
       </div>
     </VCardText>

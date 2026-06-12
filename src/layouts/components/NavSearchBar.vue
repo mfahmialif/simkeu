@@ -1,14 +1,14 @@
 <script setup>
-import Shepherd from "shepherd.js";
-import { withQuery } from "ufo";
-import { useConfigStore } from "@core/stores/config";
+import Shepherd from "shepherd.js"
+import { withQuery } from "ufo"
+import { useConfigStore } from "@core/stores/config"
 
 defineOptions({
   inheritAttrs: false,
-});
+})
 
-const configStore = useConfigStore();
-const isAppSearchBarVisible = ref(false);
+const configStore = useConfigStore()
+const isAppSearchBarVisible = ref(false)
 
 // 👉 Default suggestions
 const suggestionGroups = [
@@ -77,7 +77,7 @@ const suggestionGroups = [
       },
     ],
   },
-];
+]
 
 // 👉 No Data suggestion
 const noDataSuggestions = [
@@ -86,39 +86,39 @@ const noDataSuggestions = [
     icon: "ri-bar-chart-line",
     url: { name: "admin-pemasukan-mahasiswa-master-data-mahasiswa" },
   },
-];
+]
 
-const searchQuery = ref("");
-const router = useRouter();
-const searchResult = ref([]);
-const isLoading = ref(false);
+const searchQuery = ref("")
+const router = useRouter()
+const searchResult = ref([])
+const isLoading = ref(false)
 
 const fetchResults = async () => {
-  isLoading.value = true;
+  isLoading.value = true
 
   const { data } = await useApi(
-    withQuery("/app-bar/search", { q: searchQuery.value })
-  );
+    withQuery("/app-bar/search", { q: searchQuery.value }),
+  )
 
-  searchResult.value = data.value;
+  searchResult.value = data.value
 
   // ℹ️ simulate loading: we have used setTimeout for better user experience your can remove it
   setTimeout(() => {
-    isLoading.value = false;
-  }, 500);
-};
+    isLoading.value = false
+  }, 500)
+}
 
-watch(searchQuery, fetchResults);
+watch(searchQuery, fetchResults)
 
-const redirectToSuggestedOrSearchedPage = (selected) => {
-  router.push(selected.url);
-  isAppSearchBarVisible.value = false;
-  searchQuery.value = "";
-};
+const redirectToSuggestedOrSearchedPage = selected => {
+  router.push(selected.url)
+  isAppSearchBarVisible.value = false
+  searchQuery.value = ""
+}
 
 const LazyAppBarSearch = defineAsyncComponent(() =>
-  import("@core/components/AppBarSearch.vue")
-);
+  import("@core/components/AppBarSearch.vue"),
+)
 </script>
 
 <template>
@@ -140,7 +140,9 @@ const LazyAppBarSearch = defineAsyncComponent(() =>
       @click="Shepherd.activeTour?.cancel()"
     >
       <div>Search</div>
-      <div class="meta-key">&#8984;K</div>
+      <div class="meta-key">
+        &#8984;K
+      </div>
     </div>
   </div>
 
@@ -161,9 +163,7 @@ const LazyAppBarSearch = defineAsyncComponent(() =>
             cols="12"
             sm="6"
           >
-            <p
-              class="custom-letter-spacing text-xs text-disabled text-uppercase py-2 px-4 mb-0"
-            >
+            <p class="custom-letter-spacing text-xs text-disabled text-uppercase py-2 px-4 mb-0">
               {{ suggestion.title }}
             </p>
             <VList class="card-list">
@@ -176,7 +176,11 @@ const LazyAppBarSearch = defineAsyncComponent(() =>
               >
                 <VListItemTitle>{{ item.title }}</VListItemTitle>
                 <template #prepend>
-                  <VIcon :icon="item.icon" size="20" class="me-n1" />
+                  <VIcon
+                    :icon="item.icon"
+                    size="20"
+                    class="me-n1"
+                  />
                 </template>
               </VListItem>
             </VList>
@@ -188,14 +192,20 @@ const LazyAppBarSearch = defineAsyncComponent(() =>
     <!-- no data suggestion -->
     <template #noDataSuggestion>
       <div class="mt-6">
-        <div class="text-center text-disabled py-2">Try searching for</div>
+        <div class="text-center text-disabled py-2">
+          Try searching for
+        </div>
         <h6
           v-for="suggestion in noDataSuggestions"
           :key="suggestion.title"
           class="app-bar-search-suggestion text-h6 font-weight-regular cursor-pointer py-2 px-4"
           @click="redirectToSuggestedOrSearchedPage(suggestion)"
         >
-          <VIcon size="20" :icon="suggestion.icon" class="me-2" />
+          <VIcon
+            size="20"
+            :icon="suggestion.icon"
+            class="me-2"
+          />
           <span class="d-inline-block">{{ suggestion.title }}</span>
         </h6>
       </div>
@@ -203,9 +213,7 @@ const LazyAppBarSearch = defineAsyncComponent(() =>
 
     <!-- search result -->
     <template #searchResult="{ item }">
-      <VListSubheader
-        class="text-disabled custom-letter-spacing font-weight-regular ps-4"
-      >
+      <VListSubheader class="text-disabled custom-letter-spacing font-weight-regular ps-4">
         {{ item.title }}
       </VListSubheader>
       <VListItem
@@ -214,7 +222,11 @@ const LazyAppBarSearch = defineAsyncComponent(() =>
         @click="redirectToSuggestedOrSearchedPage(list)"
       >
         <template #prepend>
-          <VIcon size="20" :icon="list.icon" class="me-n1" />
+          <VIcon
+            size="20"
+            :icon="list.icon"
+            class="me-n1"
+          />
         </template>
         <template #append>
           <VIcon
