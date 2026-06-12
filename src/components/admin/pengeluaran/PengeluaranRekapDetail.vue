@@ -85,20 +85,28 @@ const tableHeaders = computed(() => {
     headers.push({ title: "Kategori", key: "kategori_detail" })
   }
 
-  if (props.moduleType !== "rumah-tangga") {
+  if (!["rumah-tangga", "sarana-prasarana", "transportasi"].includes(props.moduleType)) {
     headers.push({ title: "Pegawai", key: "pegawai", sortable: false })
   }
 
   const detailHeaders = [
   ]
 
-  if (props.moduleType === "rumah-tangga") {
+  if (["rumah-tangga", "sarana-prasarana"].includes(props.moduleType)) {
     detailHeaders.push(
       { title: "Kelompok Anggaran", key: "kelompok_anggaran" },
       { title: "Uraian", key: "uraian", sortable: false },
       { title: "Volume", key: "volume" },
       { title: "Satuan", key: "satuan" },
       { title: "Harga Satuan", key: "nominal" },
+    )
+  } else if (props.moduleType === "transportasi") {
+    detailHeaders.push(
+      { title: "Uraian", key: "uraian", sortable: false },
+      { title: "Volume", key: "volume" },
+      { title: "Satuan", key: "satuan" },
+      { title: "Harga Satuan", key: "nominal" },
+      { title: "Prioritas", key: "prioritas" },
     )
   } else {
     detailHeaders.push({ title: "Uraian", key: "uraian", sortable: false })
@@ -116,7 +124,7 @@ const tableHeaders = computed(() => {
 
 const lpjTableHeaders = computed(() => tableHeaders.value)
 const editingHasDetails = computed(() => Number(rekap.value?.jumlah_data || 0) > 0)
-const canDeleteRekapWithDetails = computed(() => ["kegiatan", "rumah-tangga"].includes(props.moduleType))
+const canDeleteRekapWithDetails = computed(() => ["kegiatan", "rumah-tangga", "sarana-prasarana", "transportasi"].includes(props.moduleType))
 
 const deleteRekapMessage = computed(() => {
   if (canDeleteRekapWithDetails.value && Number(rekap.value?.jumlah_data || 0) > 0) {
@@ -273,7 +281,7 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
 }
 
 const isNonPegawai = item => item.kategori_detail === "non_pegawai"
-const isRumahTangga = computed(() => props.moduleType === "rumah-tangga")
+const isRumahTangga = computed(() => ["rumah-tangga", "sarana-prasarana"].includes(props.moduleType))
 
 const pegawaiLabel = item => isNonPegawai(item)
   ? "Nonpegawai"
@@ -293,6 +301,10 @@ const uraian = item => {
   }
 
   if (props.moduleType === "kegiatan") {
+    return item.nama_kegiatan || "-"
+  }
+
+  if (props.moduleType === "transportasi") {
     return item.nama_kegiatan || "-"
   }
 
@@ -327,7 +339,7 @@ const editBatchPath = () => ({
 })
 
 const addRabPath = () => (
-  ["kegiatan", "rumah-tangga"].includes(props.moduleType)
+  ["kegiatan", "rumah-tangga", "sarana-prasarana"].includes(props.moduleType)
     ? editBatchPath()
     : createPath()
 )
@@ -772,6 +784,18 @@ onMounted(async () => {
               {{ item.volume ?? "-" }}
             </template>
 
+            <template #item.prioritas="{ item }">
+              <VChip
+                v-if="item.prioritas"
+                :color="item.prioritas === 'Tinggi' ? 'error' : item.prioritas === 'Sedang' ? 'warning' : 'success'"
+                size="small"
+                label
+              >
+                {{ item.prioritas }}
+              </VChip>
+              <span v-else>-</span>
+            </template>
+
             <template #item.jenis_pembayaran="{ item }">
               <VChip
                 v-if="item.jenis_pembayaran"
@@ -878,6 +902,18 @@ onMounted(async () => {
 
             <template #item.volume="{ item }">
               {{ item.volume ?? "-" }}
+            </template>
+
+            <template #item.prioritas="{ item }">
+              <VChip
+                v-if="item.prioritas"
+                :color="item.prioritas === 'Tinggi' ? 'error' : item.prioritas === 'Sedang' ? 'warning' : 'success'"
+                size="small"
+                label
+              >
+                {{ item.prioritas }}
+              </VChip>
+              <span v-else>-</span>
             </template>
 
             <template #item.jenis_pembayaran="{ item }">

@@ -189,7 +189,12 @@ const editingHasDetails = computed(() =>
 )
 
 const canDeleteRekapWithDetails = computed(() =>
-  ["/admin/pengeluaran/dosen-kegiatan", "/admin/pengeluaran/rumah-tangga"].includes(props.endpoint),
+  [
+    "/admin/pengeluaran/dosen-kegiatan",
+    "/admin/pengeluaran/rumah-tangga",
+    "/admin/pengeluaran/sarana-prasarana",
+    "/admin/pengeluaran/transportasi",
+  ].includes(props.endpoint),
 )
 
 const canDeleteRekap = item =>

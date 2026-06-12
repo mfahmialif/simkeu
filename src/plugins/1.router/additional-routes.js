@@ -102,6 +102,28 @@ export const routes = [
     },
   },
   {
+    path: "/admin/pengeluaran/sarana-prasarana/rekap/:id/lpj",
+    name: "admin-pengeluaran-sarana-prasarana-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Sarana Prasarana",
+      endpoint: "/admin/pengeluaran/sarana-prasarana",
+      basePath: "/admin/pengeluaran/sarana-prasarana",
+      moduleType: "sarana-prasarana",
+    },
+  },
+  {
+    path: "/admin/pengeluaran/transportasi/rekap/:id/lpj",
+    name: "admin-pengeluaran-transportasi-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Transportasi",
+      endpoint: "/admin/pengeluaran/transportasi",
+      basePath: "/admin/pengeluaran/transportasi",
+      moduleType: "transportasi",
+    },
+  },
+  {
     path: "/admin/pengeluaran/dosen-bulanan/rekap/:id/lpj",
     name: "admin-pengeluaran-dosen-bulanan-rekap-id-lpj",
     component: lpjRouteComponent,

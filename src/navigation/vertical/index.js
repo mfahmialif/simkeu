@@ -20,6 +20,8 @@ import user from "./user"
 import laporan from "./laporan"
 import rab from "./rab"
 import rumahTangga from "./rumah-tangga"
+import saranaPrasarana from "./sarana-prasarana"
+import transportasi from "./transportasi"
 
 const userData = useCookie("userData")
 
@@ -39,6 +41,8 @@ const routesByRole = roleName => {
       ...pengeluaran,
       ...pengeluaranDosen,
       ...rumahTangga,
+      ...saranaPrasarana,
+      ...transportasi,
       ...rab,
       ...laporan,
       ...user,
@@ -52,6 +56,8 @@ const routesByRole = roleName => {
       ...pengeluaran,
       ...pengeluaranDosen,
       ...rumahTangga,
+      ...saranaPrasarana,
+      ...transportasi,
       ...rab,
       ...laporan,
       ...user,
@@ -77,6 +83,18 @@ const routesByRole = roleName => {
       ...mahasiswa,
       ...pemasukanRumahTangga,
       ...rumahTangga,
+      ...setting,
+    ],
+
+    sarpras: [
+      ...dashboard,
+      ...saranaPrasarana,
+      ...setting,
+    ],
+
+    transportasi: [
+      ...dashboard,
+      ...transportasi,
       ...setting,
     ],
 

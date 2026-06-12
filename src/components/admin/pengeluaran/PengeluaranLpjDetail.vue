@@ -71,7 +71,8 @@ const detailRekapPath = computed(() => `${props.basePath}/rekap/${rekapId.value}
 
 const isTatapmuka = computed(() => props.moduleType === "tatapmuka")
 const isKegiatan = computed(() => props.moduleType === "kegiatan")
-const isRumahTangga = computed(() => props.moduleType === "rumah-tangga")
+const isRumahTangga = computed(() => ["rumah-tangga", "sarana-prasarana"].includes(props.moduleType))
+const isTransportasi = computed(() => props.moduleType === "transportasi")
 const isDosenBulanan = computed(() => props.moduleType === "dosen-bulanan")
 const isStaffBulanan = computed(() => props.moduleType === "bulanan")
 
@@ -148,6 +149,18 @@ const newRow = () => {
     }
   }
 
+  if (isTransportasi.value) {
+    return {
+      ...base,
+      nama_kegiatan: rekap.value?.nama || "",
+      nominal: 0,
+      volume: null,
+      satuan: null,
+      prioritas: "Sedang",
+      jenis_pembayaran: "Tunai",
+    }
+  }
+
   if (isDosenBulanan.value) {
     return {
       ...base,
@@ -184,6 +197,10 @@ const rowTotal = row => {
 
   if (isRumahTangga.value) {
     return Math.round(numberValue(row.nominal) * factorValue(row.jumlah) * factorValue(row.volume))
+  }
+
+  if (isTransportasi.value) {
+    return Math.round(numberValue(row.nominal) * factorValue(row.volume))
   }
 
   if (isDosenBulanan.value) {
@@ -242,7 +259,7 @@ const pegawaiForRow = () => {
 const isPegawaiKegiatan = row => row.kategori_detail !== "non_pegawai"
 
 const paymentItems = row => (
-  isRumahTangga.value
+  isRumahTangga.value || isTransportasi.value
     ? ["Tunai", "Transfer"]
     : isKegiatan.value && !isPegawaiKegiatan(row)
       ? ["Tunai", "CUS BSI", "Transfer"]
@@ -269,8 +286,9 @@ const detailToRow = item => ({
   key: `lpj-${item.id}`,
   pegawai_id: item.pegawai_id || null,
   kategori_detail: item.kategori_detail || "pegawai",
+  prioritas: item.prioritas || "Sedang",
   jenis_pembayaran: item.jenis_pembayaran || (
-    isRumahTangga.value || item.kategori_detail === "non_pegawai" ? "Tunai" : "CUS BSI"
+    isRumahTangga.value || isTransportasi.value || item.kategori_detail === "non_pegawai" ? "Tunai" : "CUS BSI"
   ),
   lampiran: selectedFileSafeArray(item.lampiran),
 })
@@ -454,6 +472,11 @@ const validateRows = () => {
     const label = `Baris ${index + 1}`
 
     if (!row.tanggal) return `${label}: tanggal wajib diisi.`
+    if (isTransportasi.value) {
+      if (!String(row.nama_kegiatan || "").trim()) return `${label}: uraian wajib diisi.`
+      if (!row.prioritas) return `${label}: prioritas wajib dipilih.`
+      continue
+    }
     if (isRumahTangga.value && !String(row.nama_kegiatan || "").trim()) {
       return `${label}: uraian wajib diisi.`
     }
@@ -506,7 +529,7 @@ const submit = async () => {
 
 onMounted(() => {
   document.title = `Detail LPJ ${props.title} - SIMKEU`
-  if (!isRumahTangga.value) {
+  if (!isRumahTangga.value && !isTransportasi.value) {
     fetchPegawai()
   }
   fetchData()
@@ -578,7 +601,7 @@ onMounted(() => {
       <VCardItem>
         <VCardTitle>Detail LPJ</VCardTitle>
         <VCardSubtitle>
-          {{ loading ? "Memuat data..." : `${flatRows.length} sub-item, total ${formatRupiah(lpjTotal)}` }}
+          {{ loading ? "Memuat data..." : `${flatRows.length} ${isRumahTangga ? "sub-item" : "baris"}, total ${formatRupiah(lpjTotal)}` }}
         </VCardSubtitle>
 
         <template #append>
@@ -862,7 +885,7 @@ onMounted(() => {
                 </VCol>
 
                 <VCol
-                  v-if="!isRumahTangga && (!isKegiatan || isPegawaiKegiatan(row))"
+                  v-if="!isRumahTangga && !isTransportasi && (!isKegiatan || isPegawaiKegiatan(row))"
                   cols="12"
                   :md="isKegiatan ? 4 : 5"
                 >
@@ -1069,6 +1092,59 @@ onMounted(() => {
                   </VCol>
                 </template>
 
+                <template v-if="isTransportasi">
+                  <VCol
+                    cols="12"
+                    md="4"
+                  >
+                    <VTextField
+                      v-model="row.nama_kegiatan"
+                      label="Uraian Pengeluaran *"
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.volume"
+                      type="number"
+                      min="0"
+                      label="Volume"
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.satuan"
+                      label="Satuan"
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.nominal"
+                      type="number"
+                      min="0"
+                      label="Harga Satuan *"
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VSelect
+                      v-model="row.prioritas"
+                      label="Prioritas *"
+                      :items="['Tinggi', 'Sedang', 'Rendah']"
+                    />
+                  </VCol>
+                </template>
+
 
 
                 <template v-if="isDosenBulanan">
@@ -1184,7 +1260,7 @@ onMounted(() => {
               </VTooltip>
 
               <VTooltip
-                v-if="isRumahTangga"
+                v-if="isTransportasi"
                 text="Duplikasi baris"
                 location="top"
               >

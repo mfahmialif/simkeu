@@ -43,6 +43,14 @@ const emptyDashboardMessage = computed(() => {
     return "Dashboard rumah tangga belum memiliki ringkasan khusus, jadi seluruh card disembunyikan."
   }
 
+  if (role.value === "sarpras") {
+    return "Dashboard sarana prasarana belum memiliki ringkasan khusus, jadi seluruh card disembunyikan."
+  }
+
+  if (role.value === "transportasi") {
+    return "Dashboard transportasi belum memiliki ringkasan khusus, jadi seluruh card disembunyikan."
+  }
+
   if (role.value === "user") {
     return "Role user belum memiliki akses dashboard operasional."
   }
