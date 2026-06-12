@@ -339,7 +339,7 @@ const editBatchPath = () => ({
 })
 
 const addRabPath = () => (
-  ["kegiatan", "rumah-tangga", "sarana-prasarana"].includes(props.moduleType)
+  ["kegiatan", "rumah-tangga", "sarana-prasarana", "transportasi"].includes(props.moduleType)
     ? editBatchPath()
     : createPath()
 )
