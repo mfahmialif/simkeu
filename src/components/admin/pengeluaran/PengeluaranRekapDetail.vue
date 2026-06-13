@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable camelcase, import/extensions */
 import { formatRupiah } from "@/composables/formatRupiah"
 import { notifyPengeluaranRekapUpdated } from "@/composables/pengeluaranRekap"
 import { showSnackbar } from "@/composables/snackbar"
@@ -50,6 +51,8 @@ const page = ref(1)
 const itemsPerPage = ref(10)
 const lpjPage = ref(1)
 const lpjItemsPerPage = ref(10)
+const rabSearch = ref("")
+const lpjSearch = ref("")
 const sortBy = ref({ key: "id", order: "desc" })
 const dataTable = ref([])
 const totalItems = ref(0)
@@ -76,6 +79,7 @@ const selectedLpjIds = ref([])
 const deleteItemsDialog = ref(false)
 const deletingItems = ref(false)
 const itemsToDelete = ref([])
+let rabSearchTimer = null
 const selectedIds = computed(() => activeDataTab.value === "rab" ? selectedRabIds.value : selectedLpjIds.value)
 
 const tableHeaders = computed(() => {
@@ -267,6 +271,7 @@ const fetchData = async () => {
         sort_key: sortBy.value.key,
         sort_order: sortBy.value.order,
         rekap_id: rekapId.value,
+        search: rabSearch.value,
       },
     })
 
@@ -288,6 +293,18 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
   if (sb.length) sortBy.value = sb[0]
   fetchData()
 }
+
+watch(rabSearch, () => {
+  clearTimeout(rabSearchTimer)
+  page.value = 1
+  selectedRabIds.value = []
+  rabSearchTimer = setTimeout(fetchData, 350)
+})
+
+watch(lpjSearch, () => {
+  lpjPage.value = 1
+  selectedLpjIds.value = []
+})
 
 const isNonPegawai = item => item.kategori_detail === "non_pegawai"
 const isRumahTangga = computed(() => ["rumah-tangga", "sarana-prasarana"].includes(props.moduleType))
@@ -328,6 +345,31 @@ const uraian = item => {
   return `Transport ${formatRupiah(subtotalTransport(item))}, mengajar ${formatRupiah(subtotalMengajar(item))}, sempro ${formatRupiah(subtotalSempro(item))}, UAS ${formatRupiah(subtotalUas(item))}`
 }
 
+const rowSearchText = item => [
+  item.tanggal,
+  item.kategori_detail,
+  pegawaiLabel(item),
+  pegawaiMeta(item),
+  item.petugas_nama,
+  item.kelompok_anggaran,
+  uraian(item),
+  item.volume,
+  item.satuan,
+  item.nominal,
+  item.prioritas,
+  item.jenis_pembayaran,
+  item.total,
+  item.keterangan,
+].join(" ").toLowerCase()
+
+const filteredLpjRows = computed(() => {
+  const keyword = lpjSearch.value.trim().toLowerCase()
+
+  if (!keyword) return lpjRows.value
+
+  return lpjRows.value.filter(item => rowSearchText(item).includes(keyword))
+})
+
 const currentDetailPath = computed(() => route.fullPath)
 
 const createPath = () => ({
@@ -347,8 +389,19 @@ const editBatchPath = () => ({
   },
 })
 
+const usesBatchAddForm = computed(() => [
+  "kegiatan",
+  "rumah-tangga",
+  "sarana-prasarana",
+  "transportasi",
+  "dosen-bulanan",
+  "bulanan",
+].includes(props.moduleType))
+
+const rabActionLabel = computed(() => Number(rekap.value?.jumlah_data || 0) > 0 && usesBatchAddForm.value ? "Edit Data" : "Tambah Data")
+
 const addRabPath = () => (
-  ["kegiatan", "rumah-tangga", "sarana-prasarana", "transportasi"].includes(props.moduleType)
+  usesBatchAddForm.value
     ? editBatchPath()
     : createPath()
 )
@@ -477,6 +530,7 @@ const submitDeleteItems = async () => {
 
     if (activeDataTab.value === "lpj") {
       const remainingItems = lpjRows.value.filter(row => !itemsToDelete.value.includes(row.id))
+
       const payload = remainingItems.map(row => ({
         ...row,
         lampiran: Array.isArray(row.lampiran) ? row.lampiran : [],
@@ -569,6 +623,8 @@ onMounted(async () => {
     })
   }
 })
+
+onBeforeUnmount(() => clearTimeout(rabSearchTimer))
 </script>
 
 <template>
@@ -697,7 +753,6 @@ onMounted(async () => {
               v-if="selectedIds.length > 0"
               color="error"
               prepend-icon="ri-delete-bin-line"
-              class="mr-3"
               @click="confirmDeleteItems(null)"
             >
               Hapus ({{ selectedIds.length }})
@@ -708,7 +763,7 @@ onMounted(async () => {
                 prepend-icon="ri-add-line"
                 @click="router.push(addRabPath())"
               >
-                Tambah Data
+                {{ rabActionLabel }}
               </VBtn>
             </template>
             <VBtn
@@ -743,6 +798,32 @@ onMounted(async () => {
           LPJ
         </VTab>
       </VTabs>
+
+      <VDivider />
+
+      <VCardText class="detail-search-row">
+        <VTextField
+          v-if="activeDataTab === 'rab'"
+          v-model="rabSearch"
+          prepend-inner-icon="ri-search-line"
+          placeholder="Cari data RAB..."
+          density="compact"
+          clearable
+          hide-details
+          class="detail-search-input"
+        />
+
+        <VTextField
+          v-else
+          v-model="lpjSearch"
+          prepend-inner-icon="ri-search-line"
+          placeholder="Cari data LPJ..."
+          density="compact"
+          clearable
+          hide-details
+          class="detail-search-input"
+        />
+      </VCardText>
 
       <VDivider />
 
@@ -873,7 +954,7 @@ onMounted(async () => {
             v-model:page="lpjPage"
             show-select
             :headers="lpjTableHeaders"
-            :items="lpjRows"
+            :items="filteredLpjRows"
             item-value="id"
             :loading="fetchingLpj || deletingItems"
           >
@@ -1293,6 +1374,15 @@ onMounted(async () => {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.detail-search-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detail-search-input {
+  max-inline-size: 360px;
 }
 
 .lpj-dialog-actions {

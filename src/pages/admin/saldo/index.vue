@@ -17,7 +17,7 @@ const modulesList = [
   { key: "sarana_prasarana", name: "Sarana Prasarana" },
   { key: "transportasi", name: "Transportasi" },
   { key: "dosen_bulanan", name: "Dosen Bulanan" },
-  { key: "staff_bulanan", name: "Staff Bulanan" },
+  { key: "hutang", name: "Hutang" },
 ]
 
 const getSaldo = (item, key) => {
@@ -104,7 +104,7 @@ const openDetail = item => {
     <div class="d-flex flex-wrap align-center justify-space-between gap-4 mb-6">
       <div>
         <h4 class="text-h4 font-weight-medium">Rekap Saldo Pegawai</h4>
-        <div class="text-body-1 text-medium-emphasis mt-1">Daftar saldo aktif dari seluruh modul pengeluaran</div>
+        <div class="text-body-1 text-medium-emphasis mt-1">Daftar saldo aktif dari seluruh modul saldo</div>
       </div>
       
       <div class="d-flex gap-4 align-center">

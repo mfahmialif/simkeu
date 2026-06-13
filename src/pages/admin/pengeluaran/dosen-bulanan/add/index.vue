@@ -1,8 +1,19 @@
 <script setup>
 import FormPengeluaranDosenBulananBatch from "@/components/admin/pengeluaran/pegawai-bulanan/FormPengeluaranDosenBulananBatch.vue"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 
 const router = useRouter()
+const route = useRoute()
+
+const returnPath = computed(() => {
+  const value = Array.isArray(route.query.return_to)
+    ? route.query.return_to[0]
+    : route.query.return_to
+
+  return typeof value === "string" && value.startsWith("/admin/pengeluaran/dosen-bulanan")
+    ? value
+    : "/admin/pengeluaran/dosen-bulanan"
+})
 
 onMounted(() => {
   document.title = "Tambah Barokah Dosen Bulanan - SIMKEU"
@@ -19,7 +30,7 @@ onMounted(() => {
         variant="outlined"
         color="secondary"
         prepend-icon="ri-arrow-left-line"
-        @click="router.push('/admin/pengeluaran/dosen-bulanan')"
+        @click="router.push(returnPath)"
       >
         Kembali
       </VBtn>
@@ -29,6 +40,8 @@ onMounted(() => {
       <FormPengeluaranDosenBulananBatch
         endpoint="/admin/pengeluaran/dosen-bulanan"
         base-path="/admin/pengeluaran/dosen-bulanan"
+        title="Barokah Dosen Bulanan"
+        pegawai-title="Dosen"
       />
     </VCol>
   </VRow>

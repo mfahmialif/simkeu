@@ -12,6 +12,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  compact: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits([
@@ -40,12 +44,14 @@ const removeExistingLampiran = path => {
       label="Lampiran"
       multiple
       chips
-      show-size
+      :show-size="!compact"
       clearable
       :prepend-icon="null"
       accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
-      hint="Opsional, maksimal 10 file dan 10 MB per file."
-      persistent-hint
+      :hint="compact ? undefined : 'Opsional, maksimal 10 file dan 10 MB per file.'"
+      :persistent-hint="!compact"
+      :density="compact ? 'compact' : undefined"
+      :hide-details="compact"
     />
 
     <div

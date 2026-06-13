@@ -134,17 +134,6 @@ export const routes = [
       moduleType: "dosen-bulanan",
     },
   },
-  {
-    path: "/admin/pengeluaran/staff-bulanan/rekap/:id/lpj",
-    name: "admin-pengeluaran-staff-bulanan-rekap-id-lpj",
-    component: lpjRouteComponent,
-    props: {
-      title: "Barokah Staff Bulanan",
-      endpoint: "/admin/pengeluaran/staff-bulanan",
-      basePath: "/admin/pengeluaran/staff-bulanan",
-      moduleType: "bulanan",
-    },
-  },
 
   // Email filter
   {

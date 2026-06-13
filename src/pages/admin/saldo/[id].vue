@@ -18,6 +18,7 @@ const form = ref({
 })
 
 const modules = computed(() => detail.value?.modules || [])
+const adjustmentModules = computed(() => modules.value.filter(item => item.key !== "hutang"))
 const summary = computed(() => detail.value?.summary || {})
 const adjustments = computed(() => detail.value?.adjustments || [])
 
@@ -43,8 +44,8 @@ const fetchDetail = async () => {
     const response = await $api(`/admin/saldo/${route.params.id}`)
 
     detail.value = response.data
-    if (!form.value.module_key && modules.value.length) {
-      form.value.module_key = modules.value[0].key
+    if (!form.value.module_key && adjustmentModules.value.length) {
+      form.value.module_key = adjustmentModules.value[0].key
     }
   } catch (error) {
     console.error(error)
@@ -56,7 +57,7 @@ const fetchDetail = async () => {
 
 const resetForm = () => {
   form.value = {
-    module_key: form.value.module_key || modules.value[0]?.key || null,
+    module_key: form.value.module_key || adjustmentModules.value[0]?.key || null,
     tanggal: new Date().toISOString().slice(0, 10),
     nominal: null,
     keterangan: "",
@@ -136,7 +137,7 @@ onMounted(() => {
         <VCol cols="12" md="4">
           <VCard>
             <VCardText>
-              <div class="text-body-2 text-medium-emphasis mb-1">Saldo dari RAB - LPJ</div>
+              <div class="text-body-2 text-medium-emphasis mb-1">Saldo Sistem</div>
               <div class="text-h5 font-weight-medium">
                 {{ formatRupiah((summary.total_saldo || 0) - (summary.total_tambahan || 0)) }}
               </div>
@@ -177,8 +178,8 @@ onMounted(() => {
                 <thead>
                   <tr>
                     <th>Kategori</th>
-                    <th class="text-end">RAB</th>
-                    <th class="text-end">LPJ</th>
+                    <th class="text-end">Masuk</th>
+                    <th class="text-end">Keluar</th>
                     <th class="text-end">Tambahan</th>
                     <th class="text-end">Total</th>
                   </tr>
@@ -236,7 +237,7 @@ onMounted(() => {
               <VForm @submit.prevent="submitAdjustment">
                 <VSelect
                   v-model="form.module_key"
-                  :items="modules"
+                  :items="adjustmentModules"
                   item-title="name"
                   item-value="key"
                   label="Kategori"

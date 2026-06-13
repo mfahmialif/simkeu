@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable camelcase, import/extensions */
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js"
 import "flatpickr/dist/plugins/monthSelect/style.css"
 import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue"
@@ -30,8 +31,6 @@ const props = defineProps({
     default: false,
   },
 })
-
-const isDosenBulanan = computed(() => props.endpoint.includes("dosen-bulanan"))
 
 const page = ref(1)
 const itemsPerPage = ref(5)
@@ -266,9 +265,7 @@ const clearBatchSelection = () => {
 
 const fetchPetugas = async () => {
   try {
-    const items = await fetchPetugasPengeluaranOptions(
-      isDosenBulanan.value ? "dosen_bulanan" : "staff_bulanan",
-    )
+    const items = await fetchPetugasPengeluaranOptions("dosen_bulanan")
 
     petugasList.value = items
 
@@ -393,11 +390,7 @@ const copyBsiData = async () => {
   }
 }
 
-const unitLabel = item => item.tipe_pegawai === "staff"
-  ? item.jabatan_staff
-  : item.nama_prodi_dosen
-
-const subtotalHarian = item => Number(item.barokah_harian || 0) * Number(item.hari || 0)
+const unitLabel = item => item.nama_prodi_dosen
 
 const monthName = value => {
   const months = [
@@ -726,17 +719,8 @@ onMounted(() => {
           { title: 'Pegawai', key: 'nama_pegawai' },
           { title: 'Nama Petugas', key: 'petugas_nama' },
           { title: 'Rekap', key: 'nama_rekap' },
-          ...(isDosenBulanan
-            ? [
-              { title: 'Dosen Tetap', key: 'barokah_dosen_tetap' },
-              { title: 'Struktural', key: 'barokah_struktural' },
-            ]
-            : [
-              { title: showPeriod ? 'Total Hari' : 'Hari', key: 'hari' },
-              { title: 'Barokah Harian', key: 'barokah_harian' },
-              { title: 'Subtotal Harian', key: 'subtotal_harian', sortable: false },
-              { title: 'Barokah Bulanan', key: 'barokah_bulanan' },
-            ]),
+          { title: 'Dosen Tetap', key: 'barokah_dosen_tetap' },
+          { title: 'Struktural', key: 'barokah_struktural' },
           { title: 'Total', key: 'total' },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
           { title: 'Lampiran', key: 'lampiran', sortable: false },
@@ -785,7 +769,7 @@ onMounted(() => {
             {{ item.kode_pegawai || "-" }}
           </div>
           <div class="text-caption text-medium-emphasis">
-            {{ item.tipe_pegawai === "staff" ? "Staff" : "Dosen" }}
+            Dosen
             <span v-if="unitLabel(item)"> - {{ unitLabel(item) }}</span>
           </div>
           <div class="text-caption text-medium-emphasis">
@@ -803,18 +787,6 @@ onMounted(() => {
 
         <template #item.nama_rekap="{ item }">
           {{ item.nama_rekap || "-" }}
-        </template>
-
-        <template #item.barokah_harian="{ item }">
-          {{ formatRupiah(item.barokah_harian) }}
-        </template>
-
-        <template #item.subtotal_harian="{ item }">
-          {{ formatRupiah(subtotalHarian(item)) }}
-        </template>
-
-        <template #item.barokah_bulanan="{ item }">
-          {{ formatRupiah(item.barokah_bulanan) }}
         </template>
 
         <template #item.barokah_dosen_tetap="{ item }">
@@ -840,7 +812,7 @@ onMounted(() => {
             </VChip>
 
             <VBtn
-              v-if="!isDosenBulanan && item.jenis_pembayaran === 'Transfer' && item.bukti_transfer_url"
+              v-if="item.jenis_pembayaran === 'Transfer' && item.bukti_transfer_url"
               :href="item.bukti_transfer_url"
               target="_blank"
               rel="noopener noreferrer"

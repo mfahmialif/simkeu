@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable camelcase, import/extensions */
 import { formatRupiah } from "@/composables/formatRupiah"
 import { showSnackbar } from "@/composables/snackbar"
 import {
@@ -50,6 +51,7 @@ const namaInput = ref(null)
 const nama = ref("")
 const keterangan = ref("")
 const jumlahSementara = ref(0)
+const useJumlahSementara = ref(false)
 
 const currentDateValue = () => {
   const date = new Date()
@@ -181,6 +183,7 @@ const resetForm = () => {
   nama.value = ""
   keterangan.value = ""
   jumlahSementara.value = 0
+  useJumlahSementara.value = false
   tanggalRekap.value = currentDateValue()
   bulanTahun.value = currentMonthValue()
 }
@@ -214,13 +217,18 @@ const createRekap = async () => {
     return
   }
 
-  const temporaryAmount = Number(jumlahSementara.value)
+  const temporaryAmount = useJumlahSementara.value
+    ? Number(jumlahSementara.value)
+    : null
 
   if (
-    jumlahSementara.value === ""
-    || jumlahSementara.value === null
-    || !Number.isFinite(temporaryAmount)
-    || temporaryAmount < 0
+    useJumlahSementara.value
+    && (
+      jumlahSementara.value === ""
+      || jumlahSementara.value === null
+      || !Number.isFinite(temporaryAmount)
+      || temporaryAmount < 0
+    )
   ) {
     showSnackbar({
       text: "Jumlah sementara harus diisi dengan nilai yang valid.",
@@ -383,6 +391,17 @@ onBeforeUnmount(() => {
                 :hint="`${formatRupiah(jumlahSementara)} - dipakai sampai detail tersedia`"
                 persistent-hint
                 :rules="[requiredValidator]"
+                :disabled="!useJumlahSementara"
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <VCheckbox
+                v-model="useJumlahSementara"
+                label="Gunakan jumlah sementara sebagai batas RAB"
+                hint="Matikan agar nominal detail RAB dapat diisi bebas."
+                persistent-hint
+                hide-details="auto"
               />
             </VCol>
 

@@ -6,7 +6,6 @@ import pengeluaran from "./pengeluaran"
 import pengeluaranDosen, {
   pengeluaranDosenBulanan,
   pengeluaranDosenKegiatan,
-  pengeluaranStaffBulanan,
   pengeluaranDosenTatapmuka,
 } from "./pengeluaran-dosen"
 import pengeluaranHeading from "./pengeluaran-heading"
@@ -19,6 +18,7 @@ import pemasukanStaff from "./staff/pemasukanStaff"
 import user from "./user"
 import laporan from "./laporan"
 import rab from "./rab"
+import hutang from "./hutang"
 import rumahTangga from "./rumah-tangga"
 import saranaPrasarana from "./sarana-prasarana"
 import transportasi from "./transportasi"
@@ -38,6 +38,7 @@ const routesByRole = roleName => {
       ...pemasukan,
       ...pengeluaranHeading,
       ...pegawai,
+      ...hutang,
       ...pengeluaran,
       ...pengeluaranDosen,
       ...rumahTangga,
@@ -54,6 +55,7 @@ const routesByRole = roleName => {
       ...pemasukan,
       ...pengeluaranHeading,
       ...pengeluaran,
+      ...hutang,
       ...pengeluaranDosen,
       ...rumahTangga,
       ...saranaPrasarana,
@@ -69,31 +71,35 @@ const routesByRole = roleName => {
       ...pemasukan,
       ...pengeluaranHeading,
       ...pengeluaran,
+      ...hutang,
       ...rab,
       ...laporan,
       ...user,
       ...setting,
     ],
 
-    staff: [...dashboardStaff, ...pemasukanStaff, ...laporan, ...setting],
-    kabag: [...dashboardStaff, ...pemasukanStaff, ...rab, ...laporan, ...setting],
+    staff: [...dashboardStaff, ...pemasukanStaff, ...hutang, ...laporan, ...setting],
+    kabag: [...dashboardStaff, ...pemasukanStaff, ...hutang, ...rab, ...laporan, ...setting],
 
     rumahtangga: [
       ...dashboard,
       ...mahasiswa,
       ...pemasukanRumahTangga,
+      ...hutang,
       ...rumahTangga,
       ...setting,
     ],
 
     sarpras: [
       ...dashboard,
+      ...hutang,
       ...saranaPrasarana,
       ...setting,
     ],
 
     transportasi: [
       ...dashboard,
+      ...hutang,
       ...transportasi,
       ...setting,
     ],
@@ -103,6 +109,7 @@ const routesByRole = roleName => {
       ...mahasiswa,
       ...pengeluaranHeading,
       ...pengeluaranDosenTatapmuka,
+      ...hutang,
       ...rab,
       ...settingHeading,
       ...setting,
@@ -113,7 +120,7 @@ const routesByRole = roleName => {
       ...mahasiswa,
       ...pengeluaranHeading,
       ...pengeluaranDosenKegiatan,
-      ...pengeluaranStaffBulanan,
+      ...hutang,
       ...rab,
       ...settingHeading,
       ...setting,
@@ -124,6 +131,7 @@ const routesByRole = roleName => {
       ...mahasiswa,
       ...pengeluaranHeading,
       ...pengeluaranDosenBulanan,
+      ...hutang,
       ...rab,
       ...settingHeading,
       ...setting,

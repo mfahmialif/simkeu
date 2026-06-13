@@ -9,10 +9,10 @@ import dashboardStaff from "./staff/dashboardStaff"
 import pemasukanStaff from "./staff/pemasukanStaff"
 import user from "./user"
 import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga"
+import hutang from "./hutang"
 import {
   pengeluaranDosenBulanan,
   pengeluaranDosenKegiatan,
-  pengeluaranStaffBulanan,
   pengeluaranDosenTatapmuka,
 } from "./barokahdosen/pengeluaranBarokahDosen"
 import laporan from "./laporan"
@@ -39,6 +39,7 @@ const routesByRole = roleName => {
       ...saranaPrasarana,
       ...transportasi,
       ...pegawai,
+      ...hutang,
       ...rab,
       ...laporan,
       ...user,
@@ -52,6 +53,7 @@ const routesByRole = roleName => {
       ...rumahTangga,
       ...saranaPrasarana,
       ...transportasi,
+      ...hutang,
       ...rab,
       ...laporan,
       ...user,
@@ -62,38 +64,42 @@ const routesByRole = roleName => {
       ...dashboard,
       ...pemasukan,
       ...pengeluaran,
+      ...hutang,
       ...rab,
       ...laporan,
       ...user,
       ...setting,
     ],
 
-    staff: [...dashboardStaff, ...pemasukanStaff, ...setting],
-    kabag: [...dashboardStaff, ...pemasukanStaff, ...rab, ...setting],
+    staff: [...dashboardStaff, ...pemasukanStaff, ...hutang, ...setting],
+    kabag: [...dashboardStaff, ...pemasukanStaff, ...hutang, ...rab, ...setting],
 
     rumahtangga: [
       ...dashboard,
       ...mahasiswa,
       ...pemasukanRumahTangga,
+      ...hutang,
       ...rumahTangga,
       ...setting,
     ],
 
     sarpras: [
       ...dashboard,
+      ...hutang,
       ...saranaPrasarana,
       ...setting,
     ],
 
     transportasi: [
       ...dashboard,
+      ...hutang,
       ...transportasi,
       ...setting,
     ],
 
-    barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...rab, ...setting],
-    barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...pengeluaranStaffBulanan, ...rab, ...setting],
-    barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...rab, ...setting],
+    barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...hutang, ...rab, ...setting],
+    barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...hutang, ...rab, ...setting],
+    barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...hutang, ...rab, ...setting],
   }
 }
 

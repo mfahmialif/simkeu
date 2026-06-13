@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable camelcase, import/extensions */
 import { formatRupiah } from "@/composables/formatRupiah"
 import {
   listenPengeluaranRekapUpdated,
@@ -56,6 +57,7 @@ const namaInput = ref(null)
 const nama = ref("")
 const keterangan = ref("")
 const jumlahSementara = ref(0)
+const useJumlahSementara = ref(true)
 
 const currentDateValue = () => {
   const date = new Date()
@@ -305,6 +307,7 @@ const resetForm = () => {
   nama.value = ""
   keterangan.value = ""
   jumlahSementara.value = 0
+  useJumlahSementara.value = false
   tanggalRekap.value = currentDateValue()
   bulanTahun.value = currentMonthValue()
 }
@@ -320,6 +323,7 @@ const openEditDialog = item => {
   bulanTahun.value = String(item.bulan_tahun || "").slice(0, 7)
   tanggalRekap.value = String(item.tanggal_rekap || "").slice(0, 10) || currentDateValue()
   jumlahSementara.value = Number(item.jumlah_data > 0 ? item.jumlah : (item.jumlah_sementara ?? item.jumlah ?? 0))
+  useJumlahSementara.value = item.jumlah_sementara !== null
   keterangan.value = item.keterangan || ""
   dialog.value = true
 }
@@ -348,14 +352,20 @@ const saveRekap = async (openDetailInput = false) => {
     return
   }
 
-  const temporaryAmount = Number(jumlahSementara.value)
+  const temporaryAmount = !useJumlahSementara.value
+    ? null
+    : Number(jumlahSementara.value)
 
-  if (!editingHasDetails.value && (
-    jumlahSementara.value === ""
-    || jumlahSementara.value === null
-    || !Number.isFinite(temporaryAmount)
-    || temporaryAmount < 0
-  )) {
+  if (
+    !editingHasDetails.value
+    && useJumlahSementara.value
+    && (
+      jumlahSementara.value === ""
+      || jumlahSementara.value === null
+      || !Number.isFinite(temporaryAmount)
+      || temporaryAmount < 0
+    )
+  ) {
     showSnackbar({
       text: "Jumlah sementara harus diisi dengan nilai yang valid.",
       color: "warning",
@@ -947,12 +957,29 @@ onBeforeUnmount(() => {
                 type="number"
                 min="0"
                 prefix="Rp"
-                :disabled="editingHasDetails"
+                :disabled="editingHasDetails || !useJumlahSementara"
                 :hint="editingHasDetails
                   ? 'Jumlah dihitung otomatis dari total data pengeluaran.'
-                  : `${formatRupiah(jumlahSementara)} - dipakai sampai detail tersedia`"
+                  : !useJumlahSementara
+                    ? 'RAB tidak dibatasi jumlah sementara.'
+                    : `${formatRupiah(jumlahSementara)} - dipakai sampai detail tersedia`"
                 persistent-hint
-                :rules="editingHasDetails ? [] : [requiredValidator]"
+                :rules="editingHasDetails || !useJumlahSementara
+                  ? []
+                  : [requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              v-if="!editingHasDetails"
+              cols="12"
+            >
+              <VCheckbox
+                v-model="useJumlahSementara"
+                label="Gunakan jumlah sementara sebagai batas RAB"
+                hint="Aktifkan jika total detail RAB tidak boleh melebihi jumlah sementara."
+                persistent-hint
+                hide-details="auto"
               />
             </VCol>
 

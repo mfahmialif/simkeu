@@ -178,7 +178,6 @@ const moduleColor = key => ({
   tatap_muka: "primary",
   kegiatan: "warning",
   dosen_bulanan: "info",
-  staff_bulanan: "success",
 }[key] || "secondary")
 
 const kasTipeItems = [

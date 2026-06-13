@@ -9,6 +9,16 @@ const id = route.params.id
 const dataForm = ref(null)
 const isLoading = ref(true)
 
+const returnPath = computed(() => {
+  const value = Array.isArray(route.query.return_to)
+    ? route.query.return_to[0]
+    : route.query.return_to
+
+  return typeof value === "string" && value.startsWith("/admin/pengeluaran/dosen-bulanan")
+    ? value
+    : "/admin/pengeluaran/dosen-bulanan"
+})
+
 const fetchDataForm = async () => {
   isLoading.value = true
   try {
@@ -43,7 +53,7 @@ onMounted(() => {
         variant="outlined"
         color="secondary"
         prepend-icon="ri-arrow-left-line"
-        @click="router.push('/admin/pengeluaran/dosen-bulanan')"
+        @click="router.push(returnPath)"
       >
         Kembali
       </VBtn>

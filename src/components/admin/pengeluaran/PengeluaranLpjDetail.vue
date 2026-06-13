@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable camelcase */
 import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue"
 import { formatRupiah } from "@/composables/formatRupiah"
 import { showSnackbar } from "@/composables/snackbar"
@@ -51,6 +52,11 @@ const loading = ref(true)
 const loadingPegawai = ref(false)
 const saving = ref(false)
 const mobileSummaryHidden = ref(false)
+const dosenLpjUsesCombobox = ref(false)
+const dosenSearch = ref("")
+const dosenPage = ref(1)
+const dosenRowsPerPage = ref(15)
+const dosenRowsPerPageOptions = [15, 30, 50]
 
 const returnPath = computed(() => {
   const value = Array.isArray(route.query.return_to)
@@ -74,7 +80,6 @@ const isKegiatan = computed(() => props.moduleType === "kegiatan")
 const isRumahTangga = computed(() => ["rumah-tangga", "sarana-prasarana"].includes(props.moduleType))
 const isTransportasi = computed(() => props.moduleType === "transportasi")
 const isDosenBulanan = computed(() => props.moduleType === "dosen-bulanan")
-const isStaffBulanan = computed(() => props.moduleType === "bulanan")
 
 const currentDateValue = () => {
   const date = new Date()
@@ -244,13 +249,53 @@ const pegawaiDisplay = item => [
   item.dosen?.prodi?.nama || item.dosen?.prodi?.alias || item.staff?.jabatan,
 ].filter(Boolean).join(" - ")
 
+const pegawaiItem = pegawaiId =>
+  pegawaiItems.value.find(item => String(item.id) === String(pegawaiId))
+
+const dosenLpjRows = computed(() => {
+  const search = dosenSearch.value.trim().toLowerCase()
+
+  if (!search) return rows.value
+
+  return rows.value.filter(row => {
+    const pegawai = pegawaiItem(row.pegawai_id)
+
+    return [
+      pegawai?.kode,
+      pegawai?.nama,
+      pegawai?.dosen?.prodi?.nama,
+      pegawai?.dosen?.prodi?.alias,
+      row.keterangan,
+    ].some(value => String(value || "").toLowerCase().includes(search))
+  })
+})
+
+const dosenTotalPages = computed(() =>
+  Math.max(1, Math.ceil(dosenLpjRows.value.length / dosenRowsPerPage.value)),
+)
+
+const paginatedDosenLpjRows = computed(() => {
+  const start = (dosenPage.value - 1) * dosenRowsPerPage.value
+
+  return dosenLpjRows.value.slice(start, start + dosenRowsPerPage.value)
+})
+
+const dosenVisibleRange = computed(() => {
+  if (dosenLpjRows.value.length === 0) return { start: 0, end: 0 }
+
+  const start = ((dosenPage.value - 1) * dosenRowsPerPage.value) + 1
+
+  return {
+    start,
+    end: Math.min(start + dosenRowsPerPage.value - 1, dosenLpjRows.value.length),
+  }
+})
+
+const sourceRowIndex = row => rows.value.indexOf(row)
+
 const pegawaiForRow = () => {
   if (isTatapmuka.value || isDosenBulanan.value) {
     return pegawaiItems.value.filter(item => item.tipe === "dosen")
-  }
-
-  if (isStaffBulanan.value) {
-    return pegawaiItems.value.filter(item => item.tipe === "staff")
   }
 
   return pegawaiItems.value
@@ -325,6 +370,7 @@ const fetchData = async () => {
       })
       items.value = newItems.length ? newItems : [{ key: `item-${Date.now()}-${Math.random()}`, kelompok_anggaran: "", subItems: [newRow()] }]
     } else {
+      dosenLpjUsesCombobox.value = isDosenBulanan.value && details.length === 0
       rows.value = details.length ? details.map(detailToRow) : [newRow()]
     }
   } catch (err) {
@@ -436,6 +482,20 @@ const removeRow = index => {
 
   rows.value.splice(index, 1)
 }
+
+watch(dosenSearch, () => {
+  dosenPage.value = 1
+})
+
+watch(dosenRowsPerPage, () => {
+  dosenPage.value = 1
+})
+
+watch(() => dosenLpjRows.value.length, () => {
+  if (dosenPage.value > dosenTotalPages.value) {
+    dosenPage.value = dosenTotalPages.value
+  }
+})
 
 const onKategoriChange = row => {
   if (row.kategori_detail === "non_pegawai") {
@@ -605,13 +665,26 @@ onMounted(() => {
         </VCardSubtitle>
 
         <template #append>
-          <VBtn
-            color="primary"
-            prepend-icon="ri-add-line"
-            @click="addRow"
-          >
-            Tambah Baris
-          </VBtn>
+          <div class="lpj-card-tools">
+            <VTextField
+              v-if="isDosenBulanan"
+              v-model="dosenSearch"
+              prepend-inner-icon="ri-search-line"
+              placeholder="Cari NIY, nama, atau prodi"
+              density="compact"
+              clearable
+              hide-details
+              class="lpj-dosen-search"
+            />
+            <VBtn
+              v-if="!isDosenBulanan || dosenLpjUsesCombobox"
+              color="primary"
+              prepend-icon="ri-add-line"
+              @click="addRow"
+            >
+              Tambah Baris
+            </VBtn>
+          </div>
         </template>
       </VCardItem>
 
@@ -633,7 +706,179 @@ onMounted(() => {
         v-else
         class="pa-0"
       >
-        <template v-if="isRumahTangga">
+        <template v-if="isDosenBulanan">
+          <div class="lpj-dosen-list">
+            <div class="lpj-dosen-header">
+              <span>Dosen</span>
+              <span>Tanggal</span>
+              <span>Dosen Tetap</span>
+              <span>Struktural</span>
+              <span>Total</span>
+              <span>Jenis Pembayaran</span>
+              <span>Keterangan</span>
+              <span />
+            </div>
+
+            <div
+              v-for="row in paginatedDosenLpjRows"
+              :key="row.key"
+              class="lpj-dosen-row"
+            >
+              <VAutocomplete
+                v-if="dosenLpjUsesCombobox"
+                v-model="row.pegawai_id"
+                :items="pegawaiForRow(row)"
+                item-title="display"
+                item-value="id"
+                label="Dosen *"
+                :loading="loadingPegawai"
+                density="compact"
+                hide-details
+                clearable
+              />
+
+              <div
+                v-else
+                class="lpj-dosen-identity"
+              >
+                <div class="font-weight-medium">
+                  {{ pegawaiItem(row.pegawai_id)?.nama || "Dosen tidak ditemukan" }}
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  {{ pegawaiItem(row.pegawai_id)?.kode || "-" }}
+                  <span v-if="pegawaiItem(row.pegawai_id)?.dosen?.prodi?.nama || pegawaiItem(row.pegawai_id)?.dosen?.prodi?.alias">
+                    · {{ pegawaiItem(row.pegawai_id)?.dosen?.prodi?.nama || pegawaiItem(row.pegawai_id)?.dosen?.prodi?.alias }}
+                  </span>
+                </div>
+              </div>
+
+              <AppDateTimePicker
+                v-model="row.tanggal"
+                label="Tanggal *"
+                :config="{
+                  altInput: true,
+                  altFormat: 'd M Y',
+                  dateFormat: 'Y-m-d',
+                }"
+                density="compact"
+                hide-details
+              />
+
+              <VTextField
+                v-model.number="row.barokah_dosen_tetap"
+                type="number"
+                min="0"
+                label="Dosen Tetap"
+                :hint="formatRupiah(row.barokah_dosen_tetap)"
+                density="compact"
+                hide-details
+              />
+
+              <VTextField
+                v-model.number="row.barokah_struktural"
+                type="number"
+                min="0"
+                label="Struktural"
+                :hint="formatRupiah(row.barokah_struktural)"
+                density="compact"
+                hide-details
+              />
+
+              <div class="lpj-dosen-total">
+                <span class="text-caption text-medium-emphasis">Total</span>
+                <strong>{{ formatRupiah(rowTotal(row)) }}</strong>
+              </div>
+
+              <VSelect
+                v-model="row.jenis_pembayaran"
+                label="Jenis"
+                :items="paymentItems(row)"
+                density="compact"
+                hide-details
+              />
+
+              <VTextField
+                v-model="row.keterangan"
+                label="Keterangan"
+                density="compact"
+                hide-details
+              />
+
+              <div class="lpj-dosen-actions">
+                <VTooltip
+                  v-if="dosenLpjUsesCombobox"
+                  text="Tambah baris setelah ini"
+                  location="top"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <VBtn
+                      v-bind="tooltipProps"
+                      icon="ri-add-line"
+                      size="small"
+                      variant="tonal"
+                      color="primary"
+                      @click="addRow(sourceRowIndex(row))"
+                    />
+                  </template>
+                </VTooltip>
+                <VTooltip
+                  text="Hapus baris"
+                  location="top"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <VBtn
+                      v-bind="tooltipProps"
+                      icon="ri-subtract-line"
+                      size="small"
+                      variant="tonal"
+                      color="error"
+                      @click="removeRow(sourceRowIndex(row))"
+                    />
+                  </template>
+                </VTooltip>
+              </div>
+            </div>
+
+            <div
+              v-if="dosenLpjRows.length === 0"
+              class="lpj-dosen-empty"
+            >
+              <VIcon
+                icon="ri-search-line"
+                size="32"
+              />
+              <span>Dosen tidak ditemukan.</span>
+            </div>
+
+            <div
+              v-else
+              class="lpj-dosen-pagination"
+            >
+              <span class="text-body-2 text-medium-emphasis">
+                Menampilkan {{ dosenVisibleRange.start }}-{{ dosenVisibleRange.end }} dari {{ dosenLpjRows.length }}
+              </span>
+              <div class="lpj-dosen-pagination-controls">
+                <VSelect
+                  v-model="dosenRowsPerPage"
+                  :items="dosenRowsPerPageOptions"
+                  label="Baris"
+                  density="compact"
+                  hide-details
+                  class="lpj-dosen-page-size"
+                />
+                <VPagination
+                  v-if="dosenTotalPages > 1"
+                  v-model="dosenPage"
+                  :length="dosenTotalPages"
+                  :total-visible="5"
+                  density="compact"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="isRumahTangga">
           <div
             v-for="(item, itemIndex) in items"
             :key="item.key"
@@ -664,7 +909,7 @@ onMounted(() => {
                   </VCol>
                   <VCol
                     cols="auto"
-                    class="ml-auto text-right"
+                    class="lpj-item-action text-right"
                   >
                     <VTooltip
                       text="Hapus Uraian"
@@ -856,6 +1101,7 @@ onMounted(() => {
             v-for="(row, index) in rows"
             :key="row.key"
             class="lpj-row"
+            :class="{ 'lpj-row--bulanan': isDosenBulanan }"
           >
             <div class="lpj-row-number">
               {{ index + 1 }}
@@ -872,7 +1118,7 @@ onMounted(() => {
                 />
                 {{ row.petugas_nama }}
               </div>
-              <VRow>
+              <VRow :class="{ 'lpj-bulanan-grid': isDosenBulanan }">
                 <VCol
                   v-if="isKegiatan"
                   cols="12"
@@ -1177,6 +1423,8 @@ onMounted(() => {
                       type="number"
                       min="0"
                       label="Barokah Dosen Tetap"
+                      density="compact"
+                      hide-details
                     />
                   </VCol>
                   <VCol
@@ -1188,42 +1436,8 @@ onMounted(() => {
                       type="number"
                       min="0"
                       label="Barokah Struktural"
-                    />
-                  </VCol>
-                </template>
-
-                <template v-if="isStaffBulanan">
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.hari"
-                      type="number"
-                      min="0"
-                      label="Hari"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="3"
-                  >
-                    <VTextField
-                      v-model="row.barokah_harian"
-                      type="number"
-                      min="0"
-                      label="Barokah Harian"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="3"
-                  >
-                    <VTextField
-                      v-model="row.barokah_bulanan"
-                      type="number"
-                      min="0"
-                      label="Barokah Bulanan"
+                      density="compact"
+                      hide-details
                     />
                   </VCol>
                 </template>
@@ -1236,6 +1450,8 @@ onMounted(() => {
                     v-model="row.jenis_pembayaran"
                     label="Pembayaran"
                     :items="paymentItems(row)"
+                    density="compact"
+                    hide-details
                   />
                 </VCol>
 
@@ -1246,6 +1462,8 @@ onMounted(() => {
                   <VTextField
                     v-model="row.keterangan"
                     label="Keterangan"
+                    density="compact"
+                    hide-details
                   />
                 </VCol>
 
@@ -1257,6 +1475,8 @@ onMounted(() => {
                     :model-value="formatRupiah(rowTotal(row))"
                     label="Total LPJ"
                     readonly
+                    density="compact"
+                    hide-details
                   />
                 </VCol>
               </VRow>
@@ -1375,6 +1595,95 @@ onMounted(() => {
   gap: 12px;
 }
 
+.lpj-card-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lpj-dosen-search {
+  inline-size: min(360px, 34vw);
+}
+
+.lpj-dosen-header,
+.lpj-dosen-row {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  grid-template-columns:
+    minmax(190px, 1.2fr)
+    minmax(130px, 0.75fr)
+    minmax(120px, 0.7fr)
+    minmax(120px, 0.7fr)
+    minmax(105px, 0.6fr)
+    minmax(130px, 0.75fr)
+    minmax(150px, 0.9fr)
+    76px;
+}
+
+.lpj-dosen-header {
+  padding: 12px 20px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.lpj-dosen-row {
+  min-block-size: 86px;
+  border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  padding: 14px 20px;
+}
+
+.lpj-dosen-identity {
+  min-inline-size: 0;
+}
+
+.lpj-dosen-identity > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lpj-dosen-total {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+}
+
+.lpj-dosen-total strong {
+  overflow-wrap: anywhere;
+}
+
+.lpj-dosen-actions,
+.lpj-dosen-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lpj-dosen-empty {
+  display: flex;
+  min-block-size: 160px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  gap: 10px;
+}
+
+.lpj-dosen-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.lpj-dosen-page-size {
+  inline-size: 100px;
+}
+
 .lpj-header {
   display: grid;
   align-items: center;
@@ -1454,9 +1763,22 @@ onMounted(() => {
   gap: 6px;
 }
 
+.lpj-item-action {
+  margin-inline-start: auto;
+}
+
 .lpj-row-actions {
   display: grid;
   gap: 8px;
+}
+
+.lpj-row--bulanan {
+  align-items: center;
+  padding-block: 14px;
+}
+
+.lpj-bulanan-grid {
+  align-items: center;
 }
 
 .floating-footer {
@@ -1523,9 +1845,31 @@ onMounted(() => {
   .lpj-header {
     grid-template-columns: 1fr;
   }
+
+  .lpj-dosen-header {
+    display: none;
+  }
+
+  .lpj-dosen-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lpj-dosen-actions {
+    justify-content: flex-end;
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 959px) {
+  .lpj-card-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lpj-dosen-search {
+    inline-size: 100%;
+  }
+
   .lpj-row {
     grid-template-columns: 32px minmax(0, 1fr);
   }
@@ -1557,6 +1901,25 @@ onMounted(() => {
 
   .lpj-summary-cards {
     grid-template-columns: 1fr;
+  }
+
+  .lpj-dosen-row {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px 16px;
+  }
+
+  .lpj-dosen-actions {
+    grid-column: auto;
+  }
+
+  .lpj-dosen-pagination,
+  .lpj-dosen-pagination-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lpj-dosen-page-size {
+    inline-size: 100%;
   }
 
   .lpj-row {
