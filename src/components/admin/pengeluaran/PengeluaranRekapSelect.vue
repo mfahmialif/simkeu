@@ -43,6 +43,7 @@ const emit = defineEmits(["update:modelValue", "created", "selected"])
 
 const items = ref([])
 const loading = ref(false)
+const searchText = ref("")
 const dialog = ref(false)
 const saving = ref(false)
 const namaInput = ref(null)
@@ -70,6 +71,7 @@ const currentMonthValue = () => {
 
 const bulanTahun = ref(currentMonthValue())
 let stopListeningRekapUpdates = null
+let searchTimer = null
 
 const monthYearPickerConfig = {
   altInput: true,
@@ -148,28 +150,23 @@ const errorMessage = err => {
   return message || "Terjadi kesalahan."
 }
 
-const fetchRekap = async () => {
+const fetchRekap = async (search = searchText.value) => {
   try {
     loading.value = true
 
     const response = await $api(`${props.endpoint}/rekap`, {
       method: "GET",
       body: {
-        limit: 100,
+        mode: "simple",
+        limit: 20,
         sort_key: "id",
         sort_order: "desc",
+        ...(search && { search }),
         ...props.filters,
       },
     })
 
     items.value = response.data?.data || []
-
-    if (
-      selectedValue.value
-      && !items.value.some(item => String(item.id) === String(selectedValue.value))
-    ) {
-      selectedValue.value = null
-    }
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -279,15 +276,24 @@ onMounted(() => {
 
 watch(selectedItem, item => emit("selected", item), { immediate: true })
 
-watch(() => props.filters, fetchRekap, { deep: true })
+watch(() => props.filters, () => fetchRekap(), { deep: true })
 
-onBeforeUnmount(() => stopListeningRekapUpdates?.())
+watch(searchText, value => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => fetchRekap(value), 250)
+})
+
+onBeforeUnmount(() => {
+  clearTimeout(searchTimer)
+  stopListeningRekapUpdates?.()
+})
 </script>
 
 <template>
   <div class="rekap-select">
     <VAutocomplete
       v-model="selectedValue"
+      v-model:search="searchText"
       :items="items"
       item-title="nama"
       item-value="id"
@@ -295,6 +301,7 @@ onBeforeUnmount(() => stopListeningRekapUpdates?.())
       :rules="rules"
       :loading="loading"
       :disabled="disabled"
+      no-filter
       clearable
     >
       <template #item="{ props: itemProps, item }">

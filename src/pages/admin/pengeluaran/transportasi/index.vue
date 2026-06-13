@@ -480,6 +480,7 @@ onMounted(() => {
           :headers="[
             { title: 'No', key: 'id' },
             { title: 'Tanggal', key: 'tanggal' },
+            { title: 'Nama Petugas', key: 'petugas_nama' },
             { title: 'Rekap', key: 'nama_rekap' },
             { title: 'Prioritas', key: 'prioritas' },
             { title: 'Uraian', key: 'nama_kegiatan' },
@@ -529,6 +530,10 @@ onMounted(() => {
 
           <template #item.tanggal="{ item }">
             {{ item.tanggal || "-" }}
+          </template>
+
+          <template #item.petugas_nama="{ item }">
+            {{ item.petugas_nama || "-" }}
           </template>
 
           <template #item.nama_rekap="{ item }">

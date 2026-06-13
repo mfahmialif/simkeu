@@ -694,6 +694,16 @@ onMounted(() => {
                     {{ rowIndex + 1 }}
                   </div>
                   <div class="lpj-row-content">
+                    <div
+                      v-if="row.petugas_nama"
+                      class="lpj-row-petugas"
+                    >
+                      <VIcon
+                        icon="ri-user-settings-line"
+                        size="14"
+                      />
+                      {{ row.petugas_nama }}
+                    </div>
                     <VRow>
                       <VCol
                         cols="12"
@@ -852,6 +862,16 @@ onMounted(() => {
             </div>
 
             <div class="lpj-row-content">
+              <div
+                v-if="row.petugas_nama"
+                class="lpj-row-petugas"
+              >
+                <VIcon
+                  icon="ri-user-settings-line"
+                  size="14"
+                />
+                {{ row.petugas_nama }}
+              </div>
               <VRow>
                 <VCol
                   v-if="isKegiatan"
@@ -1418,6 +1438,20 @@ onMounted(() => {
 
 .lpj-row-content {
   min-inline-size: 0;
+}
+
+.lpj-row-petugas {
+  display: inline-flex;
+  max-inline-size: 100%;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-block-end: 10px;
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
+  font-size: 0.75rem;
+  font-weight: 700;
+  gap: 6px;
 }
 
 .lpj-row-actions {

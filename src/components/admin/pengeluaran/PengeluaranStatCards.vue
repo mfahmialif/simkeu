@@ -22,6 +22,13 @@ const props = defineProps({
 
 const statNumber = (key, field) => Number(props.stats?.[key]?.[field] ?? 0)
 
+const saldoColor = value => {
+  if (value > 0) return "success"
+  if (value < 0) return "error"
+
+  return "secondary"
+}
+
 const defaultStatCards = computed(() => [
   {
     key: "hari_ini",
@@ -65,15 +72,37 @@ const defaultStatCards = computed(() => [
   },
 ])
 
-const statCards = computed(() => {
-  return defaultStatCards.value
+const saldoCards = computed(() => {
+  const saldo = props.stats?.saldo
+  if (!Array.isArray(saldo) || saldo.length === 0) return []
+
+  return saldo.map(item => {
+    const s = Number(item.saldo ?? 0)
+
+    return {
+      key: `saldo-${item.petugas_id}`,
+      title: `Saldo ${item.petugas_name || "-"}`,
+      amount: s,
+      icon: "ri-scales-3-line",
+      color: saldoColor(s),
+      isSaldo: true,
+      totalRab: Number(item.total_rab ?? 0),
+      totalLpj: Number(item.total_lpj ?? 0),
+      tambahan: Number(item.tambahan ?? 0),
+    }
+  })
 })
+
+const allCards = computed(() => [
+  ...defaultStatCards.value,
+  ...saldoCards.value,
+])
 </script>
 
 <template>
   <div class="pengeluaran-stat-grid mb-4">
     <VCard
-      v-for="item in statCards"
+      v-for="item in allCards"
       :key="item.key"
     >
       <VCardText class="d-flex align-center justify-space-between gap-3">
@@ -96,7 +125,10 @@ const statCards = computed(() => {
             {{ formatRupiah(item.amount) }}
           </div>
 
-          <div class="d-flex align-center mt-1">
+          <div
+            v-if="!item.isSaldo"
+            class="d-flex align-center mt-1"
+          >
             <span class="text-caption text-disabled me-2">Total Data</span>
             <VChip
               size="x-small"
@@ -104,6 +136,40 @@ const statCards = computed(() => {
               label
             >
               {{ item.count }}
+            </VChip>
+          </div>
+
+          <div
+            v-else
+            class="d-flex align-center flex-wrap gap-1 mt-1"
+          >
+            <span class="text-caption text-disabled">RAB</span>
+            <VChip
+              size="x-small"
+              color="info"
+              label
+            >
+              {{ formatRupiah(item.totalRab) }}
+            </VChip>
+            <span class="text-caption text-disabled">LPJ</span>
+            <VChip
+              size="x-small"
+              color="warning"
+              label
+            >
+              {{ formatRupiah(item.totalLpj) }}
+            </VChip>
+            <span
+              v-if="item.tambahan"
+              class="text-caption text-disabled"
+            >Tambah</span>
+            <VChip
+              v-if="item.tambahan"
+              size="x-small"
+              color="success"
+              label
+            >
+              {{ formatRupiah(item.tambahan) }}
             </VChip>
           </div>
         </div>

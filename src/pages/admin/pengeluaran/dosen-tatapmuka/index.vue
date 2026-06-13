@@ -527,6 +527,7 @@ const printSlip = async id => {
           { title: 'No', key: 'id' },
           { title: 'Tanggal', key: 'tanggal' },
           { title: 'Dosen', key: 'nama_dosen' },
+          { title: 'Nama Petugas', key: 'petugas_nama' },
           { title: 'Rekap', key: 'nama_rekap' },
           { title: 'Transport', key: 'subtotal_transport', sortable: false },
           { title: 'Mengajar', key: 'subtotal_mengajar', sortable: false },
@@ -637,6 +638,10 @@ const printSlip = async id => {
               {{ item.nama_prodi_dosen }}
             </div>
           </div>
+        </template>
+
+        <template #item.petugas_nama="{ item }">
+          {{ item.petugas_nama || "-" }}
         </template>
 
         <template #item.nama_rekap="{ item }">

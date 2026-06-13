@@ -109,6 +109,8 @@ declare module 'vue-router/auto-routes' {
     'admin-pengeluaran-transportasi-edit-id': RouteRecordInfo<'admin-pengeluaran-transportasi-edit-id', '/admin/pengeluaran/transportasi/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-pengeluaran-transportasi-rekap-id': RouteRecordInfo<'admin-pengeluaran-transportasi-rekap-id', '/admin/pengeluaran/transportasi/rekap/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-profile': RouteRecordInfo<'admin-profile', '/admin/profile', Record<never, never>, Record<never, never>>,
+    'admin-saldo': RouteRecordInfo<'admin-saldo', '/admin/saldo', Record<never, never>, Record<never, never>>,
+    'admin-saldo-id': RouteRecordInfo<'admin-saldo-id', '/admin/saldo/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-setting-aktifkan-mahasiswa': RouteRecordInfo<'admin-setting-aktifkan-mahasiswa', '/admin/setting/aktifkan-mahasiswa', Record<never, never>, Record<never, never>>,
     'admin-setting-form-schadule': RouteRecordInfo<'admin-setting-form-schadule', '/admin/setting/form-schadule', Record<never, never>, Record<never, never>>,
     'admin-setting-form-schadule-add': RouteRecordInfo<'admin-setting-form-schadule-add', '/admin/setting/form-schadule/add', Record<never, never>, Record<never, never>>,

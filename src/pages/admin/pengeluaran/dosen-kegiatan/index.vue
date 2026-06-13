@@ -585,6 +585,7 @@ onMounted(() => {
             { title: 'Tanggal', key: 'tanggal' },
             { title: 'Kategori', key: 'kategori_detail' },
             { title: 'Pegawai', key: 'nama_pegawai' },
+            { title: 'Nama Petugas', key: 'petugas_nama' },
             { title: 'Rekap', key: 'nama_rekap' },
             { title: 'Uraian', key: 'nama_kegiatan' },
             { title: 'Transport', key: 'transport' },
@@ -675,6 +676,10 @@ onMounted(() => {
             >
               {{ item.kategori_detail === "non_pegawai" ? "Nonpegawai" : "Pegawai" }}
             </VChip>
+          </template>
+
+          <template #item.petugas_nama="{ item }">
+            {{ item.petugas_nama || "-" }}
           </template>
 
           <template #item.nama_rekap="{ item }">

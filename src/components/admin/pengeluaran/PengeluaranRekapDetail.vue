@@ -48,6 +48,8 @@ const returnPath = computed(() => {
 const rekap = ref(null)
 const page = ref(1)
 const itemsPerPage = ref(10)
+const lpjPage = ref(1)
+const lpjItemsPerPage = ref(10)
 const sortBy = ref({ key: "id", order: "desc" })
 const dataTable = ref([])
 const totalItems = ref(0)
@@ -59,6 +61,7 @@ const actionDialog = ref(false)
 const actionLoading = ref(false)
 const lpjDialog = ref(false)
 const lpjLoading = ref(false)
+const fetchingLpj = ref(false)
 const lpj = ref(null)
 const lpjRows = ref([])
 const namaInput = ref(null)
@@ -111,6 +114,8 @@ const tableHeaders = computed(() => {
   } else {
     detailHeaders.push({ title: "Uraian", key: "uraian", sortable: false })
   }
+
+  headers.push({ title: "Nama Petugas", key: "petugas_nama" })
 
   return [
     ...headers,
@@ -234,6 +239,8 @@ const fetchRekap = async () => {
 
 const fetchLpj = async () => {
   try {
+    fetchingLpj.value = true
+
     const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
       method: "GET",
     })
@@ -243,6 +250,8 @@ const fetchLpj = async () => {
   } catch {
     lpj.value = null
     lpjRows.value = []
+  } finally {
+    fetchingLpj.value = false
   }
 }
 
@@ -465,8 +474,27 @@ const submitDeleteItems = async () => {
 
   try {
     deletingItems.value = true
-    const promises = itemsToDelete.value.map(id => $api(`${props.endpoint}/${id}`, { method: "DELETE" }))
-    await Promise.all(promises)
+
+    if (activeDataTab.value === "lpj") {
+      const remainingItems = lpjRows.value.filter(row => !itemsToDelete.value.includes(row.id))
+      const payload = remainingItems.map(row => ({
+        ...row,
+        lampiran: Array.isArray(row.lampiran) ? row.lampiran : [],
+      }))
+
+      await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
+        method: "PUT",
+        body: { items: payload },
+      })
+    } else {
+      const promises = itemsToDelete.value.map(id => $api(`${props.endpoint}/${id}`, { method: "DELETE" }))
+
+      await Promise.all(promises)
+    }
+
+    await fetchRekap()
+    await fetchData()
+    await fetchLpj()
     
     deleteItemsDialog.value = false
     selectedRabIds.value = []
@@ -477,9 +505,6 @@ const submitDeleteItems = async () => {
       color: "success",
     })
     
-    await fetchRekap()
-    await fetchData()
-    await fetchLpj()
     notifyPengeluaranRekapUpdated(props.endpoint)
   } catch (err) {
     showSnackbar({
@@ -754,6 +779,10 @@ onMounted(async () => {
               </div>
             </template>
 
+            <template #item.petugas_nama="{ item }">
+              {{ item.petugas_nama || "-" }}
+            </template>
+
             <template #item.kategori_detail="{ item }">
               <VChip
                 :color="isNonPegawai(item) ? 'secondary' : 'primary'"
@@ -840,11 +869,13 @@ onMounted(async () => {
         <VWindowItem value="lpj">
           <VDataTable
             v-model="selectedLpjIds"
+            v-model:items-per-page="lpjItemsPerPage"
+            v-model:page="lpjPage"
             show-select
             :headers="lpjTableHeaders"
             :items="lpjRows"
-            :items-per-page="itemsPerPage"
             item-value="id"
+            :loading="fetchingLpj || deletingItems"
           >
             <template #no-data>
               <div class="text-center pa-6">
@@ -862,7 +893,7 @@ onMounted(async () => {
             </template>
 
             <template #item.id="{ index }">
-              {{ index + 1 }}
+              {{ lpjItemsPerPage * (lpjPage - 1) + index + 1 }}
             </template>
 
             <template #item.pegawai="{ item }">
@@ -872,6 +903,10 @@ onMounted(async () => {
               <div class="text-caption text-medium-emphasis">
                 {{ pegawaiMeta(item) || "-" }}
               </div>
+            </template>
+
+            <template #item.petugas_nama="{ item }">
+              {{ item.petugas_nama || "-" }}
             </template>
 
             <template #item.kategori_detail="{ item }">

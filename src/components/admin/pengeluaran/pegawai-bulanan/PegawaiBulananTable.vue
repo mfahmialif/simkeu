@@ -724,6 +724,7 @@ onMounted(() => {
           { title: 'Tanggal', key: 'tanggal' },
           ...(showPeriod ? [{ title: 'Periode', key: 'periode', sortable: false }] : []),
           { title: 'Pegawai', key: 'nama_pegawai' },
+          { title: 'Nama Petugas', key: 'petugas_nama' },
           { title: 'Rekap', key: 'nama_rekap' },
           ...(isDosenBulanan
             ? [
@@ -794,6 +795,10 @@ onMounted(() => {
 
         <template #item.periode="{ item }">
           {{ monthName(item.bulan) }} {{ item.tahun || "" }}
+        </template>
+
+        <template #item.petugas_nama="{ item }">
+          {{ item.petugas_nama || "-" }}
         </template>
 
         <template #item.nama_rekap="{ item }">

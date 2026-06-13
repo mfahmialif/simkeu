@@ -32,6 +32,10 @@ const kasDetailDialog = ref(false)
 const kasFormDialog = ref(false)
 const kasEditingId = ref(null)
 const kasSaving = ref(false)
+const rekapFormDialog = ref(false)
+const rekapSaving = ref(false)
+const rekapPetugasLoading = ref(false)
+const rekapPetugasList = ref([])
 
 const kasForm = ref({
   petugas_id: null,
@@ -43,6 +47,21 @@ const kasForm = ref({
   ].join("-"),
   tipe: "masuk",
   nominal: 0,
+  keterangan: "",
+})
+
+const rekapForm = ref({
+  module_key: null,
+  petugas_id: null,
+  nama: "",
+  bulan: currentDate.getMonth() + 1,
+  tahun: currentDate.getFullYear(),
+  tanggal_rekap: [
+    currentDate.getFullYear(),
+    String(currentDate.getMonth() + 1).padStart(2, "0"),
+    String(currentDate.getDate()).padStart(2, "0"),
+  ].join("-"),
+  jumlah_sementara: 0,
   keterangan: "",
 })
 
@@ -122,12 +141,20 @@ const statCards = computed(() => [
     color: "primary",
   },
   {
-    key: "total_rekap",
-    title: "Jumlah Rekap",
-    value: Number(stats.value.total_rekap || 0).toLocaleString("id-ID"),
-    note: "Rekap sesuai filter",
-    icon: "ri-file-list-3-line",
+    key: "total_lpj",
+    title: "Total LPJ",
+    value: formatRupiah(stats.value.total_lpj || 0),
+    note: "Akumulasi realisasi LPJ",
+    icon: "ri-file-check-line",
     color: "info",
+  },
+  {
+    key: "selisih",
+    title: "Selisih",
+    value: formatRupiah(stats.value.selisih || 0),
+    note: "Total RAB dikurangi LPJ",
+    icon: "ri-scales-3-line",
+    color: Number(stats.value.selisih || 0) < 0 ? "error" : "success",
   },
   {
     key: "total_data",
@@ -304,6 +331,115 @@ const openKasForm = (item = null) => {
   kasFormDialog.value = true
 }
 
+const fetchRekapPetugas = async moduleKey => {
+  if (!moduleKey) {
+    rekapPetugasList.value = []
+    rekapForm.value.petugas_id = null
+
+    return
+  }
+
+  try {
+    rekapPetugasLoading.value = true
+
+    const items = await fetchPetugasPengeluaranOptions(moduleKey)
+
+    rekapPetugasList.value = items
+
+    const hasSelectedPetugas = rekapForm.value.petugas_id
+      && items.some(item => String(item.value) === String(rekapForm.value.petugas_id))
+
+    if (!hasSelectedPetugas) {
+      const filterPetugas = selectedPetugasId.value
+        && items.find(item => String(item.value) === String(selectedPetugasId.value))
+
+      rekapForm.value.petugas_id = filterPetugas?.value || items[0]?.value || null
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    rekapPetugasLoading.value = false
+  }
+}
+
+const openRekapForm = async () => {
+  const moduleKey = selectedModule.value || modules.value?.[0]?.value || "tatap_muka"
+
+  rekapForm.value = {
+    module_key: moduleKey,
+    petugas_id: selectedPetugasId.value || null,
+    nama: "",
+    bulan: selectedBulan.value || currentDate.getMonth() + 1,
+    tahun: selectedTahun.value || currentDate.getFullYear(),
+    tanggal_rekap: [
+      currentDate.getFullYear(),
+      String(currentDate.getMonth() + 1).padStart(2, "0"),
+      String(currentDate.getDate()).padStart(2, "0"),
+    ].join("-"),
+    jumlah_sementara: 0,
+    keterangan: "",
+  }
+  rekapFormDialog.value = true
+  await fetchRekapPetugas(moduleKey)
+}
+
+const saveRekap = async () => {
+  if (rekapSaving.value) return
+
+  const bulan = Number(rekapForm.value.bulan)
+  const tahun = Number(rekapForm.value.tahun)
+
+  if (
+    !rekapForm.value.module_key
+    || !rekapForm.value.petugas_id
+    || !String(rekapForm.value.nama || "").trim()
+    || !bulan
+    || !tahun
+    || !rekapForm.value.tanggal_rekap
+  ) {
+    showSnackbar({
+      text: "Jenis rekap, petugas, nama, periode, dan tanggal rekap wajib diisi.",
+      color: "warning",
+    })
+    
+    return
+  }
+
+  try {
+    rekapSaving.value = true
+
+    const response = await $api("/admin/laporan/rab", {
+      method: "POST",
+      body: {
+        module_key: rekapForm.value.module_key,
+        petugas_id: rekapForm.value.petugas_id,
+        nama: rekapForm.value.nama,
+        bulan_tahun: `${tahun}-${String(bulan).padStart(2, "0")}`,
+        tanggal_rekap: rekapForm.value.tanggal_rekap,
+        jumlah_sementara: Number(rekapForm.value.jumlah_sementara || 0),
+        keterangan: rekapForm.value.keterangan,
+      },
+    })
+
+    rekapFormDialog.value = false
+    showSnackbar({
+      text: response.message,
+      color: "success",
+    })
+    fetchData()
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    rekapSaving.value = false
+  }
+}
+
 const saveKasManual = async () => {
   if (kasSaving.value) return
 
@@ -379,6 +515,10 @@ watch([selectedBulan, selectedTahun, selectedModule, selectedPetugasId], () => {
 })
 
 watch(selectedModule, fetchPetugas)
+
+watch(() => rekapForm.value.module_key, moduleKey => {
+  if (rekapFormDialog.value) fetchRekapPetugas(moduleKey)
+})
 
 watch(search, () => {
   clearTimeout(searchTimer)
@@ -522,8 +662,9 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 
           <VCol
             cols="12"
+            sm="6"
             md="4"
-            lg="1"
+            lg="2"
           >
             <VBtn
               class="w-100"
@@ -541,10 +682,27 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
     </VCard>
 
     <VCard>
-      <VCardItem>
-        <VCardTitle>Daftar Rekap Anggaran</VCardTitle>
-        <VCardSubtitle>{{ totalItems }} rekap ditemukan</VCardSubtitle>
-      </VCardItem>
+      <VCardText class="rab-table-header">
+        <div class="min-w-0">
+          <div class="text-h6 font-weight-semibold text-truncate">
+            Daftar Rekap Anggaran
+          </div>
+          <div class="text-body-2 text-medium-emphasis text-truncate">
+            {{ totalItems }} rekap ditemukan
+          </div>
+        </div>
+
+        <div class="rab-table-header-action">
+          <VBtn
+            class="rab-add-button"
+            color="primary"
+            prepend-icon="ri-add-line"
+            @click="openRekapForm"
+          >
+            Tambah Data
+          </VBtn>
+        </div>
+      </VCardText>
 
       <VDivider />
 
@@ -556,10 +714,12 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
           { title: 'No', key: 'nomor', sortable: false },
           { title: 'Tanggal Rekap', key: 'tanggal_rekap' },
           { title: 'Periode', key: 'bulan_tahun' },
+          { title: 'Nama Petugas', key: 'petugas_nama' },
           { title: 'Nama Rekap', key: 'nama' },
           { title: 'Jenis', key: 'module_name' },
           { title: 'Jumlah Data', key: 'jumlah_data', align: 'end' },
           { title: 'Jumlah RAB', key: 'jumlah', align: 'end' },
+          { title: 'Jumlah LPJ', key: 'total_lpj', align: 'end' },
           { title: 'Keterangan', key: 'keterangan', sortable: false },
           { title: '', key: 'actions', sortable: false, align: 'end' },
         ]"
@@ -605,6 +765,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
           </div>
         </template>
 
+        <template #item.petugas_nama="{ item }">
+          {{ item.petugas_nama || "-" }}
+        </template>
+
         <template #item.nama="{ item }">
           <button
             type="button"
@@ -647,6 +811,10 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
           </div>
         </template>
 
+        <template #item.total_lpj="{ item }">
+          <strong>{{ formatRupiah(item.total_lpj || 0) }}</strong>
+        </template>
+
         <template #item.keterangan="{ item }">
           <span class="text-medium-emphasis">{{ item.keterangan || "-" }}</span>
         </template>
@@ -670,6 +838,153 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
         </template>
       </VDataTableServer>
     </VCard>
+
+    <VDialog
+      v-model="rekapFormDialog"
+      width="760"
+    >
+      <VCard title="Tambah Rekap Anggaran">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="rekapFormDialog = false"
+        />
+
+        <VCardText>
+          <VRow>
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VSelect
+                v-model="rekapForm.module_key"
+                label="Jenis Rekap *"
+                :items="modules"
+                :disabled="rekapSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VAutocomplete
+                v-model="rekapForm.petugas_id"
+                label="Petugas *"
+                :items="rekapPetugasList"
+                :loading="rekapPetugasLoading"
+                :disabled="rekapSaving || !rekapForm.module_key"
+                :rules="[requiredValidator]"
+                clearable
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <VTextField
+                v-model="rekapForm.nama"
+                label="Nama Rekap *"
+                placeholder="Contoh: RAB Kegiatan Juni 2026"
+                :disabled="rekapSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              sm="6"
+              md="4"
+            >
+              <VSelect
+                v-model="rekapForm.bulan"
+                label="Bulan Periode *"
+                :items="bulanItems"
+                :disabled="rekapSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              sm="6"
+              md="4"
+            >
+              <VSelect
+                v-model="rekapForm.tahun"
+                label="Tahun Periode *"
+                :items="yearItems"
+                :disabled="rekapSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="4"
+            >
+              <AppDateTimePicker
+                v-model="rekapForm.tanggal_rekap"
+                label="Tanggal Rekap *"
+                :config="{
+                  altInput: true,
+                  altFormat: 'd F Y',
+                  dateFormat: 'Y-m-d',
+                }"
+                :disabled="rekapSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VTextField
+                v-model="rekapForm.jumlah_sementara"
+                label="Jumlah RAB Sementara *"
+                type="number"
+                min="0"
+                prefix="Rp"
+                :hint="formatRupiah(rekapForm.jumlah_sementara)"
+                persistent-hint
+                :disabled="rekapSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <VTextarea
+                v-model="rekapForm.keterangan"
+                label="Keterangan"
+                placeholder="Catatan singkat kebutuhan rekap"
+                auto-grow
+                :disabled="rekapSaving"
+              />
+            </VCol>
+          </VRow>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="rekapSaving"
+            @click="rekapFormDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="primary"
+            prepend-icon="ri-save-line"
+            :loading="rekapSaving"
+            :disabled="rekapSaving || rekapPetugasLoading"
+            @click="saveRekap"
+          >
+            Simpan
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
 
     <VDialog
       v-model="kasDetailDialog"
@@ -1003,8 +1318,19 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 
 .rab-stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
+}
+
+.rab-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rab-table-header-action {
+  flex: 0 0 auto;
 }
 
 .rab-stat-card--clickable {
@@ -1102,7 +1428,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 
 @media (max-width: 1199px) {
   .rab-stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .kas-total-row,
@@ -1114,6 +1440,16 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 @media (max-width: 599px) {
   .rab-stat-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rab-table-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rab-table-header-action,
+  .rab-add-button {
+    inline-size: 100%;
   }
 
   .kas-total-row,

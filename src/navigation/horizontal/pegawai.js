@@ -8,4 +8,10 @@ export const pegawaiMenu = {
   ],
 }
 
-export default [pegawaiMenu]
+export const saldoMenu = {
+  title: "Saldo",
+  icon: { icon: "ri-wallet-3-line" },
+  to: "admin-saldo",
+}
+
+export default [pegawaiMenu, saldoMenu]

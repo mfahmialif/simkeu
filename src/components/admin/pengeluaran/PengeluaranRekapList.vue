@@ -712,7 +712,15 @@ onBeforeUnmount(() => {
                 </VChip>
 
                 <div class="rekap-item-heading">
-                  <span class="rekap-item-name">{{ item.nama }}</span>
+                  <div class="rekap-item-title-stack">
+                    <span
+                      v-if="item.petugas_nama"
+                      class="rekap-item-petugas"
+                    >
+                      {{ item.petugas_nama }}
+                    </span>
+                    <span class="rekap-item-name">{{ item.nama }}</span>
+                  </div>
                   <VChip
                     size="x-small"
                     color="primary"
@@ -1278,6 +1286,21 @@ onBeforeUnmount(() => {
   min-inline-size: 0;
   align-items: center;
   gap: 12px;
+}
+
+.rekap-item-title-stack {
+  display: grid;
+  min-inline-size: min(100%, 260px);
+}
+
+.rekap-item-petugas {
+  overflow: hidden;
+  color: rgba(var(--v-theme-on-surface), 0.68);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rekap-item-name {
