@@ -711,7 +711,7 @@ onMounted(() => {
             <div class="lpj-dosen-header">
               <span>Dosen</span>
               <span>Tanggal</span>
-              <span>Dosen Tetap</span>
+              <span>Barokah Tetap</span>
               <span>Struktural</span>
               <span>Total</span>
               <span>Jenis Pembayaran</span>
@@ -768,7 +768,7 @@ onMounted(() => {
                 v-model.number="row.barokah_dosen_tetap"
                 type="number"
                 min="0"
-                label="Dosen Tetap"
+                label="Barokah Tetap"
                 :hint="formatRupiah(row.barokah_dosen_tetap)"
                 density="compact"
                 hide-details
@@ -1422,7 +1422,7 @@ onMounted(() => {
                       v-model="row.barokah_dosen_tetap"
                       type="number"
                       min="0"
-                      label="Barokah Dosen Tetap"
+                      label="Barokah Tetap"
                       density="compact"
                       hide-details
                     />

@@ -93,6 +93,7 @@ declare global {
   const mapStores: typeof import('pinia')['mapStores']
   const mapWritableState: typeof import('pinia')['mapWritableState']
   const markRaw: typeof import('vue')['markRaw']
+  const moduleKeyFromPengeluaranEndpoint: typeof import('./src/composables/petugasPengeluaran.js')['moduleKeyFromPengeluaranEndpoint']
   const nextTick: typeof import('vue')['nextTick']
   const notifyPengeluaranRekapUpdated: typeof import('./src/composables/pengeluaranRekap.js')['notifyPengeluaranRekapUpdated']
   const onActivated: typeof import('vue')['onActivated']
@@ -474,6 +475,7 @@ declare module 'vue' {
     readonly mapStores: UnwrapRef<typeof import('pinia')['mapStores']>
     readonly mapWritableState: UnwrapRef<typeof import('pinia')['mapWritableState']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
+    readonly moduleKeyFromPengeluaranEndpoint: UnwrapRef<typeof import('./src/composables/petugasPengeluaran.js')['moduleKeyFromPengeluaranEndpoint']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly notifyPengeluaranRekapUpdated: UnwrapRef<typeof import('./src/composables/pengeluaranRekap.js')['notifyPengeluaranRekapUpdated']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>

@@ -10,7 +10,7 @@ import DashboardUASReport from "./DashboardUASReport.vue"
 const userData = useCookie("userData").value ?? {}
 const role = computed(() => String(userData.role?.name || "").toLowerCase())
 
-const allAccessRoles = ["admin", "pimpinan", "keuangan", "kabag"]
+const allAccessRoles = ["admin", "pimpinan", "keuangan", "kabag", "kabag_pemasukan", "kabag_pengeluaran"]
 const staffRoles = ["staff"]
 
 const barokahRoles = [

@@ -376,7 +376,7 @@ defineExpose({
             <VTextField
               v-model="barokahDosenTetap"
               type="number"
-              label="Barokah Dosen Tetap"
+              label="Barokah Tetap"
               :rules="[requiredValidator]"
               :hint="formatRupiah(barokahDosenTetap)"
               persistent-hint

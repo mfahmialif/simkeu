@@ -33,6 +33,8 @@
     "cookie-es": "1.2.2",
     "destr": "2.0.5",
     "eslint-plugin-regexp": "2.7.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "jwt-decode": "4.0.0",
     "mapbox-gl": "3.5.2",
     "nprogress": "^0.2.0",

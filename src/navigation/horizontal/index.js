@@ -1,6 +1,5 @@
 import { computed } from "vue"
 import dashboard from "./dashboard"
-import mahasiswa from "./mahasiswa"
 import pemasukan from "./pemasukan"
 import pengeluaran from "./pengeluaran"
 import pegawai from "./pegawai"
@@ -8,14 +7,13 @@ import { settingItemsForRole } from "./setting"
 import dashboardStaff from "./staff/dashboardStaff"
 import pemasukanStaff from "./staff/pemasukanStaff"
 import user from "./user"
-import pemasukanRumahTangga from "./rumahtangga/pemasukanRumahTangga"
 import hutang from "./hutang"
 import {
   pengeluaranDosenBulanan,
   pengeluaranDosenKegiatan,
   pengeluaranDosenTatapmuka,
 } from "./barokahdosen/pengeluaranBarokahDosen"
-import laporan from "./laporan"
+import laporan, { laporanPengeluaran } from "./laporan"
 import rab from "./rab"
 import rumahTangga from "./rumah-tangga"
 import saranaPrasarana from "./sarana-prasarana"
@@ -53,6 +51,7 @@ const routesByRole = roleName => {
       ...rumahTangga,
       ...saranaPrasarana,
       ...transportasi,
+      ...pegawai,
       ...hutang,
       ...rab,
       ...laporan,
@@ -73,11 +72,23 @@ const routesByRole = roleName => {
 
     staff: [...dashboardStaff, ...pemasukanStaff, ...hutang, ...setting],
     kabag: [...dashboardStaff, ...pemasukanStaff, ...hutang, ...rab, ...setting],
+    kabag_pemasukan: [...dashboardStaff, ...pemasukan, ...hutang, ...laporan, ...setting],
+    kabag_pengeluaran: [
+      ...dashboard,
+      ...pegawai,
+      ...hutang,
+      ...pengeluaran,
+      ...rumahTangga,
+      ...saranaPrasarana,
+      ...transportasi,
+      ...rab,
+      ...laporanPengeluaran,
+      ...setting,
+    ],
 
     rumahtangga: [
       ...dashboard,
-      ...mahasiswa,
-      ...pemasukanRumahTangga,
+      ...pegawai,
       ...hutang,
       ...rumahTangga,
       ...setting,
@@ -85,6 +96,7 @@ const routesByRole = roleName => {
 
     sarpras: [
       ...dashboard,
+      ...pegawai,
       ...hutang,
       ...saranaPrasarana,
       ...setting,
@@ -92,14 +104,23 @@ const routesByRole = roleName => {
 
     transportasi: [
       ...dashboard,
+      ...pegawai,
       ...hutang,
       ...transportasi,
       ...setting,
     ],
 
-    barokahdosen_tatapmuka: [...dashboard, ...mahasiswa, ...pengeluaranDosenTatapmuka, ...hutang, ...rab, ...setting],
-    barokahdosen_kegiatan: [...dashboard, ...mahasiswa, ...pengeluaranDosenKegiatan, ...hutang, ...rab, ...setting],
-    barokahdosen_bulanan: [...dashboard, ...mahasiswa, ...pengeluaranDosenBulanan, ...hutang, ...rab, ...setting],
+    barokahdosen_tatapmuka: [
+      ...dashboard,
+      ...pegawai,
+      ...hutang,
+      ...pengeluaranDosenTatapmuka,
+      ...laporanPengeluaran,
+      ...setting,
+    ],
+
+    barokahdosen_kegiatan: [...dashboard, ...pegawai, ...hutang, ...pengeluaranDosenKegiatan, ...laporanPengeluaran, ...setting],
+    barokahdosen_bulanan: [...dashboard, ...pegawai, ...hutang, ...pengeluaranDosenBulanan, ...rab, ...laporanPengeluaran, ...setting],
   }
 }
 

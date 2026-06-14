@@ -16,7 +16,7 @@ const modulesList = [
   { key: "rumah_tangga", name: "Rumah Tangga" },
   { key: "sarana_prasarana", name: "Sarana Prasarana" },
   { key: "transportasi", name: "Transportasi" },
-  { key: "dosen_bulanan", name: "Dosen Bulanan" },
+  { key: "dosen_bulanan", name: "Bulanan" },
   { key: "hutang", name: "Hutang" },
 ]
 

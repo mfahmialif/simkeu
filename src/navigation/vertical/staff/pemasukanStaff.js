@@ -1,5 +1,4 @@
 export default [
-  { heading: "Pemasukan" },
   {
     title: "Data Mahasiswa",
     icon: { icon: "ri-group-line" },

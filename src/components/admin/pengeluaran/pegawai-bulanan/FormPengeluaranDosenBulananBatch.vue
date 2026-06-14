@@ -19,11 +19,11 @@ const props = defineProps({
   },
   title: {
     type: String,
-    default: "Barokah Dosen Bulanan",
+    default: "Barokah Bulanan",
   },
   pegawaiTitle: {
     type: String,
-    default: "Dosen",
+    default: "Pegawai",
   },
   showPeriod: {
     type: Boolean,
@@ -116,7 +116,7 @@ const visibleRange = computed(() => {
   }
 })
 
-const totalDosen = computed(() => rows.value.filter(item =>
+const totalPegawai = computed(() => rows.value.filter(item =>
   rowTotal(item) > 0,
 ).length)
 
@@ -398,7 +398,7 @@ onMounted(() => {
               v-if="copyRekapId"
               class="text-caption text-medium-emphasis mt-1"
             >
-              {{ copiedRowsCount }} dosen memakai nominal rekap sumber, {{ emptyCopiedRowsCount }} dosen lainnya tetap Rp 0.
+              {{ copiedRowsCount }} pegawai memakai nominal rekap sumber, {{ emptyCopiedRowsCount }} pegawai lainnya tetap Rp 0.
             </div>
           </VCol>
 
@@ -453,7 +453,7 @@ onMounted(() => {
           <div>
             <VCardTitle>Daftar {{ pegawaiTitle }}</VCardTitle>
             <VCardSubtitle v-if="rekapId">
-              {{ totalDosen }} {{ pegawaiTitle.toLowerCase() }} diisi, total {{ formatRupiah(totalBarokah) }}
+              {{ totalPegawai }} {{ pegawaiTitle.toLowerCase() }} diisi, total {{ formatRupiah(totalBarokah) }}
             </VCardSubtitle>
           </div>
 
@@ -492,7 +492,7 @@ onMounted(() => {
           indeterminate
           color="primary"
         />
-        <span>Memuat daftar dosen...</span>
+        <span>Memuat daftar pegawai...</span>
       </div>
 
       <div
@@ -501,7 +501,7 @@ onMounted(() => {
       >
         <div class="dosen-list-header">
           <span>{{ pegawaiTitle }}</span>
-          <span>Dosen Tetap</span>
+          <span>Barokah Tetap</span>
           <span>Struktural</span>
           <span>Total</span>
           <span>Jenis Pembayaran</span>
@@ -535,7 +535,7 @@ onMounted(() => {
             v-model.number="item.barokah_dosen_tetap"
             type="number"
             min="0"
-            label="Dosen Tetap"
+            label="Barokah Tetap"
             :hint="formatRupiah(item.barokah_dosen_tetap)"
             persistent-hint
             density="compact"
@@ -674,7 +674,7 @@ onMounted(() => {
           :loading="saving"
           :disabled="saving || rows.length === 0"
         >
-          Simpan {{ totalDosen }} {{ pegawaiTitle }}
+          Simpan {{ totalPegawai }} {{ pegawaiTitle }}
         </VBtn>
       </VCardActions>
     </VCard>

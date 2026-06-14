@@ -1,6 +1,11 @@
 <script setup>
 /* eslint-disable camelcase, import/extensions */
 import { formatRupiah } from "@/composables/formatRupiah"
+import {
+  defaultPetugasPengeluaranId,
+  fetchPetugasPengeluaranOptions,
+  moduleKeyFromPengeluaranEndpoint,
+} from "@/composables/petugasPengeluaran"
 import { showSnackbar } from "@/composables/snackbar"
 import {
   listenPengeluaranRekapUpdated,
@@ -38,6 +43,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  moduleKey: {
+    type: String,
+    default: null,
+  },
 })
 
 const emit = defineEmits(["update:modelValue", "created", "selected"])
@@ -47,6 +56,9 @@ const loading = ref(false)
 const searchText = ref("")
 const dialog = ref(false)
 const saving = ref(false)
+const petugasLoading = ref(false)
+const petugasList = ref([])
+const petugasId = ref(null)
 const namaInput = ref(null)
 const nama = ref("")
 const keterangan = ref("")
@@ -74,6 +86,10 @@ const currentMonthValue = () => {
 const bulanTahun = ref(currentMonthValue())
 let stopListeningRekapUpdates = null
 let searchTimer = null
+
+const petugasModuleKey = computed(() =>
+  props.moduleKey || moduleKeyFromPengeluaranEndpoint(props.endpoint),
+)
 
 const monthYearPickerConfig = {
   altInput: true,
@@ -179,6 +195,42 @@ const fetchRekap = async (search = searchText.value) => {
   }
 }
 
+const fetchPetugas = async () => {
+  try {
+    petugasLoading.value = true
+
+    const items = await fetchPetugasPengeluaranOptions(petugasModuleKey.value)
+
+    petugasList.value = items
+
+    const selectedFromFilter = props.filters?.petugas_id
+
+    const hasCurrent = petugasId.value
+      && items.some(item => String(item.value) === String(petugasId.value))
+
+    if (hasCurrent) {
+      return
+    }
+
+    if (selectedFromFilter && items.some(item => String(item.value) === String(selectedFromFilter))) {
+      petugasId.value = selectedFromFilter
+
+      return
+    }
+
+    petugasId.value = defaultPetugasPengeluaranId(items) || items[0]?.value || null
+  } catch (err) {
+    petugasList.value = []
+    petugasId.value = null
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    petugasLoading.value = false
+  }
+}
+
 const resetForm = () => {
   nama.value = ""
   keterangan.value = ""
@@ -186,11 +238,13 @@ const resetForm = () => {
   useJumlahSementara.value = false
   tanggalRekap.value = currentDateValue()
   bulanTahun.value = currentMonthValue()
+  petugasId.value = props.filters?.petugas_id || null
 }
 
-const openCreateDialog = () => {
+const openCreateDialog = async () => {
   resetForm()
   dialog.value = true
+  await fetchPetugas()
 }
 
 const createRekap = async () => {
@@ -214,6 +268,15 @@ const createRekap = async () => {
       color: "warning",
     })
     
+    return
+  }
+
+  if (!petugasId.value) {
+    showSnackbar({
+      text: "Petugas harus dipilih.",
+      color: "warning",
+    })
+
     return
   }
 
@@ -244,6 +307,7 @@ const createRekap = async () => {
     const response = await $api(`${props.endpoint}/rekap`, {
       method: "POST",
       body: {
+        petugas_id: petugasId.value,
         nama: trimmedNama,
         bulan_tahun: bulanTahun.value,
         tanggal_rekap: tanggalRekap.value,
@@ -352,6 +416,19 @@ onBeforeUnmount(() => {
         <VCardText>
           <VRow>
             <VCol cols="12">
+              <VAutocomplete
+                v-model="petugasId"
+                :items="petugasList"
+                :loading="petugasLoading"
+                label="Petugas *"
+                placeholder="Pilih petugas pengeluaran"
+                prepend-inner-icon="ri-user-settings-line"
+                :rules="[requiredValidator]"
+                :disabled="saving"
+              />
+            </VCol>
+
+            <VCol cols="12">
               <VTextField
                 ref="namaInput"
                 v-model="nama"
@@ -439,7 +516,7 @@ onBeforeUnmount(() => {
           <VBtn
             color="primary"
             :loading="saving"
-            :disabled="saving"
+            :disabled="saving || petugasLoading"
             @click="createRekap"
           >
             Simpan

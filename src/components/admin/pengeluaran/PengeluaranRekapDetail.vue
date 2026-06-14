@@ -46,6 +46,27 @@ const returnPath = computed(() => {
   return props.basePath
 })
 
+const userData = useCookie("userData").value ?? {}
+const userRole = String(userData?.role?.name ?? "").toLowerCase()
+
+const isBarokahRole = [
+  "barokahdosen_tatapmuka",
+  "barokahdosen_kegiatan",
+  "barokahdosen_bulanan",
+].includes(userRole)
+
+const canModify = computed(() => {
+  if (!isBarokahRole) return true
+
+  return rekap.value?.jumlah_sementara !== null && rekap.value?.jumlah_sementara !== undefined
+})
+
+const canEditDeleteRekap = computed(() => {
+  if (!isBarokahRole) return true
+
+  return Number(rekap.value?.jumlah_data || 0) === 0 && Number(rekap.value?.jumlah_lpj || 0) === 0
+})
+
 const rekap = ref(null)
 const page = ref(1)
 const itemsPerPage = ref(10)
@@ -121,19 +142,24 @@ const tableHeaders = computed(() => {
 
   headers.push({ title: "Nama Petugas", key: "petugas_nama" })
 
-  return [
+  const allHeaders = [
     ...headers,
     ...detailHeaders,
     { title: "Jenis Pembayaran", key: "jenis_pembayaran" },
     { title: "Total", key: "total" },
     { title: "Keterangan", key: "keterangan" },
-    { title: "Actions", key: "actions", sortable: false },
   ]
+
+  if (canModify.value) {
+    allHeaders.push({ title: "Actions", key: "actions", sortable: false })
+  }
+
+  return allHeaders
 })
 
 const lpjTableHeaders = computed(() => tableHeaders.value)
 const editingHasDetails = computed(() => Number(rekap.value?.jumlah_data || 0) > 0)
-const canDeleteRekapWithDetails = computed(() => ["kegiatan", "rumah-tangga", "sarana-prasarana", "transportasi"].includes(props.moduleType))
+const canDeleteRekapWithDetails = computed(() => true)
 
 const deleteRekapMessage = computed(() => {
   if (canDeleteRekapWithDetails.value && Number(rekap.value?.jumlah_data || 0) > 0) {
@@ -339,7 +365,7 @@ const uraian = item => {
   }
 
   if (props.moduleType === "dosen-bulanan") {
-    return `Dosen Tetap ${formatRupiah(item.barokah_dosen_tetap)}, Struktural ${formatRupiah(item.barokah_struktural)}`
+    return `Barokah Tetap ${formatRupiah(item.barokah_dosen_tetap)}, Struktural ${formatRupiah(item.barokah_struktural)}`
   }
 
   return `Transport ${formatRupiah(subtotalTransport(item))}, mengajar ${formatRupiah(subtotalMengajar(item))}, sempro ${formatRupiah(subtotalSempro(item))}, UAS ${formatRupiah(subtotalUas(item))}`
@@ -696,7 +722,10 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
               </div>
             </div>
 
-            <div class="detail-actions">
+            <div
+              v-if="canEditDeleteRekap"
+              class="detail-actions"
+            >
               <VBtn
                 variant="outlined"
                 color="primary"
@@ -709,7 +738,6 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
                 variant="outlined"
                 color="error"
                 prepend-icon="ri-delete-bin-line"
-                :disabled="!canDeleteRekapWithDetails && Number(rekap?.jumlah_data || 0) > 0"
                 @click="actionDialog = true"
               >
                 Delete
@@ -745,7 +773,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
         </VCardSubtitle>
 
         <template
-          v-if="allowCreate || activeDataTab === 'lpj' || selectedIds.length > 0"
+          v-if="(allowCreate || activeDataTab === 'lpj' || selectedIds.length > 0) && canModify"
           #append
         >
           <div class="detail-data-actions">
@@ -757,7 +785,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
             >
               Hapus ({{ selectedIds.length }})
             </VBtn>
-            <template v-if="activeDataTab === 'rab' && allowCreate">
+            <template v-if="activeDataTab === 'rab' && allowCreate && !isBarokahRole">
               <VBtn
                 color="primary"
                 prepend-icon="ri-add-line"
@@ -767,7 +795,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
               </VBtn>
             </template>
             <VBtn
-              v-else-if="activeDataTab === 'lpj'"
+              v-else-if="activeDataTab === 'lpj' && !isBarokahRole"
               color="success"
               prepend-icon="ri-file-edit-line"
               @click="router.push(lpjDetailPath())"
@@ -833,7 +861,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
             v-model:items-per-page="itemsPerPage"
             v-model:page="page"
             v-model="selectedRabIds"
-            show-select
+            :show-select="canModify"
             :headers="tableHeaders"
             :items="dataTable"
             :items-length="totalItems"
@@ -952,7 +980,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
             v-model="selectedLpjIds"
             v-model:items-per-page="lpjItemsPerPage"
             v-model:page="lpjPage"
-            show-select
+            :show-select="canModify"
             :headers="lpjTableHeaders"
             :items="filteredLpjRows"
             item-value="id"
@@ -964,6 +992,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
                   Belum ada data LPJ.
                 </div>
                 <VBtn
+                  v-if="canModify && !isBarokahRole"
                   color="success"
                   prepend-icon="ri-file-check-line"
                   @click="openLpjDialog"

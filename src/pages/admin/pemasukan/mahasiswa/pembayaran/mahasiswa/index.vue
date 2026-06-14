@@ -684,7 +684,7 @@ const refreshData = () => {
                   v-if="
                     !isBsiPayment(item) &&
                       (
-                        ['admin', 'kabag'].includes(
+                        ['admin', 'kabag', 'kabag_pemasukan'].includes(
                           (userData?.role?.name || '').toLowerCase()
                         ) ||
                         ((userData?.role?.name || '').toLowerCase() === 'staff' &&

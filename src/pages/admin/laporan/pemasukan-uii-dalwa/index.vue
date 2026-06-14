@@ -28,7 +28,7 @@ const userData = useCookie("userData").value ?? {}
 const isAdmin = computed(() => {
   const role = (userData?.role?.name || '').toLowerCase()
   
-  return role === 'admin' || role === 'kabag'
+  return ['admin', 'kabag', 'kabag_pemasukan'].includes(role)
 })
 
 const selectedJenisKelamin = ref("%")

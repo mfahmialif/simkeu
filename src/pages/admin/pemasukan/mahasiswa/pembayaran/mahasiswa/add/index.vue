@@ -207,7 +207,7 @@ onMounted(() => {
 
   isAdmin.value = role === "admin"
 
-  if ((role == "staff" || role == "kabag") && jenisKelamin == "Laki-laki") {
+  if ((role == "staff" || role == "kabag" || role == "kabag_pemasukan") && jenisKelamin == "Laki-laki") {
     redirectKwitansi.value = true
   }
 })

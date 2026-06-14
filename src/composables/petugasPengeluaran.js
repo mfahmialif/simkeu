@@ -1,5 +1,27 @@
 import { $api } from "@/utils/api"
 
+export const moduleKeyFromPengeluaranEndpoint = endpoint => {
+  const key = String(endpoint || "")
+    .split("?")[0]
+    .replace(/\/+$/, "")
+    .split("/")
+    .pop()
+    ?.replace(/-/g, "_")
+
+  const aliases = {
+    "dosen_tatapmuka": "dosen_tatapmuka",
+    "dosen_tatap_muka": "dosen_tatapmuka",
+    "dosen_kegiatan": "dosen_kegiatan",
+    "dosen_bulanan": "dosen_bulanan",
+    bulanan: "bulanan",
+    "rumah_tangga": "rumah_tangga",
+    "sarana_prasarana": "sarana_prasarana",
+    transportasi: "transportasi",
+  }
+
+  return aliases[key] || key || "rab"
+}
+
 export const fetchPetugasPengeluaranOptions = async (module = null) => {
   const response = await $api("/helper/petugas-pengeluaran", {
     method: "GET",

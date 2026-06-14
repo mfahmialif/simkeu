@@ -38,6 +38,7 @@ declare module 'vue' {
     CustomRadios: typeof import('./src/@core/components/app-form-elements/CustomRadios.vue')['default']
     CustomRadiosWithIcon: typeof import('./src/@core/components/app-form-elements/CustomRadiosWithIcon.vue')['default']
     CustomRadiosWithImage: typeof import('./src/@core/components/app-form-elements/CustomRadiosWithImage.vue')['default']
+    DailyExpenseTable: typeof import('./src/components/admin/laporan/DailyExpenseTable.vue')['default']
     DataDosenPengeluaranDosen: typeof import('./src/components/admin/pengeluaran/dosen-tatapmuka/DataDosenPengeluaranDosen.vue')['default']
     DataDosenPengeluaranDosenKegiatan: typeof import('./src/components/admin/pengeluaran/dosen-kegiatan/DataDosenPengeluaranDosenKegiatan.vue')['default']
     DemoAlertBasic: typeof import('./src/views/demos/components/alert/DemoAlertBasic.vue')['default']

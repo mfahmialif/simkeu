@@ -69,6 +69,10 @@ export const redirects = [
 ]
 export const routes = [
   {
+    path: "/admin/pengeluaran/dosen-bulanan/:pathMatch(.*)*",
+    redirect: to => to.fullPath.replace("/admin/pengeluaran/dosen-bulanan", "/admin/pengeluaran/bulanan"),
+  },
+  {
     path: "/admin/pengeluaran/dosen-tatapmuka/rekap/:id/lpj",
     name: "admin-pengeluaran-dosen-tatapmuka-rekap-id-lpj",
     component: lpjRouteComponent,
@@ -124,13 +128,13 @@ export const routes = [
     },
   },
   {
-    path: "/admin/pengeluaran/dosen-bulanan/rekap/:id/lpj",
-    name: "admin-pengeluaran-dosen-bulanan-rekap-id-lpj",
+    path: "/admin/pengeluaran/bulanan/rekap/:id/lpj",
+    name: "admin-pengeluaran-bulanan-rekap-id-lpj",
     component: lpjRouteComponent,
     props: {
-      title: "Barokah Dosen Bulanan",
-      endpoint: "/admin/pengeluaran/dosen-bulanan",
-      basePath: "/admin/pengeluaran/dosen-bulanan",
+      title: "Barokah Bulanan",
+      endpoint: "/admin/pengeluaran/bulanan",
+      basePath: "/admin/pengeluaran/bulanan",
       moduleType: "dosen-bulanan",
     },
   },

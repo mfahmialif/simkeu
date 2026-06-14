@@ -380,7 +380,7 @@ const fetchJenisPembayaran = async () => {
       const jk = (userData?.jenis_kelamin || '').toLowerCase()
       
       let userCategory = '%'
-      if (role !== 'admin' && role !== 'kabag') {
+      if (!['admin', 'kabag', 'kabag_pemasukan'].includes(role)) {
         if (jk === 'laki-laki') userCategory = 'Putra'
         if (jk === 'perempuan') userCategory = 'Putri'
       }

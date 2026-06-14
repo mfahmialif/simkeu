@@ -5,6 +5,11 @@ import {
   listenPengeluaranRekapUpdated,
   notifyPengeluaranRekapUpdated,
 } from "@/composables/pengeluaranRekap"
+import {
+  defaultPetugasPengeluaranId,
+  fetchPetugasPengeluaranOptions,
+  moduleKeyFromPengeluaranEndpoint,
+} from "@/composables/petugasPengeluaran"
 import { showSnackbar } from "@/composables/snackbar"
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js"
 import "flatpickr/dist/plugins/monthSelect/style.css"
@@ -34,6 +39,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  moduleKey: {
+    type: String,
+    default: null,
+  },
 })
 
 const emit = defineEmits(["updated"])
@@ -53,11 +62,23 @@ const isExpanded = ref(props.defaultExpanded)
 const dialog = ref(false)
 const saving = ref(false)
 const editingItem = ref(null)
+const petugasLoading = ref(false)
+const petugasList = ref([])
+const petugasId = ref(null)
 const namaInput = ref(null)
 const nama = ref("")
 const keterangan = ref("")
 const jumlahSementara = ref(0)
 const useJumlahSementara = ref(true)
+
+const userData = useCookie("userData").value ?? {}
+const userRole = String(userData?.role?.name ?? "").toLowerCase()
+
+const isBarokahRole = [
+  "barokahdosen_tatapmuka",
+  "barokahdosen_kegiatan",
+  "barokahdosen_bulanan",
+].includes(userRole)
 
 const currentDateValue = () => {
   const date = new Date()
@@ -190,24 +211,26 @@ const editingHasDetails = computed(() =>
   Number(editingItem.value?.jumlah_data || 0) > 0,
 )
 
-const canDeleteRekapWithDetails = computed(() =>
-  [
-    "/admin/pengeluaran/dosen-kegiatan",
-    "/admin/pengeluaran/rumah-tangga",
-    "/admin/pengeluaran/sarana-prasarana",
-    "/admin/pengeluaran/transportasi",
-  ].includes(props.endpoint),
+const canDeleteRekapWithDetails = computed(() => true)
+
+const petugasModuleKey = computed(() =>
+  props.moduleKey || moduleKeyFromPengeluaranEndpoint(props.endpoint),
 )
 
-const canDeleteRekap = item =>
-  canDeleteRekapWithDetails.value || Number(item?.jumlah_data || 0) === 0
+const canDeleteRekap = item => {
+  if (isBarokahRole) {
+    return Number(item?.jumlah_data || 0) === 0 && Number(item?.jumlah_lpj || item?.total_lpj || 0) === 0
+  }
+
+  return true
+}
 
 const actionDialogMessage = computed(() => {
   if (actionType.value === "release") {
     return `Semua data dalam rekap "${actionItem.value?.nama || ""}" akan dikeluarkan dari rekap.`
   }
 
-  if (canDeleteRekapWithDetails.value && Number(actionItem.value?.jumlah_data || 0) > 0) {
+  if (Number(actionItem.value?.jumlah_data || 0) > 0) {
     return `Rekap "${actionItem.value?.nama || ""}" beserta ${actionItem.value?.jumlah_data || 0} data pengeluaran di dalamnya akan dihapus permanen.`
   }
 
@@ -304,6 +327,7 @@ const fetchData = async () => {
 
 const resetForm = () => {
   editingItem.value = null
+  petugasId.value = props.filters?.petugas_id || null
   nama.value = ""
   keterangan.value = ""
   jumlahSementara.value = 0
@@ -312,13 +336,51 @@ const resetForm = () => {
   bulanTahun.value = currentMonthValue()
 }
 
-const openCreateDialog = () => {
+const fetchPetugas = async () => {
+  try {
+    petugasLoading.value = true
+
+    const items = await fetchPetugasPengeluaranOptions(petugasModuleKey.value)
+
+    petugasList.value = items
+
+    const selectedFromFilter = props.filters?.petugas_id
+
+    const hasCurrent = petugasId.value
+      && items.some(item => String(item.value) === String(petugasId.value))
+
+    if (hasCurrent) {
+      return
+    }
+
+    if (selectedFromFilter && items.some(item => String(item.value) === String(selectedFromFilter))) {
+      petugasId.value = selectedFromFilter
+
+      return
+    }
+
+    petugasId.value = defaultPetugasPengeluaranId(items) || items[0]?.value || null
+  } catch (err) {
+    petugasList.value = []
+    petugasId.value = null
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    petugasLoading.value = false
+  }
+}
+
+const openCreateDialog = async () => {
   resetForm()
   dialog.value = true
+  await fetchPetugas()
 }
 
 const openEditDialog = item => {
   editingItem.value = item
+  petugasId.value = item.petugas_id || null
   nama.value = item.nama || ""
   bulanTahun.value = String(item.bulan_tahun || "").slice(0, 7)
   tanggalRekap.value = String(item.tanggal_rekap || "").slice(0, 10) || currentDateValue()
@@ -374,10 +436,19 @@ const saveRekap = async (openDetailInput = false) => {
     return
   }
 
+  const isEditing = !!editingItem.value
+
+  if (!isEditing && !petugasId.value) {
+    showSnackbar({
+      text: "Petugas harus dipilih.",
+      color: "warning",
+    })
+
+    return
+  }
+
   try {
     saving.value = true
-
-    const isEditing = !!editingItem.value
 
     const response = await $api(
       isEditing
@@ -386,6 +457,7 @@ const saveRekap = async (openDetailInput = false) => {
       {
         method: isEditing ? "PUT" : "POST",
         body: {
+          ...(!isEditing && { petugas_id: petugasId.value }),
           nama: trimmedNama,
           bulan_tahun: bulanTahun.value,
           tanggal_rekap: tanggalRekap.value,
@@ -920,6 +992,22 @@ onBeforeUnmount(() => {
 
         <VCardText>
           <VRow>
+            <VCol
+              v-if="!editingItem"
+              cols="12"
+            >
+              <VAutocomplete
+                v-model="petugasId"
+                :items="petugasList"
+                :loading="petugasLoading"
+                label="Petugas *"
+                placeholder="Pilih petugas pengeluaran"
+                prepend-inner-icon="ri-user-settings-line"
+                :rules="[requiredValidator]"
+                :disabled="saving"
+              />
+            </VCol>
+
             <VCol cols="12">
               <VTextField
                 ref="namaInput"
@@ -1019,7 +1107,7 @@ onBeforeUnmount(() => {
             variant="tonal"
             color="primary"
             :loading="saving"
-            :disabled="saving"
+            :disabled="saving || petugasLoading"
             @click="saveRekap(true)"
           >
             Simpan dan Inputkan Detail
@@ -1027,7 +1115,7 @@ onBeforeUnmount(() => {
           <VBtn
             color="primary"
             :loading="saving"
-            :disabled="saving"
+            :disabled="saving || petugasLoading"
             @click="saveRekap(false)"
           >
             {{ editingItem ? "Simpan Perubahan" : "Simpan" }}

@@ -1,7 +1,7 @@
 <script setup>
 import { formatRupiah } from "@/composables/formatRupiah"
 import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue"
-import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran"
+import { fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran"
 import { showSnackbar } from "@/composables/snackbar"
 
 const router = useRouter()
@@ -286,15 +286,12 @@ const fetchPetugas = async () => {
 
     petugasList.value = items
 
-    const hasSelectedPetugas = selectedPetugasId.value
-      && items.some(item => String(item.value) === String(selectedPetugasId.value))
-
-    const nextPetugasId = hasSelectedPetugas
-      ? selectedPetugasId.value
-      : defaultPetugasPengeluaranId(items)
-
-    if (String(selectedPetugasId.value ?? "") !== String(nextPetugasId ?? "")) {
-      selectedPetugasId.value = nextPetugasId
+    // Jika sudah ada petugas yang dipilih tapi tidak valid lagi, reset ke null
+    if (
+      selectedPetugasId.value
+      && !items.some(item => String(item.value) === String(selectedPetugasId.value))
+    ) {
+      selectedPetugasId.value = null
     }
   } catch (err) {
     console.error("Failed to fetch petugas pengeluaran:", err)
@@ -525,9 +522,10 @@ watch(search, () => {
   searchTimer = setTimeout(fetchData, 350)
 })
 
-onMounted(() => {
+onMounted(async () => {
   document.title = "RAB - SIMKEU"
-  fetchPetugas()
+  await fetchPetugas()
+  fetchData()
 })
 
 onBeforeUnmount(() => clearTimeout(searchTimer))

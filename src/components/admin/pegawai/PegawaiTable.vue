@@ -44,6 +44,7 @@ const isImportDialogVisible = ref(false)
 const isImporting = ref(false)
 const importFile = ref(null)
 const importSummary = ref(null)
+let searchTimer = null
 
 const stats = ref({
   total: 0,
@@ -371,7 +372,10 @@ watch(
 
 watch(search, () => {
   page.value = 1
-  fetchData()
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    fetchData()
+  }, 450)
 })
 
 watch(
@@ -566,7 +570,6 @@ onMounted(() => {
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
-        :search="search"
         item-value="id"
         @update:options="loadItems"
       >

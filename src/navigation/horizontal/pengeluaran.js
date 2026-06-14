@@ -5,7 +5,7 @@ export default [
     children: [
       { title: "Tatapmuka", to: "admin-pengeluaran-dosen-tatapmuka" },
       { title: "Kegiatan", to: "admin-pengeluaran-dosen-kegiatan" },
-      { title: "Dosen Bulanan", to: "admin-pengeluaran-dosen-bulanan" },
+      { title: "Bulanan", to: "admin-pengeluaran-bulanan" },
     ],
   },
 ]

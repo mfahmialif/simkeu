@@ -382,6 +382,7 @@
     "notifyPengeluaranRekapUpdated": true,
     "appendLampiranFormData": true,
     "fetchPetugasPengeluaranOptions": true,
-    "defaultPetugasPengeluaranId": true
+    "defaultPetugasPengeluaranId": true,
+    "moduleKeyFromPengeluaranEndpoint": true
   }
 }

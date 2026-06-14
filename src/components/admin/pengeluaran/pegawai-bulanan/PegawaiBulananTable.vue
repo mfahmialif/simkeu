@@ -54,6 +54,7 @@ const selectAllPages = ref(false)
 const isLoadingExcel = ref(false)
 const isLoadingBsiExcel = ref(false)
 const isLoadingBsiCopy = ref(false)
+let searchTimer = null
 
 const hasDateFilter = computed(() => !!(
   tanggalHarian.value
@@ -390,7 +391,14 @@ const copyBsiData = async () => {
   }
 }
 
-const unitLabel = item => item.nama_prodi_dosen
+const pegawaiTypeLabel = item => {
+  if (item.tipe_pegawai === "staff") return "Staff"
+  if (item.tipe_pegawai === "dosen") return "Dosen"
+
+  return "Pegawai"
+}
+
+const unitLabel = item => item.nama_prodi_dosen || item.jabatan_staff
 
 const monthName = value => {
   const months = [
@@ -415,7 +423,14 @@ watch(search, () => {
   selectedRows.value = []
   selectAllPages.value = false
   page.value = 1
-  fetchData()
+
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+
+  searchTimer = setTimeout(() => {
+    fetchData()
+  }, 450)
 })
 
 watch(filterMode, () => {
@@ -719,7 +734,7 @@ onMounted(() => {
           { title: 'Pegawai', key: 'nama_pegawai' },
           { title: 'Nama Petugas', key: 'petugas_nama' },
           { title: 'Rekap', key: 'nama_rekap' },
-          { title: 'Dosen Tetap', key: 'barokah_dosen_tetap' },
+          { title: 'Barokah Tetap', key: 'barokah_dosen_tetap' },
           { title: 'Struktural', key: 'barokah_struktural' },
           { title: 'Total', key: 'total' },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
@@ -730,7 +745,6 @@ onMounted(() => {
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
-        :search="search"
         item-value="id"
         @update:options="loadItems"
       >
@@ -769,7 +783,7 @@ onMounted(() => {
             {{ item.kode_pegawai || "-" }}
           </div>
           <div class="text-caption text-medium-emphasis">
-            Dosen
+            {{ pegawaiTypeLabel(item) }}
             <span v-if="unitLabel(item)"> - {{ unitLabel(item) }}</span>
           </div>
           <div class="text-caption text-medium-emphasis">
