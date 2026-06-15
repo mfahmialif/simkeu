@@ -1,6 +1,7 @@
 <script setup>
 import { formatCurrencyTotals, formatMoney } from "@/composables/formatRupiah"
 import { showSnackbar } from "@/composables/snackbar"
+import { useDashboardFilters } from "@/composables/dashboardFilters"
 import { computed, onMounted, ref, watch } from "vue"
 
 // Palette warna dan ikon untuk kategori dinamis
@@ -27,8 +28,11 @@ const totalsByCurrency = ref([])
 const selectedCurrency = ref("IDR")
 
 // ===== FILTER =====
-const thAkademikList = ref([])
-const prodiList = ref([])
+const {
+  thAkademikList,
+  prodiList,
+  loadDashboardFilters,
+} = useDashboardFilters()
 
 const selectedThAkademik = ref(null)
 const selectedProdi = ref(null)
@@ -54,38 +58,6 @@ const selectedMataUang = computed(
     simbol: selectedCurrency.value === "IDR" ? "Rp" : selectedCurrency.value,
   },
 )
-
-const fetchThAkademik = async () => {
-  try {
-    const { data } = await $api("/admin/th-akademik", {
-      method: "GET",
-      body: { limit: 0, sort_key: "kode", sort_order: "desc" },
-    })
-
-    thAkademikList.value = (data.data || []).map(i => ({
-      title: `${i.nama} - ${i.semester}`,
-      value: i.id,
-    }))
-  } catch (e) {
-    console.error(e)
-  }
-}
-
-const fetchProdi = async () => {
-  try {
-    const { data } = await $api("/admin/prodi", {
-      method: "GET",
-      body: { limit: 0, sort_key: "kode", sort_order: "desc" },
-    })
-
-    prodiList.value = (data.data || []).map(i => ({
-      title: i.nama,
-      value: i.id,
-    }))
-  } catch (e) {
-    console.error(e)
-  }
-}
 
 const jkList = [
   { title: "Laki-laki", value: 8 },
@@ -242,8 +214,7 @@ const fetchData = async () => {
 }
 
 onMounted(() => {
-  fetchThAkademik()
-  fetchProdi()
+  loadDashboardFilters()
   fetchData()
 })
 </script>

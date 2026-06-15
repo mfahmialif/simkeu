@@ -485,6 +485,7 @@ onMounted(() => {
       :endpoint="endpoint"
       :base-path="basePath"
       :filters="rekapFilterPayload"
+      enable-excel-export
       @updated="clearBatchSelection"
     />
 

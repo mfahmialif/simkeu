@@ -433,6 +433,7 @@ declare module 'vue' {
     ScrollToTop: typeof import('./src/@core/components/ScrollToTop.vue')['default']
     ShareProjectDialog: typeof import('./src/components/dialogs/ShareProjectDialog.vue')['default']
     Shortcuts: typeof import('./src/@core/components/Shortcuts.vue')['default']
+    SignaturePad: typeof import('./src/components/admin/pimpinan/SignaturePad.vue')['default']
     TagihanPembayaran: typeof import('./src/components/admin/pemasukan/mahasiswa/DispensasiTagihan/TagihanPembayaran.vue')['default']
     TagihanPembayaranMahasiswa: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/TagihanPembayaranMahasiswa.vue')['default']
     TagihanPembayaranMahasiswaTambahan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/TagihanPembayaranMahasiswaTambahan.vue')['default']

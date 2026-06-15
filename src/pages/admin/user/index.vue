@@ -80,11 +80,13 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
 
 const fetchRole = async () => {
   try {
-    const { data } = await $api("/admin/role", {
+    const { data } = await $api("/admin/role?limit=0&sort_key=name&sort_order=asc", {
       method: "GET",
     })
 
-    role.value = data.data.map(role => {
+    const rows = Array.isArray(data) ? data : data.data || []
+
+    role.value = rows.map(role => {
       return {
         title: role.name,
         value: role.id,

@@ -180,7 +180,10 @@ const chartCards = computed(() => {
 
 const topPegawai = computed(() => summary.value.top_pegawai || [])
 const modules = computed(() => summary.value.modules || [])
-const primaryModulePath = computed(() => modules.value[0]?.path || null)
+
+const primaryModulePath = computed(() =>
+  summary.value.detail_path || modules.value[0]?.path || null,
+)
 
 const goToPath = path => {
   if (path) {

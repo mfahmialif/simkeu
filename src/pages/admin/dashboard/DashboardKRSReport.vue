@@ -1,50 +1,18 @@
 <script setup>
+import { useDashboardFilters } from "@/composables/dashboardFilters"
 import { showSnackbar } from "@/composables/snackbar"
 import { ref, watch, onMounted, computed } from "vue"
 
 // ===== FILTER =====
-const thAkademikList = ref([])
-const prodiList = ref([])
+const {
+  thAkademikList,
+  prodiList,
+  loadDashboardFilters,
+} = useDashboardFilters()
 
 const selectedThAkademik = ref(null)
 const selectedProdi = ref(null)
 const selectedThAngkatan = ref(null)
-
-const fetchThAkademik = async () => {
-  try {
-    const response = await $api("/admin/th-akademik?limit=0&sort_key=kode&sort_order=desc")
-    const items = response.data?.data || response.data || []
-
-    thAkademikList.value = items.map(i => ({
-      title: `${i.nama} - ${i.semester}`,
-      value: i.id,
-      aktif: i.aktif,
-    }))
-
-    // Set default ke th akademik yang aktif
-    const aktif = thAkademikList.value.find(i => i.aktif === "Y")
-    if (aktif) {
-      selectedThAkademik.value = aktif.value
-    }
-  } catch (e) {
-    console.error(e)
-  }
-}
-
-const fetchProdi = async () => {
-  try {
-    const response = await $api("/admin/prodi?limit=0&sort_key=kode&sort_order=desc")
-    const items = response.data?.data || response.data || []
-
-    prodiList.value = items.map(i => ({
-      title: i.nama,
-      value: i.id,
-    }))
-  } catch (e) {
-    console.error(e)
-  }
-}
-
 
 // ===== SUMMARY DATA (Info Cards) =====
 const isLoading = ref(false)
@@ -241,7 +209,11 @@ const statCards = computed(() => [
 ])
 
 onMounted(async () => {
-  await Promise.all([fetchThAkademik(), fetchProdi()])
+  await loadDashboardFilters()
+
+  const aktif = thAkademikList.value.find(item => item.aktif === "Y")
+
+  if (aktif) selectedThAkademik.value = aktif.value
   filtersInitialized.value = true
   fetchSummary()
 })

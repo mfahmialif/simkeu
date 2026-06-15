@@ -5,6 +5,7 @@ export const settingMenu = {
     { title: "Prodi", to: "admin-setting-prodi" },
     { title: "Tahun Akademik", to: "admin-setting-th-akademik" },
     { title: "Mata Uang", to: "admin-setting-mata-uang" },
+    { title: "Pimpinan", to: "admin-setting-pimpinan" },
     { title: "Form Schedule", to: "admin-setting-form-schadule" },
     { title: "Aktifkan Mahasiswa", to: "admin-setting-aktifkan-mahasiswa" },
   ],

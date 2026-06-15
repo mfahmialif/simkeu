@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable camelcase */
 import { formatRupiah } from "@/composables/formatRupiah"
 import { showSnackbar } from "@/composables/snackbar"
 import { ref, watch } from "vue"
@@ -73,6 +74,7 @@ const searchNim = ref("")
 const mahasiswa = ref(emptyMahasiswa)
 const loadingDataMahasiswa = ref(false)
 const mahasiswaList = ref([])
+const refSearch = ref(null)
 
 onMounted(async () => {
   await fetchAllTahun()
@@ -259,7 +261,7 @@ const fetchTagihan = async nim => {
 
     const res = await $api(`/admin/pemasukan/mahasiswa/cek-tagihan`, {
       method: "GET",
-      body: {
+      params: {
         nim: nim,
       },
     })
@@ -332,7 +334,9 @@ let typingTimeout = null
 watch(search, newVal => {
   clearTimeout(typingTimeout)
 
-  if (!newVal.trim()) {
+  const keyword = String(newVal || "").trim()
+
+  if (!keyword) {
     mahasiswaList.value = []
     loadingSearch.value = false
     
@@ -343,7 +347,7 @@ watch(search, newVal => {
     try {
       loadingSearch.value = true
 
-      const res = await $api(`/admin/mahasiswa/search/${newVal}`, {
+      const res = await $api(`/admin/mahasiswa/search/${encodeURIComponent(keyword)}`, {
         method: "GET",
       })
 
@@ -362,7 +366,7 @@ watch(search, newVal => {
     } finally {
       loadingSearch.value = false
     }
-  }, 1000) // <-- debounce 2 detik
+  }, 300)
 })
 
 watch(selectedMahasiswa, newVal => {
@@ -377,7 +381,9 @@ watch(selectedMahasiswa, newVal => {
 })
 
 const searching = async () => {
-  if (!searchNim.value) {
+  const nim = String(searchNim.value || search.value || "").split(" - ")[0].trim()
+
+  if (!nim) {
     showSnackbar({
       text: "NIM harus diisi",
       color: "error",
@@ -391,12 +397,12 @@ const searching = async () => {
 
     const res = await $api(`/admin/mahasiswa/nim`, {
       method: "GET",
-      body: {
-        nim: searchNim.value,
+      params: {
+        nim: nim,
       },
     })
 
-    if (res.length < 1) {
+    if (!res || (Array.isArray(res) && res.length < 1)) {
       showSnackbar({
         text: "Data mahasiswa tidak ditemukan",
         color: "error",
@@ -431,6 +437,17 @@ const searching = async () => {
     loadingDataMahasiswa.value = false
   }
 }
+
+const selectAll = async () => {
+  await nextTick()
+
+  const input = refSearch.value?.$el?.querySelector("input")
+  if (input) input.select()
+}
+
+onBeforeUnmount(() => {
+  clearTimeout(typingTimeout)
+})
 
 const rows = ref([])
 function onSelectTagihan(val) {
@@ -487,6 +504,7 @@ function removeRow(id) {
         cols="12"
       >
         <VCombobox
+          ref="refSearch"
           v-model="selectedMahasiswa"
           v-model:search="search"
           :items="mahasiswaList"
@@ -495,6 +513,9 @@ function removeRow(id) {
           label="NIM"
           clearable
           :loading="loadingSearch"
+          autocomplete="off"
+          @focus="selectAll"
+          @click="selectAll"
         >
           <template #append-inner>
             <VProgressCircular
@@ -632,7 +653,7 @@ function removeRow(id) {
       </VCol>
 
       <VRow
-        v-for="(row, idx) in rows"
+        v-for="row in rows"
         :key="row.id"
         class="align-center mt-2 ms-1 me-4"
       >
@@ -691,7 +712,7 @@ function removeRow(id) {
             color="error"
             icon="ri-delete-bin-line"
             variant="elevated"
-            class="ml-auto"
+            class="ms-auto"
             :aria-label="`Hapus ${row.jumlah}`"
             hint="delete"
             persistent-hint

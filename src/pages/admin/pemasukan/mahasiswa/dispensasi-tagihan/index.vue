@@ -1,7 +1,5 @@
 <script setup>
-const selectedRole = ref()
-const role = ref([])
-
+/* eslint-disable camelcase */
 const page = ref(1)
 const itemsPerPage = ref(5)
 const sortBy = ref({ key: "id", order: "desc" })
@@ -11,41 +9,32 @@ const dataTable = ref([])
 const totalItems = ref(0)
 const loading = ref(true)
 const initialLoading = ref(true)
-let isFetching = ref(false)
+let searchTimer = null
 
 const fetchDispensasiTagihan = async () => {
-  if (isFetching.value) {
-    return
-  }
-  isFetching.value = true
+  loading.value = true
   try {
-    loading.value = true
-
-    const response = await $api(
+    const { data } = await $api(
       "/admin/pemasukan/mahasiswa/dispensasi-tagihan",
       {
         method: "GET",
-        params: {
+        body: {
           page: page.value,
           limit: itemsPerPage.value,
-          sort_key: sortBy.value?.key,
-          sort_order: sortBy.value?.order,
+          sort_key: sortBy.value.key,
+          sort_order: sortBy.value.order,
           search: search.value,
-          ...(selectedRole.value && { role_id: selectedRole.value }),
         },
       },
     )
 
-    const dispensasiTagihanList = response.data.data ?? response
+    dataTable.value = data.data
+    totalItems.value = data.total
 
-    dataTable.value = dispensasiTagihanList
-    totalItems.value = response.data.total ?? 0
-
-    fetchMahasiswa()
+    await fetchMahasiswa()
   } catch (err) {
     console.error("Gagal fetch dispensasi:", err)
   } finally {
-    isFetching.value = false
     loading.value = false
     if (initialLoading.value) initialLoading.value = false
   }
@@ -55,12 +44,11 @@ const fetchMahasiswa = async () => {
   try {
     const nimList = dataTable.value.map(item => item.nim)
 
-    console.log("NIM List:", nimList)
+    if (!nimList.length) return
 
     const response = await $api("/admin/mahasiswa/nim", {
       method: "GET",
-      params: {
-        limit: 30,
+      body: {
         nim: JSON.stringify(nimList),
         whereIn: true,
       },
@@ -86,6 +74,7 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   page.value = p
   itemsPerPage.value = ipp
   if (sb.length) sortBy.value = sb[0]
+  if (typeof s === "string") search.value = s
   fetchDispensasiTagihan()
 }
 
@@ -138,7 +127,6 @@ const deleteDataSubmit = async id => {
 
 onMounted(() => {
   document.title = "Catatan Dispensasi - SIMKEU"
-  fetchDispensasiTagihan()
 })
 
 watch(
@@ -151,9 +139,16 @@ watch(
   { deep: true },
 )
 
-watch(selectedRole, () => {
-  console.log("value from wathc", selectedRole.value)
-  fetchUsers()
+watch(search, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    fetchDispensasiTagihan()
+  }, 350)
+})
+
+onBeforeUnmount(() => {
+  clearTimeout(searchTimer)
 })
 </script>
 
@@ -203,6 +198,7 @@ watch(selectedRole, () => {
       </VCardText>
       <!-- 👉 Datatable  -->
       <VDataTableServer
+        v-model:model-value="selectedRows"
         v-model:items-per-page="itemsPerPage"
         v-model:page="page"
         :headers="[

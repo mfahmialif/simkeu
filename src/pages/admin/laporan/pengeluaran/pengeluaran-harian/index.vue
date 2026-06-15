@@ -11,19 +11,37 @@ import { showSnackbar } from "@/composables/snackbar"
 
 const theme = useTheme()
 const now = new Date()
+const userData = useCookie("userData")
 const jkScope = useCookie("simkeuJkScope", { default: () => "semua" })
+
+const isAdmin = computed(() => {
+  const roleName = String(userData.value?.role?.name || "").toLowerCase()
+
+  return roleName === "admin" || Number(userData.value?.role_id) === 1
+})
+
+const userGender = computed(() => {
+  const gender = String(userData.value?.jenis_kelamin || "").toLowerCase()
+
+  if (gender.includes("perempuan")) return "Perempuan"
+  if (gender.includes("laki")) return "Laki-laki"
+
+  return null
+})
 
 const scopeGender = computed(() => ({
   putra: "Laki-laki",
   putri: "Perempuan",
 })[jkScope.value] || null)
 
+const accessGender = computed(() => isAdmin.value ? scopeGender.value : userGender.value)
+
 const selectedMode = ref("bulanan")
 const selectedMonth = ref(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`)
 const selectedYear = ref(String(now.getFullYear()))
 const selectedPayment = ref(null)
 const selectedOfficer = ref(null)
-const selectedGender = ref(scopeGender.value)
+const selectedGender = ref(accessGender.value)
 const paymentOptions = ref([])
 const officerList = ref([])
 const loading = ref(false)
@@ -47,8 +65,8 @@ const modeOptions = [
   { title: "Mode Tahunan", value: "tahunan" },
 ]
 
-const genderOptions = computed(() => scopeGender.value
-  ? [{ title: scopeGender.value, value: scopeGender.value }]
+const genderOptions = computed(() => accessGender.value
+  ? [{ title: accessGender.value, value: accessGender.value }]
   : [
     { title: "Laki-laki", value: "Laki-laki" },
     { title: "Perempuan", value: "Perempuan" },
@@ -87,7 +105,7 @@ const requestPayload = computed(() => ({
     : { tahun: selectedYear.value }),
   ...(selectedPayment.value && { jenis_pembayaran: selectedPayment.value }),
   ...(selectedOfficer.value && { petugas_id: selectedOfficer.value }),
-  ...(!scopeGender.value && selectedGender.value && { jenis_kelamin: selectedGender.value }),
+  ...(selectedGender.value && { jenis_kelamin: selectedGender.value }),
 }))
 
 const summaryCards = computed(() => [
@@ -261,6 +279,9 @@ const fetchOfficers = async () => {
   try {
     const response = await $api("/helper/petugas-pengeluaran", {
       method: "GET",
+      body: {
+        ...(selectedGender.value && { jenis_kelamin: selectedGender.value }),
+      },
     })
 
     officerList.value = response?.data || []
@@ -270,12 +291,8 @@ const fetchOfficers = async () => {
 }
 
 watch(selectedGender, () => {
-  if (
-    selectedOfficer.value
-    && !officerOptions.value.some(item => item.value === selectedOfficer.value)
-  ) {
-    selectedOfficer.value = null
-  }
+  selectedOfficer.value = null
+  fetchOfficers()
 })
 
 onMounted(() => {
@@ -376,9 +393,9 @@ onMounted(() => {
               v-model="selectedGender"
               :items="genderOptions"
               label="Jenis Kelamin Petugas"
-              :placeholder="scopeGender ? scopeGender : 'Semua'"
-              :clearable="!scopeGender"
-              :disabled="Boolean(scopeGender)"
+              :placeholder="accessGender || 'Semua'"
+              :clearable="!accessGender"
+              :disabled="Boolean(accessGender)"
               density="comfortable"
               hide-details
             />

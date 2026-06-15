@@ -383,6 +383,7 @@
     "appendLampiranFormData": true,
     "fetchPetugasPengeluaranOptions": true,
     "defaultPetugasPengeluaranId": true,
-    "moduleKeyFromPengeluaranEndpoint": true
+    "moduleKeyFromPengeluaranEndpoint": true,
+    "useDashboardFilters": true
   }
 }

@@ -5,6 +5,7 @@ export const settingMenu = {
     { title: "Prodi", icon: { icon: "ri-graduation-cap-line" }, to: "admin-setting-prodi" },
     { title: "Tahun Akademik", icon: { icon: "ri-calendar-line" }, to: "admin-setting-th-akademik" },
     { title: "Mata Uang", icon: { icon: "ri-money-dollar-circle-line" }, to: "admin-setting-mata-uang" },
+    { title: "Pimpinan", icon: { icon: "ri-user-star-line" }, to: "admin-setting-pimpinan" },
     { title: "Form Schedule", icon: { icon: "ri-time-line" }, to: "admin-setting-form-schadule" },
     {
       title: "Aktifkan Mahasiswa",

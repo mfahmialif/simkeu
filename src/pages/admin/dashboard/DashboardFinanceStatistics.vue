@@ -224,7 +224,7 @@ onMounted(fetchData)
     <template v-else>
       <VCardItem
         title="Statistik Keuangan"
-        subtitle="Data Statistik Pemasukan harian UII Dalwa"
+        subtitle="Perbandingan pemasukan dan seluruh pengeluaran dalam 10 hari terakhir"
       >
         <template #append>
           <div class="d-flex align-center gap-2">

@@ -1,5 +1,6 @@
 <script setup>
 /* eslint-disable camelcase, import/extensions */
+import { downloadFileExport } from "@/composables/exportFile"
 import { formatRupiah } from "@/composables/formatRupiah"
 import {
   listenPengeluaranRekapUpdated,
@@ -42,6 +43,10 @@ const props = defineProps({
   moduleKey: {
     type: String,
     default: null,
+  },
+  enableExcelExport: {
+    type: Boolean,
+    default: false,
   },
 })
 
@@ -91,6 +96,7 @@ const currentDateValue = () => {
 }
 
 const tanggalRekap = ref(currentDateValue())
+const tanggalPencairan = ref(null)
 
 const currentMonthValue = () => {
   const date = new Date()
@@ -106,6 +112,8 @@ const actionLoading = ref(false)
 const lpjDialog = ref(false)
 const lpjItem = ref(null)
 const lpjLoading = ref(false)
+const exportingExcel = ref(false)
+const exportingDetailId = ref(null)
 let searchTimer = null
 let stopListeningRekapUpdates = null
 
@@ -196,6 +204,14 @@ const bulanTahunFilter = computed(() => {
     bulan: match[2],
   }
 })
+
+const rekapRequestPayload = computed(() => ({
+  search: search.value,
+  ...props.filters,
+  ...bulanTahunFilter.value,
+  ...(filterTanggalMulai.value && { tanggal_mulai: filterTanggalMulai.value }),
+  ...(filterTanggalAkhir.value && { tanggal_akhir: filterTanggalAkhir.value }),
+}))
 
 const actionDialogTitle = computed(() => (
   actionType.value === "release"
@@ -304,11 +320,7 @@ const fetchData = async () => {
         limit: itemsPerPage.value,
         sort_key: "id",
         sort_order: "desc",
-        search: search.value,
-        ...props.filters,
-        ...bulanTahunFilter.value,
-        ...(filterTanggalMulai.value && { tanggal_mulai: filterTanggalMulai.value }),
-        ...(filterTanggalAkhir.value && { tanggal_akhir: filterTanggalAkhir.value }),
+        ...rekapRequestPayload.value,
       },
     })
 
@@ -325,6 +337,80 @@ const fetchData = async () => {
   }
 }
 
+const exportRekapExcel = async () => {
+  if (exportingExcel.value) return
+
+  try {
+    exportingExcel.value = true
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api(`${props.endpoint}/rekap/export-excel`, {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        sort_key: "id",
+        sort_order: "desc",
+        ...rekapRequestPayload.value,
+      },
+    })
+
+    downloadFileExport(response, `Rekap ${props.title}.xlsx`)
+    showSnackbar({
+      text: "Rekap berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    exportingExcel.value = false
+  }
+}
+
+const exportRekapDetailExcel = async item => {
+  if (exportingDetailId.value) return
+
+  try {
+    exportingDetailId.value = item.id
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api(`${props.endpoint}/rekap/${item.id}/export-excel`, {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        tab: "rab",
+      },
+    })
+
+    downloadFileExport(response, `Detail RAB ${item.nama || props.title}.xlsx`)
+    showSnackbar({
+      text: "Detail rekap berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    exportingDetailId.value = null
+  }
+}
+
 const resetForm = () => {
   editingItem.value = null
   petugasId.value = props.filters?.petugas_id || null
@@ -333,6 +419,7 @@ const resetForm = () => {
   jumlahSementara.value = 0
   useJumlahSementara.value = false
   tanggalRekap.value = currentDateValue()
+  tanggalPencairan.value = null
   bulanTahun.value = currentMonthValue()
 }
 
@@ -384,6 +471,7 @@ const openEditDialog = item => {
   nama.value = item.nama || ""
   bulanTahun.value = String(item.bulan_tahun || "").slice(0, 7)
   tanggalRekap.value = String(item.tanggal_rekap || "").slice(0, 10) || currentDateValue()
+  tanggalPencairan.value = String(item.tanggal_pencairan || "").slice(0, 10) || null
   jumlahSementara.value = Number(item.jumlah_data > 0 ? item.jumlah : (item.jumlah_sementara ?? item.jumlah ?? 0))
   useJumlahSementara.value = item.jumlah_sementara !== null
   keterangan.value = item.keterangan || ""
@@ -461,6 +549,7 @@ const saveRekap = async (openDetailInput = false) => {
           nama: trimmedNama,
           bulan_tahun: bulanTahun.value,
           tanggal_rekap: tanggalRekap.value,
+          tanggal_pencairan: tanggalPencairan.value || null,
           jumlah_sementara: editingHasDetails.value ? null : temporaryAmount,
           keterangan: keterangan.value,
         },
@@ -647,6 +736,18 @@ onBeforeUnmount(() => {
             Tambah Data
           </VBtn>
 
+          <VBtn
+            v-if="enableExcelExport"
+            color="success"
+            variant="tonal"
+            prepend-icon="ri-file-excel-2-line"
+            :loading="exportingExcel"
+            :disabled="exportingExcel"
+            @click="exportRekapExcel"
+          >
+            Download Excel
+          </VBtn>
+
           <VTooltip
             :text="isExpanded ? 'Tutup daftar rekap' : 'Buka daftar rekap'"
             location="top"
@@ -819,6 +920,16 @@ onBeforeUnmount(() => {
                   >
                     {{ formatDate(item.tanggal_rekap) }}
                   </VChip>
+                  <VChip
+                    size="x-small"
+                    :color="item.tanggal_pencairan ? 'success' : 'warning'"
+                    variant="tonal"
+                    label
+                  >
+                    {{ item.tanggal_pencairan
+                      ? `Cair ${formatDate(item.tanggal_pencairan)}`
+                      : "Belum cair" }}
+                  </VChip>
                 </div>
 
                 <div class="rekap-item-note">
@@ -872,6 +983,25 @@ onBeforeUnmount(() => {
                       variant="text"
                       color="primary"
                       @click="openEditDialog(item)"
+                    />
+                  </template>
+                </VTooltip>
+
+                <VTooltip
+                  v-if="enableExcelExport"
+                  text="Download Excel"
+                  location="top"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <VBtn
+                      v-bind="tooltipProps"
+                      icon="ri-file-excel-2-line"
+                      size="small"
+                      variant="text"
+                      color="success"
+                      :loading="exportingDetailId === item.id"
+                      :disabled="Boolean(exportingDetailId)"
+                      @click="exportRekapDetailExcel(item)"
                     />
                   </template>
                 </VTooltip>
@@ -1032,6 +1162,20 @@ onBeforeUnmount(() => {
                 prepend-inner-icon="ri-calendar-event-line"
                 :config="datePickerConfig"
                 :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <AppDateTimePicker
+                v-model="tanggalPencairan"
+                label="Tanggal Pencairan (Opsional)"
+                placeholder="Belum ditentukan"
+                prepend-inner-icon="ri-calendar-check-line"
+                clearable
+                :config="datePickerConfig"
               />
             </VCol>
 
@@ -1228,6 +1372,8 @@ onBeforeUnmount(() => {
 .rekap-header-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 

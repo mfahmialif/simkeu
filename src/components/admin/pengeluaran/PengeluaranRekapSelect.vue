@@ -76,6 +76,7 @@ const currentDateValue = () => {
 }
 
 const tanggalRekap = ref(currentDateValue())
+const tanggalPencairan = ref(null)
 
 const currentMonthValue = () => {
   const date = new Date()
@@ -138,6 +139,7 @@ const formatDate = value => {
 const rekapSubtitle = item => [
   formatMonthYear(item.bulan_tahun),
   item.tanggal_rekap ? `Tanggal ${formatDate(item.tanggal_rekap)}` : null,
+  item.tanggal_pencairan ? `Cair ${formatDate(item.tanggal_pencairan)}` : "Belum cair",
   `${item.is_jumlah_sementara ? "Sementara" : "Detail"} ${formatRupiah(item.jumlah || 0)}`,
   item.jumlah_sementara !== null && Number(item.jumlah_data || 0) > 0
     ? `Target ${formatRupiah(item.jumlah_sementara)}`
@@ -237,6 +239,7 @@ const resetForm = () => {
   jumlahSementara.value = 0
   useJumlahSementara.value = false
   tanggalRekap.value = currentDateValue()
+  tanggalPencairan.value = null
   bulanTahun.value = currentMonthValue()
   petugasId.value = props.filters?.petugas_id || null
 }
@@ -311,6 +314,7 @@ const createRekap = async () => {
         nama: trimmedNama,
         bulan_tahun: bulanTahun.value,
         tanggal_rekap: tanggalRekap.value,
+        tanggal_pencairan: tanggalPencairan.value || null,
         jumlah_sementara: temporaryAmount,
         keterangan: keterangan.value,
       },
@@ -452,6 +456,20 @@ onBeforeUnmount(() => {
                 prepend-inner-icon="ri-calendar-event-line"
                 :config="datePickerConfig"
                 :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <AppDateTimePicker
+                v-model="tanggalPencairan"
+                label="Tanggal Pencairan (Opsional)"
+                placeholder="Belum ditentukan"
+                prepend-inner-icon="ri-calendar-check-line"
+                clearable
+                :config="datePickerConfig"
               />
             </VCol>
 

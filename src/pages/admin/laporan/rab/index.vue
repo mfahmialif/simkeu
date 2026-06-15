@@ -1,4 +1,6 @@
 <script setup>
+/* eslint-disable camelcase */
+import { downloadFileExport } from "@/composables/exportFile"
 import { formatRupiah } from "@/composables/formatRupiah"
 import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue"
 import { fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran"
@@ -23,6 +25,9 @@ const years = ref([currentDate.getFullYear()])
 const modules = ref([])
 const loading = ref(false)
 const initialLoading = ref(true)
+const statsLoading = ref(false)
+const exportingExcel = ref(false)
+const exportingRekapan = ref(false)
 const kasLoading = ref(false)
 const kasSummary = ref([])
 const kasTotals = ref({})
@@ -36,6 +41,24 @@ const rekapFormDialog = ref(false)
 const rekapSaving = ref(false)
 const rekapPetugasLoading = ref(false)
 const rekapPetugasList = ref([])
+const selectedRekapKeys = ref([])
+const bulkTanggalPencairan = ref(null)
+const bulkTanggalSaving = ref(false)
+const tanggalPencairanSaving = ref({})
+const resettingFilters = ref(false)
+
+const userData = useCookie("userData").value ?? {}
+const userRole = String(userData?.role?.name ?? "").toLowerCase()
+
+const canEditTanggalPencairan = [
+  "admin",
+  "keuangan",
+  "kabag",
+  "kabag_pengeluaran",
+  "barokahdosen_tatapmuka",
+  "barokahdosen_kegiatan",
+  "barokahdosen_bulanan",
+].includes(userRole)
 
 const kasForm = ref({
   petugas_id: null,
@@ -61,11 +84,13 @@ const rekapForm = ref({
     String(currentDate.getMonth() + 1).padStart(2, "0"),
     String(currentDate.getDate()).padStart(2, "0"),
   ].join("-"),
+  tanggal_pencairan: null,
   jumlah_sementara: 0,
   keterangan: "",
 })
 
 let searchTimer = null
+let statsRequestToken = 0
 
 const bulanItems = [
   "Januari",
@@ -81,6 +106,13 @@ const bulanItems = [
   "November",
   "Desember",
 ].map((title, index) => ({ title, value: index + 1 }))
+
+const tanggalPencairanPickerConfig = {
+  altInput: true,
+  altFormat: "d F Y",
+  dateFormat: "Y-m-d",
+  disableMobile: true,
+}
 
 const formatMonthYear = value => {
   const match = String(value || "").match(/^(\d{4})-(\d{2})/)
@@ -114,6 +146,12 @@ const saldoAdjustmentTotal = computed(() =>
   Number(kasTotals.value.manual_masuk || 0) - Number(kasTotals.value.manual_keluar || 0),
 )
 
+const selectedRekapItems = computed(() => {
+  const selected = new Set(selectedRekapKeys.value)
+
+  return dataTable.value.filter(item => selected.has(item.row_key))
+})
+
 const selectedPetugasName = computed(() => {
   if (kasPetugas.value?.name) return kasPetugas.value.name
 
@@ -131,6 +169,8 @@ const saldoCardTitle = computed(() => (
   selectedPetugasName.value ? `Saldo ${selectedPetugasName.value}` : "Saldo"
 ))
 
+const isStatsPending = computed(() => statsLoading.value && Boolean(stats.value?.partial))
+
 const statCards = computed(() => [
   {
     key: "total_anggaran",
@@ -139,6 +179,7 @@ const statCards = computed(() => [
     note: "Akumulasi seluruh rekap",
     icon: "ri-wallet-3-line",
     color: "primary",
+    loading: isStatsPending.value,
   },
   {
     key: "total_lpj",
@@ -147,6 +188,7 @@ const statCards = computed(() => [
     note: "Akumulasi realisasi LPJ",
     icon: "ri-file-check-line",
     color: "info",
+    loading: isStatsPending.value,
   },
   {
     key: "selisih",
@@ -155,6 +197,7 @@ const statCards = computed(() => [
     note: "Total RAB dikurangi LPJ",
     icon: "ri-scales-3-line",
     color: Number(stats.value.selisih || 0) < 0 ? "error" : "success",
+    loading: isStatsPending.value,
   },
   {
     key: "total_data",
@@ -163,6 +206,7 @@ const statCards = computed(() => [
     note: "Detail pengeluaran",
     icon: "ri-database-2-line",
     color: "warning",
+    loading: isStatsPending.value,
   },
   {
     key: "total_modul",
@@ -171,6 +215,7 @@ const statCards = computed(() => [
     note: "Jenis Barokah",
     icon: "ri-layout-grid-line",
     color: "secondary",
+    loading: isStatsPending.value,
   },
 ])
 
@@ -185,13 +230,19 @@ const kasTipeItems = [
   { title: "Penyesuaian Keluar", value: "keluar" },
 ]
 
-const activeFilterPayload = () => ({
-  search: search.value,
-  ...(selectedBulan.value && { bulan: selectedBulan.value }),
-  ...(selectedTahun.value && { tahun: selectedTahun.value }),
-  ...(selectedModule.value && { module_key: selectedModule.value }),
-  ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
-})
+const activeFilterPayload = () => {
+  const searchTerm = String(search.value || "").trim()
+
+  return {
+    ...(searchTerm && { search: searchTerm }),
+    ...(selectedBulan.value && { bulan: selectedBulan.value }),
+    ...(selectedTahun.value && { tahun: selectedTahun.value }),
+    ...(selectedModule.value && { module_key: selectedModule.value }),
+    ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
+  }
+}
+
+const hasActiveFilters = () => Object.keys(activeFilterPayload()).length > 0
 
 const errorMessage = err => {
   const message =
@@ -230,11 +281,50 @@ const fetchKas = async () => {
   }
 }
 
+const fetchDeferredStats = async filterPayload => {
+  const requestToken = ++statsRequestToken
+  const signature = JSON.stringify(filterPayload)
+
+  try {
+    statsLoading.value = true
+
+    const response = await $api("/admin/laporan/rab", {
+      method: "GET",
+      body: {
+        ...filterPayload,
+        stats_only: true,
+      },
+    })
+
+    if (
+      requestToken !== statsRequestToken
+      || signature !== JSON.stringify(activeFilterPayload())
+    ) {
+      return
+    }
+
+    stats.value = response.stats || stats.value
+  } catch (err) {
+    console.error("Failed to fetch RAB stats:", err)
+  } finally {
+    if (requestToken === statsRequestToken) {
+      statsLoading.value = false
+    }
+  }
+}
+
 const fetchData = async () => {
   try {
     loading.value = true
 
     const activeSort = sortBy.value?.[0] || { key: "tanggal_rekap", order: "desc" }
+    const filterPayload = activeFilterPayload()
+    const useFastList = !hasActiveFilters()
+
+    if (!useFastList) {
+      statsRequestToken += 1
+      statsLoading.value = false
+    }
 
     const response = await $api("/admin/laporan/rab", {
       method: "GET",
@@ -243,16 +333,26 @@ const fetchData = async () => {
         limit: itemsPerPage.value,
         sort_key: activeSort.key,
         sort_order: activeSort.order,
-        ...activeFilterPayload(),
+        ...filterPayload,
+        ...(useFastList && { fast_list: true }),
       },
     })
 
     dataTable.value = response.data?.data || []
+    selectedRekapKeys.value = []
     totalItems.value = Number(response.data?.total || 0)
     stats.value = response.stats || {}
     years.value = response.filters?.years || years.value
     modules.value = response.filters?.modules || modules.value
-    fetchKas()
+
+    if (useFastList && response.stats?.partial) {
+      fetchDeferredStats(filterPayload)
+    } else {
+      statsRequestToken += 1
+      statsLoading.value = false
+    }
+
+    if (kasDetailDialog.value) fetchKas()
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -271,12 +371,95 @@ const loadItems = ({ page: nextPage, itemsPerPage: nextLimit, sortBy: nextSort }
   fetchData()
 }
 
-const resetFilters = () => {
+const exportRabExcel = async () => {
+  if (exportingExcel.value) return
+
+  try {
+    exportingExcel.value = true
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const activeSort = sortBy.value?.[0] || { key: "tanggal_rekap", order: "desc" }
+
+    const response = await $api("/admin/laporan/rab/export-excel", {
+      method: "GET",
+      headers: {
+        Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        sort_key: activeSort.key,
+        sort_order: activeSort.order,
+        ...activeFilterPayload(),
+      },
+    })
+
+    downloadFileExport(response, "RAB.xlsx")
+    showSnackbar({
+      text: "RAB berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    exportingExcel.value = false
+  }
+}
+
+const exportRekapanExcel = async () => {
+  if (exportingRekapan.value) return
+
+  try {
+    exportingRekapan.value = true
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const activeSort = sortBy.value?.[0] || { key: "tanggal_rekap", order: "desc" }
+
+    const response = await $api("/admin/laporan/rab/export-rekapan", {
+      method: "GET",
+      headers: {
+        Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        sort_key: activeSort.key,
+        sort_order: activeSort.order,
+        ...activeFilterPayload(),
+      },
+    })
+
+    downloadFileExport(response, "Rekapan RAB.xlsx")
+    showSnackbar({
+      text: "Rekapan berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    exportingRekapan.value = false
+  }
+}
+
+const resetFilters = async () => {
+  resettingFilters.value = true
+  clearTimeout(searchTimer)
   search.value = ""
   selectedBulan.value = null
   selectedTahun.value = null
   selectedModule.value = null
+  selectedPetugasId.value = null
   page.value = 1
+  await nextTick()
+  resettingFilters.value = false
   fetchData()
 }
 
@@ -375,6 +558,7 @@ const openRekapForm = async () => {
       String(currentDate.getMonth() + 1).padStart(2, "0"),
       String(currentDate.getDate()).padStart(2, "0"),
     ].join("-"),
+    tanggal_pencairan: null,
     jumlah_sementara: 0,
     keterangan: "",
   }
@@ -415,6 +599,7 @@ const saveRekap = async () => {
         nama: rekapForm.value.nama,
         bulan_tahun: `${tahun}-${String(bulan).padStart(2, "0")}`,
         tanggal_rekap: rekapForm.value.tanggal_rekap,
+        tanggal_pencairan: rekapForm.value.tanggal_pencairan || null,
         jumlah_sementara: Number(rekapForm.value.jumlah_sementara || 0),
         keterangan: rekapForm.value.keterangan,
       },
@@ -433,6 +618,101 @@ const saveRekap = async () => {
     })
   } finally {
     rekapSaving.value = false
+  }
+}
+
+const updateTanggalPencairan = async (items, tanggalPencairan) => {
+  const response = await $api("/admin/laporan/rab/tanggal-pencairan", {
+    method: "PUT",
+    body: {
+      items: items.map(item => ({
+        module_key: item.module_key,
+        id: item.id,
+      })),
+      tanggal_pencairan: tanggalPencairan || null,
+    },
+  })
+
+  const updatedKeys = new Set(response.data?.row_keys || [])
+
+  dataTable.value.forEach(item => {
+    if (updatedKeys.has(item.row_key)) {
+      item.tanggal_pencairan = response.data?.tanggal_pencairan || null
+    }
+  })
+
+  return response
+}
+
+const saveTanggalPencairan = async (item, value) => {
+  const tanggalPencairan = value || null
+
+  if (
+    tanggalPencairanSaving.value[item.row_key]
+    || tanggalPencairan === (item.tanggal_pencairan || null)
+  ) {
+    return
+  }
+
+  try {
+    tanggalPencairanSaving.value = {
+      ...tanggalPencairanSaving.value,
+      [item.row_key]: true,
+    }
+
+    const response = await updateTanggalPencairan([item], tanggalPencairan)
+
+    showSnackbar({
+      text: response.message,
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    tanggalPencairanSaving.value = {
+      ...tanggalPencairanSaving.value,
+      [item.row_key]: false,
+    }
+  }
+}
+
+const saveBulkTanggalPencairan = async (clearDate = false) => {
+  if (bulkTanggalSaving.value || selectedRekapItems.value.length === 0) return
+
+  if (!clearDate && !bulkTanggalPencairan.value) {
+    showSnackbar({
+      text: "Pilih tanggal pencairan terlebih dahulu.",
+      color: "warning",
+    })
+
+    return
+  }
+
+  try {
+    bulkTanggalSaving.value = true
+
+    const response = await updateTanggalPencairan(
+      selectedRekapItems.value,
+      clearDate ? null : bulkTanggalPencairan.value,
+    )
+
+    selectedRekapKeys.value = []
+    if (clearDate) bulkTanggalPencairan.value = null
+
+    showSnackbar({
+      text: response.message,
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    bulkTanggalSaving.value = false
   }
 }
 
@@ -506,6 +786,8 @@ const deleteKasManual = async item => {
 }
 
 watch([selectedBulan, selectedTahun, selectedModule, selectedPetugasId], () => {
+  if (resettingFilters.value) return
+
   page.value = 1
   fetchData()
 })
@@ -517,6 +799,8 @@ watch(() => rekapForm.value.module_key, moduleKey => {
 })
 
 watch(search, () => {
+  if (resettingFilters.value) return
+
   clearTimeout(searchTimer)
   page.value = 1
   searchTimer = setTimeout(fetchData, 350)
@@ -528,7 +812,10 @@ onMounted(async () => {
   fetchData()
 })
 
-onBeforeUnmount(() => clearTimeout(searchTimer))
+onBeforeUnmount(() => {
+  clearTimeout(searchTimer)
+  statsRequestToken += 1
+})
 </script>
 
 <template>
@@ -691,6 +978,30 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 
         <div class="rab-table-header-action">
           <VBtn
+            class="rab-export-button"
+            color="success"
+            variant="tonal"
+            prepend-icon="ri-file-excel-2-line"
+            :loading="exportingExcel"
+            :disabled="exportingExcel"
+            @click="exportRabExcel"
+          >
+            Download RAB
+          </VBtn>
+
+          <VBtn
+            class="rab-export-button"
+            color="success"
+            variant="tonal"
+            prepend-icon="ri-file-list-3-line"
+            :loading="exportingRekapan"
+            :disabled="exportingRekapan"
+            @click="exportRekapanExcel"
+          >
+            Download Rekapan
+          </VBtn>
+
+          <VBtn
             class="rab-add-button"
             color="primary"
             prepend-icon="ri-add-line"
@@ -703,13 +1014,75 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 
       <VDivider />
 
+      <VCardText
+        v-if="canEditTanggalPencairan"
+        class="rab-pencairan-toolbar"
+      >
+        <div class="rab-pencairan-toolbar-copy">
+          <div class="font-weight-semibold">
+            Input Tanggal Pencairan
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            Edit langsung pada kolom tanggal, atau pilih beberapa baris untuk memakai tanggal yang sama.
+          </div>
+        </div>
+
+        <div class="rab-pencairan-toolbar-actions">
+          <VChip
+            color="primary"
+            variant="tonal"
+            label
+          >
+            {{ selectedRekapItems.length }} dipilih
+          </VChip>
+
+          <div class="rab-bulk-date">
+            <AppDateTimePicker
+              v-model="bulkTanggalPencairan"
+              placeholder="Pilih tanggal cair"
+              prepend-inner-icon="ri-calendar-check-line"
+              clearable
+              hide-details
+              density="compact"
+              :config="tanggalPencairanPickerConfig"
+              :disabled="bulkTanggalSaving"
+            />
+          </div>
+
+          <VBtn
+            color="primary"
+            prepend-icon="ri-check-double-line"
+            :loading="bulkTanggalSaving"
+            :disabled="bulkTanggalSaving || selectedRekapItems.length === 0 || !bulkTanggalPencairan"
+            @click="saveBulkTanggalPencairan(false)"
+          >
+            Terapkan
+          </VBtn>
+
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            prepend-icon="ri-eraser-line"
+            :disabled="bulkTanggalSaving || selectedRekapItems.length === 0"
+            @click="saveBulkTanggalPencairan(true)"
+          >
+            Kosongkan
+          </VBtn>
+        </div>
+      </VCardText>
+
+      <VDivider v-if="canEditTanggalPencairan" />
+
       <VDataTableServer
+        v-model:model-value="selectedRekapKeys"
         v-model:items-per-page="itemsPerPage"
         v-model:page="page"
         v-model:sort-by="sortBy"
+        :show-select="canEditTanggalPencairan"
         :headers="[
           { title: 'No', key: 'nomor', sortable: false },
           { title: 'Tanggal Rekap', key: 'tanggal_rekap' },
+          { title: 'Tanggal Pencairan', key: 'tanggal_pencairan' },
           { title: 'Periode', key: 'bulan_tahun' },
           { title: 'Nama Petugas', key: 'petugas_nama' },
           { title: 'Nama Rekap', key: 'nama' },
@@ -754,6 +1127,42 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
           <div class="font-weight-medium">
             {{ formatDate(item.tanggal_rekap) }}
           </div>
+        </template>
+
+        <template #item.tanggal_pencairan="{ item }">
+          <div
+            v-if="canEditTanggalPencairan"
+            class="rab-inline-date"
+          >
+            <AppDateTimePicker
+              :model-value="item.tanggal_pencairan"
+              placeholder="Belum cair"
+              prepend-inner-icon="ri-calendar-check-line"
+              clearable
+              hide-details
+              density="compact"
+              :config="tanggalPencairanPickerConfig"
+              :disabled="Boolean(tanggalPencairanSaving[item.row_key])"
+              @update:model-value="value => saveTanggalPencairan(item, value)"
+            />
+            <VProgressCircular
+              v-if="tanggalPencairanSaving[item.row_key]"
+              indeterminate
+              color="primary"
+              size="18"
+              width="2"
+            />
+          </div>
+
+          <VChip
+            v-else
+            :color="item.tanggal_pencairan ? 'success' : 'warning'"
+            size="small"
+            variant="tonal"
+            label
+          >
+            {{ item.tanggal_pencairan ? formatDate(item.tanggal_pencairan) : "Belum cair" }}
+          </VChip>
         </template>
 
         <template #item.bulan_tahun="{ item }">
@@ -929,6 +1338,24 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
                 }"
                 :disabled="rekapSaving"
                 :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="4"
+            >
+              <AppDateTimePicker
+                v-model="rekapForm.tanggal_pencairan"
+                label="Tanggal Pencairan (Opsional)"
+                placeholder="Belum ditentukan"
+                clearable
+                :config="{
+                  altInput: true,
+                  altFormat: 'd F Y',
+                  dateFormat: 'Y-m-d',
+                }"
+                :disabled="rekapSaving"
               />
             </VCol>
 
@@ -1327,7 +1754,53 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 }
 
 .rab-table-header-action {
+  display: flex;
+  align-items: center;
   flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rab-pencairan-toolbar {
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rab-pencairan-toolbar-copy {
+  width: 100%;
+}
+
+.rab-pencairan-toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.rab-bulk-date {
+  flex: 0 0 280px;
+  min-width: 280px;
+  width: 280px;
+}
+
+.rab-bulk-date :deep(.v-input),
+.rab-bulk-date :deep(.v-field),
+.rab-bulk-date :deep(.app-picker-field) {
+  width: 100%;
+}
+
+.rab-inline-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.rab-inline-date :deep(.v-input) {
+  min-width: 160px;
 }
 
 .rab-stat-card--clickable {
@@ -1444,8 +1917,24 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
     flex-direction: column;
   }
 
+  .rab-pencairan-toolbar,
+  .rab-pencairan-toolbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rab-pencairan-toolbar-actions {
+    width: 100%;
+  }
+
+  .rab-bulk-date {
+    min-width: 0;
+    width: 100%;
+  }
+
   .rab-table-header-action,
-  .rab-add-button {
+  .rab-add-button,
+  .rab-export-button {
     inline-size: 100%;
   }
 

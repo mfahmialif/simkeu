@@ -1,5 +1,6 @@
 <script setup>
 /* eslint-disable camelcase, import/extensions */
+import { downloadFileExport } from "@/composables/exportFile"
 import { formatRupiah } from "@/composables/formatRupiah"
 import { notifyPengeluaranRekapUpdated } from "@/composables/pengeluaranRekap"
 import { showSnackbar } from "@/composables/snackbar"
@@ -24,6 +25,10 @@ const props = defineProps({
     required: true,
   },
   allowCreate: {
+    type: Boolean,
+    default: false,
+  },
+  enableExcelExport: {
     type: Boolean,
     default: false,
   },
@@ -86,6 +91,7 @@ const actionLoading = ref(false)
 const lpjDialog = ref(false)
 const lpjLoading = ref(false)
 const fetchingLpj = ref(false)
+const exportingExcel = ref(false)
 const lpj = ref(null)
 const lpjRows = ref([])
 const namaInput = ref(null)
@@ -93,6 +99,7 @@ const nama = ref("")
 const keterangan = ref("")
 const jumlahSementara = ref(0)
 const tanggalRekap = ref("")
+const tanggalPencairan = ref(null)
 const bulanTahun = ref("")
 
 const selectedRabIds = ref([])
@@ -102,6 +109,13 @@ const deletingItems = ref(false)
 const itemsToDelete = ref([])
 let rabSearchTimer = null
 const selectedIds = computed(() => activeDataTab.value === "rab" ? selectedRabIds.value : selectedLpjIds.value)
+
+const detailExportPayload = computed(() => ({
+  tab: activeDataTab.value,
+  search: activeDataTab.value === "rab" ? rabSearch.value : lpjSearch.value,
+  sort_key: sortBy.value.key,
+  sort_order: sortBy.value.order,
+}))
 
 const tableHeaders = computed(() => {
   const headers = [
@@ -313,6 +327,42 @@ const fetchData = async () => {
   }
 }
 
+const exportDetailExcel = async () => {
+  if (exportingExcel.value) return
+
+  try {
+    exportingExcel.value = true
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/export-excel`, {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: detailExportPayload.value,
+    })
+
+    const prefix = activeDataTab.value === "lpj" ? "Detail LPJ" : "Detail RAB"
+
+    downloadFileExport(response, `${prefix} ${rekap.value?.nama || props.title}.xlsx`)
+    showSnackbar({
+      text: "Detail rekap berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    exportingExcel.value = false
+  }
+}
+
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
   page.value = p
   itemsPerPage.value = ipp
@@ -457,6 +507,7 @@ const openEditRekapDialog = () => {
   nama.value = rekap.value?.nama || ""
   bulanTahun.value = String(rekap.value?.bulan_tahun || "").slice(0, 7)
   tanggalRekap.value = String(rekap.value?.tanggal_rekap || "").slice(0, 10)
+  tanggalPencairan.value = String(rekap.value?.tanggal_pencairan || "").slice(0, 10) || null
   jumlahSementara.value = Number(rekap.value?.jumlah_data > 0 ? rekap.value?.jumlah : (rekap.value?.jumlah_sementara ?? rekap.value?.jumlah ?? 0))
   keterangan.value = rekap.value?.keterangan || ""
   dialog.value = true
@@ -486,6 +537,7 @@ const saveRekap = async () => {
         nama: trimmedNama,
         bulan_tahun: bulanTahun.value,
         tanggal_rekap: tanggalRekap.value,
+        tanggal_pencairan: tanggalPencairan.value || null,
         jumlah_sementara: editingHasDetails.value ? null : Number(jumlahSementara.value || 0),
         keterangan: keterangan.value,
       },
@@ -690,6 +742,11 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
             >
               Tanggal rekap {{ formatDate(rekap.tanggal_rekap) }}
             </div>
+            <div class="text-caption text-medium-emphasis mt-1">
+              {{ rekap?.tanggal_pencairan
+                ? `Tanggal pencairan ${formatDate(rekap.tanggal_pencairan)}`
+                : "Tanggal pencairan belum ditentukan" }}
+            </div>
           </div>
 
           <div class="detail-side">
@@ -773,19 +830,31 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
         </VCardSubtitle>
 
         <template
-          v-if="(allowCreate || activeDataTab === 'lpj' || selectedIds.length > 0) && canModify"
+          v-if="enableExcelExport || ((allowCreate || activeDataTab === 'lpj' || selectedIds.length > 0) && canModify)"
           #append
         >
           <div class="detail-data-actions">
             <VBtn
-              v-if="selectedIds.length > 0"
+              v-if="enableExcelExport"
+              color="success"
+              variant="tonal"
+              prepend-icon="ri-file-excel-2-line"
+              :loading="exportingExcel"
+              :disabled="exportingExcel || !rekap"
+              @click="exportDetailExcel"
+            >
+              Download Excel
+            </VBtn>
+
+            <VBtn
+              v-if="canModify && selectedIds.length > 0"
               color="error"
               prepend-icon="ri-delete-bin-line"
               @click="confirmDeleteItems(null)"
             >
               Hapus ({{ selectedIds.length }})
             </VBtn>
-            <template v-if="activeDataTab === 'rab' && allowCreate && !isBarokahRole">
+            <template v-if="canModify && activeDataTab === 'rab' && allowCreate && !isBarokahRole">
               <VBtn
                 color="primary"
                 prepend-icon="ri-add-line"
@@ -795,7 +864,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
               </VBtn>
             </template>
             <VBtn
-              v-else-if="activeDataTab === 'lpj' && !isBarokahRole"
+              v-else-if="canModify && activeDataTab === 'lpj' && !isBarokahRole"
               color="success"
               prepend-icon="ri-file-edit-line"
               @click="router.push(lpjDetailPath())"
@@ -1170,6 +1239,20 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
                 prepend-inner-icon="ri-calendar-event-line"
                 :config="datePickerConfig"
                 :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <AppDateTimePicker
+                v-model="tanggalPencairan"
+                label="Tanggal Pencairan (Opsional)"
+                placeholder="Belum ditentukan"
+                prepend-inner-icon="ri-calendar-check-line"
+                clearable
+                :config="datePickerConfig"
               />
             </VCol>
 

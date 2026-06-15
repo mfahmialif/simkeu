@@ -32,10 +32,10 @@ const currencyRows = (groups = [], fallbackValue = null) => {
 }
 
 const detailRoutes = {
-  saldo: "/admin/saldo/kategori",
-  pemasukan: "/admin/pemasukan/mahasiswa/laporan",
-  pengeluaran: "/admin/pengeluaran/umum",
-  user: "/admin/user",
+  saldo: { name: "admin-saldo" },
+  pemasukan: { path: "/admin/pemasukan/mahasiswa/laporan" },
+  pengeluaran: { name: "admin-laporan-pengeluaran-pengeluaran-harian" },
+  user: { path: "/admin/user" },
 }
 
 const logisticData = ref([
@@ -173,10 +173,10 @@ const fetchData = async () => {
 }
 
 const goToDetail = data => {
-  const path = detailRoutes[data.key]
+  const target = detailRoutes[data.key]
 
-  if (path) {
-    router.push(path)
+  if (target) {
+    router.push(target)
   }
 }
 

@@ -121,6 +121,7 @@ declare module 'vue-router/auto-routes' {
     'admin-setting-pegawai-add': RouteRecordInfo<'admin-setting-pegawai-add', '/admin/setting/pegawai/add', Record<never, never>, Record<never, never>>,
     'admin-setting-pegawai-detail-id': RouteRecordInfo<'admin-setting-pegawai-detail-id', '/admin/setting/pegawai/detail/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-setting-pegawai-edit-id': RouteRecordInfo<'admin-setting-pegawai-edit-id', '/admin/setting/pegawai/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    'admin-setting-pimpinan': RouteRecordInfo<'admin-setting-pimpinan', '/admin/setting/pimpinan', Record<never, never>, Record<never, never>>,
     'admin-setting-prodi': RouteRecordInfo<'admin-setting-prodi', '/admin/setting/prodi', Record<never, never>, Record<never, never>>,
     'admin-setting-prodi-add': RouteRecordInfo<'admin-setting-prodi-add', '/admin/setting/prodi/add', Record<never, never>, Record<never, never>>,
     'admin-setting-prodi-edit-id': RouteRecordInfo<'admin-setting-prodi-edit-id', '/admin/setting/prodi/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
