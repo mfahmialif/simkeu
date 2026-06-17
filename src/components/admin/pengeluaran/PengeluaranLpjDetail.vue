@@ -463,31 +463,35 @@ const removeItem = index => {
   items.value.splice(index, 1)
 }
 
-const addSubItem = (item, index = item.subItems.length - 1) => {
-  item.subItems.splice(index + 1, 0, newRow())
+const addSubItem = (itemIndex, index) => {
+  const targetSubItems = items.value[itemIndex].subItems;
+  if (index === undefined) index = targetSubItems.length - 1;
+  targetSubItems.splice(index + 1, 0, newRow())
 }
 
-const duplicateSubItem = (item, index) => {
-  const source = item.subItems[index] || newRow()
+const duplicateSubItem = (itemIndex, index) => {
+  const targetSubItems = items.value[itemIndex].subItems;
+  const source = targetSubItems[index] || newRow()
 
   const duplicated = {
     ...newRow(),
     ...Object.fromEntries(Object.entries(source).filter(([key]) => !["id", "key", "rab_detail_id", "lampiran"].includes(key))),
-    key: `${Date.now()}-${Math.random()}`,
+    key: `\${Date.now()}-\${Math.random()}`,
     rab_detail_id: null,
     lampiran: [],
   }
 
-  item.subItems.splice(index + 1, 0, duplicated)
+  targetSubItems.splice(index + 1, 0, duplicated)
 }
 
-const removeSubItem = (item, index) => {
-  if (item.subItems.length === 1) {
-    item.subItems[0] = newRow()
+const removeSubItem = (itemIndex, index) => {
+  const targetSubItems = items.value[itemIndex].subItems;
+  if (targetSubItems.length === 1) {
+    targetSubItems[0] = newRow()
     
     return
   }
-  item.subItems.splice(index, 1)
+  targetSubItems.splice(index, 1)
 }
 
 const addRow = (index = rows.value.length - 1) => {
@@ -760,16 +764,21 @@ onMounted(() => {
                     </VRow>
                   </div>
                   <div class="lpj-row-actions">
-                    <VTooltip text="Tambah baris">
-                      <template #activator="{ props: tooltipProps }">
-                        <VBtn v-bind="tooltipProps" icon="ri-add-line" size="small" variant="tonal" color="primary" @click="item.subItems.splice(subIndex + 1, 0, newRow())" />
-                      </template>
-                    </VTooltip>
-                    <VTooltip text="Hapus baris">
-                      <template #activator="{ props: tooltipProps }">
-                        <VBtn v-bind="tooltipProps" icon="ri-delete-bin-line" size="small" variant="tonal" color="error" @click="item.subItems.splice(subIndex, 1)" />
-                      </template>
-                    </VTooltip>
+                      <VTooltip text="Tambah baris">
+                        <template #activator="{ props: tooltipProps }">
+                          <VBtn v-bind="tooltipProps" icon="ri-add-line" size="small" variant="tonal" color="primary" @click="addSubItem(index, subIndex)" />
+                        </template>
+                      </VTooltip>
+                      <VTooltip text="Duplikat baris">
+                        <template #activator="{ props: tooltipProps }">
+                          <VBtn v-bind="tooltipProps" icon="ri-file-copy-line" size="small" variant="tonal" color="info" @click="duplicateSubItem(index, subIndex)" />
+                        </template>
+                      </VTooltip>
+                      <VTooltip text="Hapus baris">
+                        <template #activator="{ props: tooltipProps }">
+                          <VBtn v-bind="tooltipProps" icon="ri-delete-bin-line" size="small" variant="tonal" color="error" @click="removeSubItem(index, subIndex)" />
+                        </template>
+                      </VTooltip>
                   </div>
                 </div>
               </div>

@@ -280,12 +280,15 @@ const removeItem = index => {
   items.value.splice(index, 1)
 }
 
-const addSubItem = (item, index = item.subItems.length - 1) => {
-  item.subItems.splice(index + 1, 0, newSubItem())
+const addSubItem = (itemIndex, index) => {
+  const targetSubItems = items.value[itemIndex].subItems;
+  if (index === undefined) index = targetSubItems.length - 1;
+  targetSubItems.splice(index + 1, 0, newSubItem())
 }
 
-const duplicateSubItem = (item, index) => {
-  const source = item.subItems[index] || newSubItem()
+const duplicateSubItem = (itemIndex, index) => {
+  const targetSubItems = items.value[itemIndex].subItems;
+  const source = targetSubItems[index] || newSubItem()
 
   const duplicated = {
     ...newSubItem(),
@@ -298,18 +301,19 @@ const duplicateSubItem = (item, index) => {
     keterangan: source.keterangan || "",
   }
 
-  item.subItems.splice(index + 1, 0, duplicated)
+  targetSubItems.splice(index + 1, 0, duplicated)
 }
 
-const removeSubItem = (item, index) => {
-  const removed = item.subItems[index]
+const removeSubItem = (itemIndex, index) => {
+  const targetSubItems = items.value[itemIndex].subItems;
+  const removed = targetSubItems[index]
   if (removed?.id) removedRowIds.value.push(removed.id)
-  if (item.subItems.length === 1) {
-    item.subItems[0] = newSubItem()
+  if (targetSubItems.length === 1) {
+    targetSubItems[0] = newSubItem()
     
     return
   }
-  item.subItems.splice(index, 1)
+  targetSubItems.splice(index, 1)
 }
 
 const validateRows = () => {
@@ -547,9 +551,8 @@ onMounted(() => {
                   <div class="uraian-letter">{{ String.fromCharCode(65 + itemIndex) }}</div>
                 </VCol>
                 <VCol>
-                  <VCombobox
-                    v-model="item.kelompok_anggaran"
-                    :items="kelompokAnggaranItems"
+                  <VTextField
+                    v-model="items[itemIndex].kelompok_anggaran"
                     class="mt-1"
                     label="Kelompok Anggaran *"
                     density="compact"
@@ -729,7 +732,7 @@ onMounted(() => {
                         size="small"
                         variant="tonal"
                         color="primary"
-                        @click="addSubItem(item, rowIndex)"
+                        @click="addSubItem(itemIndex, rowIndex)"
                       />
                     </template>
                   </VTooltip>
@@ -744,7 +747,7 @@ onMounted(() => {
                         size="small"
                         variant="tonal"
                         color="info"
-                        @click="duplicateSubItem(item, rowIndex)"
+                        @click="duplicateSubItem(itemIndex, rowIndex)"
                       />
                     </template>
                   </VTooltip>
@@ -759,7 +762,7 @@ onMounted(() => {
                         size="small"
                         variant="tonal"
                         color="error"
-                        @click="removeSubItem(item, rowIndex)"
+                        @click="removeSubItem(itemIndex, rowIndex)"
                       />
                     </template>
                   </VTooltip>

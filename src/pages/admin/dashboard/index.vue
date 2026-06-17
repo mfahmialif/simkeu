@@ -10,24 +10,28 @@ import DashboardUASReport from "./DashboardUASReport.vue"
 const userData = useCookie("userData").value ?? {}
 const role = computed(() => String(userData.role?.name || "").toLowerCase())
 
-const allAccessRoles = ["admin", "pimpinan", "keuangan", "kabag", "kabag_pemasukan", "kabag_pengeluaran"]
+const allAccessRoles = ["admin", "pimpinan", "keuangan", "kabag", "kabag_pemasukan"]
 const staffRoles = ["staff"]
 
-const barokahRoles = [
+const pengeluaranRoles = [
   "barokahdosen_tatapmuka",
   "barokahdosen_kegiatan",
   "barokahdosen_bulanan",
+  "sarpras",
+  "rumahtangga",
+  "transportasi",
+  "kabag_pengeluaran"
 ]
 
 const canSeeAllDashboard = computed(() => allAccessRoles.includes(role.value))
 const isStaffDashboard = computed(() => staffRoles.includes(role.value))
-const isBarokahDashboard = computed(() => barokahRoles.includes(role.value))
+const isPengeluaranDashboard = computed(() => pengeluaranRoles.includes(role.value))
 
 const shouldShowEmptyDashboard = computed(
   () =>
     !canSeeAllDashboard.value &&
     !isStaffDashboard.value &&
-    !isBarokahDashboard.value,
+    !isPengeluaranDashboard.value,
 )
 
 const displayName = computed(
@@ -39,18 +43,6 @@ const roleLabel = computed(() =>
 )
 
 const emptyDashboardMessage = computed(() => {
-  if (role.value === "rumahtangga") {
-    return "Dashboard rumah tangga belum memiliki ringkasan khusus, jadi seluruh card disembunyikan."
-  }
-
-  if (role.value === "sarpras") {
-    return "Dashboard sarana prasarana belum memiliki ringkasan khusus, jadi seluruh card disembunyikan."
-  }
-
-  if (role.value === "transportasi") {
-    return "Dashboard transportasi belum memiliki ringkasan khusus, jadi seluruh card disembunyikan."
-  }
-
   if (role.value === "user") {
     return "Role user belum memiliki akses dashboard operasional."
   }
@@ -167,7 +159,7 @@ const emptyDashboardMessage = computed(() => {
       </VCol>
     </template>
 
-    <template v-else-if="isBarokahDashboard">
+    <template v-else-if="isPengeluaranDashboard">
       <VCol cols="12">
         <DashboardBarokahRole />
       </VCol>

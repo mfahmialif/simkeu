@@ -28,7 +28,7 @@ const fetchData = async () => {
 
     if (!response?.status) {
       showSnackbar({
-        text: response?.message || "Gagal mengambil ringkasan barokah",
+        text: response?.message || "Gagal mengambil ringkasan pengeluaran",
         color: "error",
       })
       
@@ -39,7 +39,7 @@ const fetchData = async () => {
   } catch (error) {
     console.error(error)
     showSnackbar({
-      text: "Terjadi kesalahan saat mengambil ringkasan barokah",
+      text: "Terjadi kesalahan saat mengambil ringkasan pengeluaran",
       color: "error",
     })
   } finally {
@@ -301,26 +301,20 @@ onMounted(fetchData)
     </VCol>
 
     <VCol
+      v-if="topPegawai.length > 0"
       cols="12"
       lg="8"
     >
       <VCard>
         <VCardItem
-          title="Pegawai dengan Pengeluaran Terbanyak"
-          subtitle="Diurutkan dari total pengeluaran barokah terbesar"
+          title="Pengguna dengan Pengeluaran Terbanyak"
+          subtitle="Diurutkan dari total pengeluaran terbesar"
         />
         <VCardText>
           <VSkeletonLoader
             v-if="isLoading"
             type="table"
           />
-          <VAlert
-            v-else-if="!topPegawai.length"
-            color="secondary"
-            variant="tonal"
-          >
-            Belum ada data pengeluaran barokah.
-          </VAlert>
           <div
             v-else
             class="barokah-table-wrapper"
@@ -382,11 +376,11 @@ onMounted(fetchData)
 
     <VCol
       cols="12"
-      lg="4"
+      :lg="topPegawai.length > 0 ? 4 : 12"
     >
       <VCard>
         <VCardItem
-          title="Ringkasan Modul Barokah"
+          title="Ringkasan Modul Pengeluaran"
           subtitle="Total pengeluaran per modul yang bisa diakses"
         />
         <VCardText>
@@ -399,7 +393,7 @@ onMounted(fetchData)
             color="secondary"
             variant="tonal"
           >
-            Belum ada modul barokah untuk role ini.
+            Belum ada modul pengeluaran untuk role ini.
           </VAlert>
           <div
             v-else
