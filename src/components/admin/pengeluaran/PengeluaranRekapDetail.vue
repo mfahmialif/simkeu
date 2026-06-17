@@ -80,8 +80,10 @@ const lpjItemsPerPage = ref(10)
 const rabSearch = ref("")
 const lpjSearch = ref("")
 const sortBy = ref({ key: "id", order: "desc" })
+const lpjSortBy = ref({ key: "id", order: "asc" })
 const dataTable = ref([])
 const totalItems = ref(0)
+const lpjTotalItems = ref(0)
 const loading = ref(true)
 const activeDataTab = ref("rab")
 const dialog = ref(false)
@@ -108,13 +110,15 @@ const deleteItemsDialog = ref(false)
 const deletingItems = ref(false)
 const itemsToDelete = ref([])
 let rabSearchTimer = null
+let lpjSearchTimer = null
 const selectedIds = computed(() => activeDataTab.value === "rab" ? selectedRabIds.value : selectedLpjIds.value)
+const lpjEditorRowLimit = 500
 
 const detailExportPayload = computed(() => ({
   tab: activeDataTab.value,
   search: activeDataTab.value === "rab" ? rabSearch.value : lpjSearch.value,
-  sort_key: sortBy.value.key,
-  sort_order: sortBy.value.order,
+  sort_key: activeDataTab.value === "rab" ? sortBy.value.key : lpjSortBy.value.key,
+  sort_order: activeDataTab.value === "rab" ? sortBy.value.order : lpjSortBy.value.order,
 }))
 
 const tableHeaders = computed(() => {
@@ -174,6 +178,8 @@ const tableHeaders = computed(() => {
 const lpjTableHeaders = computed(() => tableHeaders.value)
 const editingHasDetails = computed(() => Number(rekap.value?.jumlah_data || 0) > 0)
 const canDeleteRekapWithDetails = computed(() => true)
+const lpjEditorRowCount = computed(() => Number(lpj.value?.jumlah_data || 0))
+const canOpenLpjEditor = computed(() => lpjEditorRowCount.value <= lpjEditorRowLimit)
 
 const deleteRekapMessage = computed(() => {
   if (canDeleteRekapWithDetails.value && Number(rekap.value?.jumlah_data || 0) > 0) {
@@ -287,13 +293,25 @@ const fetchLpj = async () => {
 
     const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
       method: "GET",
+      body: {
+        page: lpjPage.value,
+        limit: Number(lpjItemsPerPage.value) > 0 ? lpjItemsPerPage.value : 100,
+        sort_key: lpjSortBy.value.key,
+        sort_order: lpjSortBy.value.order,
+        search: lpjSearch.value,
+      },
     })
 
     lpj.value = response.data?.lpj || null
-    lpjRows.value = response.data?.details || []
+    const details = response.data?.details || []
+    const rows = Array.isArray(details) ? details : details.data || []
+
+    lpjRows.value = rows
+    lpjTotalItems.value = Number(details.total ?? rows.length)
   } catch {
     lpj.value = null
     lpjRows.value = []
+    lpjTotalItems.value = 0
   } finally {
     fetchingLpj.value = false
   }
@@ -370,6 +388,13 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
   fetchData()
 }
 
+const loadLpjItems = ({ page: p, itemsPerPage: ipp, sortBy: sb }) => {
+  lpjPage.value = p
+  lpjItemsPerPage.value = Number(ipp) > 0 ? ipp : 100
+  if (sb.length) lpjSortBy.value = sb[0]
+  fetchLpj()
+}
+
 watch(rabSearch, () => {
   clearTimeout(rabSearchTimer)
   page.value = 1
@@ -378,8 +403,10 @@ watch(rabSearch, () => {
 })
 
 watch(lpjSearch, () => {
+  clearTimeout(lpjSearchTimer)
   lpjPage.value = 1
   selectedLpjIds.value = []
+  lpjSearchTimer = setTimeout(fetchLpj, 350)
 })
 
 const isNonPegawai = item => item.kategori_detail === "non_pegawai"
@@ -420,31 +447,6 @@ const uraian = item => {
 
   return `Transport ${formatRupiah(subtotalTransport(item))}, mengajar ${formatRupiah(subtotalMengajar(item))}, sempro ${formatRupiah(subtotalSempro(item))}, UAS ${formatRupiah(subtotalUas(item))}`
 }
-
-const rowSearchText = item => [
-  item.tanggal,
-  item.kategori_detail,
-  pegawaiLabel(item),
-  pegawaiMeta(item),
-  item.petugas_nama,
-  item.kelompok_anggaran,
-  uraian(item),
-  item.volume,
-  item.satuan,
-  item.nominal,
-  item.prioritas,
-  item.jenis_pembayaran,
-  item.total,
-  item.keterangan,
-].join(" ").toLowerCase()
-
-const filteredLpjRows = computed(() => {
-  const keyword = lpjSearch.value.trim().toLowerCase()
-
-  if (!keyword) return lpjRows.value
-
-  return lpjRows.value.filter(item => rowSearchText(item).includes(keyword))
-})
 
 const currentDetailPath = computed(() => route.fullPath)
 
@@ -495,6 +497,19 @@ const lpjDetailPath = () => ({
     return_to: currentDetailPath.value,
   },
 })
+
+const openLpjDetailEditor = () => {
+  if (!canOpenLpjEditor.value) {
+    showSnackbar({
+      text: `Edit Detail LPJ massal dibatasi ${lpjEditorRowLimit} data. Gunakan tabel detail LPJ untuk melihat dan menghapus data besar per halaman.`,
+      color: "warning",
+    })
+
+    return
+  }
+
+  router.push(lpjDetailPath())
+}
 
 const paymentColor = value => {
   if (value === "Transfer") return "info"
@@ -607,16 +622,9 @@ const submitDeleteItems = async () => {
     deletingItems.value = true
 
     if (activeDataTab.value === "lpj") {
-      const remainingItems = lpjRows.value.filter(row => !itemsToDelete.value.includes(row.id))
-
-      const payload = remainingItems.map(row => ({
-        ...row,
-        lampiran: Array.isArray(row.lampiran) ? row.lampiran : [],
-      }))
-
       await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
-        method: "PUT",
-        body: { items: payload },
+        method: "DELETE",
+        body: { ids: itemsToDelete.value },
       })
     } else {
       const promises = itemsToDelete.value.map(id => $api(`${props.endpoint}/${id}`, { method: "DELETE" }))
@@ -654,6 +662,15 @@ const openLpjDialog = () => {
 
 const submitLpj = async sameAsRab => {
   if (lpjLoading.value) return
+
+  if (!sameAsRab && Number(rekap.value?.jumlah_data || 0) > lpjEditorRowLimit) {
+    showSnackbar({
+      text: `Edit Detail LPJ massal dibatasi ${lpjEditorRowLimit} data. Untuk data besar, pilih "Ya, Sama dengan RAB" atau kelola LPJ lewat tabel detail.`,
+      color: "warning",
+    })
+
+    return
+  }
 
   try {
     lpjLoading.value = true
@@ -702,7 +719,10 @@ onMounted(async () => {
   }
 })
 
-onBeforeUnmount(() => clearTimeout(rabSearchTimer))
+onBeforeUnmount(() => {
+  clearTimeout(rabSearchTimer)
+  clearTimeout(lpjSearchTimer)
+})
 </script>
 
 <template>
@@ -804,7 +824,11 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
         </div>
 
         <VAlert
-          v-if="rekap?.jumlah_sementara !== null && Number(rekap?.jumlah_data || 0) > 0"
+          v-if="
+            rekap?.jumlah_sementara !== null &&
+            Number(rekap?.jumlah_data || 0) > 0 &&
+            Number(rekap?.selisih_sementara || 0) > 0
+          "
           type="warning"
           variant="tonal"
           density="compact"
@@ -825,7 +849,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
             {{ loading ? "Memuat data RAB..." : `${totalItems} data RAB, total ${formatRupiah(rekap?.jumlah || 0)}` }}
           </template>
           <template v-else>
-            {{ `${lpjRows.length} data LPJ, total ${formatRupiah(lpj?.total_lpj || 0)}` }}
+            {{ `${lpj?.jumlah_data || lpjTotalItems} data LPJ, total ${formatRupiah(lpj?.total_lpj || 0)}` }}
           </template>
         </VCardSubtitle>
 
@@ -843,7 +867,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
               :disabled="exportingExcel || !rekap"
               @click="exportDetailExcel"
             >
-              Download Excel
+              Download Rekapan
             </VBtn>
 
             <VBtn
@@ -867,7 +891,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
               v-else-if="canModify && activeDataTab === 'lpj' && !isBarokahRole"
               color="success"
               prepend-icon="ri-file-edit-line"
-              @click="router.push(lpjDetailPath())"
+              @click="openLpjDetailEditor"
             >
               Edit Detail LPJ
             </VBtn>
@@ -1045,15 +1069,18 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
         </VWindowItem>
 
         <VWindowItem value="lpj">
-          <VDataTable
+          <VDataTableServer
             v-model="selectedLpjIds"
             v-model:items-per-page="lpjItemsPerPage"
             v-model:page="lpjPage"
             :show-select="canModify"
             :headers="lpjTableHeaders"
-            :items="filteredLpjRows"
+            :items="lpjRows"
+            :items-length="lpjTotalItems"
             item-value="id"
             :loading="fetchingLpj || deletingItems"
+            :items-per-page-options="[10, 25, 50, 100]"
+            @update:options="loadLpjItems"
           >
             <template #no-data>
               <div class="text-center pa-6">
@@ -1159,7 +1186,7 @@ onBeforeUnmount(() => clearTimeout(rabSearchTimer))
                 @click="confirmDeleteItems(item.id)"
               />
             </template>
-          </VDataTable>
+          </VDataTableServer>
         </VWindowItem>
       </VWindow>
     </VCard>

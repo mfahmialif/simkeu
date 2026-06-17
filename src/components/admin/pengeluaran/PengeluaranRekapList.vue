@@ -48,6 +48,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  enableDetailExcelExport: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(["updated"])
@@ -241,6 +245,10 @@ const canDeleteRekap = item => {
   return true
 }
 
+const canExportDetailExcel = computed(() =>
+  props.enableDetailExcelExport,
+)
+
 const actionDialogMessage = computed(() => {
   if (actionType.value === "release") {
     return `Semua data dalam rekap "${actionItem.value?.nama || ""}" akan dikeluarkan dari rekap.`
@@ -360,9 +368,9 @@ const exportRekapExcel = async () => {
       },
     })
 
-    downloadFileExport(response, `Rekap ${props.title}.xlsx`)
+    downloadFileExport(response, `Rekapan ${props.title}.xlsx`)
     showSnackbar({
-      text: "Rekap berhasil di download.",
+      text: "Rekapan berhasil di download.",
       color: "success",
     })
   } catch (err) {
@@ -745,7 +753,7 @@ onBeforeUnmount(() => {
             :disabled="exportingExcel"
             @click="exportRekapExcel"
           >
-            Download Excel
+            Download Rekapan
           </VBtn>
 
           <VTooltip
@@ -936,7 +944,11 @@ onBeforeUnmount(() => {
                   {{ item.keterangan || "Tanpa keterangan" }}
                 </div>
                 <div
-                  v-if="item.jumlah_sementara !== null && Number(item.jumlah_data || 0) > 0"
+                  v-if="
+                    item.jumlah_sementara !== null &&
+                    Number(item.jumlah_data || 0) > 0 &&
+                    Number(item.selisih_sementara || 0) > 0
+                  "
                   class="rekap-item-sync"
                 >
                   Total detail masih kurang
@@ -988,8 +1000,8 @@ onBeforeUnmount(() => {
                 </VTooltip>
 
                 <VTooltip
-                  v-if="enableExcelExport"
-                  text="Download Excel"
+                  v-if="canExportDetailExcel"
+                  text="Download Detail Rekapan"
                   location="top"
                 >
                   <template #activator="{ props: tooltipProps }">

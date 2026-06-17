@@ -9,5 +9,6 @@ import PengeluaranRekapDetail from "@/components/admin/pengeluaran/PengeluaranRe
     base-path="/admin/pengeluaran/sarana-prasarana"
     module-type="sarana-prasarana"
     allow-create
+    enable-excel-export
   />
 </template>

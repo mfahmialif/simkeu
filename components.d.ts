@@ -407,6 +407,7 @@ declare module 'vue' {
     LaporanRekap: typeof import('./src/components/admin/pemasukan/mahasiswa/laporan/LaporanRekap.vue')['default']
     LaporanRekapTahun: typeof import('./src/components/admin/pemasukan/mahasiswa/laporan/LaporanRekapTahun.vue')['default']
     LaporanTahunan: typeof import('./src/components/admin/pemasukan/mahasiswa/laporan/LaporanTahunan.vue')['default']
+    LazyTextField: typeof import('./src/components/LazyTextField.vue')['default']
     MahasiswaPembayaranMahasiswa: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/MahasiswaPembayaranMahasiswa.vue')['default']
     MahasiswaPembayaranMahasiswaTambahan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/MahasiswaPembayaranMahasiswaTambahan.vue')['default']
     MoreBtn: typeof import('./src/@core/components/MoreBtn.vue')['default']

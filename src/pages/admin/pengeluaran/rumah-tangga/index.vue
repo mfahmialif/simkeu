@@ -301,6 +301,8 @@ onMounted(() => {
         base-path="/admin/pengeluaran/rumah-tangga"
         default-expanded
         :allow-release="false"
+        enable-excel-export
+        enable-detail-excel-export
         :filters="rekapFilterPayload"
         @updated="clearBatchSelection"
       />

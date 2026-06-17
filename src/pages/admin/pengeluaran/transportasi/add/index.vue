@@ -12,8 +12,14 @@ const saving = ref(false)
 const selectedRekap = ref(null)
 const loadingBatch = ref(false)
 const originalRowIds = ref([])
+const originalRowsState = ref(new Map())
 const removedRowIds = ref([])
 const mobileSummaryHidden = ref(false)
+
+// Infinite scroll state
+const SCROLL_BATCH = 25
+const scrollSentinel = ref(null)
+const batchNextPage = ref(1)
 
 const queryRekapId = computed(() => {
   const value = route.query.rekap_id
@@ -78,12 +84,17 @@ const rowTotal = row => Math.round(
   Number(row.nominal || 0) * factorValue(row.volume),
 )
 
-const grandTotal = computed(() =>
-  rows.value.reduce((total, row) => total + rowTotal(row), 0),
-)
+const grandTotal = computed(() => rows.value.reduce((total, row) => total + rowTotal(row), 0))
+
+const displayRows = computed(() => rows.value.slice(0, batchNextPage.value * SCROLL_BATCH))
+const batchHasMore = computed(() => batchNextPage.value * SCROLL_BATCH < rows.value.length)
 
 const summaryItems = computed(() => [
-  { label: `${rows.value.length} baris`, value: grandTotal.value, total: true },
+  {
+    label: isBatchEdit.value ? `${rows.value.length} baris` : `${rows.value.length} baris`,
+    value: grandTotal.value,
+    total: true,
+  },
 ])
 
 const selectedFile = value => {
@@ -161,17 +172,31 @@ const fetchBatchRows = async () => {
       method: "GET",
       body: {
         rekap_id: rekapId.value,
-        limit: 1000,
+        limit: 999999,
         sort_key: "id",
         sort_order: "asc",
       },
     })
 
-    const fetchedRows = (response.data?.data || []).map(detailToRow)
+    const newRows = (response.data?.data || []).map(detailToRow)
 
-    originalRowIds.value = fetchedRows.map(row => row.id).filter(Boolean)
-    removedRowIds.value = []
-    rows.value = fetchedRows.length ? fetchedRows : [newRow()]
+    originalRowIds.value = newRows.map(r => r.id).filter(Boolean)
+      originalRowsState.value = new Map()
+      newRows.forEach(row => {
+        if (row.id) {
+          originalRowsState.value.set(row.id, JSON.stringify({
+            tanggal: row.tanggal,
+            prioritas: row.prioritas,
+            nama_kegiatan: row.nama_kegiatan,
+            nominal: row.nominal,
+            volume: row.volume,
+            satuan: row.satuan,
+            jenis_pembayaran: row.jenis_pembayaran,
+            keterangan: row.keterangan
+          }))
+        }
+      })
+    rows.value = newRows.length ? newRows : [newRow()]
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -214,6 +239,15 @@ const removeRow = index => {
 
   rows.value.splice(index, 1)
 }
+
+let scrollObserver = null
+
+watch(scrollSentinel, el => {
+  scrollObserver?.disconnect()
+  if (el) scrollObserver?.observe(el)
+})
+
+onBeforeUnmount(() => scrollObserver?.disconnect())
 
 const validateRows = () => {
   if (!rekapId.value) return "Rekap harus dipilih."
@@ -265,14 +299,45 @@ const submitBatchEdit = async () => {
     formData.append(`deleted_ids[${index}]`, id)
   })
 
+    let modifiedCount = 0
+  let sendIndex = 0
   rows.value.forEach((row, index) => {
-    const prefix = `items[${index}]`
-    if (row.id) {
-      formData.append(`${prefix}[id]`, row.id)
+    let isModified = true
+    if (row.id && originalRowsState.value.has(row.id)) {
+      const original = originalRowsState.value.get(row.id)
+      const current = JSON.stringify({
+        tanggal: row.tanggal,
+        prioritas: row.prioritas,
+        nama_kegiatan: row.nama_kegiatan,
+        nominal: row.nominal,
+        volume: row.volume,
+        satuan: row.satuan,
+        jenis_pembayaran: row.jenis_pembayaran,
+        keterangan: row.keterangan
+      })
+      if (original === current && !row.bukti_transfer && row.lampiran?.length === 0 && row.removed_lampiran?.length === 0) {
+        isModified = false
+      }
     }
-
-    appendRowFormData(formData, row, prefix)
+    
+    if (isModified) {
+      const prefix = `items[${sendIndex}]`
+      if (row.id) {
+        formData.append(`${prefix}[id]`, row.id)
+      }
+      appendRowFormData(formData, row, prefix)
+      sendIndex++
+      modifiedCount++
+    }
   })
+
+  if (modifiedCount === 0 && removedRowIds.value.length === 0) {
+    return Promise.reject({ message: "Tidak ada perubahan data." })
+  }
+  
+  if (modifiedCount > 100) {
+    return Promise.reject({ message: `Maksimal 100 data dapat diupdate sekaligus. Anda mencoba menyimpan ${modifiedCount} data yang diubah.` })
+  }
 
   return $api("/admin/pengeluaran/transportasi/batch-update", {
     method: "POST",
@@ -336,6 +401,13 @@ const submit = async () => {
 
 onMounted(() => {
   document.title = `${isBatchEdit.value ? "Edit" : "Tambah"} Pengeluaran Transportasi - SIMKEU`
+
+  scrollObserver = new IntersectionObserver(entries => {
+    if (entries[0]?.isIntersecting && batchHasMore.value) {
+      batchNextPage.value += 1
+    }
+  }, { rootMargin: '400px' })
+
   fetchBatchRows()
 })
 </script>
@@ -447,7 +519,7 @@ onMounted(() => {
 
           <template v-else>
             <div
-              v-for="(row, index) in rows"
+              v-for="(row, index) in displayRows"
               :key="row.key"
               class="expense-row"
             >
@@ -489,19 +561,7 @@ onMounted(() => {
                     cols="12"
                     md="4"
                   >
-                    <VTextField
-                      v-model="row.nama_kegiatan"
-                      label="Uraian Pengeluaran *"
-                      :rules="[requiredValidator]"
-                    />
-                  </VCol>
-
-                  <VCol
-                    cols="12"
-                    md="1"
-                  >
-                    <VTextField
-                      v-model="row.volume"
+                    <LazyTextField v-model="row.volume"
                       type="number"
                       min="0"
                       label="Volume"
@@ -512,18 +572,7 @@ onMounted(() => {
                     cols="12"
                     md="1"
                   >
-                    <VTextField
-                      v-model="row.satuan"
-                      label="Satuan"
-                    />
-                  </VCol>
-
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.nominal"
+                    <LazyTextField v-model="row.nominal"
                       type="number"
                       min="0"
                       label="Harga Satuan *"
@@ -646,6 +695,30 @@ onMounted(() => {
               </div>
             </div>
           </template>
+
+          <div
+            v-if="isBatchEdit && batchHasMore"
+            ref="scrollSentinel"
+            class="scroll-sentinel"
+          >
+            <VProgressCircular
+              indeterminate
+              size="20"
+              width="2"
+            />
+            <span class="text-body-2 text-medium-emphasis">
+              Memuat data lagi... ({{ displayRows.length }}/{{ rows.length }})
+            </span>
+          </div>
+
+          <div
+            v-else-if="isBatchEdit && rows.length > SCROLL_BATCH && !batchHasMore"
+            class="scroll-sentinel"
+          >
+            <span class="text-body-2 text-medium-emphasis">
+              Semua {{ rows.length }} data sudah dimuat.
+            </span>
+          </div>
         </VCardText>
       </VCard>
 
@@ -729,6 +802,24 @@ onMounted(() => {
 .expense-row-actions {
   display: grid;
   gap: 8px;
+}
+
+.batch-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.batch-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.batch-page-size {
+  max-inline-size: 120px;
 }
 
 .page-with-floating-footer {

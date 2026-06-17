@@ -8,5 +8,6 @@ import PengeluaranRekapDetail from "@/components/admin/pengeluaran/PengeluaranRe
     endpoint="/admin/pengeluaran/dosen"
     base-path="/admin/pengeluaran/dosen-tatapmuka"
     module-type="tatapmuka"
+    enable-excel-export
   />
 </template>

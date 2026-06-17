@@ -12,8 +12,14 @@ const saving = ref(false)
 const selectedRekap = ref(null)
 const loadingBatch = ref(false)
 const originalRowIds = ref([])
+const originalRowsState = ref(new Map())
 const removedRowIds = ref([])
 const mobileSummaryHidden = ref(false)
+
+// Infinite scroll state
+const SCROLL_BATCH = 25
+const scrollSentinel = ref(null)
+const batchNextPage = ref(1)
 
 const queryRekapId = computed(() => {
   const value = route.query.rekap_id
@@ -91,12 +97,47 @@ const kelompokAnggaranItems = computed(() => Array.from(new Set(
 )).sort((a, b) => a.localeCompare(b, "id-ID")))
 
 const rowTotal = row => Math.round(Number(row.nominal || 0) * factorValue(row.volume))
+
 const grandTotal = computed(() => flatRows.value.reduce((total, row) => total + rowTotal(row), 0))
+
+const displayItems = computed(() => {
+  const limit = batchNextPage.value * SCROLL_BATCH
+  let currentTotal = 0
+  const result = []
+
+  for (const item of items.value) {
+    if (currentTotal >= limit) break
+    const remaining = limit - currentTotal
+    const subLen = item.subItems.length
+    const sliceLen = Math.min(subLen, remaining)
+    
+    result.push({
+      ...item,
+      subItems: item.subItems.slice(0, sliceLen)
+    })
+    
+    currentTotal += (subLen === 0 ? 1 : sliceLen)
+  }
+  return result
+})
+const batchHasMore = computed(() => {
+  const limit = batchNextPage.value * SCROLL_BATCH
+  let totalRenderable = 0
+  for (const item of items.value) {
+    totalRenderable += (item.subItems.length === 0 ? 1 : item.subItems.length)
+  }
+  return limit < totalRenderable
+})
+const renderedSubItemsCount = computed(() => displayItems.value.reduce((total, item) => total + item.subItems.length, 0))
 
 const summaryItems = computed(() => [
   { label: "Jumlah Uraian", value: items.value.length, plain: true },
   { label: "Jumlah Sub Item", value: flatRows.value.length, plain: true },
-  { label: "Total Keseluruhan", value: grandTotal.value, total: true },
+  {
+    label: isBatchEdit.value ? `Total Keseluruhan (${flatRows.value.length} baris)` : "Total Keseluruhan",
+    value: grandTotal.value,
+    total: true,
+  },
 ])
 
 const selectedFile = value => {
@@ -145,38 +186,61 @@ const detailToRow = item => ({
 
 const fetchBatchRows = async () => {
   if (!isBatchEdit.value || !rekapId.value) return
+
   try {
     loadingBatch.value = true
 
     const response = await $api("/admin/pengeluaran/sarana-prasarana", {
       method: "GET",
-      body: { rekap_id: rekapId.value, limit: 1000, sort_key: "id", sort_order: "asc" },
+      body: {
+        rekap_id: rekapId.value,
+        limit: 999999,
+        sort_key: "id",
+        sort_order: "asc",
+      },
     })
 
     const fetchedRows = response.data?.data || []
-
-    originalRowIds.value = fetchedRows.map(row => row.id).filter(Boolean)
-    removedRowIds.value = []
     
-    const grouped = {}
+    items.value = []
+    originalRowIds.value = []
+    originalRowsState.value = new Map()
 
     fetchedRows.forEach(detail => {
+      const row = detailToRow(detail)
+      if (row.id) {
+        if (!originalRowIds.value.includes(row.id)) originalRowIds.value.push(row.id)
+
+      originalRowsState.value.set(row.id, JSON.stringify({
+        tanggal: row.tanggal,
+        kelompok_anggaran: detail.kelompok_anggaran || "",
+        nama_kegiatan: row.nama_kegiatan,
+        nominal: row.nominal,
+        volume: row.volume,
+        satuan: row.satuan,
+        jenis_pembayaran: row.jenis_pembayaran,
+        keterangan: row.keterangan
+      }))
+      }
+
       const key = detail.kelompok_anggaran || ""
-      if (!grouped[key]) grouped[key] = []
-      grouped[key].push(detailToRow(detail))
+      let existingItem = items.value.find(i => i.kelompok_anggaran === key)
+      
+      if (!existingItem) {
+        existingItem = {
+          key: `item-${Date.now()}-${Math.random()}`,
+          kelompok_anggaran: key,
+          subItems: [],
+        }
+        items.value.push(existingItem)
+      }
+      
+      existingItem.subItems.push(row)
     })
 
-    const newItems = []
-
-    Object.keys(grouped).forEach(kegiatan => {
-      newItems.push({
-        key: `item-${Date.now()}-${Math.random()}`,
-        kelompok_anggaran: kegiatan,
-        subItems: grouped[kegiatan],
-      })
-    })
-    
-    items.value = newItems.length ? newItems : [newItem()]
+    if (items.value.length === 0) {
+      items.value = [newItem()]
+    }
   } catch (err) {
     showSnackbar({ text: errorMessage(err), color: "error" })
   } finally {
@@ -290,16 +354,45 @@ const submitBatchEdit = async () => {
   removedRowIds.value.forEach((id, index) => {
     formData.append(`deleted_ids[${index}]`, id)
   })
-  let flatIndex = 0
+    let flatIndex = 0
+  let modifiedCount = 0
   items.value.forEach(item => {
     item.subItems.forEach(sub => {
-      const prefix = `items[${flatIndex}]`
-      if (sub.id) formData.append(`${prefix}[id]`, sub.id)
-      appendRowFormData(formData, { ...sub, kelompok_anggaran: item.kelompok_anggaran }, prefix)
-      flatIndex++
+      let isModified = true
+      if (sub.id && originalRowsState.value.has(sub.id)) {
+        const original = originalRowsState.value.get(sub.id)
+        const current = JSON.stringify({
+          tanggal: sub.tanggal,
+          kelompok_anggaran: item.kelompok_anggaran || "",
+          nama_kegiatan: sub.nama_kegiatan,
+          nominal: sub.nominal,
+          volume: sub.volume,
+          satuan: sub.satuan,
+          jenis_pembayaran: sub.jenis_pembayaran,
+          keterangan: sub.keterangan
+        })
+        if (original === current && !sub.bukti_transfer && sub.lampiran?.length === 0 && sub.removed_lampiran?.length === 0) {
+          isModified = false
+        }
+      }
+      if (isModified) {
+        const prefix = `items[${flatIndex}]`
+        if (sub.id) formData.append(`${prefix}[id]`, sub.id)
+        appendRowFormData(formData, { ...sub, kelompok_anggaran: item.kelompok_anggaran }, prefix)
+        flatIndex++
+        modifiedCount++
+      }
     })
   })
+
+  if (modifiedCount === 0 && removedRowIds.value.length === 0) {
+    return Promise.reject({ message: "Tidak ada perubahan data." })
+  }
   
+  if (modifiedCount > 100) {
+    return Promise.reject({ message: `Maksimal 100 data dapat diupdate sekaligus. Anda mencoba menyimpan ${modifiedCount} data yang diubah.` })
+  }
+
   return $api("/admin/pengeluaran/sarana-prasarana/batch-update", { method: "POST", body: formData })
 }
 
@@ -341,8 +434,24 @@ const submit = async () => {
   }
 }
 
+let scrollObserver = null
+
+watch(scrollSentinel, el => {
+  scrollObserver?.disconnect()
+  if (el) scrollObserver?.observe(el)
+})
+
+onBeforeUnmount(() => scrollObserver?.disconnect())
+
 onMounted(() => {
   document.title = `${isBatchEdit.value ? "Edit" : "Tambah"} Pengeluaran Sarana Prasarana - SIMKEU`
+
+  scrollObserver = new IntersectionObserver(entries => {
+    if (entries[0]?.isIntersecting && batchHasMore.value) {
+      batchNextPage.value += 1
+    }
+  }, { rootMargin: '400px' })
+
   fetchBatchRows()
 })
 </script>
@@ -367,8 +476,10 @@ onMounted(() => {
     >
       <VCard class="mb-5">
         <VCardItem>
-          <VCardTitle>{{ isBatchEdit ? "Edit" : "Tambah" }} Pengeluaran Sarana Prasarana</VCardTitle>
-          <VCardSubtitle>{{ isBatchEdit ? "Edit beberapa data dalam satu rekap." : "Tambahkan beberapa data sekaligus ke dalam satu rekap." }}</VCardSubtitle>
+          <VCardTitle>Pengeluaran Sarana Prasarana</VCardTitle>
+          <VCardSubtitle>
+            {{ loadingBatch ? "Memuat data..." : `${items.length} uraian, ${flatRows.length} baris, total ${formatRupiah(grandTotal)}` }}
+          </VCardSubtitle>
         </VCardItem>
         <VCardText>
           <PengeluaranRekapSelect
@@ -425,9 +536,9 @@ onMounted(() => {
 
       <template v-else>
         <div
-          v-for="(item, itemIndex) in items"
+          v-for="(item, itemIndex) in displayItems"
           :key="item.key"
-          class="mb-5"
+          class="budget-group mb-6"
         >
           <VCard class="item-card">
             <VCardItem class="bg-primary-lighten-4 pt-4 pb-2">
@@ -481,10 +592,7 @@ onMounted(() => {
                 </div>
                 <div class="expense-row-content">
                   <VRow>
-                    <VCol
-                      cols="12"
-                      md="2"
-                    >
+                    <VCol cols="12" md="2">
                       <AppDateTimePicker
                         v-model="row.tanggal"
                         label="Tanggal *"
@@ -494,43 +602,42 @@ onMounted(() => {
                         :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }"
                       />
                     </VCol>
-                    <VCol
-                      cols="12"
-                      md="3"
-                    >
-                      <VTextField
+                    
+                    <VCol cols="12" md="3">
+                      <LazyTextField
                         v-model="row.nama_kegiatan"
-                        label="Input Uraian (Pengeluaran) *"
+                        label="Uraian Pengeluaran *"
                         density="compact"
                         hide-details
                         :rules="[requiredValidator]"
-                        placeholder="Contoh: Pembelian Alat Kebersihan"
                       />
                     </VCol>
+
                     <VCol cols="12" md="3">
-                      <div class="d-flex" style="gap: 12px;">
-                        <VTextField v-model="row.volume" type="number" min="0" label="Volume" density="compact" hide-details style="flex: 1; min-width: 0;" />
-                        <VTextField v-model="row.satuan" label="Satuan" density="compact" hide-details style="flex: 1; min-width: 0;" />
+                      <div class="d-flex gap-2">
+                        <LazyTextField
+                          v-model="row.volume"
+                          type="number"
+                          min="0"
+                          label="Volume"
+                          density="compact"
+                          hide-details
+                          style="flex: 1; min-width: 0;"
+                        />
+                        <LazyTextField
+                          v-model="row.nominal"
+                          type="number"
+                          min="0"
+                          label="Harga Satuan *"
+                          density="compact"
+                          hide-details
+                          :rules="[requiredValidator]"
+                          style="flex: 1.5; min-width: 0;"
+                        />
                       </div>
                     </VCol>
-                    <VCol
-                      cols="12"
-                      md="2"
-                    >
-                      <VTextField
-                        v-model="row.nominal"
-                        type="number"
-                        min="0"
-                        label="Harga Satuan *"
-                        density="compact"
-                        hide-details
-                        :rules="[requiredValidator]"
-                      />
-                    </VCol>
-                    <VCol
-                      cols="12"
-                      md="2"
-                    >
+
+                    <VCol cols="12" md="2">
                       <VSelect
                         v-model="row.jenis_pembayaran"
                         label="Pembayaran *"
@@ -541,10 +648,21 @@ onMounted(() => {
                         @update:model-value="row.bukti_transfer = null"
                       />
                     </VCol>
+
+                    <VCol cols="12" md="2">
+                      <VTextField
+                        :model-value="formatRupiah(rowTotal(row))"
+                        label="Total"
+                        density="compact"
+                        hide-details
+                        readonly
+                      />
+                    </VCol>
+
                     <VCol
                       v-if="row.jenis_pembayaran === 'Transfer'"
                       cols="12"
-                      md="2"
+                      md="3"
                     >
                       <VFileInput
                         v-model="row.bukti_transfer"
@@ -555,6 +673,7 @@ onMounted(() => {
                         hide-details
                       />
                     </VCol>
+                    
                     <VCol
                       v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'"
                       cols="12"
@@ -576,7 +695,7 @@ onMounted(() => {
                     
                     <VCol
                       cols="12"
-                      :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 3 : 4) : 5"
+                      :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 3 : 4) : 6"
                     >
                       <VTextField
                         v-model="row.keterangan"
@@ -588,25 +707,12 @@ onMounted(() => {
                     
                     <VCol
                       cols="12"
-                      :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 3 : 4) : 5"
+                      :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 4 : 5) : 6"
                     >
                       <PengeluaranLampiranInput
                         v-model="row.lampiran"
                         v-model:removed-lampiran="row.removed_lampiran"
                         :existing-lampiran="row.existing_lampiran"
-                      />
-                    </VCol>
-                    
-                    <VCol
-                      cols="12"
-                      md="2"
-                    >
-                      <VTextField
-                        :model-value="formatRupiah(rowTotal(row))"
-                        label="Total"
-                        density="compact"
-                        hide-details
-                        readonly
                       />
                     </VCol>
                   </VRow>
@@ -661,6 +767,30 @@ onMounted(() => {
               </div>
             </VCardText>
           </VCard>
+        </div>
+
+        <div
+          v-if="isBatchEdit && batchHasMore"
+          ref="scrollSentinel"
+          class="scroll-sentinel"
+        >
+          <VProgressCircular
+            indeterminate
+            size="20"
+            width="2"
+          />
+          <span class="text-body-2 text-medium-emphasis">
+            Memuat uraian lagi... ({{ renderedSubItemsCount }}/{{ flatRows.length }})
+          </span>
+        </div>
+
+        <div
+          v-else-if="isBatchEdit && items.length > SCROLL_BATCH && !batchHasMore"
+          class="scroll-sentinel"
+        >
+          <span class="text-body-2 text-medium-emphasis">
+            Semua {{ items.length }} uraian sudah dimuat.
+          </span>
         </div>
 
         <div class="mb-5 mt-2">
@@ -755,6 +885,23 @@ onMounted(() => {
 .expense-row-actions {
   display: grid;
   gap: 8px;
+}
+
+.batch-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.batch-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.batch-page-size {
+  max-inline-size: 120px;
 }
 .page-with-floating-footer {
   padding-block-end: 98px;

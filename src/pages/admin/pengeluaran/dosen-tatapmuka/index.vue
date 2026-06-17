@@ -381,6 +381,8 @@ const printSlip = async id => {
       title="Barokah Dosen Tatapmuka"
       endpoint="/admin/pengeluaran/dosen"
       base-path="/admin/pengeluaran/dosen-tatapmuka"
+      enable-excel-export
+      enable-detail-excel-export
       :filters="rekapFilterPayload"
       @updated="clearBatchSelection"
     />

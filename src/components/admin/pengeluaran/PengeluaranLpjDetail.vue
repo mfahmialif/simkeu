@@ -54,9 +54,13 @@ const saving = ref(false)
 const mobileSummaryHidden = ref(false)
 const dosenLpjUsesCombobox = ref(false)
 const dosenSearch = ref("")
-const dosenPage = ref(1)
-const dosenRowsPerPage = ref(15)
-const dosenRowsPerPageOptions = [15, 30, 50]
+
+// Client-side Infinite Scroll State
+const SCROLL_BATCH = 25
+const batchNextPage = ref(1)
+const scrollSentinel = ref(null)
+
+const lpjEditorRowLimit = 500
 
 const returnPath = computed(() => {
   const value = Array.isArray(route.query.return_to)
@@ -258,37 +262,52 @@ const dosenLpjRows = computed(() => {
   if (!search) return rows.value
 
   return rows.value.filter(row => {
-    const pegawai = pegawaiItem(row.pegawai_id)
-
-    return [
-      pegawai?.kode,
-      pegawai?.nama,
-      pegawai?.dosen?.prodi?.nama,
-      pegawai?.dosen?.prodi?.alias,
-      row.keterangan,
-    ].some(value => String(value || "").toLowerCase().includes(search))
+    return String(row.kode_pegawai || "").toLowerCase().includes(search)
+      || String(row.nama_pegawai || "").toLowerCase().includes(search)
+      || String(row.nama_prodi_dosen || "").toLowerCase().includes(search)
   })
 })
 
-const dosenTotalPages = computed(() =>
-  Math.max(1, Math.ceil(dosenLpjRows.value.length / dosenRowsPerPage.value)),
+const paginatedDosenLpjRows = computed(() =>
+  dosenLpjRows.value.slice(0, batchNextPage.value * SCROLL_BATCH),
 )
 
-const paginatedDosenLpjRows = computed(() => {
-  const start = (dosenPage.value - 1) * dosenRowsPerPage.value
+const displayItems = computed(() => {
+  const limit = batchNextPage.value * SCROLL_BATCH
+  let currentTotal = 0
+  const result = []
 
-  return dosenLpjRows.value.slice(start, start + dosenRowsPerPage.value)
+  for (const item of items.value) {
+    if (currentTotal >= limit) break
+    const remaining = limit - currentTotal
+    const subLen = item.subItems.length
+    const sliceLen = Math.min(subLen, remaining)
+    
+    result.push({
+      ...item,
+      subItems: item.subItems.slice(0, sliceLen)
+    })
+    
+    currentTotal += (subLen === 0 ? 1 : sliceLen)
+  }
+  return result
+})
+const displayRows = computed(() => {
+  if (isDosenBulanan.value && !dosenLpjUsesCombobox.value) {
+    return dosenLpjRows.value.slice(0, batchNextPage.value * SCROLL_BATCH)
+  }
+  return flatRows.value.slice(0, batchNextPage.value * SCROLL_BATCH)
 })
 
-const dosenVisibleRange = computed(() => {
-  if (dosenLpjRows.value.length === 0) return { start: 0, end: 0 }
-
-  const start = ((dosenPage.value - 1) * dosenRowsPerPage.value) + 1
-
-  return {
-    start,
-    end: Math.min(start + dosenRowsPerPage.value - 1, dosenLpjRows.value.length),
+const batchHasMore = computed(() => {
+  if (isRumahTangga.value) {
+    return batchNextPage.value * SCROLL_BATCH < items.value.length
   }
+  if (isDosenBulanan.value && !dosenLpjUsesCombobox.value) {
+    return batchNextPage.value * SCROLL_BATCH < dosenLpjRows.value.length
+  }
+  
+  return batchNextPage.value * SCROLL_BATCH < flatRows.value.length
 })
 
 const sourceRowIndex = row => rows.value.indexOf(row)
@@ -341,6 +360,27 @@ const detailToRow = item => ({
 const fetchData = async () => {
   try {
     loading.value = true
+
+    const summaryResponse = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
+      method: "GET",
+      body: {
+        page: 1,
+        limit: 1,
+      },
+    })
+
+    rekap.value = summaryResponse.data?.rekap || null
+    lpj.value = summaryResponse.data?.lpj || null
+
+    if (Number(lpj.value?.jumlah_data || 0) > lpjEditorRowLimit) {
+      showSnackbar({
+        text: `Edit Detail LPJ massal dibatasi ${lpjEditorRowLimit} data agar halaman tidak berat.`,
+        color: "warning",
+      })
+      router.replace(detailRekapPath.value)
+
+      return
+    }
 
     const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
       method: "GET",
@@ -484,17 +524,7 @@ const removeRow = index => {
 }
 
 watch(dosenSearch, () => {
-  dosenPage.value = 1
-})
-
-watch(dosenRowsPerPage, () => {
-  dosenPage.value = 1
-})
-
-watch(() => dosenLpjRows.value.length, () => {
-  if (dosenPage.value > dosenTotalPages.value) {
-    dosenPage.value = dosenTotalPages.value
-  }
+  batchNextPage.value = 1
 })
 
 const onKategoriChange = row => {
@@ -587,11 +617,27 @@ const submit = async () => {
   }
 }
 
+let observer = null
+
+watch(scrollSentinel, el => {
+  observer?.disconnect()
+  if (el) observer?.observe(el)
+})
+
+onBeforeUnmount(() => observer?.disconnect())
+
 onMounted(() => {
   document.title = `Detail LPJ ${props.title} - SIMKEU`
   if (!isRumahTangga.value && !isTransportasi.value) {
     fetchPegawai()
   }
+
+  observer = new IntersectionObserver(entries => {
+    if (entries[0]?.isIntersecting && batchHasMore.value) {
+      batchNextPage.value += 1
+    }
+  }, { rootMargin: '400px' })
+
   fetchData()
 })
 </script>
@@ -666,21 +712,13 @@ onMounted(() => {
 
         <template #append>
           <div class="lpj-card-tools">
-            <VTextField
-              v-if="isDosenBulanan"
-              v-model="dosenSearch"
-              prepend-inner-icon="ri-search-line"
-              placeholder="Cari NIY, nama, atau prodi"
-              density="compact"
-              clearable
-              hide-details
-              class="lpj-dosen-search"
-            />
             <VBtn
-              v-if="!isDosenBulanan || dosenLpjUsesCombobox"
+              v-if="!isRumahTangga"
               color="primary"
+              variant="tonal"
               prepend-icon="ri-add-line"
-              @click="addRow"
+              size="small"
+              @click="addRow()"
             >
               Tambah Baris
             </VBtn>
@@ -688,692 +726,162 @@ onMounted(() => {
         </template>
       </VCardItem>
 
-      <VDivider />
-
-      <VCardText
-        v-if="loading"
-        class="text-center pa-8"
-      >
-        <VProgressCircular
-          indeterminate
-          color="primary"
-          class="mb-3"
-        />
-        <div>Memuat detail LPJ...</div>
-      </VCardText>
-
-      <VCardText
-        v-else
-        class="pa-0"
-      >
-        <template v-if="isDosenBulanan">
-          <div class="lpj-dosen-list">
-            <div class="lpj-dosen-header">
-              <span>Dosen</span>
-              <span>Tanggal</span>
-              <span>Barokah Tetap</span>
-              <span>Struktural</span>
-              <span>Total</span>
-              <span>Jenis Pembayaran</span>
-              <span>Keterangan</span>
-              <span />
-            </div>
-
+      <VCardText>
+        <div class="lpj-list">
+          <template v-if="isRumahTangga">
             <div
-              v-for="row in paginatedDosenLpjRows"
-              :key="row.key"
-              class="lpj-dosen-row"
+              v-for="item in displayItems"
+              :key="item.key"
+              class="lpj-group"
             >
-              <VAutocomplete
-                v-if="dosenLpjUsesCombobox"
-                v-model="row.pegawai_id"
-                :items="pegawaiForRow(row)"
-                item-title="display"
-                item-value="id"
-                label="Dosen *"
-                :loading="loadingPegawai"
-                density="compact"
-                hide-details
-                clearable
-              />
-
-              <div
-                v-else
-                class="lpj-dosen-identity"
-              >
-                <div class="font-weight-medium">
-                  {{ pegawaiItem(row.pegawai_id)?.nama || "Dosen tidak ditemukan" }}
-                </div>
-                <div class="text-caption text-medium-emphasis">
-                  {{ pegawaiItem(row.pegawai_id)?.kode || "-" }}
-                  <span v-if="pegawaiItem(row.pegawai_id)?.dosen?.prodi?.nama || pegawaiItem(row.pegawai_id)?.dosen?.prodi?.alias">
-                    · {{ pegawaiItem(row.pegawai_id)?.dosen?.prodi?.nama || pegawaiItem(row.pegawai_id)?.dosen?.prodi?.alias }}
-                  </span>
-                </div>
+              <div class="lpj-group-header">
+                {{ item.kelompok_anggaran }}
               </div>
-
-              <AppDateTimePicker
-                v-model="row.tanggal"
-                label="Tanggal *"
-                :config="{
-                  altInput: true,
-                  altFormat: 'd M Y',
-                  dateFormat: 'Y-m-d',
-                }"
-                density="compact"
-                hide-details
-              />
-
-              <VTextField
-                v-model.number="row.barokah_dosen_tetap"
-                type="number"
-                min="0"
-                label="Barokah Tetap"
-                :hint="formatRupiah(row.barokah_dosen_tetap)"
-                density="compact"
-                hide-details
-              />
-
-              <VTextField
-                v-model.number="row.barokah_struktural"
-                type="number"
-                min="0"
-                label="Struktural"
-                :hint="formatRupiah(row.barokah_struktural)"
-                density="compact"
-                hide-details
-              />
-
-              <div class="lpj-dosen-total">
-                <span class="text-caption text-medium-emphasis">Total</span>
-                <strong>{{ formatRupiah(rowTotal(row)) }}</strong>
-              </div>
-
-              <VSelect
-                v-model="row.jenis_pembayaran"
-                label="Jenis"
-                :items="paymentItems(row)"
-                density="compact"
-                hide-details
-              />
-
-              <VTextField
-                v-model="row.keterangan"
-                label="Keterangan"
-                density="compact"
-                hide-details
-              />
-
-              <div class="lpj-dosen-actions">
-                <VTooltip
-                  v-if="dosenLpjUsesCombobox"
-                  text="Tambah baris setelah ini"
-                  location="top"
-                >
-                  <template #activator="{ props: tooltipProps }">
-                    <VBtn
-                      v-bind="tooltipProps"
-                      icon="ri-add-line"
-                      size="small"
-                      variant="tonal"
-                      color="primary"
-                      @click="addRow(sourceRowIndex(row))"
-                    />
-                  </template>
-                </VTooltip>
-                <VTooltip
-                  text="Hapus baris"
-                  location="top"
-                >
-                  <template #activator="{ props: tooltipProps }">
-                    <VBtn
-                      v-bind="tooltipProps"
-                      icon="ri-subtract-line"
-                      size="small"
-                      variant="tonal"
-                      color="error"
-                      @click="removeRow(sourceRowIndex(row))"
-                    />
-                  </template>
-                </VTooltip>
-              </div>
-            </div>
-
-            <div
-              v-if="dosenLpjRows.length === 0"
-              class="lpj-dosen-empty"
-            >
-              <VIcon
-                icon="ri-search-line"
-                size="32"
-              />
-              <span>Dosen tidak ditemukan.</span>
-            </div>
-
-            <div
-              v-else
-              class="lpj-dosen-pagination"
-            >
-              <span class="text-body-2 text-medium-emphasis">
-                Menampilkan {{ dosenVisibleRange.start }}-{{ dosenVisibleRange.end }} dari {{ dosenLpjRows.length }}
-              </span>
-              <div class="lpj-dosen-pagination-controls">
-                <VSelect
-                  v-model="dosenRowsPerPage"
-                  :items="dosenRowsPerPageOptions"
-                  label="Baris"
-                  density="compact"
-                  hide-details
-                  class="lpj-dosen-page-size"
-                />
-                <VPagination
-                  v-if="dosenTotalPages > 1"
-                  v-model="dosenPage"
-                  :length="dosenTotalPages"
-                  :total-visible="5"
-                  density="compact"
-                />
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <template v-else-if="isRumahTangga">
-          <div
-            v-for="(item, itemIndex) in items"
-            :key="item.key"
-            class="mb-5"
-          >
-            <VCard
-              class="item-card border-none"
-              elevation="0"
-              rounded="0"
-              style="border: 1px solid rgba(var(--v-theme-primary), 0.16);"
-            >
-              <VCardItem class="bg-primary-lighten-4 pt-4 pb-2 border-b">
-                <VRow align="center">
-                  <VCol cols="auto">
-                    <div class="uraian-letter">{{ String.fromCharCode(65 + itemIndex) }}</div>
-                  </VCol>
-                  <VCol>
-                    <VCombobox
-                      v-model="item.kelompok_anggaran"
-                      :items="kelompokAnggaranItems"
-                      class="mt-1"
-                      label="Kelompok Anggaran *"
-                      density="compact"
-                      hide-details
-                      :rules="[requiredValidator]"
-                      clearable
-                    />
-                  </VCol>
-                  <VCol
-                    cols="auto"
-                    class="lpj-item-action text-right"
-                  >
-                    <VTooltip
-                      text="Hapus Uraian"
-                      location="top"
-                    >
-                      <template #activator="{ props: tooltipProps }">
-                        <VBtn
-                          v-bind="tooltipProps"
-                          icon="ri-delete-bin-line"
-                          color="error"
-                          variant="text"
-                          size="small"
-                          @click="removeItem(itemIndex)"
-                        />
-                      </template>
-                    </VTooltip>
-                  </VCol>
-                </VRow>
-              </VCardItem>
-              <VCardText class="pa-0">
+              <div class="lpj-group-items">
                 <div
-                  v-for="(row, rowIndex) in item.subItems"
+                  v-for="(row, subIndex) in item.subItems"
                   :key="row.key"
                   class="lpj-row"
                 >
-                  <div class="lpj-row-number">
-                    {{ rowIndex + 1 }}
-                  </div>
                   <div class="lpj-row-content">
-                    <div
-                      v-if="row.petugas_nama"
-                      class="lpj-row-petugas"
-                    >
-                      <VIcon
-                        icon="ri-user-settings-line"
-                        size="14"
-                      />
-                      {{ row.petugas_nama }}
-                    </div>
                     <VRow>
-                      <VCol
-                        cols="12"
-                        md="2"
-                      >
-                        <AppDateTimePicker
-                          v-model="row.tanggal"
-                          label="Tanggal *"
-                          :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }"
-                          density="compact"
-                          hide-details
-                        />
+                      <VCol cols="12" md="5">
+                        <LazyTextField v-model="row.nama_kegiatan" label="Uraian Pengeluaran" density="compact" hide-details />
                       </VCol>
-                      <VCol
-                        cols="12"
-                        md="3"
-                      >
-                        <VTextField
-                          v-model="row.nama_kegiatan"
-                          label="Input Uraian (Pengeluaran) *"
-                          density="compact"
-                          hide-details
-                          :rules="[requiredValidator]"
-                          placeholder="Contoh: Pembelian Alat Kebersihan"
-                        />
+                      <VCol cols="12" md="2">
+                        <LazyTextField v-model="row.volume" type="number" min="0" label="Volume" density="compact" hide-details />
                       </VCol>
                       <VCol cols="12" md="3">
-                        <div class="d-flex" style="gap: 12px;">
-                          <VTextField v-model="row.volume" type="number" min="0" label="Volume" density="compact" hide-details style="flex: 1; min-width: 0;" />
-                          <VTextField v-model="row.satuan" label="Satuan" density="compact" hide-details style="flex: 1; min-width: 0;" />
-                        </div>
+                        <LazyTextField v-model="row.nominal" type="number" min="0" label="Harga Satuan *" density="compact" hide-details />
                       </VCol>
-                      <VCol
-                        cols="12"
-                        md="2"
-                      >
-                        <VTextField
-                          v-model="row.nominal"
-                          type="number"
-                          min="0"
-                          label="Harga Satuan *"
-                          density="compact"
-                          hide-details
-                        />
-                      </VCol>
-                      <VCol
-                        cols="12"
-                        md="2"
-                      >
-                        <VSelect
-                          v-model="row.jenis_pembayaran"
-                          label="Pembayaran"
-                          :items="paymentItems(row)"
-                          density="compact"
-                          hide-details
-                        />
-                      </VCol>
-                      
-                      <VCol
-                        cols="12"
-                        md="10"
-                      >
-                        <VTextField
-                          v-model="row.keterangan"
-                          label="Keterangan"
-                          density="compact"
-                          hide-details
-                        />
-                      </VCol>
-                      <VCol
-                        cols="12"
-                        md="2"
-                      >
-                        <VTextField
-                          :model-value="formatRupiah(rowTotal(row))"
-                          label="Total LPJ"
-                          readonly
-                          density="compact"
-                          hide-details
-                        />
+                      <VCol cols="12" md="2">
+                        <VSelect v-model="row.jenis_pembayaran" label="Pembayaran" :items="paymentItems(row)" density="compact" hide-details />
                       </VCol>
                     </VRow>
                   </div>
                   <div class="lpj-row-actions">
-                    <VTooltip
-                      text="Tambah sub-item setelah ini"
-                      location="top"
-                    >
+                    <VTooltip text="Tambah baris">
                       <template #activator="{ props: tooltipProps }">
-                        <VBtn
-                          v-bind="tooltipProps"
-                          icon="ri-add-line"
-                          size="small"
-                          variant="tonal"
-                          color="primary"
-                          @click="addSubItem(item, rowIndex)"
-                        />
+                        <VBtn v-bind="tooltipProps" icon="ri-add-line" size="small" variant="tonal" color="primary" @click="item.subItems.splice(subIndex + 1, 0, newRow())" />
                       </template>
                     </VTooltip>
-                    <VTooltip
-                      text="Duplikasi sub-item"
-                      location="top"
-                    >
+                    <VTooltip text="Hapus baris">
                       <template #activator="{ props: tooltipProps }">
-                        <VBtn
-                          v-bind="tooltipProps"
-                          icon="ri-file-copy-line"
-                          size="small"
-                          variant="tonal"
-                          color="info"
-                          @click="duplicateSubItem(item, rowIndex)"
-                        />
-                      </template>
-                    </VTooltip>
-                    <VTooltip
-                      text="Hapus sub-item"
-                      location="top"
-                    >
-                      <template #activator="{ props: tooltipProps }">
-                        <VBtn
-                          v-bind="tooltipProps"
-                          icon="ri-subtract-line"
-                          size="small"
-                          variant="tonal"
-                          color="error"
-                          @click="removeSubItem(item, rowIndex)"
-                        />
+                        <VBtn v-bind="tooltipProps" icon="ri-delete-bin-line" size="small" variant="tonal" color="error" @click="item.subItems.splice(subIndex, 1)" />
                       </template>
                     </VTooltip>
                   </div>
                 </div>
-              </VCardText>
-            </VCard>
-          </div>
-          <div class="mb-5 mt-2">
-            <VBtn
-              color="primary"
-              variant="outlined"
-              block
-              prepend-icon="ri-add-line"
-              @click="addItem"
-            >
-              Tambah Uraian Baru
-            </VBtn>
-          </div>
-        </template>
-
-        <template v-else>
-          <div
-            v-for="(row, index) in rows"
-            :key="row.key"
-            class="lpj-row"
-            :class="{ 'lpj-row--bulanan': isDosenBulanan }"
-          >
-            <div class="lpj-row-number">
-              {{ index + 1 }}
-            </div>
-
-            <div class="lpj-row-content">
-              <div
-                v-if="row.petugas_nama"
-                class="lpj-row-petugas"
-              >
-                <VIcon
-                  icon="ri-user-settings-line"
-                  size="14"
-                />
-                {{ row.petugas_nama }}
               </div>
-              <VRow :class="{ 'lpj-bulanan-grid': isDosenBulanan }">
-                <VCol
-                  v-if="isKegiatan"
-                  cols="12"
-                  md="2"
-                >
-                  <VSelect
-                    v-model="row.kategori_detail"
-                    label="Kategori"
-                    :items="[
-                      { title: 'Pegawai', value: 'pegawai' },
-                      { title: 'Nonpegawai', value: 'non_pegawai' },
-                    ]"
-                    @update:model-value="onKategoriChange(row)"
-                  />
-                </VCol>
+            </div>
+          </template>
 
-                <VCol
-                  cols="12"
-                  md="2"
-                >
-                  <AppDateTimePicker
-                    v-model="row.tanggal"
-                    label="Tanggal *"
-                    :config="{
-                      altInput: true,
-                      altFormat: 'd F Y',
-                      dateFormat: 'Y-m-d',
-                    }"
-                  />
-                </VCol>
-
-                <VCol
-                  v-if="!isRumahTangga && !isTransportasi && (!isKegiatan || isPegawaiKegiatan(row))"
-                  cols="12"
-                  :md="isKegiatan ? 4 : 5"
-                >
-                  <VAutocomplete
-                    v-model="row.pegawai_id"
-                    :items="pegawaiForRow(row)"
-                    item-title="display"
-                    item-value="id"
-                    label="Pegawai *"
-                    :loading="loadingPegawai"
-                    clearable
-                  />
-                </VCol>
+          <template v-else>
+            <div
+              v-for="(row, index) in displayRows"
+              :key="row.key"
+              class="lpj-row"
+            >
+              <div class="lpj-row-content">
+                <VRow>
+                  <VCol cols="12" md="4" v-if="!isDosenBulanan">
+                    <div class="d-flex align-center gap-3">
+                      <div class="font-weight-medium">
+                        {{ index + 1 }}.
+                      </div>
+                      <div class="flex-grow-1">
+                        <VSelect
+                          v-if="isKegiatan"
+                          v-model="row.kategori_detail"
+                          label="Kategori"
+                          :items="[
+                            { title: 'Pegawai', value: 'pegawai' },
+                            { title: 'Non Pegawai', value: 'non_pegawai' },
+                            { title: 'Mahasiswa', value: 'mahasiswa' }
+                          ]"
+                          density="compact"
+                          hide-details
+                          class="mb-3"
+                          @update:model-value="row.pegawai_id = null"
+                        />
+                        <VAutocomplete
+                          v-if="(!isKegiatan || row.kategori_detail === 'pegawai') && !isTransportasi"
+                          v-model="row.pegawai_id"
+                          label="Pegawai"
+                          :items="pegawaiItems"
+                          item-title="display"
+                          item-value="id"
+                          density="compact"
+                          hide-details
+                          class="mb-3"
+                          clearable
+                        />
+                        <LazyTextField
+                          v-if="!isDosenBulanan"
+                          v-model="row.nama_kegiatan"
+                          label="Uraian Pengeluaran"
+                          density="compact"
+                          hide-details
+                        />
+                      </div>
+                    </div>
+                  </VCol>
+                  
+                  <VCol cols="12" md="3" v-if="!isDosenBulanan">
+                    <LazyTextField
+                      v-model="row.tanggal"
+                      type="date"
+                      label="Tanggal"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                    <LazyTextField
+                      v-if="isTransportasi"
+                      v-model="row.tujuan"
+                      label="Tujuan"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
 
                 <template v-if="isTatapmuka">
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.transport_motor"
-                      type="number"
-                      min="0"
-                      label="Transport Motor"
-                    />
+                  <VCol cols="12" md="10">
+                    <LazyTextField v-model="row.transport_motor" type="number" min="0" label="Transport Motor" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.transport_mobil" type="number" min="0" label="Transport Mobil" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.barokah_mengajar_biasa" type="number" min="0" label="Barokah Mengajar" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.barokah_mengajar_double_degree" type="number" min="0" label="Barokah DD" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.barokah_uas" type="number" min="0" label="Barokah UAS" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.barokah_sempro" type="number" min="0" label="Barokah Sempro" density="compact" hide-details class="mb-3" />
                   </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.hari_transport_motor"
-                      type="number"
-                      min="0"
-                      label="Hari Motor"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.transport_mobil"
-                      type="number"
-                      min="0"
-                      label="Transport Mobil"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.hari_transport_mobil"
-                      type="number"
-                      min="0"
-                      label="Hari Mobil"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.barokah_mengajar_biasa"
-                      type="number"
-                      min="0"
-                      label="Barokah Mengajar"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.jam"
-                      type="number"
-                      min="0"
-                      label="Jam"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.barokah_mengajar_double_degree"
-                      type="number"
-                      min="0"
-                      label="Barokah DD"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.jam_mengajar_double_degree"
-                      type="number"
-                      min="0"
-                      label="Jam DD"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.barokah_uas"
-                      type="number"
-                      min="0"
-                      label="Barokah UAS"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.jumlah_mahasiswa_uas"
-                      type="number"
-                      min="0"
-                      label="Mhs UAS"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.barokah_sempro"
-                      type="number"
-                      min="0"
-                      label="Barokah Sempro"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.jam_sempro"
-                      type="number"
-                      min="0"
-                      label="Jam Sempro"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="4"
-                  >
-                    <VTextField
-                      v-model="row.keterangan_sempro"
-                      label="Keterangan Sempro"
-                    />
+                  <VCol cols="12" md="2">
+                    <LazyTextField v-model="row.hari_transport_motor" type="number" min="0" label="Hari Motor" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.hari_transport_mobil" type="number" min="0" label="Hari Mobil" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.jam" type="number" min="0" label="Jam" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.jam_mengajar_double_degree" type="number" min="0" label="Jam DD" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.jumlah_mahasiswa_uas" type="number" min="0" label="Mhs UAS" density="compact" hide-details class="mb-3" />
+                    <LazyTextField v-model="row.jam_sempro" type="number" min="0" label="Jam Sempro" density="compact" hide-details class="mb-3" />
                   </VCol>
                 </template>
-
                 <template v-if="isKegiatan">
-                  <VCol
-                    cols="12"
-                    :md="isPegawaiKegiatan(row) ? 4 : 5"
-                  >
-                    <VTextField
-                      v-model="row.nama_kegiatan"
-                      :label="isPegawaiKegiatan(row) ? 'Nama Kegiatan' : 'Uraian Pengeluaran'"
-                    />
-                  </VCol>
-                  <template v-if="isPegawaiKegiatan(row)">
-                    <VCol
-                      cols="12"
-                      md="2"
-                    >
-                      <VTextField
-                        v-model="row.transport"
-                        type="number"
-                        min="0"
-                        label="Transport"
-                      />
+                  <template v-if="row.kategori_detail !== 'non_pegawai'">
+                    <VCol cols="12" md="3">
+                      <LazyTextField v-model="row.transport" type="number" min="0" label="Transport" density="compact" hide-details />
                     </VCol>
-                    <VCol
-                      cols="12"
-                      md="2"
-                    >
-                      <VTextField
-                        v-model="row.barokah"
-                        type="number"
-                        min="0"
-                        label="Barokah"
-                      />
+                    <VCol cols="12" md="2">
+                      <LazyTextField v-model="row.barokah" type="number" min="0" label="Barokah" density="compact" hide-details />
                     </VCol>
                   </template>
-                  <VCol
-                    v-else
-                    cols="12"
-                    md="3"
-                  >
-                    <VTextField
-                      v-model="row.nominal"
-                      type="number"
-                      min="0"
-                      label="Nominal"
-                    />
+                  <VCol v-else cols="12" md="5">
+                    <LazyTextField v-model="row.nominal" type="number" min="0" label="Nominal" density="compact" hide-details />
                   </VCol>
                 </template>
-
                 <template v-if="isTransportasi">
                   <VCol
                     cols="12"
                     md="4"
                   >
-                    <VTextField
-                      v-model="row.nama_kegiatan"
-                      label="Uraian Pengeluaran *"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.volume"
+                    <LazyTextField v-model="row.volume"
                       type="number"
                       min="0"
                       label="Volume"
@@ -1383,17 +891,7 @@ onMounted(() => {
                     cols="12"
                     md="2"
                   >
-                    <VTextField
-                      v-model="row.satuan"
-                      label="Satuan"
-                    />
-                  </VCol>
-                  <VCol
-                    cols="12"
-                    md="2"
-                  >
-                    <VTextField
-                      v-model="row.nominal"
+                    <LazyTextField v-model="row.nominal"
                       type="number"
                       min="0"
                       label="Harga Satuan *"
@@ -1418,8 +916,7 @@ onMounted(() => {
                     cols="12"
                     md="3"
                   >
-                    <VTextField
-                      v-model="row.barokah_dosen_tetap"
+                    <LazyTextField v-model="row.barokah_dosen_tetap"
                       type="number"
                       min="0"
                       label="Barokah Tetap"
@@ -1431,8 +928,7 @@ onMounted(() => {
                     cols="12"
                     md="3"
                   >
-                    <VTextField
-                      v-model="row.barokah_struktural"
+                    <LazyTextField v-model="row.barokah_struktural"
                       type="number"
                       min="0"
                       label="Barokah Struktural"
@@ -1534,6 +1030,22 @@ onMounted(() => {
             </div>
           </div>
         </template>
+      </div>
+        
+        <div
+          v-if="batchHasMore"
+          ref="scrollSentinel"
+          class="scroll-sentinel my-5"
+        >
+          <VProgressCircular
+            indeterminate
+            size="20"
+            width="2"
+          />
+          <span class="text-body-2 text-medium-emphasis">
+            Merender data lagi...
+          </span>
+        </div>
       </VCardText>
     </VCard>
 
