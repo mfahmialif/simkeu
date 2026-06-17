@@ -52,7 +52,7 @@ const jumlahMahasiswaUas = ref(0)
 const barokahSempro = ref(0)
 const jamSempro = ref(0)
 const keteranganSempro = ref("")
-const jenisPembayaran = ref("CUS BSI")
+const jenisPembayaran = ref("CUZ BSI")
 const rekapId = ref(null)
 const buktiTransfer = ref(null)
 const existingBuktiTransferUrl = ref(null)
@@ -62,7 +62,7 @@ const removedLampiran = ref([])
 const keterangan = ref("")
 const existingPengeluaran = ref(null)
 
-const jenisPembayaranList = ["CUS BSI", "Transfer"]
+const jenisPembayaranList = ["CUZ BSI", "Transfer"]
 
 const refJam = ref(null)
 
@@ -171,7 +171,7 @@ const resetFormValues = () => {
   barokahSempro.value = 0
   jamSempro.value = 0
   keteranganSempro.value = ""
-  jenisPembayaran.value = "CUS BSI"
+  jenisPembayaran.value = "CUZ BSI"
   rekapId.value = null
   buktiTransfer.value = null
   existingBuktiTransferUrl.value = null
@@ -196,7 +196,7 @@ const fillFormFromData = data => {
   barokahSempro.value = data.barokah_sempro ?? 0
   jamSempro.value = data.jam_sempro ?? (numberValue(data.barokah_sempro) > 0 ? 1 : 0)
   keteranganSempro.value = data.keterangan_sempro ?? ""
-  jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI"
+  jenisPembayaran.value = data.jenis_pembayaran ?? "CUZ BSI"
   rekapId.value = data.rekap_id ?? null
   buktiTransfer.value = null
   existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null

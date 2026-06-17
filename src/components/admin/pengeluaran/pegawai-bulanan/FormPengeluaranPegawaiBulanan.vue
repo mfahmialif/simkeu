@@ -69,7 +69,7 @@ const bulan = ref(null)
 const tahun = ref(null)
 const barokahDosenTetap = ref(null)
 const barokahStruktural = ref(null)
-const jenisPembayaran = ref("CUS BSI")
+const jenisPembayaran = ref("CUZ BSI")
 const rekapId = ref(null)
 const lampiran = ref([])
 const existingLampiran = ref([])
@@ -77,7 +77,7 @@ const removedLampiran = ref([])
 const keterangan = ref("")
 const disabled = ref(false)
 
-const jenisPembayaranList = ["CUS BSI", "Transfer"]
+const jenisPembayaranList = ["CUZ BSI", "Transfer"]
 const showMainDataInForm = computed(() => props.typeForm === "edit")
 const identifierLabel = computed(() => `NIY ${props.pegawaiTitle}`)
 
@@ -151,7 +151,7 @@ const fillFormFromData = data => {
   periode.value = periodValue(bulan.value, tahun.value) ?? periode.value
   barokahDosenTetap.value = data.barokah_dosen_tetap ?? data.total ?? 0
   barokahStruktural.value = data.barokah_struktural ?? 0
-  jenisPembayaran.value = data.jenis_pembayaran ?? "CUS BSI"
+  jenisPembayaran.value = data.jenis_pembayaran ?? "CUZ BSI"
   rekapId.value = data.rekap_id ?? null
   lampiran.value = []
   existingLampiran.value = data.lampiran ?? []

@@ -66,7 +66,7 @@ const newRow = () => ({
   transport: 0,
   barokah: 0,
   nominal: 0,
-  jenis_pembayaran: "CUS BSI",
+  jenis_pembayaran: "CUZ BSI",
   bukti_transfer: null,
   existing_bukti_transfer_url: null,
   lampiran: [],
@@ -86,8 +86,8 @@ const isPegawai = row => row.kategori_detail === "pegawai"
 
 const paymentItems = row => (
   isPegawai(row)
-    ? ["CUS BSI", "Transfer"]
-    : ["Tunai", "CUS BSI", "Transfer"]
+    ? ["CUZ BSI", "Transfer"]
+    : ["Tunai", "CUZ BSI", "Transfer"]
 )
 
 const rowTotal = row => Math.round(
@@ -215,7 +215,7 @@ const detailToRow = item => ({
   transport: Number(item.transport || 0),
   barokah: Number(item.barokah || 0),
   nominal: Number(item.nominal || 0),
-  jenis_pembayaran: item.jenis_pembayaran || (item.kategori_detail === "non_pegawai" ? "Tunai" : "CUS BSI"),
+  jenis_pembayaran: item.jenis_pembayaran || (item.kategori_detail === "non_pegawai" ? "Tunai" : "CUZ BSI"),
   bukti_transfer: null,
   existing_bukti_transfer_url: item.bukti_transfer_url || null,
   lampiran: [],
@@ -274,7 +274,7 @@ const onCategoryChange = row => {
 
   if (isPegawai(row)) {
     row.nominal = 0
-    row.jenis_pembayaran = "CUS BSI"
+    row.jenis_pembayaran = "CUZ BSI"
   } else {
     row.transport = 0
     row.barokah = 0

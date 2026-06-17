@@ -1,0 +1,1 @@
+function c(e,t){const o=URL.createObjectURL(e),n=document.createElement("a");n.href=o,n.download=t==="Template Batch Payment.txt"&&e.name?e.name:t||e.name,document.body.appendChild(n),n.click(),n.remove(),URL.revokeObjectURL(o)}function a(e){const t=URL.createObjectURL(e);window.open(t,"_blank","noopener"),setTimeout(()=>URL.revokeObjectURL(t),1e4)}export{c as d,a as o};

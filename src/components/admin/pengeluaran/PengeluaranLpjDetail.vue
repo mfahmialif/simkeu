@@ -112,7 +112,7 @@ const newRow = () => {
     rab_detail_id: null,
     tanggal: defaultRowDate(),
     pegawai_id: null,
-    jenis_pembayaran: "CUS BSI",
+    jenis_pembayaran: "CUZ BSI",
     keterangan: "",
     lampiran: [],
   }
@@ -326,8 +326,8 @@ const paymentItems = row => (
   isRumahTangga.value || isTransportasi.value
     ? ["Tunai", "Transfer"]
     : isKegiatan.value && !isPegawaiKegiatan(row)
-      ? ["Tunai", "CUS BSI", "Transfer"]
-      : ["CUS BSI", "Transfer"]
+      ? ["Tunai", "CUZ BSI", "Transfer"]
+      : ["CUZ BSI", "Transfer"]
 )
 
 const errorMessage = err => {
@@ -352,7 +352,7 @@ const detailToRow = item => ({
   kategori_detail: item.kategori_detail || "pegawai",
   prioritas: item.prioritas || "Sedang",
   jenis_pembayaran: item.jenis_pembayaran || (
-    isRumahTangga.value || isTransportasi.value || item.kategori_detail === "non_pegawai" ? "Tunai" : "CUS BSI"
+    isRumahTangga.value || isTransportasi.value || item.kategori_detail === "non_pegawai" ? "Tunai" : "CUZ BSI"
   ),
   lampiran: selectedFileSafeArray(item.lampiran),
 })
@@ -542,7 +542,7 @@ const onKategoriChange = row => {
   }
 
   row.nominal = 0
-  row.jenis_pembayaran = "CUS BSI"
+  row.jenis_pembayaran = "CUZ BSI"
 }
 
 const validateRows = () => {

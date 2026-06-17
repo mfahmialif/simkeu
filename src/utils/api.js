@@ -87,7 +87,8 @@ export const $api = async (url, options = {}) => {
 
     const isBlobResponse =
       acceptHeader.includes("application/vnd.openxmlformats-officedocument") ||
-      acceptHeader.includes("application/pdf")
+      acceptHeader.includes("application/pdf") ||
+      acceptHeader.includes("text/plain")
 
     if (isBlobResponse) {
       const blob = await response.blob()
@@ -97,6 +98,14 @@ export const $api = async (url, options = {}) => {
 
         error.status = response.status
         throw error
+      }
+      
+      const disposition = response.headers.get("Content-Disposition")
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^"]+)"?/)
+        if (match && match[1]) {
+          blob.name = match[1]
+        }
       }
       
       return blob

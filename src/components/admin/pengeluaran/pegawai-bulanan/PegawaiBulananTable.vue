@@ -53,6 +53,7 @@ const petugasList = ref([])
 const selectAllPages = ref(false)
 const isLoadingExcel = ref(false)
 const isLoadingBsiExcel = ref(false)
+const isLoadingBsiTxt = ref(false)
 const isLoadingBsiCopy = ref(false)
 let searchTimer = null
 
@@ -333,9 +334,9 @@ const exportBsiExcel = async () => {
       },
     })
 
-    downloadFileExport(response, `CUS BSI ${props.title}.xlsx`)
+    downloadFileExport(response, `CUZ BSI ${props.title}.xlsx`)
     showSnackbar({
-      text: "Laporan CUS BSI berhasil di download.",
+      text: "Laporan CUZ BSI berhasil di download.",
       color: "success",
     })
   } catch (err) {
@@ -345,6 +346,40 @@ const exportBsiExcel = async () => {
     })
   } finally {
     isLoadingBsiExcel.value = false
+  }
+}
+
+const exportBsiTxt = async () => {
+  try {
+    isLoadingBsiTxt.value = true
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api(`${props.endpoint}/export-bsi-txt`, {
+      method: "GET",
+      headers: {
+        Accept: "text/plain",
+      },
+      body: {
+        search: search.value,
+        ...requestFilterPayload.value,
+      },
+    })
+
+    downloadFileExport(response, "Template Batch Payment.txt")
+    showSnackbar({
+      text: "TXT CUZ BSI berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    isLoadingBsiTxt.value = false
   }
 }
 
@@ -369,7 +404,7 @@ const copyBsiData = async () => {
 
     if (!text || total === 0) {
       showSnackbar({
-        text: "Tidak ada data CUS BSI untuk disalin.",
+        text: "Tidak ada data CUZ BSI untuk disalin.",
         color: "warning",
       })
       
@@ -378,7 +413,7 @@ const copyBsiData = async () => {
 
     await copyTextToClipboard(text)
     showSnackbar({
-      text: `${total} data CUS BSI berhasil disalin.`,
+      text: `${total} data CUZ BSI berhasil disalin.`,
       color: "success",
     })
   } catch (err) {
@@ -682,39 +717,56 @@ onMounted(() => {
 
         <VSpacer />
 
-        <div class="d-flex flex-wrap gap-3 align-center">
-          <VBtn
-            v-if="showPeriod"
-            variant="outlined"
-            color="success"
-            prepend-icon="ri-file-excel-2-line"
-            :loading="isLoadingExcel"
-            @click="exportExcel"
-          >
-            Download Excel
-          </VBtn>
+        <div class="d-flex flex-wrap gap-3 align-center justify-end w-100 w-sm-auto ms-auto">
+          <VMenu>
+            <template #activator="{ props }">
+              <VBtn
+                v-bind="props"
+                variant="outlined"
+                color="secondary"
+                prepend-icon="ri-download-line"
+                append-icon="ri-arrow-down-s-line"
+                class="w-100 w-sm-auto"
+                :loading="isLoadingExcel || isLoadingBsiExcel || isLoadingBsiTxt"
+              >
+                Download
+              </VBtn>
+            </template>
+            <VList>
+              <VListItem @click="exportExcel" v-if="showPeriod">
+                <template #prepend>
+                  <VIcon icon="ri-file-excel-line" class="me-2" color="success" />
+                </template>
+                <VListItemTitle>Laporan Excel</VListItemTitle>
+              </VListItem>
+              <VListItem @click="exportBsiExcel">
+                <template #prepend>
+                  <VIcon icon="ri-bank-card-line" class="me-2" color="success" />
+                </template>
+                <VListItemTitle>Excel CUZ BSI</VListItemTitle>
+              </VListItem>
+              <VListItem @click="exportBsiTxt">
+                <template #prepend>
+                  <VIcon icon="ri-file-text-line" class="me-2" color="success" />
+                </template>
+                <VListItemTitle>TXT CUZ BSI</VListItemTitle>
+              </VListItem>
+            </VList>
+          </VMenu>
 
           <VBtn
-            variant="outlined"
-            color="success"
-            prepend-icon="ri-bank-card-line"
-            :loading="isLoadingBsiExcel"
-            @click="exportBsiExcel"
-          >
-            Download CUS BSI
-          </VBtn>
-
-          <VBtn
-            variant="outlined"
-            color="primary"
+            class="w-100 w-sm-auto"
+            variant="tonal"
+            color="secondary"
             prepend-icon="ri-file-copy-line"
             :loading="isLoadingBsiCopy"
             @click="copyBsiData"
           >
-            Salin untuk CUS BSI
+            Salin CUZ BSI
           </VBtn>
 
           <VBtn
+            class="w-100 w-sm-auto"
             color="primary"
             prepend-icon="ri-add-line"
             @click="$router.push(`${basePath}/add`)"

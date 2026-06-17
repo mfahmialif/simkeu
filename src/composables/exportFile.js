@@ -3,7 +3,7 @@ function downloadFileExport(blob, fileName) {
   const a = document.createElement("a")
 
   a.href = url
-  a.download = fileName
+  a.download = (fileName === "Template Batch Payment.txt" && blob.name) ? blob.name : (fileName || blob.name)
   document.body.appendChild(a)
   a.click()
   a.remove()

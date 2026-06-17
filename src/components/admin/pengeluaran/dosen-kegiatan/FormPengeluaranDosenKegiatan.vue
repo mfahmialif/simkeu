@@ -61,7 +61,7 @@ const namaKegiatan = ref("")
 const transport = ref(null)
 const barokah = ref(null)
 const nominal = ref(null)
-const jenisPembayaran = ref("CUS BSI")
+const jenisPembayaran = ref("CUZ BSI")
 const rekapId = ref(props.initialRekapId)
 const selectedRekap = ref(null)
 const buktiTransfer = ref(null)
@@ -84,7 +84,7 @@ const showDateInForm = computed(() => props.typeForm === "edit" || !isPegawai.va
 
 const jenisPembayaranList = computed(() => (
   isPegawai.value
-    ? ["CUS BSI", "Transfer"]
+    ? ["CUZ BSI", "Transfer"]
     : ["Tunai", "Transfer"]
 ))
 
@@ -186,8 +186,8 @@ watch(kategoriDetail, newValue => {
   }
 
   nominal.value = null
-  if (!["CUS BSI", "Transfer"].includes(jenisPembayaran.value)) {
-    jenisPembayaran.value = "CUS BSI"
+  if (!["CUZ BSI", "Transfer"].includes(jenisPembayaran.value)) {
+    jenisPembayaran.value = "CUZ BSI"
   }
 }, { immediate: true })
 
@@ -214,7 +214,7 @@ const fillFormFromData = data => {
   barokah.value = data.barokah ?? 0
   nominal.value = data.nominal ?? null
   jenisPembayaran.value = data.jenis_pembayaran
-    ?? (data.kategori_detail === "non_pegawai" ? "Tunai" : "CUS BSI")
+    ?? (data.kategori_detail === "non_pegawai" ? "Tunai" : "CUZ BSI")
   rekapId.value = data.rekap_id ?? props.initialRekapId ?? null
   buktiTransfer.value = null
   existingBuktiTransferUrl.value = data.bukti_transfer_url ?? null

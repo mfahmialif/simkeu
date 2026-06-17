@@ -40,7 +40,7 @@ const tanggal = ref(fDate(new Date()))
 const periode = ref(null)
 const bulan = ref(null)
 const tahun = ref(null)
-const jenisPembayaran = ref("CUS BSI")
+const jenisPembayaran = ref("CUZ BSI")
 const search = ref("")
 const rows = ref([])
 const currentPage = ref(1)
@@ -48,7 +48,7 @@ const rowsPerPage = ref(15)
 const loading = ref(false)
 const saving = ref(false)
 
-const jenisPembayaranList = ["CUS BSI", "Transfer"]
+const jenisPembayaranList = ["CUZ BSI", "Transfer"]
 const rowsPerPageOptions = [15, 30, 50]
 const isBatchEdit = computed(() => route.query.edit_batch === "1")
 

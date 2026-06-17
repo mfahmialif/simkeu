@@ -7,6 +7,7 @@ import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRe
 import PengeluaranStatCards from "@/components/admin/pengeluaran/PengeluaranStatCards.vue"
 import { downloadFileExport } from "@/composables/exportFile"
 import { formatRupiah } from "@/composables/formatRupiah"
+import { copyTextToClipboard } from "@/utils/clipboard"
 import { defaultPetugasPengeluaranId, fetchPetugasPengeluaranOptions } from "@/composables/petugasPengeluaran"
 
 const page = ref(1)
@@ -28,6 +29,9 @@ const selectedPetugasId = ref(null)
 const petugasList = ref([])
 const selectAllPages = ref(false)
 const isLoadingExcel = ref(false)
+const isLoadingBsiExcel = ref(false)
+const isLoadingBsiTxt = ref(false)
+const isLoadingBsiCopy = ref(false)
 
 const filterModeOptions = [
   { title: "Harian", value: "harian" },
@@ -232,6 +236,118 @@ const exportExcel = async () => {
     })
   } finally {
     isLoadingExcel.value = false
+  }
+}
+
+const exportBsiExcel = async () => {
+  try {
+    isLoadingBsiExcel.value = true
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api("/admin/pengeluaran/rumah-tangga/export-bsi", {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        search: search.value,
+        ...requestFilterPayload.value,
+      },
+    })
+
+    downloadFileExport(response, "CUZ BSI Pengeluaran Rumah Tangga.xlsx")
+    showSnackbar({
+      text: "Laporan CUZ BSI berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    isLoadingBsiExcel.value = false
+  }
+}
+
+const exportBsiTxt = async () => {
+  try {
+    isLoadingBsiTxt.value = true
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api("/admin/pengeluaran/rumah-tangga/export-bsi-txt", {
+      method: "GET",
+      headers: {
+        Accept: "text/plain",
+      },
+      body: {
+        search: search.value,
+        ...requestFilterPayload.value,
+      },
+    })
+
+    downloadFileExport(response, "Template Batch Payment.txt")
+    showSnackbar({
+      text: "TXT CUZ BSI berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    isLoadingBsiTxt.value = false
+  }
+}
+
+const copyBsiData = async () => {
+  try {
+    isLoadingBsiCopy.value = true
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api("/admin/pengeluaran/rumah-tangga/copy-bsi", {
+      method: "GET",
+      body: {
+        search: search.value,
+        ...requestFilterPayload.value,
+      },
+    })
+
+    const text = response.data?.text || ""
+    const total = Number(response.data?.total || 0)
+
+    if (!text || total === 0) {
+      showSnackbar({
+        text: "Tidak ada data CUZ BSI untuk disalin.",
+        color: "warning",
+      })
+      
+      return
+    }
+
+    await copyTextToClipboard(text)
+    showSnackbar({
+      text: `${total} data CUZ BSI berhasil disalin.`,
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: err.data?.message || err.message || "Gagal menyalin data CUZ BSI.",
+      color: "error",
+    })
+  } finally {
+    isLoadingBsiCopy.value = false
   }
 }
 
@@ -453,25 +569,63 @@ onMounted(() => {
 
           <VSpacer />
 
-          <div class="d-flex flex-wrap gap-3 align-center">
-            <VBtn
-              variant="outlined"
-              color="success"
-              prepend-icon="ri-file-excel-2-line"
-              :loading="isLoadingExcel"
-              @click="exportExcel"
-            >
-              Download Excel
-            </VBtn>
+          <div class="d-flex flex-wrap gap-3 align-center justify-end w-100 w-sm-auto ms-auto">
+          <VMenu>
+            <template #activator="{ props }">
+              <VBtn
+                v-bind="props"
+                variant="outlined"
+                color="secondary"
+                prepend-icon="ri-download-line"
+                append-icon="ri-arrow-down-s-line"
+                class="w-100 w-sm-auto"
+                :loading="isLoadingExcel || isLoadingBsiExcel || isLoadingBsiTxt"
+              >
+                Download
+              </VBtn>
+            </template>
+            <VList>
+              <VListItem @click="exportExcel">
+                <template #prepend>
+                  <VIcon icon="ri-file-excel-line" class="me-2" color="success" />
+                </template>
+                <VListItemTitle>Laporan Excel</VListItemTitle>
+              </VListItem>
+              <VListItem @click="exportBsiExcel">
+                <template #prepend>
+                  <VIcon icon="ri-bank-card-line" class="me-2" color="success" />
+                </template>
+                <VListItemTitle>Excel CUZ BSI</VListItemTitle>
+              </VListItem>
+              <VListItem @click="exportBsiTxt">
+                <template #prepend>
+                  <VIcon icon="ri-file-text-line" class="me-2" color="success" />
+                </template>
+                <VListItemTitle>TXT CUZ BSI</VListItemTitle>
+              </VListItem>
+            </VList>
+          </VMenu>
 
-            <VBtn
-              color="primary"
-              prepend-icon="ri-add-line"
-              @click="$router.push('/admin/pengeluaran/rumah-tangga/add')"
-            >
-              Add Data
-            </VBtn>
-          </div>
+          <VBtn
+            class="w-100 w-sm-auto"
+            variant="tonal"
+            color="secondary"
+            prepend-icon="ri-file-copy-line"
+            :loading="isLoadingBsiCopy"
+            @click="copyBsiData"
+          >
+            Salin CUZ BSI
+          </VBtn>
+
+          <VBtn
+            class="w-100 w-sm-auto"
+            color="primary"
+            prepend-icon="ri-add-line"
+            @click="$router.push('/admin/pengeluaran/rumah-tangga/add')"
+          >
+            Add Data
+          </VBtn>
+        </div>
         </VCardText>
 
         <VDataTableServer
