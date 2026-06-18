@@ -614,11 +614,12 @@ onMounted(() => {
                       cols="12"
                       md="2"
                     >
-                      <LazyTextField v-model="row.transport"
+                      <VTextField
+                        v-model="row.transport"
                         type="number"
                         min="0"
                         label="Transport"
-                        :hint="formatRupiah(row.transport)"
+                        :hint="formatRupiah(row.transport || 0)"
                         persistent-hint
                       />
                     </VCol>
@@ -627,11 +628,12 @@ onMounted(() => {
                       cols="12"
                       md="2"
                     >
-                      <LazyTextField v-model="row.barokah"
+                      <VTextField
+                        v-model="row.barokah"
                         type="number"
                         min="0"
                         label="Barokah"
-                        :hint="formatRupiah(row.barokah)"
+                        :hint="formatRupiah(row.barokah || 0)"
                         persistent-hint
                       />
                     </VCol>
@@ -642,12 +644,13 @@ onMounted(() => {
                     cols="12"
                     md="3"
                   >
-                    <LazyTextField v-model="row.nominal"
+                    <VTextField
+                      v-model="row.nominal"
                       type="number"
                       min="0"
                       label="Nominal *"
                       :rules="[requiredValidator]"
-                      :hint="formatRupiah(row.nominal)"
+                      :hint="formatRupiah(row.nominal || 0)"
                       persistent-hint
                     />
                   </VCol>

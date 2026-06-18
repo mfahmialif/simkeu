@@ -681,6 +681,19 @@ watch(search, () => {
   searchTimer = setTimeout(fetchData, 350)
 })
 
+
+watch(filterTanggalMulai, newVal => {
+  if (newVal && !filterTanggalAkhir.value) {
+    filterTanggalAkhir.value = newVal
+  }
+})
+
+watch(filterTanggalAkhir, newVal => {
+  if (newVal && !filterTanggalMulai.value) {
+    filterTanggalMulai.value = newVal
+  }
+})
+
 watch([filterTanggalMulai, filterTanggalAkhir, filterBulanTahun], () => {
   page.value = 1
   fetchData()
@@ -946,8 +959,8 @@ onBeforeUnmount(() => {
                 <div
                   v-if="
                     item.jumlah_sementara !== null &&
-                    Number(item.jumlah_data || 0) > 0 &&
-                    Number(item.selisih_sementara || 0) > 0
+                      Number(item.jumlah_data || 0) > 0 &&
+                      Number(item.selisih_sementara || 0) > 0
                   "
                   class="rekap-item-sync"
                 >
@@ -1906,5 +1919,18 @@ onBeforeUnmount(() => {
     min-inline-size: 36px;
     inline-size: 36px;
   }
+}
+</style>
+
+<style lang="scss">
+:global(.flatpickr-calendar .flatpickr-monthSelect-month) {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+:global(.flatpickr-calendar .flatpickr-monthSelect-month:hover) {
+  background-color: rgba(var(--v-theme-on-surface), 0.08);
+}
+:global(.flatpickr-calendar .flatpickr-monthSelect-month.selected) {
+  background-color: rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-on-primary));
 }
 </style>

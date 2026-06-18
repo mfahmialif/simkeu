@@ -3,6 +3,7 @@ import PengeluaranLampiranInput from "@/components/admin/pengeluaran/Pengeluaran
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue"
 import { showSnackbar } from "@/composables/snackbar"
 import { appendLampiranFormData } from "@/utils/lampiran"
+import { formatRupiah } from "@/composables/formatRupiah"
 
 const props = defineProps({
   typeForm: {
@@ -305,7 +306,9 @@ onMounted(() => {
               min="0"
               label="Harga Satuan *"
               density="compact"
-              hide-details
+              hide-details="auto"
+              :hint="formatRupiah(nominal)"
+              persistent-hint
               :rules="[requiredValidator]"
             />
           </VCol>

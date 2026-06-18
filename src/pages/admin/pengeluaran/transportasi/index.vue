@@ -361,6 +361,19 @@ watch(filterMode, () => {
   fetchData()
 })
 
+
+watch(tanggalMulai, newVal => {
+  if (newVal && !tanggalAkhir.value) {
+    tanggalAkhir.value = newVal
+  }
+})
+
+watch(tanggalAkhir, newVal => {
+  if (newVal && !tanggalMulai.value) {
+    tanggalMulai.value = newVal
+  }
+})
+
 watch([tanggalHarian, tanggalMulai, tanggalAkhir, selectedRekapId, selectedPetugasId, search], () => {
   selectedRows.value = []
   selectAllPages.value = false
@@ -570,62 +583,74 @@ onMounted(() => {
           <VSpacer />
 
           <div class="d-flex flex-wrap gap-3 align-center justify-end w-100 w-sm-auto ms-auto">
-          <VMenu>
-            <template #activator="{ props }">
-              <VBtn
-                v-bind="props"
-                variant="outlined"
-                color="secondary"
-                prepend-icon="ri-download-line"
-                append-icon="ri-arrow-down-s-line"
-                class="w-100 w-sm-auto"
-                :loading="isLoadingExcel || isLoadingBsiExcel || isLoadingBsiTxt"
-              >
-                Download
-              </VBtn>
-            </template>
-            <VList>
-              <VListItem @click="exportExcel">
-                <template #prepend>
-                  <VIcon icon="ri-file-excel-line" class="me-2" color="success" />
-                </template>
-                <VListItemTitle>Laporan Excel</VListItemTitle>
-              </VListItem>
-              <VListItem @click="exportBsiExcel">
-                <template #prepend>
-                  <VIcon icon="ri-bank-card-line" class="me-2" color="success" />
-                </template>
-                <VListItemTitle>Excel CUZ BSI</VListItemTitle>
-              </VListItem>
-              <VListItem @click="exportBsiTxt">
-                <template #prepend>
-                  <VIcon icon="ri-file-text-line" class="me-2" color="success" />
-                </template>
-                <VListItemTitle>TXT CUZ BSI</VListItemTitle>
-              </VListItem>
-            </VList>
-          </VMenu>
+            <VMenu>
+              <template #activator="{ props }">
+                <VBtn
+                  v-bind="props"
+                  variant="outlined"
+                  color="secondary"
+                  prepend-icon="ri-download-line"
+                  append-icon="ri-arrow-down-s-line"
+                  class="w-100 w-sm-auto"
+                  :loading="isLoadingExcel || isLoadingBsiExcel || isLoadingBsiTxt"
+                >
+                  Download
+                </VBtn>
+              </template>
+              <VList>
+                <VListItem @click="exportExcel">
+                  <template #prepend>
+                    <VIcon
+                      icon="ri-file-excel-line"
+                      class="me-2"
+                      color="success"
+                    />
+                  </template>
+                  <VListItemTitle>Laporan Excel</VListItemTitle>
+                </VListItem>
+                <VListItem @click="exportBsiExcel">
+                  <template #prepend>
+                    <VIcon
+                      icon="ri-bank-card-line"
+                      class="me-2"
+                      color="success"
+                    />
+                  </template>
+                  <VListItemTitle>Excel CUZ BSI</VListItemTitle>
+                </VListItem>
+                <VListItem @click="exportBsiTxt">
+                  <template #prepend>
+                    <VIcon
+                      icon="ri-file-text-line"
+                      class="me-2"
+                      color="success"
+                    />
+                  </template>
+                  <VListItemTitle>TXT CUZ BSI</VListItemTitle>
+                </VListItem>
+              </VList>
+            </VMenu>
 
-          <VBtn
-            class="w-100 w-sm-auto"
-            variant="tonal"
-            color="secondary"
-            prepend-icon="ri-file-copy-line"
-            :loading="isLoadingBsiCopy"
-            @click="copyBsiData"
-          >
-            Salin CUZ BSI
-          </VBtn>
+            <VBtn
+              class="w-100 w-sm-auto"
+              variant="tonal"
+              color="secondary"
+              prepend-icon="ri-file-copy-line"
+              :loading="isLoadingBsiCopy"
+              @click="copyBsiData"
+            >
+              Salin CUZ BSI
+            </VBtn>
 
-          <VBtn
-            class="w-100 w-sm-auto"
-            color="primary"
-            prepend-icon="ri-add-line"
-            @click="$router.push('/admin/pengeluaran/transportasi/add')"
-          >
-            Add Data
-          </VBtn>
-        </div>
+            <VBtn
+              class="w-100 w-sm-auto"
+              color="primary"
+              prepend-icon="ri-add-line"
+              @click="$router.push('/admin/pengeluaran/transportasi/add')"
+            >
+              Add Data
+            </VBtn>
+          </div>
         </VCardText>
 
         <VDataTableServer

@@ -181,21 +181,21 @@ const fetchBatchRows = async () => {
     const newRows = (response.data?.data || []).map(detailToRow)
 
     originalRowIds.value = newRows.map(r => r.id).filter(Boolean)
-      originalRowsState.value = new Map()
-      newRows.forEach(row => {
-        if (row.id) {
-          originalRowsState.value.set(row.id, JSON.stringify({
-            tanggal: row.tanggal,
-            prioritas: row.prioritas,
-            nama_kegiatan: row.nama_kegiatan,
-            nominal: row.nominal,
-            volume: row.volume,
-            satuan: row.satuan,
-            jenis_pembayaran: row.jenis_pembayaran,
-            keterangan: row.keterangan
-          }))
-        }
-      })
+    originalRowsState.value = new Map()
+    newRows.forEach(row => {
+      if (row.id) {
+        originalRowsState.value.set(row.id, JSON.stringify({
+          tanggal: row.tanggal,
+          prioritas: row.prioritas,
+          nama_kegiatan: row.nama_kegiatan,
+          nominal: row.nominal,
+          volume: row.volume,
+          satuan: row.satuan,
+          jenis_pembayaran: row.jenis_pembayaran,
+          keterangan: row.keterangan,
+        }))
+      }
+    })
     rows.value = newRows.length ? newRows : [newRow()]
   } catch (err) {
     showSnackbar({
@@ -299,12 +299,13 @@ const submitBatchEdit = async () => {
     formData.append(`deleted_ids[${index}]`, id)
   })
 
-    let modifiedCount = 0
+  let modifiedCount = 0
   let sendIndex = 0
   rows.value.forEach((row, index) => {
     let isModified = true
     if (row.id && originalRowsState.value.has(row.id)) {
       const original = originalRowsState.value.get(row.id)
+
       const current = JSON.stringify({
         tanggal: row.tanggal,
         prioritas: row.prioritas,
@@ -313,8 +314,9 @@ const submitBatchEdit = async () => {
         volume: row.volume,
         satuan: row.satuan,
         jenis_pembayaran: row.jenis_pembayaran,
-        keterangan: row.keterangan
+        keterangan: row.keterangan,
       })
+
       if (original === current && !row.bukti_transfer && row.lampiran?.length === 0 && row.removed_lampiran?.length === 0) {
         isModified = false
       }
@@ -560,7 +562,8 @@ onMounted(() => {
                     cols="12"
                     md="1"
                   >
-                    <LazyTextField v-model="row.volume"
+                    <LazyTextField
+                      v-model="row.volume"
                       type="number"
                       min="0"
                       label="Vol"
@@ -571,14 +574,15 @@ onMounted(() => {
                     cols="12"
                     md="2"
                   >
-                    <LazyTextField v-model="row.nominal"
+                    <VTextField
+                      v-model="row.nominal"
                       type="number"
                       min="0"
                       label="Harga *"
                       :rules="[requiredValidator]"
                       :hint="formatRupiah(row.nominal)"
                       persistent-hint
-                    />
+                     hide-details="auto"/>
                   </VCol>
 
                   <VCol

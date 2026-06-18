@@ -2,6 +2,7 @@
 /* eslint-disable camelcase, import/extensions */
 import { downloadFileExport } from "@/composables/exportFile"
 import { formatRupiah } from "@/composables/formatRupiah"
+import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue"
 import { notifyPengeluaranRekapUpdated } from "@/composables/pengeluaranRekap"
 import { showSnackbar } from "@/composables/snackbar"
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js"
@@ -112,7 +113,7 @@ const itemsToDelete = ref([])
 let rabSearchTimer = null
 let lpjSearchTimer = null
 const selectedIds = computed(() => activeDataTab.value === "rab" ? selectedRabIds.value : selectedLpjIds.value)
-const lpjEditorRowLimit = 500
+const lpjEditorRowLimit = 999999
 
 const detailExportPayload = computed(() => ({
   tab: activeDataTab.value,
@@ -164,8 +165,10 @@ const tableHeaders = computed(() => {
     ...headers,
     ...detailHeaders,
     { title: "Jenis Pembayaran", key: "jenis_pembayaran" },
+    { title: "Bukti Transfer", key: "bukti_transfer", sortable: false },
     { title: "Total", key: "total" },
     { title: "Keterangan", key: "keterangan" },
+    { title: "Lampiran", key: "lampiran", sortable: false },
   ]
 
   if (canModify.value) {
@@ -303,6 +306,7 @@ const fetchLpj = async () => {
     })
 
     lpj.value = response.data?.lpj || null
+
     const details = response.data?.details || []
     const rows = Array.isArray(details) ? details : details.data || []
 
@@ -517,6 +521,8 @@ const paymentColor = value => {
 
   return "success"
 }
+
+const buktiTransferUrl = item => item?.bukti_transfer_url || null
 
 const openEditRekapDialog = () => {
   nama.value = rekap.value?.nama || ""
@@ -826,8 +832,8 @@ onBeforeUnmount(() => {
         <VAlert
           v-if="
             rekap?.jumlah_sementara !== null &&
-            Number(rekap?.jumlah_data || 0) > 0 &&
-            Number(rekap?.selisih_sementara || 0) > 0
+              Number(rekap?.jumlah_data || 0) > 0 &&
+              Number(rekap?.selisih_sementara || 0) > 0
           "
           type="warning"
           variant="tonal"
@@ -1043,8 +1049,28 @@ onBeforeUnmount(() => {
               {{ formatRupiah(item.total) }}
             </template>
 
+            <template #item.bukti_transfer="{ item }">
+              <VBtn
+                v-if="buktiTransferUrl(item)"
+                :href="buktiTransferUrl(item)"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="tonal"
+                size="small"
+                color="primary"
+                prepend-icon="ri-eye-line"
+              >
+                Lihat
+              </VBtn>
+              <span v-else>-</span>
+            </template>
+
             <template #item.keterangan="{ item }">
               {{ item.keterangan || "-" }}
+            </template>
+
+            <template #item.lampiran="{ item }">
+              <PengeluaranLampiranList :items="item.lampiran || []" />
             </template>
 
             <template #item.actions="{ item }">
@@ -1173,8 +1199,28 @@ onBeforeUnmount(() => {
               {{ formatRupiah(item.total) }}
             </template>
 
+            <template #item.bukti_transfer="{ item }">
+              <VBtn
+                v-if="buktiTransferUrl(item)"
+                :href="buktiTransferUrl(item)"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="tonal"
+                size="small"
+                color="primary"
+                prepend-icon="ri-eye-line"
+              >
+                Lihat
+              </VBtn>
+              <span v-else>-</span>
+            </template>
+
             <template #item.keterangan="{ item }">
               {{ item.keterangan || "-" }}
+            </template>
+
+            <template #item.lampiran="{ item }">
+              <PengeluaranLampiranList :items="item.lampiran || []" />
             </template>
 
             <template #item.actions="{ item }">

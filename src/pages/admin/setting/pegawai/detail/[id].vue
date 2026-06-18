@@ -10,6 +10,7 @@ const route = useRoute()
 
 const id = route.params.id
 const pegawai = ref({})
+
 const barokah = ref({
   filters: {},
   stats: {},
@@ -27,6 +28,7 @@ const filterMode = ref("bulan")
 
 const today = new Date()
 const selectedMonth = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`)
+
 const dateRange = ref({
   start: `${selectedMonth.value}-01`,
   end: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`,

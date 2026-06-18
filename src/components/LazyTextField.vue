@@ -1,8 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue'
 
-defineOptions({ inheritAttrs: false })
-
 const props = defineProps({
   modelValue: {
     type: [String, Number],
@@ -11,6 +9,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
+
+defineOptions({ inheritAttrs: false })
 
 const internalValue = ref(props.modelValue)
 

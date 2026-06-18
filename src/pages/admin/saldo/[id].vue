@@ -10,6 +10,7 @@ const router = useRouter()
 const loading = ref(true)
 const saving = ref(false)
 const detail = ref(null)
+
 const form = ref({
   module_key: null,
   tanggal: new Date().toISOString().slice(0, 10),
@@ -113,8 +114,12 @@ onMounted(() => {
         >
           Kembali
         </VBtn>
-        <h4 class="text-h4 font-weight-medium">Detail Saldo {{ summary.petugas_name || "-" }}</h4>
-        <div class="text-body-1 text-medium-emphasis mt-1">Sumber saldo, tambahan saldo, dan total saldo akhir.</div>
+        <h4 class="text-h4 font-weight-medium">
+          Detail Saldo {{ summary.petugas_name || "-" }}
+        </h4>
+        <div class="text-body-1 text-medium-emphasis mt-1">
+          Sumber saldo, tambahan saldo, dan total saldo akhir.
+        </div>
       </div>
 
       <VBtn
@@ -127,37 +132,61 @@ onMounted(() => {
       </VBtn>
     </div>
 
-    <div v-if="loading && !detail" class="text-center pa-10">
-      <VProgressCircular indeterminate color="primary" class="mb-4" />
-      <div class="text-body-1 text-medium-emphasis">Memuat detail saldo...</div>
+    <div
+      v-if="loading && !detail"
+      class="text-center pa-10"
+    >
+      <VProgressCircular
+        indeterminate
+        color="primary"
+        class="mb-4"
+      />
+      <div class="text-body-1 text-medium-emphasis">
+        Memuat detail saldo...
+      </div>
     </div>
 
     <template v-else>
       <VRow class="mb-4">
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VCard>
             <VCardText>
-              <div class="text-body-2 text-medium-emphasis mb-1">Saldo Sistem</div>
+              <div class="text-body-2 text-medium-emphasis mb-1">
+                Saldo Sistem
+              </div>
               <div class="text-h5 font-weight-medium">
                 {{ formatRupiah((summary.total_saldo || 0) - (summary.total_tambahan || 0)) }}
               </div>
             </VCardText>
           </VCard>
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VCard>
             <VCardText>
-              <div class="text-body-2 text-medium-emphasis mb-1">Saldo Tambahan</div>
+              <div class="text-body-2 text-medium-emphasis mb-1">
+                Saldo Tambahan
+              </div>
               <div class="text-h5 font-weight-medium text-success">
                 {{ formatRupiah(summary.total_tambahan || 0) }}
               </div>
             </VCardText>
           </VCard>
         </VCol>
-        <VCol cols="12" md="4">
+        <VCol
+          cols="12"
+          md="4"
+        >
           <VCard>
             <VCardText>
-              <div class="text-body-2 text-medium-emphasis mb-1">Total Saldo</div>
+              <div class="text-body-2 text-medium-emphasis mb-1">
+                Total Saldo
+              </div>
               <div
                 class="text-h5 font-weight-medium"
                 :class="`text-${saldoColor(summary.total_saldo || 0)}`"
@@ -170,7 +199,10 @@ onMounted(() => {
       </VRow>
 
       <VRow>
-        <VCol cols="12" lg="8">
+        <VCol
+          cols="12"
+          lg="8"
+        >
           <VCard class="mb-4">
             <VCardTitle>Sumber Saldo</VCardTitle>
             <VCardText>
@@ -178,18 +210,35 @@ onMounted(() => {
                 <thead>
                   <tr>
                     <th>Kategori</th>
-                    <th class="text-end">Masuk</th>
-                    <th class="text-end">Keluar</th>
-                    <th class="text-end">Tambahan</th>
-                    <th class="text-end">Total</th>
+                    <th class="text-end">
+                      Masuk
+                    </th>
+                    <th class="text-end">
+                      Keluar
+                    </th>
+                    <th class="text-end">
+                      Tambahan
+                    </th>
+                    <th class="text-end">
+                      Total
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in moduleRows" :key="row.key">
+                  <tr
+                    v-for="row in moduleRows"
+                    :key="row.key"
+                  >
                     <td>{{ row.name }}</td>
-                    <td class="text-end">{{ formatRupiah(row.total_rab || 0) }}</td>
-                    <td class="text-end">{{ formatRupiah(row.total_lpj || 0) }}</td>
-                    <td class="text-end text-success">{{ formatRupiah(row.tambahan || 0) }}</td>
+                    <td class="text-end">
+                      {{ formatRupiah(row.total_rab || 0) }}
+                    </td>
+                    <td class="text-end">
+                      {{ formatRupiah(row.total_lpj || 0) }}
+                    </td>
+                    <td class="text-end text-success">
+                      {{ formatRupiah(row.tambahan || 0) }}
+                    </td>
                     <td
                       class="text-end font-weight-medium"
                       :class="`text-${saldoColor(row.saldo || 0)}`"
@@ -205,24 +254,37 @@ onMounted(() => {
           <VCard>
             <VCardTitle>Riwayat Saldo Tambahan</VCardTitle>
             <VCardText>
-              <div v-if="adjustments.length === 0" class="text-body-2 text-medium-emphasis py-4">
+              <div
+                v-if="adjustments.length === 0"
+                class="text-body-2 text-medium-emphasis py-4"
+              >
                 Belum ada saldo tambahan.
               </div>
-              <VTable v-else density="comfortable">
+              <VTable
+                v-else
+                density="comfortable"
+              >
                 <thead>
                   <tr>
                     <th>Tanggal</th>
                     <th>Kategori</th>
                     <th>Keterangan</th>
-                    <th class="text-end">Nominal</th>
+                    <th class="text-end">
+                      Nominal
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in adjustments" :key="item.id">
+                  <tr
+                    v-for="item in adjustments"
+                    :key="item.id"
+                  >
                     <td>{{ item.tanggal }}</td>
                     <td>{{ item.module_name }}</td>
                     <td>{{ item.keterangan }}</td>
-                    <td class="text-end text-success">{{ formatRupiah(item.nominal || 0) }}</td>
+                    <td class="text-end text-success">
+                      {{ formatRupiah(item.nominal || 0) }}
+                    </td>
                   </tr>
                 </tbody>
               </VTable>
@@ -230,7 +292,10 @@ onMounted(() => {
           </VCard>
         </VCol>
 
-        <VCol cols="12" lg="4">
+        <VCol
+          cols="12"
+          lg="4"
+        >
           <VCard>
             <VCardTitle>Tambah Saldo</VCardTitle>
             <VCardText>

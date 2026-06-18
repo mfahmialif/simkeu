@@ -532,19 +532,31 @@ const printSlip = async id => {
             <VList>
               <VListItem @click="exportExcel">
                 <template #prepend>
-                  <VIcon icon="ri-file-excel-line" class="me-2" color="success" />
+                  <VIcon
+                    icon="ri-file-excel-line"
+                    class="me-2"
+                    color="success"
+                  />
                 </template>
                 <VListItemTitle>Laporan Excel</VListItemTitle>
               </VListItem>
               <VListItem @click="exportBsiExcel">
                 <template #prepend>
-                  <VIcon icon="ri-bank-card-line" class="me-2" color="success" />
+                  <VIcon
+                    icon="ri-bank-card-line"
+                    class="me-2"
+                    color="success"
+                  />
                 </template>
                 <VListItemTitle>Excel CUZ BSI</VListItemTitle>
               </VListItem>
               <VListItem @click="exportBsiTxt">
                 <template #prepend>
-                  <VIcon icon="ri-file-text-line" class="me-2" color="success" />
+                  <VIcon
+                    icon="ri-file-text-line"
+                    class="me-2"
+                    color="success"
+                  />
                 </template>
                 <VListItemTitle>TXT CUZ BSI</VListItemTitle>
               </VListItem>

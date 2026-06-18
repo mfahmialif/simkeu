@@ -113,21 +113,25 @@ const displayItems = computed(() => {
     
     result.push({
       ...item,
-      subItems: item.subItems.slice(0, sliceLen)
+      subItems: item.subItems.slice(0, sliceLen),
     })
     
     currentTotal += (subLen === 0 ? 1 : sliceLen)
   }
+  
   return result
 })
+
 const batchHasMore = computed(() => {
   const limit = batchNextPage.value * SCROLL_BATCH
   let totalRenderable = 0
   for (const item of items.value) {
     totalRenderable += (item.subItems.length === 0 ? 1 : item.subItems.length)
   }
+  
   return limit < totalRenderable
 })
+
 const renderedSubItemsCount = computed(() => displayItems.value.reduce((total, item) => total + item.subItems.length, 0))
 
 const summaryItems = computed(() => [
@@ -211,16 +215,16 @@ const fetchBatchRows = async () => {
       if (row.id) {
         if (!originalRowIds.value.includes(row.id)) originalRowIds.value.push(row.id)
 
-      originalRowsState.value.set(row.id, JSON.stringify({
-        tanggal: row.tanggal,
-        kelompok_anggaran: detail.kelompok_anggaran || "",
-        nama_kegiatan: row.nama_kegiatan,
-        nominal: row.nominal,
-        volume: row.volume,
-        satuan: row.satuan,
-        jenis_pembayaran: row.jenis_pembayaran,
-        keterangan: row.keterangan
-      }))
+        originalRowsState.value.set(row.id, JSON.stringify({
+          tanggal: row.tanggal,
+          kelompok_anggaran: detail.kelompok_anggaran || "",
+          nama_kegiatan: row.nama_kegiatan,
+          nominal: row.nominal,
+          volume: row.volume,
+          satuan: row.satuan,
+          jenis_pembayaran: row.jenis_pembayaran,
+          keterangan: row.keterangan,
+        }))
       }
 
       const key = detail.kelompok_anggaran || ""
@@ -281,13 +285,13 @@ const removeItem = index => {
 }
 
 const addSubItem = (itemIndex, index) => {
-  const targetSubItems = items.value[itemIndex].subItems;
-  if (index === undefined) index = targetSubItems.length - 1;
+  const targetSubItems = items.value[itemIndex].subItems
+  if (index === undefined) index = targetSubItems.length - 1
   targetSubItems.splice(index + 1, 0, newSubItem())
 }
 
 const duplicateSubItem = (itemIndex, index) => {
-  const targetSubItems = items.value[itemIndex].subItems;
+  const targetSubItems = items.value[itemIndex].subItems
   const source = targetSubItems[index] || newSubItem()
 
   const duplicated = {
@@ -305,7 +309,7 @@ const duplicateSubItem = (itemIndex, index) => {
 }
 
 const removeSubItem = (itemIndex, index) => {
-  const targetSubItems = items.value[itemIndex].subItems;
+  const targetSubItems = items.value[itemIndex].subItems
   const removed = targetSubItems[index]
   if (removed?.id) removedRowIds.value.push(removed.id)
   if (targetSubItems.length === 1) {
@@ -358,13 +362,14 @@ const submitBatchEdit = async () => {
   removedRowIds.value.forEach((id, index) => {
     formData.append(`deleted_ids[${index}]`, id)
   })
-    let flatIndex = 0
+  let flatIndex = 0
   let modifiedCount = 0
   items.value.forEach(item => {
     item.subItems.forEach(sub => {
       let isModified = true
       if (sub.id && originalRowsState.value.has(sub.id)) {
         const original = originalRowsState.value.get(sub.id)
+
         const current = JSON.stringify({
           tanggal: sub.tanggal,
           kelompok_anggaran: item.kelompok_anggaran || "",
@@ -373,8 +378,9 @@ const submitBatchEdit = async () => {
           volume: sub.volume,
           satuan: sub.satuan,
           jenis_pembayaran: sub.jenis_pembayaran,
-          keterangan: sub.keterangan
+          keterangan: sub.keterangan,
         })
+
         if (original === current && !sub.bukti_transfer && sub.lampiran?.length === 0 && sub.removed_lampiran?.length === 0) {
           isModified = false
         }
@@ -437,6 +443,7 @@ const submit = async () => {
     saving.value = false
   }
 }
+
 let scrollObserver = null
 
 watch(scrollSentinel, el => {
@@ -547,7 +554,9 @@ onMounted(() => {
             <VCardItem class="bg-primary-lighten-4 pt-4 pb-2">
               <VRow align="center">
                 <VCol cols="auto">
-                  <div class="uraian-letter">{{ String.fromCharCode(65 + itemIndex) }}</div>
+                  <div class="uraian-letter">
+                    {{ String.fromCharCode(65 + itemIndex) }}
+                  </div>
                 </VCol>
                 <VCol>
                   <VTextField
@@ -594,7 +603,10 @@ onMounted(() => {
                 </div>
                 <div class="expense-row-content">
                   <VRow>
-                    <VCol cols="12" md="2">
+                    <VCol
+                      cols="12"
+                      md="2"
+                    >
                       <AppDateTimePicker
                         v-model="row.tanggal"
                         label="Tanggal *"
@@ -605,7 +617,10 @@ onMounted(() => {
                       />
                     </VCol>
                     
-                    <VCol cols="12" md="3">
+                    <VCol
+                      cols="12"
+                      md="3"
+                    >
                       <LazyTextField
                         v-model="row.nama_kegiatan"
                         label="Uraian Pengeluaran *"
@@ -615,8 +630,11 @@ onMounted(() => {
                       />
                     </VCol>
 
-                    <VCol cols="12" md="3">
-                      <div class="d-flex gap-2">
+                    <VCol
+                      cols="12"
+                      md="3"
+                    >
+                      <div class="d-flex gap-2 align-start">
                         <LazyTextField
                           v-model="row.volume"
                           type="number"
@@ -626,20 +644,23 @@ onMounted(() => {
                           hide-details
                           style="flex: 1; min-width: 0;"
                         />
-                        <LazyTextField
+                        <VTextField
                           v-model="row.nominal"
                           type="number"
                           min="0"
                           label="Harga Satuan *"
                           density="compact"
-                          hide-details
+                          hide-details="auto" :hint="formatRupiah(row.nominal || 0)" persistent-hint
                           :rules="[requiredValidator]"
                           style="flex: 1.5; min-width: 0;"
                         />
                       </div>
                     </VCol>
 
-                    <VCol cols="12" md="2">
+                    <VCol
+                      cols="12"
+                      md="2"
+                    >
                       <VSelect
                         v-model="row.jenis_pembayaran"
                         label="Pembayaran *"
@@ -651,7 +672,10 @@ onMounted(() => {
                       />
                     </VCol>
 
-                    <VCol cols="12" md="2">
+                    <VCol
+                      cols="12"
+                      md="2"
+                    >
                       <VTextField
                         :model-value="formatRupiah(rowTotal(row))"
                         label="Total"

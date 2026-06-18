@@ -103,8 +103,12 @@ const openDetail = item => {
   <div>
     <div class="d-flex flex-wrap align-center justify-space-between gap-4 mb-6">
       <div>
-        <h4 class="text-h4 font-weight-medium">Rekap Saldo Pegawai</h4>
-        <div class="text-body-1 text-medium-emphasis mt-1">Daftar saldo aktif dari seluruh modul saldo</div>
+        <h4 class="text-h4 font-weight-medium">
+          Rekap Saldo Pegawai
+        </h4>
+        <div class="text-body-1 text-medium-emphasis mt-1">
+          Daftar saldo aktif dari seluruh modul saldo
+        </div>
       </div>
       
       <div class="d-flex gap-4 align-center">
@@ -129,16 +133,37 @@ const openDetail = item => {
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading && items.length === 0" class="text-center pa-10">
-      <VProgressCircular indeterminate color="primary" class="mb-4" />
-      <div class="text-body-1 text-medium-emphasis">Memuat data saldo...</div>
+    <div
+      v-if="loading && items.length === 0"
+      class="text-center pa-10"
+    >
+      <VProgressCircular
+        indeterminate
+        color="primary"
+        class="mb-4"
+      />
+      <div class="text-body-1 text-medium-emphasis">
+        Memuat data saldo...
+      </div>
     </div>
 
     <!-- Empty State -->
-    <VCard v-else-if="filteredItems.length === 0" class="text-center pa-10">
-      <VIcon icon="ri-wallet-3-line" size="48" color="secondary" class="mb-4 opacity-50" />
-      <div class="text-h6 text-medium-emphasis">Tidak ada data saldo aktif</div>
-      <div class="text-body-2 text-disabled mt-2">Semua saldo saat ini kosong atau telah di-filter.</div>
+    <VCard
+      v-else-if="filteredItems.length === 0"
+      class="text-center pa-10"
+    >
+      <VIcon
+        icon="ri-wallet-3-line"
+        size="48"
+        color="secondary"
+        class="mb-4 opacity-50"
+      />
+      <div class="text-h6 text-medium-emphasis">
+        Tidak ada data saldo aktif
+      </div>
+      <div class="text-body-2 text-disabled mt-2">
+        Semua saldo saat ini kosong atau telah di-filter.
+      </div>
     </VCard>
 
     <!-- List Layout -->
@@ -174,7 +199,9 @@ const openDetail = item => {
                 </VAvatar>
               </template>
               
-              <VCardTitle class="text-h6">{{ item.petugas_name }}</VCardTitle>
+              <VCardTitle class="text-h6">
+                {{ item.petugas_name }}
+              </VCardTitle>
               <VCardSubtitle>Klik untuk detail saldo</VCardSubtitle>
             </VCardItem>
             
@@ -191,7 +218,10 @@ const openDetail = item => {
                     class="d-flex justify-space-between align-center"
                   >
                     <span class="text-body-2 text-medium-emphasis d-flex align-center gap-2">
-                      <VIcon icon="ri-money-dollar-circle-line" size="16" />
+                      <VIcon
+                        icon="ri-money-dollar-circle-line"
+                        size="16"
+                      />
                       {{ mod.name }}
                     </span>
                     <div class="text-end">
@@ -240,7 +270,10 @@ const openDetail = item => {
       </VRow>
 
       <!-- Pagination -->
-      <div v-if="pageCount > 1" class="d-flex justify-end mt-6">
+      <div
+        v-if="pageCount > 1"
+        class="d-flex justify-end mt-6"
+      >
         <VPagination
           v-model="page"
           :length="pageCount"

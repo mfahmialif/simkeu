@@ -20,7 +20,7 @@ const pengeluaranRoles = [
   "sarpras",
   "rumahtangga",
   "transportasi",
-  "kabag_pengeluaran"
+  "kabag_pengeluaran",
 ]
 
 const canSeeAllDashboard = computed(() => allAccessRoles.includes(role.value))

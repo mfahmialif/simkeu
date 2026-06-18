@@ -303,8 +303,12 @@ onMounted(async () => {
   <div>
     <div class="d-flex flex-wrap align-center justify-space-between gap-4 mb-6">
       <div>
-        <h4 class="text-h4 font-weight-medium">Hutang</h4>
-        <div class="text-body-1 text-medium-emphasis mt-1">Input hutang dan pelunasan direkap per pemberi pinjaman.</div>
+        <h4 class="text-h4 font-weight-medium">
+          Hutang
+        </h4>
+        <div class="text-body-1 text-medium-emphasis mt-1">
+          Input hutang dan pelunasan direkap per pemberi pinjaman.
+        </div>
       </div>
 
       <VBtn
@@ -317,31 +321,53 @@ onMounted(async () => {
     </div>
 
     <div class="d-flex flex-wrap align-center gap-2 mb-3 text-body-2 text-medium-emphasis">
-      <VIcon icon="ri-filter-3-line" size="18" />
+      <VIcon
+        icon="ri-filter-3-line"
+        size="18"
+      />
       <span>Stat card mengikuti filter: <span class="font-weight-medium">{{ statFilterInfo }}</span></span>
     </div>
 
     <VRow class="mb-4">
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VCard>
           <VCardText>
-            <div class="text-body-2 text-medium-emphasis mb-1">Total Hutang</div>
-            <div class="text-h5 font-weight-medium text-success">{{ formatRupiah(summary.total_hutang || 0) }}</div>
+            <div class="text-body-2 text-medium-emphasis mb-1">
+              Total Hutang
+            </div>
+            <div class="text-h5 font-weight-medium text-success">
+              {{ formatRupiah(summary.total_hutang || 0) }}
+            </div>
           </VCardText>
         </VCard>
       </VCol>
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VCard>
           <VCardText>
-            <div class="text-body-2 text-medium-emphasis mb-1">Total Pelunasan</div>
-            <div class="text-h5 font-weight-medium text-error">{{ formatRupiah(summary.total_pelunasan || 0) }}</div>
+            <div class="text-body-2 text-medium-emphasis mb-1">
+              Total Pelunasan
+            </div>
+            <div class="text-h5 font-weight-medium text-error">
+              {{ formatRupiah(summary.total_pelunasan || 0) }}
+            </div>
           </VCardText>
         </VCard>
       </VCol>
-      <VCol cols="12" md="4">
+      <VCol
+        cols="12"
+        md="4"
+      >
         <VCard>
           <VCardText>
-            <div class="text-body-2 text-medium-emphasis mb-1">Saldo Hutang</div>
+            <div class="text-body-2 text-medium-emphasis mb-1">
+              Saldo Hutang
+            </div>
             <div
               class="text-h5 font-weight-medium"
               :class="`text-${saldoColor(summary.saldo || 0)}`"
@@ -356,23 +382,44 @@ onMounted(async () => {
     <VCard class="mb-4">
       <VCardTitle>Rekap per Pemberi Pinjaman</VCardTitle>
       <VCardText>
-        <div v-if="lenderSummary.length === 0" class="text-body-2 text-medium-emphasis py-4">
+        <div
+          v-if="lenderSummary.length === 0"
+          class="text-body-2 text-medium-emphasis py-4"
+        >
           Belum ada rekap hutang.
         </div>
-        <VTable v-else density="comfortable">
+        <VTable
+          v-else
+          density="comfortable"
+        >
           <thead>
             <tr>
               <th>Pemberi Pinjaman</th>
-              <th class="text-end">Hutang</th>
-              <th class="text-end">Pelunasan</th>
-              <th class="text-end">Sisa Hutang</th>
+              <th class="text-end">
+                Hutang
+              </th>
+              <th class="text-end">
+                Pelunasan
+              </th>
+              <th class="text-end">
+                Sisa Hutang
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in lenderSummary" :key="item.pemberi_pinjaman">
-              <td class="font-weight-medium">{{ item.pemberi_pinjaman }}</td>
-              <td class="text-end text-success">{{ formatRupiah(item.total_hutang || 0) }}</td>
-              <td class="text-end text-error">{{ formatRupiah(item.total_pelunasan || 0) }}</td>
+            <tr
+              v-for="item in lenderSummary"
+              :key="item.pemberi_pinjaman"
+            >
+              <td class="font-weight-medium">
+                {{ item.pemberi_pinjaman }}
+              </td>
+              <td class="text-end text-success">
+                {{ formatRupiah(item.total_hutang || 0) }}
+              </td>
+              <td class="text-end text-error">
+                {{ formatRupiah(item.total_pelunasan || 0) }}
+              </td>
               <td
                 class="text-end font-weight-medium"
                 :class="`text-${saldoColor(item.saldo || 0)}`"
@@ -478,15 +525,27 @@ onMounted(async () => {
         item-value="id"
         @update:options="loadItems"
       >
-        <template v-if="initialLoading" #loading>
+        <template
+          v-if="initialLoading"
+          #loading
+        >
           <div class="text-center pa-4">
-            <VProgressCircular indeterminate color="primary" class="mb-2" />
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-2"
+            />
             <div>Memuat data...</div>
           </div>
         </template>
 
-        <template v-else #no-data>
-          <div class="text-center pa-4">Belum ada data hutang.</div>
+        <template
+          v-else
+          #no-data
+        >
+          <div class="text-center pa-4">
+            Belum ada data hutang.
+          </div>
         </template>
 
         <template #item.no="{ index }">
@@ -535,7 +594,10 @@ onMounted(async () => {
       </VDataTableServer>
     </VCard>
 
-    <VDialog v-model="dialogVisible" width="640">
+    <VDialog
+      v-model="dialogVisible"
+      width="640"
+    >
       <VCard :title="editingId ? 'Edit Hutang' : 'Input Hutang'">
         <DialogCloseBtn
           variant="text"
@@ -610,7 +672,10 @@ onMounted(async () => {
       </VCard>
     </VDialog>
 
-    <VDialog v-model="deleteDialogVisible" width="500">
+    <VDialog
+      v-model="deleteDialogVisible"
+      width="500"
+    >
       <VCard title="Hapus Transaksi Hutang">
         <DialogCloseBtn
           variant="text"
