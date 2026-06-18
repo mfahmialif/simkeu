@@ -269,7 +269,7 @@ const appendRowFormData = (formData, row, prefix = null) => {
 
   formData.append(key("tanggal"), row.tanggal)
   formData.append(key("prioritas"), row.prioritas)
-  formData.append(key("nama_kegiatan"), row.nama_kegiatan || rekapNama.value)
+  formData.append(key("nama_kegiatan"), row.nama_kegiatan || "")
   formData.append(key("nominal"), Number(row.nominal || 0))
   if (row.volume !== null && row.volume !== "") formData.append(key("volume"), row.volume)
   if (row.satuan !== null && row.satuan !== "") formData.append(key("satuan"), row.satuan)
@@ -547,24 +547,12 @@ onMounted(() => {
 
                   <VCol
                     cols="12"
-                    md="2"
+                    md="3"
                   >
-                    <VSelect
-                      v-model="row.prioritas"
-                      :items="prioritasList"
-                      label="Prioritas *"
+                    <VTextField
+                      v-model="row.nama_kegiatan"
+                      label="Nama Item *"
                       :rules="[requiredValidator]"
-                    />
-                  </VCol>
-
-                  <VCol
-                    cols="12"
-                    md="4"
-                  >
-                    <LazyTextField v-model="row.volume"
-                      type="number"
-                      min="0"
-                      label="Volume"
                     />
                   </VCol>
 
@@ -572,13 +560,36 @@ onMounted(() => {
                     cols="12"
                     md="1"
                   >
+                    <LazyTextField v-model="row.volume"
+                      type="number"
+                      min="0"
+                      label="Vol"
+                    />
+                  </VCol>
+
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <LazyTextField v-model="row.nominal"
                       type="number"
                       min="0"
-                      label="Harga Satuan *"
+                      label="Harga *"
                       :rules="[requiredValidator]"
                       :hint="formatRupiah(row.nominal)"
                       persistent-hint
+                    />
+                  </VCol>
+
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VSelect
+                      v-model="row.prioritas"
+                      :items="prioritasList"
+                      label="Prioritas *"
+                      :rules="[requiredValidator]"
                     />
                   </VCol>
 
@@ -598,7 +609,7 @@ onMounted(() => {
                   <VCol
                     v-if="row.jenis_pembayaran === 'Transfer'"
                     cols="12"
-                    md="3"
+                    md="2"
                   >
                     <VFileInput
                       v-model="row.bukti_transfer"
@@ -611,7 +622,7 @@ onMounted(() => {
                   <VCol
                     v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'"
                     cols="12"
-                    md="3"
+                    md="2"
                   >
                     <VBtn
                       variant="outlined"
@@ -628,7 +639,7 @@ onMounted(() => {
 
                   <VCol
                     cols="12"
-                    :md="row.jenis_pembayaran === 'Transfer' ? 4 : 6"
+                    :md="row.jenis_pembayaran === 'Transfer' ? 2 : 4"
                   >
                     <VTextField
                       v-model="row.keterangan"
@@ -638,7 +649,7 @@ onMounted(() => {
 
                   <VCol
                     cols="12"
-                    md="10"
+                    :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 4 : 6) : 6"
                   >
                     <PengeluaranLampiranInput
                       v-model="row.lampiran"

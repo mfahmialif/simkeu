@@ -137,7 +137,7 @@ const onSubmit = async () => {
   formData.append("tanggal", tanggal.value)
   formData.append("rekap_id", rekapId.value)
   formData.append("prioritas", prioritas.value)
-  formData.append("nama_kegiatan", namaKegiatan.value || rekapNama.value)
+  formData.append("nama_kegiatan", namaKegiatan.value || "")
   formData.append("nominal", nominal.value ?? 0)
   if (volume.value !== null && volume.value !== "") formData.append("volume", volume.value)
   if (satuan.value !== null && satuan.value !== "") formData.append("satuan", satuan.value)
