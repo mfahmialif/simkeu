@@ -1,6 +1,7 @@
 <script setup>
 import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue"
 import PengeluaranRekapSelect from "@/components/admin/pengeluaran/PengeluaranRekapSelect.vue"
+import SatuanInput from "@/components/admin/pengeluaran/SatuanInput.vue"
 import { showSnackbar } from "@/composables/snackbar"
 import { appendLampiranFormData } from "@/utils/lampiran"
 import { formatRupiah } from "@/composables/formatRupiah"
@@ -287,12 +288,7 @@ onMounted(() => {
             cols="12"
             md="3"
           >
-            <VTextField
-              v-model="satuan"
-              label="Satuan"
-              density="compact"
-              hide-details
-            />
+            <SatuanInput v-model="satuan" />
           </VCol>
 
           <VCol

@@ -1,6 +1,7 @@
 <script setup>
 /* eslint-disable camelcase */
 import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue"
+import SatuanInput from "@/components/admin/pengeluaran/SatuanInput.vue"
 import { formatRupiah } from "@/composables/formatRupiah"
 import { showSnackbar } from "@/composables/snackbar"
 import { appendLampiranFormData } from "@/utils/lampiran"
@@ -964,6 +965,12 @@ onMounted(() => {
                         cols="12"
                         md="2"
                       >
+                        <SatuanInput v-model="sub.satuan" />
+                      </VCol>
+                      <VCol
+                        cols="12"
+                        md="2"
+                      >
                         <VSelect
                           v-model="sub.jenis_pembayaran"
                           label="Pembayaran *"
@@ -1019,7 +1026,7 @@ onMounted(() => {
                       </VCol>
                       <VCol
                         cols="12"
-                        :md="sub.jenis_pembayaran === 'Transfer' ? (sub.existing_bukti_transfer_url ? 3 : 4) : 6"
+                        :md="sub.jenis_pembayaran === 'Transfer' ? (sub.existing_bukti_transfer_url ? 2 : 3) : 5"
                       >
                         <VTextField
                           v-model="sub.keterangan"
@@ -1030,7 +1037,7 @@ onMounted(() => {
                       </VCol>
                       <VCol
                         cols="12"
-                        :md="sub.jenis_pembayaran === 'Transfer' ? (sub.existing_bukti_transfer_url ? 4 : 5) : 6"
+                        :md="sub.jenis_pembayaran === 'Transfer' ? (sub.existing_bukti_transfer_url ? 3 : 4) : 5"
                       >
                         <PengeluaranLampiranInput
                           v-model="sub.lampiran"
