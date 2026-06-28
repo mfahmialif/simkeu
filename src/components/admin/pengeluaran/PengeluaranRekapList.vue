@@ -2,6 +2,7 @@
 /* eslint-disable camelcase, import/extensions */
 import { downloadFileExport } from "@/composables/exportFile"
 import { formatRupiah } from "@/composables/formatRupiah"
+import PengeluaranLampiranList from "@/components/admin/pengeluaran/PengeluaranLampiranList.vue"
 import {
   listenPengeluaranRekapUpdated,
   notifyPengeluaranRekapUpdated,
@@ -260,16 +261,61 @@ const previewModuleType = computed(() => {
   return aliases[petugasModuleKey.value] || petugasModuleKey.value
 })
 
-const detailPreviewHeaders = [
-  { title: "No", key: "no", sortable: false, width: 64 },
-  { title: "Tanggal", key: "tanggal", width: 140 },
-  { title: "Pegawai", key: "pegawai", sortable: false },
-  { title: "Uraian", key: "uraian", sortable: false },
-  { title: "Petugas", key: "petugas_nama" },
-  { title: "Jenis Pembayaran", key: "jenis_pembayaran", width: 160 },
-  { title: "Total", key: "total", align: "end", width: 150 },
-  { title: "Keterangan", key: "keterangan", sortable: false },
-]
+const previewHeadersForModule = moduleType => {
+  const headers = [
+    { title: "No", key: "id", sortable: false, width: 64 },
+    { title: "Tanggal", key: "tanggal", width: 140 },
+  ]
+
+  if (moduleType === "kegiatan") {
+    headers.push({ title: "Kategori", key: "kategori_detail" })
+  }
+
+  if (!["rumah-tangga", "sarana-prasarana", "transportasi", "umum"].includes(moduleType)) {
+    headers.push({ title: "Pegawai", key: "pegawai", sortable: false })
+  }
+
+  const detailHeaders = []
+
+  if (["rumah-tangga", "sarana-prasarana"].includes(moduleType)) {
+    detailHeaders.push(
+      { title: "Kelompok Anggaran", key: "kelompok_anggaran" },
+      { title: "Uraian", key: "uraian", sortable: false },
+      { title: "Volume", key: "volume" },
+      { title: "Satuan", key: "satuan" },
+      { title: "Harga Satuan", key: "nominal" },
+    )
+  } else if (moduleType === "transportasi") {
+    detailHeaders.push(
+      { title: "Uraian", key: "uraian", sortable: false },
+      { title: "Volume", key: "volume" },
+      { title: "Satuan", key: "satuan" },
+      { title: "Harga Satuan", key: "nominal" },
+      { title: "Prioritas", key: "prioritas" },
+    )
+  } else if (moduleType === "umum") {
+    detailHeaders.push(
+      { title: "Nama Pengeluaran", key: "uraian", sortable: false },
+      { title: "Nominal", key: "nominal" },
+    )
+  } else {
+    detailHeaders.push({ title: "Uraian", key: "uraian", sortable: false })
+  }
+
+  headers.push({ title: "Nama Petugas", key: "petugas_nama" })
+
+  return [
+    ...headers,
+    ...detailHeaders,
+    { title: "Jenis Pembayaran", key: "jenis_pembayaran" },
+    { title: "Bukti Transfer", key: "bukti_transfer", sortable: false },
+    { title: "Total", key: "total" },
+    { title: "Keterangan", key: "keterangan" },
+    { title: "Lampiran", key: "lampiran", sortable: false },
+  ]
+}
+
+const detailPreviewHeaders = computed(() => previewHeadersForModule(previewModuleType.value))
 
 const detailPreviewShown = computed(() => detailPreviewRows.value.length)
 const detailPreviewAmount = computed(() => Number(detailPreviewItem.value?.jumlah || 0))
@@ -1492,7 +1538,7 @@ onBeforeUnmount(() => {
             class="detail-preview-table"
             no-data-text="Belum ada detail rekap."
           >
-            <template #item.no="{ index }">
+            <template #item.id="{ index }">
               {{ index + 1 }}
             </template>
 
@@ -1519,6 +1565,44 @@ onBeforeUnmount(() => {
               {{ item.petugas_nama || "-" }}
             </template>
 
+            <template #item.kategori_detail="{ item }">
+              <VChip
+                :color="previewIsNonPegawai(item) ? 'secondary' : 'primary'"
+                size="small"
+                label
+              >
+                {{ previewIsNonPegawai(item) ? "Nonpegawai" : "Pegawai" }}
+              </VChip>
+            </template>
+
+            <template #item.kelompok_anggaran="{ item }">
+              {{ item.kelompok_anggaran || "-" }}
+            </template>
+
+            <template #item.nominal="{ item }">
+              {{ formatRupiah(item.nominal) }}
+            </template>
+
+            <template #item.jumlah="{ item }">
+              {{ item.jumlah ?? "-" }}
+            </template>
+
+            <template #item.volume="{ item }">
+              {{ item.volume ?? "-" }}
+            </template>
+
+            <template #item.prioritas="{ item }">
+              <VChip
+                v-if="item.prioritas"
+                :color="item.prioritas === 'Tinggi' ? 'error' : item.prioritas === 'Sedang' ? 'warning' : 'success'"
+                size="small"
+                label
+              >
+                {{ item.prioritas }}
+              </VChip>
+              <span v-else>-</span>
+            </template>
+
             <template #item.jenis_pembayaran="{ item }">
               <VChip
                 v-if="item.jenis_pembayaran"
@@ -1535,10 +1619,30 @@ onBeforeUnmount(() => {
               <span class="font-weight-medium">{{ formatRupiah(item.total || 0) }}</span>
             </template>
 
+            <template #item.bukti_transfer="{ item }">
+              <VBtn
+                v-if="item.bukti_transfer_url"
+                :href="item.bukti_transfer_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="tonal"
+                size="small"
+                color="primary"
+                prepend-icon="ri-eye-line"
+              >
+                Lihat
+              </VBtn>
+              <span v-else>-</span>
+            </template>
+
             <template #item.keterangan="{ item }">
               <div class="detail-preview-text">
                 {{ item.keterangan || "-" }}
               </div>
+            </template>
+
+            <template #item.lampiran="{ item }">
+              <PengeluaranLampiranList :items="item.lampiran || []" />
             </template>
           </VDataTable>
         </VCardText>
