@@ -85,6 +85,7 @@ const isTatapmuka = computed(() => props.moduleType === "tatapmuka")
 const isKegiatan = computed(() => props.moduleType === "kegiatan")
 const isRumahTangga = computed(() => ["rumah-tangga", "sarana-prasarana"].includes(props.moduleType))
 const isTransportasi = computed(() => props.moduleType === "transportasi")
+const isUmum = computed(() => props.moduleType === "umum")
 const isDosenBulanan = computed(() => props.moduleType === "dosen-bulanan")
 
 const currentDateValue = () => {
@@ -101,6 +102,7 @@ const defaultRowDate = () => rekap.value?.tanggal_rekap || currentDateValue()
 const numberValue = value => Number(value || 0)
 const factorValue = value => (value === null || value === "" || value === undefined ? 1 : Number(value || 0))
 const selectedFileSafeArray = value => (Array.isArray(value) ? value : [])
+
 const selectedFile = value => {
   if (Array.isArray(value)) return value[0] || null
 
@@ -188,6 +190,15 @@ const newRow = () => {
     }
   }
 
+  if (isUmum.value) {
+    return {
+      ...base,
+      nama_kegiatan: rekap.value?.nama || "",
+      nominal: 0,
+      jenis_pembayaran: "Tunai",
+    }
+  }
+
   if (isDosenBulanan.value) {
     return {
       ...base,
@@ -228,6 +239,10 @@ const rowTotal = row => {
 
   if (isTransportasi.value) {
     return Math.round(numberValue(row.nominal) * factorValue(row.volume))
+  }
+
+  if (isUmum.value) {
+    return Math.round(numberValue(row.nominal))
   }
 
   if (isDosenBulanan.value) {
@@ -347,6 +362,7 @@ const displayRows = computed(() => {
 const batchHasMore = computed(() => {
   if (isRumahTangga.value) {
     const limit = batchNextPage.value * SCROLL_BATCH
+
     const totalRenderable = items.value.reduce(
       (total, item) => total + (item.subItems.length === 0 ? 1 : item.subItems.length),
       0,
@@ -403,7 +419,7 @@ const pegawaiForRow = () => {
 const isPegawaiKegiatan = row => row.kategori_detail === "pegawai"
 
 const paymentItems = row => (
-  isRumahTangga.value || isTransportasi.value
+  isRumahTangga.value || isTransportasi.value || isUmum.value
     ? ["Tunai", "Transfer"]
     : isKegiatan.value && !isPegawaiKegiatan(row)
       ? ["Tunai", "CUZ BSI", "Transfer"]
@@ -432,7 +448,7 @@ const detailToRow = item => ({
   kategori_detail: item.kategori_detail === "non_pegawai" ? "non_pegawai" : "pegawai",
   prioritas: item.prioritas || "Sedang",
   jenis_pembayaran: item.jenis_pembayaran || (
-    isRumahTangga.value || isTransportasi.value || item.kategori_detail === "non_pegawai" ? "Tunai" : "CUZ BSI"
+    isRumahTangga.value || isTransportasi.value || isUmum.value || item.kategori_detail === "non_pegawai" ? "Tunai" : "CUZ BSI"
   ),
   bukti_transfer: null,
   existing_bukti_transfer_url: item.bukti_transfer_url || null,
@@ -660,6 +676,10 @@ const validateRows = () => {
       if (!row.prioritas) return `${label}: prioritas wajib dipilih.`
       continue
     }
+    if (isUmum.value) {
+      if (!String(row.nama_kegiatan || "").trim()) return `${label}: nama pengeluaran wajib diisi.`
+      continue
+    }
     if (isRumahTangga.value && !String(row.nama_kegiatan || "").trim()) {
       return `${label}: uraian wajib diisi.`
     }
@@ -689,10 +709,12 @@ const submit = async () => {
     saving.value = true
 
     const formData = new FormData()
+
     formData.append("_method", "PUT")
 
     flatRows.value.forEach((row, index) => {
       const prefix = `items[${index}]`
+
       Object.entries(row).forEach(([key, value]) => {
         if ([
           "lampiran",
@@ -759,7 +781,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 onMounted(() => {
   document.title = `Detail LPJ ${props.title} - SIMKEU`
-  if (!isRumahTangga.value && !isTransportasi.value) {
+  if (!isRumahTangga.value && !isTransportasi.value && !isUmum.value) {
     fetchPegawai()
   }
 
@@ -1102,69 +1124,232 @@ onMounted(() => {
               </div>
               <div class="lpj-row-content">
                 <VRow v-if="isKegiatan">
-                    <VCol cols="12" md="2">
-                      <VSelect v-model="row.kategori_detail" label="Kategori *" :items="kategoriKegiatanItems" density="compact" hide-details class="mb-3" @update:model-value="onKategoriChange(row)" />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VSelect
+                      v-model="row.kategori_detail"
+                      label="Kategori *"
+                      :items="kategoriKegiatanItems"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                      @update:model-value="onKategoriChange(row)"
+                    />
+                  </VCol>
+
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <AppDateTimePicker
+                      v-model="row.tanggal"
+                      label="Tanggal *"
+                      :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                  </VCol>
+
+                  <VCol
+                    v-if="isPegawaiKegiatan(row)"
+                    cols="12"
+                    md="8"
+                  >
+                    <VAutocomplete
+                      v-model="row.pegawai_id"
+                      :items="pegawaiItems"
+                      item-title="display"
+                      item-value="id"
+                      label="Pegawai *"
+                      auto-select-first
+                      clearable
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                  </VCol>
+
+                  <template v-if="isPegawaiKegiatan(row)">
+                    <VCol
+                      cols="12"
+                      md="2"
+                    >
+                      <VTextField
+                        v-model="row.transport"
+                        type="number"
+                        min="0"
+                        label="Transport"
+                        density="compact"
+                        hide-details="auto"
+                        :hint="formatRupiah(row.transport || 0)"
+                        persistent-hint
+                        class="mb-3"
+                      />
                     </VCol>
 
-                    <VCol cols="12" md="2">
-                      <AppDateTimePicker v-model="row.tanggal" label="Tanggal *" :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }" density="compact" hide-details class="mb-3" />
+                    <VCol
+                      cols="12"
+                      md="2"
+                    >
+                      <VTextField
+                        v-model="row.barokah"
+                        type="number"
+                        min="0"
+                        label="Barokah"
+                        density="compact"
+                        hide-details="auto"
+                        :hint="formatRupiah(row.barokah || 0)"
+                        persistent-hint
+                        class="mb-3"
+                      />
                     </VCol>
+                  </template>
 
-                    <VCol v-if="isPegawaiKegiatan(row)" cols="12" md="8">
-                      <VAutocomplete v-model="row.pegawai_id" :items="pegawaiItems" item-title="display" item-value="id" label="Pegawai *" auto-select-first clearable density="compact" hide-details class="mb-3" />
-                    </VCol>
+                  <VCol
+                    v-else
+                    cols="12"
+                    md="3"
+                  >
+                    <VTextField
+                      v-model="row.nominal"
+                      type="number"
+                      min="0"
+                      label="Nominal *"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.nominal || 0)"
+                      persistent-hint
+                      class="mb-3"
+                    />
+                  </VCol>
 
-                    <template v-if="isPegawaiKegiatan(row)">
-                      <VCol cols="12" md="2">
-                        <VTextField v-model="row.transport" type="number" min="0" label="Transport" density="compact" hide-details="auto" :hint="formatRupiah(row.transport || 0)" persistent-hint class="mb-3" />
-                      </VCol>
+                  <VCol
+                    v-if="!isPegawaiKegiatan(row)"
+                    cols="12"
+                    md="3"
+                  >
+                    <LazyTextField
+                      v-model="row.nama_kegiatan"
+                      label="Uraian Pengeluaran"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                  </VCol>
 
-                      <VCol cols="12" md="2">
-                        <VTextField v-model="row.barokah" type="number" min="0" label="Barokah" density="compact" hide-details="auto" :hint="formatRupiah(row.barokah || 0)" persistent-hint class="mb-3" />
-                      </VCol>
-                    </template>
+                  <VCol
+                    v-if="!isPegawaiKegiatan(row)"
+                    cols="12"
+                    md="2"
+                  >
+                    <LazyTextField
+                      v-model="row.keterangan"
+                      label="Keterangan"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                  </VCol>
 
-                    <VCol v-else cols="12" md="3">
-                      <VTextField v-model="row.nominal" type="number" min="0" label="Nominal *" density="compact" hide-details="auto" :hint="formatRupiah(row.nominal || 0)" persistent-hint class="mb-3" />
-                    </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VSelect
+                      v-model="row.jenis_pembayaran"
+                      label="Pembayaran *"
+                      :items="paymentItems(row)"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                      @update:model-value="row.bukti_transfer = null"
+                    />
+                  </VCol>
 
-                    <VCol v-if="!isPegawaiKegiatan(row)" cols="12" md="3">
-                      <LazyTextField v-model="row.nama_kegiatan" label="Uraian Pengeluaran" density="compact" hide-details class="mb-3" />
-                    </VCol>
+                  <VCol
+                    v-if="row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="3"
+                  >
+                    <VFileInput
+                      v-model="row.bukti_transfer"
+                      label="Bukti Transfer"
+                      accept="image/png, image/jpeg, application/pdf"
+                      :prepend-icon="null"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                  </VCol>
 
-                    <VCol v-if="!isPegawaiKegiatan(row)" cols="12" md="2">
-                      <LazyTextField v-model="row.keterangan" label="Keterangan" density="compact" hide-details class="mb-3" />
-                    </VCol>
+                  <VCol
+                    v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="3"
+                  >
+                    <VBtn
+                      variant="outlined"
+                      color="primary"
+                      prepend-icon="ri-file-paper-2-line"
+                      :href="row.existing_bukti_transfer_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="w-100 mb-3"
+                      density="compact"
+                    >
+                      Bukti Lama
+                    </VBtn>
+                  </VCol>
 
-                    <VCol cols="12" md="2">
-                      <VSelect v-model="row.jenis_pembayaran" label="Pembayaran *" :items="paymentItems(row)" density="compact" hide-details class="mb-3" @update:model-value="row.bukti_transfer = null" />
-                    </VCol>
+                  <VCol
+                    v-if="isPegawaiKegiatan(row)"
+                    cols="12"
+                    :md="row.jenis_pembayaran === 'Transfer' ? 3 : 6"
+                  >
+                    <LazyTextField
+                      v-model="row.keterangan"
+                      label="Keterangan"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                  </VCol>
 
-                    <VCol v-if="row.jenis_pembayaran === 'Transfer'" cols="12" md="3">
-                      <VFileInput v-model="row.bukti_transfer" label="Bukti Transfer" accept="image/png, image/jpeg, application/pdf" :prepend-icon="null" density="compact" hide-details class="mb-3" />
-                    </VCol>
+                  <VCol
+                    cols="12"
+                    md="10"
+                  >
+                    <PengeluaranLampiranInput
+                      v-model="row.lampiran"
+                      v-model:removed-lampiran="row.removed_lampiran"
+                      :existing-lampiran="row.existing_lampiran"
+                    />
+                  </VCol>
 
-                    <VCol v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'" cols="12" md="3">
-                      <VBtn variant="outlined" color="primary" prepend-icon="ri-file-paper-2-line" :href="row.existing_bukti_transfer_url" target="_blank" rel="noopener noreferrer" class="w-100 mb-3" density="compact">
-                        Bukti Lama
-                      </VBtn>
-                    </VCol>
-
-                    <VCol v-if="isPegawaiKegiatan(row)" cols="12" :md="row.jenis_pembayaran === 'Transfer' ? 3 : 6">
-                      <LazyTextField v-model="row.keterangan" label="Keterangan" density="compact" hide-details class="mb-3" />
-                    </VCol>
-
-                    <VCol cols="12" md="10">
-                      <PengeluaranLampiranInput v-model="row.lampiran" v-model:removed-lampiran="row.removed_lampiran" :existing-lampiran="row.existing_lampiran" />
-                    </VCol>
-
-                    <VCol cols="12" md="2">
-                      <VTextField :model-value="formatRupiah(rowTotal(row))" label="Total" readonly variant="plain" class="text-right font-weight-bold" density="compact" hide-details />
-                    </VCol>
-                  </VRow>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(rowTotal(row))"
+                      label="Total"
+                      readonly
+                      variant="plain"
+                      class="text-right font-weight-bold"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+                </VRow>
 
                 <VRow v-else-if="isTatapmuka">
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <AppDateTimePicker
                       v-model="row.tanggal"
                       label="Tanggal"
@@ -1173,7 +1358,10 @@ onMounted(() => {
                       :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }"
                     />
                   </VCol>
-                  <VCol cols="12" md="10">
+                  <VCol
+                    cols="12"
+                    md="10"
+                  >
                     <VAutocomplete
                       v-model="row.pegawai_id"
                       label="Pegawai"
@@ -1186,80 +1374,304 @@ onMounted(() => {
                     />
                   </VCol>
 
-                  <VCol cols="12" md="2">
-                    <LazyTextField v-model="row.hari_transport_motor" type="number" min="0" label="Hari Motor" density="compact" hide-details />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <LazyTextField
+                      v-model="row.hari_transport_motor"
+                      type="number"
+                      min="0"
+                      label="Hari Motor"
+                      density="compact"
+                      hide-details
+                    />
                   </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField v-model="row.transport_motor" type="number" min="0" label="Transport Motor" density="compact" hide-details="auto" :hint="formatRupiah(row.transport_motor)" persistent-hint />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.transport_motor"
+                      type="number"
+                      min="0"
+                      label="Transport Motor"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.transport_motor)"
+                      persistent-hint
+                    />
                   </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField :model-value="formatRupiah(subtotalTransportMotor(row))" label="Subtotal Motor" density="compact" hide-details readonly />
-                  </VCol>
-
-                  <VCol cols="12" md="2">
-                    <LazyTextField v-model="row.hari_transport_mobil" type="number" min="0" label="Hari Mobil" density="compact" hide-details />
-                  </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField v-model="row.transport_mobil" type="number" min="0" label="Transport Mobil" density="compact" hide-details="auto" :hint="formatRupiah(row.transport_mobil)" persistent-hint />
-                  </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField :model-value="formatRupiah(subtotalTransportMobil(row))" label="Subtotal Mobil" density="compact" hide-details readonly />
-                  </VCol>
-
-                  <VCol cols="12" md="2">
-                    <LazyTextField v-model="row.jam" type="number" min="0" label="Jam Mengajar" density="compact" hide-details />
-                  </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField v-model="row.barokah_mengajar_biasa" type="number" min="0" label="Barokah Mengajar Biasa" density="compact" hide-details="auto" :hint="formatRupiah(row.barokah_mengajar_biasa)" persistent-hint />
-                  </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField :model-value="formatRupiah(subtotalMengajarBiasa(row))" label="Subtotal Mengajar Biasa" density="compact" hide-details readonly />
-                  </VCol>
-
-                  <VCol cols="12" md="2">
-                    <LazyTextField v-model="row.jam_mengajar_double_degree" type="number" min="0" label="Jam Mengajar Double Degree" density="compact" hide-details />
-                  </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField v-model="row.barokah_mengajar_double_degree" type="number" min="0" label="Barokah Mengajar Double Degree" density="compact" hide-details="auto" :hint="formatRupiah(row.barokah_mengajar_double_degree)" persistent-hint />
-                  </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField :model-value="formatRupiah(subtotalMengajarDoubleDegree(row))" label="Subtotal Mengajar Double Degree" density="compact" hide-details readonly />
-                  </VCol>
-
-                  <VCol cols="12" md="2">
-                    <LazyTextField v-model="row.jam_sempro" type="number" min="0" label="Jam Sempro" density="compact" hide-details />
-                  </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField v-model="row.barokah_sempro" type="number" min="0" label="Barokah Sempro / Jam" density="compact" hide-details="auto" :hint="formatRupiah(row.barokah_sempro)" persistent-hint />
-                  </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField :model-value="formatRupiah(subtotalSempro(row))" label="Subtotal Sempro" density="compact" hide-details readonly />
-                  </VCol>
-                  <VCol cols="12" md="6">
-                    <LazyTextField v-model="row.keterangan_sempro" label="Penguji Sempro" density="compact" hide-details />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(subtotalTransportMotor(row))"
+                      label="Subtotal Motor"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
                   </VCol>
 
-                  <VCol cols="12" md="2">
-                    <VTextField v-model="row.barokah_uas" type="number" min="0" label="Barokah UAS / Mahasiswa" density="compact" hide-details="auto" :hint="formatRupiah(row.barokah_uas)" persistent-hint />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <LazyTextField
+                      v-model="row.hari_transport_mobil"
+                      type="number"
+                      min="0"
+                      label="Hari Mobil"
+                      density="compact"
+                      hide-details
+                    />
                   </VCol>
-                  <VCol cols="12" md="2">
-                    <LazyTextField v-model="row.jumlah_mahasiswa_uas" type="number" min="0" label="Jumlah Mahasiswa UAS" density="compact" hide-details />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.transport_mobil"
+                      type="number"
+                      min="0"
+                      label="Transport Mobil"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.transport_mobil)"
+                      persistent-hint
+                    />
                   </VCol>
-                  <VCol cols="12" md="2">
-                    <VTextField :model-value="formatRupiah(subtotalUas(row))" label="Subtotal UAS" density="compact" hide-details readonly />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(subtotalTransportMobil(row))"
+                      label="Subtotal Mobil"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
                   </VCol>
 
-                  <VCol cols="12" md="3">
-                    <VTextField :model-value="formatRupiah(subtotalTransport(row))" label="Subtotal Transport" density="compact" hide-details readonly />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <LazyTextField
+                      v-model="row.jam"
+                      type="number"
+                      min="0"
+                      label="Jam Mengajar"
+                      density="compact"
+                      hide-details
+                    />
                   </VCol>
-                  <VCol cols="12" md="3">
-                    <VTextField :model-value="formatRupiah(subtotalMengajar(row))" label="Subtotal Mengajar" density="compact" hide-details readonly />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.barokah_mengajar_biasa"
+                      type="number"
+                      min="0"
+                      label="Barokah Mengajar Biasa"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.barokah_mengajar_biasa)"
+                      persistent-hint
+                    />
                   </VCol>
-                  <VCol cols="12" md="3">
-                    <VTextField :model-value="formatRupiah(rowTotal(row))" label="Total" density="compact" hide-details readonly />
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(subtotalMengajarBiasa(row))"
+                      label="Subtotal Mengajar Biasa"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
                   </VCol>
 
-                  <VCol cols="12" md="3">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <LazyTextField
+                      v-model="row.jam_mengajar_double_degree"
+                      type="number"
+                      min="0"
+                      label="Jam Mengajar Double Degree"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.barokah_mengajar_double_degree"
+                      type="number"
+                      min="0"
+                      label="Barokah Mengajar Double Degree"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.barokah_mengajar_double_degree)"
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(subtotalMengajarDoubleDegree(row))"
+                      label="Subtotal Mengajar Double Degree"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
+                  </VCol>
+
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <LazyTextField
+                      v-model="row.jam_sempro"
+                      type="number"
+                      min="0"
+                      label="Jam Sempro"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.barokah_sempro"
+                      type="number"
+                      min="0"
+                      label="Barokah Sempro / Jam"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.barokah_sempro)"
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(subtotalSempro(row))"
+                      label="Subtotal Sempro"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="6"
+                  >
+                    <LazyTextField
+                      v-model="row.keterangan_sempro"
+                      label="Penguji Sempro"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.barokah_uas"
+                      type="number"
+                      min="0"
+                      label="Barokah UAS / Mahasiswa"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.barokah_uas)"
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <LazyTextField
+                      v-model="row.jumlah_mahasiswa_uas"
+                      type="number"
+                      min="0"
+                      label="Jumlah Mahasiswa UAS"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(subtotalUas(row))"
+                      label="Subtotal UAS"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
+                  </VCol>
+
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(subtotalTransport(row))"
+                      label="Subtotal Transport"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(subtotalMengajar(row))"
+                      label="Subtotal Mengajar"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(rowTotal(row))"
+                      label="Total"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
+                  </VCol>
+
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
                     <VSelect
                       v-model="row.jenis_pembayaran"
                       label="Jenis Pembayaran"
@@ -1269,7 +1681,11 @@ onMounted(() => {
                       @update:model-value="row.bukti_transfer = null"
                     />
                   </VCol>
-                  <VCol v-if="row.jenis_pembayaran === 'Transfer'" cols="12" md="3">
+                  <VCol
+                    v-if="row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="3"
+                  >
                     <VFileInput
                       v-model="row.bukti_transfer"
                       :prepend-icon="null"
@@ -1279,7 +1695,11 @@ onMounted(() => {
                       hide-details
                     />
                   </VCol>
-                  <VCol v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'" cols="12" md="3">
+                  <VCol
+                    v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="3"
+                  >
                     <VBtn
                       variant="outlined"
                       color="primary"
@@ -1292,8 +1712,16 @@ onMounted(() => {
                       Bukti Lama
                     </VBtn>
                   </VCol>
-                  <VCol cols="12" :md="row.jenis_pembayaran === 'Transfer' ? 6 : 9">
-                    <VTextField v-model="row.keterangan" label="Keterangan" density="compact" hide-details />
+                  <VCol
+                    cols="12"
+                    :md="row.jenis_pembayaran === 'Transfer' ? 6 : 9"
+                  >
+                    <VTextField
+                      v-model="row.keterangan"
+                      label="Keterangan"
+                      density="compact"
+                      hide-details
+                    />
                   </VCol>
                   <VCol cols="12">
                     <PengeluaranLampiranInput
@@ -1306,7 +1734,10 @@ onMounted(() => {
                 </VRow>
 
                 <VRow v-else-if="isTransportasi">
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <AppDateTimePicker
                       v-model="row.tanggal"
                       label="Tanggal *"
@@ -1315,7 +1746,10 @@ onMounted(() => {
                       :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }"
                     />
                   </VCol>
-                  <VCol cols="12" md="3">
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
                     <VTextField
                       v-model="row.nama_kegiatan"
                       label="Nama Item *"
@@ -1323,7 +1757,10 @@ onMounted(() => {
                       hide-details
                     />
                   </VCol>
-                  <VCol cols="12" md="1">
+                  <VCol
+                    cols="12"
+                    md="1"
+                  >
                     <LazyTextField
                       v-model="row.volume"
                       type="number"
@@ -1333,7 +1770,10 @@ onMounted(() => {
                       hide-details
                     />
                   </VCol>
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <VTextField
                       v-model="row.nominal"
                       type="number"
@@ -1345,7 +1785,10 @@ onMounted(() => {
                       persistent-hint
                     />
                   </VCol>
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <VSelect
                       v-model="row.prioritas"
                       :items="prioritasTransportasiItems"
@@ -1354,7 +1797,10 @@ onMounted(() => {
                       hide-details
                     />
                   </VCol>
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <VSelect
                       v-model="row.jenis_pembayaran"
                       label="Pembayaran *"
@@ -1364,7 +1810,11 @@ onMounted(() => {
                       @update:model-value="row.bukti_transfer = null"
                     />
                   </VCol>
-                  <VCol v-if="row.jenis_pembayaran === 'Transfer'" cols="12" md="2">
+                  <VCol
+                    v-if="row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="2"
+                  >
                     <VFileInput
                       v-model="row.bukti_transfer"
                       label="Bukti Transfer"
@@ -1374,7 +1824,11 @@ onMounted(() => {
                       hide-details
                     />
                   </VCol>
-                  <VCol v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'" cols="12" md="2">
+                  <VCol
+                    v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="2"
+                  >
                     <VBtn
                       variant="outlined"
                       color="primary"
@@ -1387,7 +1841,10 @@ onMounted(() => {
                       Bukti Lama
                     </VBtn>
                   </VCol>
-                  <VCol cols="12" :md="row.jenis_pembayaran === 'Transfer' ? 2 : 4">
+                  <VCol
+                    cols="12"
+                    :md="row.jenis_pembayaran === 'Transfer' ? 2 : 4"
+                  >
                     <VTextField
                       v-model="row.keterangan"
                       label="Keterangan"
@@ -1395,7 +1852,10 @@ onMounted(() => {
                       hide-details
                     />
                   </VCol>
-                  <VCol cols="12" :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 4 : 6) : 6">
+                  <VCol
+                    cols="12"
+                    :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 4 : 6) : 6"
+                  >
                     <PengeluaranLampiranInput
                       v-model="row.lampiran"
                       v-model:removed-lampiran="row.removed_lampiran"
@@ -1403,7 +1863,129 @@ onMounted(() => {
                       compact
                     />
                   </VCol>
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(rowTotal(row))"
+                      label="Total"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
+                  </VCol>
+                </VRow>
+
+                <VRow v-else-if="isUmum">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <AppDateTimePicker
+                      v-model="row.tanggal"
+                      label="Tanggal *"
+                      density="compact"
+                      hide-details
+                      :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }"
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="4"
+                  >
+                    <VTextField
+                      v-model="row.nama_kegiatan"
+                      label="Nama Pengeluaran *"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model="row.nominal"
+                      type="number"
+                      min="0"
+                      label="Nominal *"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.nominal)"
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VSelect
+                      v-model="row.jenis_pembayaran"
+                      label="Pembayaran *"
+                      :items="paymentItems(row)"
+                      density="compact"
+                      hide-details
+                      @update:model-value="row.bukti_transfer = null"
+                    />
+                  </VCol>
+                  <VCol
+                    v-if="row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="2"
+                  >
+                    <VFileInput
+                      v-model="row.bukti_transfer"
+                      label="Bukti Transfer"
+                      accept="image/png, image/jpeg, application/pdf"
+                      :prepend-icon="null"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+                  <VCol
+                    v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="2"
+                  >
+                    <VBtn
+                      variant="outlined"
+                      color="primary"
+                      prepend-icon="ri-file-paper-2-line"
+                      :href="row.existing_bukti_transfer_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="w-100"
+                    >
+                      Bukti Lama
+                    </VBtn>
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    :md="row.jenis_pembayaran === 'Transfer' ? 4 : 6"
+                  >
+                    <VTextField
+                      v-model="row.keterangan"
+                      label="Keterangan"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 4 : 6) : 6"
+                  >
+                    <PengeluaranLampiranInput
+                      v-model="row.lampiran"
+                      v-model:removed-lampiran="row.removed_lampiran"
+                      :existing-lampiran="row.existing_lampiran"
+                      compact
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <VTextField
                       :model-value="formatRupiah(rowTotal(row))"
                       label="Total"
@@ -1415,7 +1997,10 @@ onMounted(() => {
                 </VRow>
 
                 <VRow v-else-if="isDosenBulanan">
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <AppDateTimePicker
                       v-model="row.tanggal"
                       label="Tanggal"
@@ -1424,7 +2009,10 @@ onMounted(() => {
                       :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }"
                     />
                   </VCol>
-                  <VCol cols="12" md="10">
+                  <VCol
+                    cols="12"
+                    md="10"
+                  >
                     <VAutocomplete
                       v-model="row.pegawai_id"
                       label="Pegawai"
@@ -1437,7 +2025,10 @@ onMounted(() => {
                     />
                   </VCol>
 
-                  <VCol cols="12" md="3">
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
                     <VTextField
                       v-model="row.barokah_dosen_tetap"
                       type="number"
@@ -1449,7 +2040,10 @@ onMounted(() => {
                       persistent-hint
                     />
                   </VCol>
-                  <VCol cols="12" md="3">
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
                     <VTextField
                       v-model="row.barokah_struktural"
                       type="number"
@@ -1461,7 +2055,10 @@ onMounted(() => {
                       persistent-hint
                     />
                   </VCol>
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <VTextField
                       :model-value="formatRupiah(rowTotal(row))"
                       label="Total"
@@ -1470,7 +2067,10 @@ onMounted(() => {
                       readonly
                     />
                   </VCol>
-                  <VCol cols="12" md="2">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
                     <VSelect
                       v-model="row.jenis_pembayaran"
                       label="Jenis Pembayaran"
@@ -1480,7 +2080,11 @@ onMounted(() => {
                       @update:model-value="row.bukti_transfer = null"
                     />
                   </VCol>
-                  <VCol v-if="row.jenis_pembayaran === 'Transfer'" cols="12" md="2">
+                  <VCol
+                    v-if="row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="2"
+                  >
                     <VFileInput
                       v-model="row.bukti_transfer"
                       :prepend-icon="null"
@@ -1490,7 +2094,11 @@ onMounted(() => {
                       hide-details
                     />
                   </VCol>
-                  <VCol v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'" cols="12" md="2">
+                  <VCol
+                    v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="2"
+                  >
                     <VBtn
                       variant="outlined"
                       color="primary"
@@ -1503,7 +2111,10 @@ onMounted(() => {
                       Bukti Lama
                     </VBtn>
                   </VCol>
-                  <VCol cols="12" :md="row.jenis_pembayaran === 'Transfer' ? 4 : 6">
+                  <VCol
+                    cols="12"
+                    :md="row.jenis_pembayaran === 'Transfer' ? 4 : 6"
+                  >
                     <VTextField
                       v-model="row.keterangan"
                       label="Keterangan"

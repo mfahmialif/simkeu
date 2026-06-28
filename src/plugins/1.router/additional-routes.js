@@ -128,6 +128,17 @@ export const routes = [
     },
   },
   {
+    path: "/admin/pengeluaran/umum/rekap/:id/lpj",
+    name: "admin-pengeluaran-umum-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Pengeluaran Umum",
+      endpoint: "/admin/pengeluaran/umum",
+      basePath: "/admin/pengeluaran/umum",
+      moduleType: "umum",
+    },
+  },
+  {
     path: "/admin/pengeluaran/bulanan/rekap/:id/lpj",
     name: "admin-pengeluaran-bulanan-rekap-id-lpj",
     component: lpjRouteComponent,

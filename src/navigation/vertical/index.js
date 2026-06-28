@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { computed } from "vue"
 import dashboard from "./dashboard"
 import pemasukan from "./pemasukan"
@@ -18,6 +19,7 @@ import hutang from "./hutang"
 import rumahTangga from "./rumah-tangga"
 import saranaPrasarana from "./sarana-prasarana"
 import transportasi from "./transportasi"
+import umum from "./umum"
 
 const kelolaHeading = [{ heading: "Kelola" }]
 const pemasukanHeading = [{ heading: "Pemasukan" }]
@@ -46,6 +48,7 @@ const routesByRole = roleName => {
       ...rumahTangga,
       ...saranaPrasarana,
       ...transportasi,
+      ...umum,
       ...rab,
       ...laporanHeading,
       ...laporan,
@@ -66,6 +69,7 @@ const routesByRole = roleName => {
       ...rumahTangga,
       ...saranaPrasarana,
       ...transportasi,
+      ...umum,
       ...rab,
       ...laporanHeading,
       ...laporan,
@@ -102,6 +106,7 @@ const routesByRole = roleName => {
       ...rumahTangga,
       ...saranaPrasarana,
       ...transportasi,
+      ...umum,
       ...rab,
       ...laporanHeading,
       ...laporanPengeluaran,
@@ -115,6 +120,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...rumahTangga,
+      ...umum,
       ...kelolaHeading,
       ...setting,
     ],
@@ -125,6 +131,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...saranaPrasarana,
+      ...umum,
       ...kelolaHeading,
       ...setting,
     ],
@@ -135,6 +142,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...transportasi,
+      ...umum,
       ...kelolaHeading,
       ...setting,
     ],
@@ -145,6 +153,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...pengeluaranDosenTatapmuka,
+      ...umum,
       ...laporanHeading,
       ...laporanPengeluaran,
       ...kelolaHeading,
@@ -157,6 +166,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...pengeluaranDosenKegiatan,
+      ...umum,
       ...laporanHeading,
       ...laporanPengeluaran,
       ...kelolaHeading,
@@ -169,6 +179,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...pengeluaranDosenBulanan,
+      ...umum,
       ...rab,
       ...laporanHeading,
       ...laporanPengeluaran,

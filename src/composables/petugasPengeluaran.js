@@ -17,6 +17,7 @@ export const moduleKeyFromPengeluaranEndpoint = endpoint => {
     "rumah_tangga": "rumah_tangga",
     "sarana_prasarana": "sarana_prasarana",
     transportasi: "transportasi",
+    umum: "umum",
   }
 
   return aliases[key] || key || "rab"

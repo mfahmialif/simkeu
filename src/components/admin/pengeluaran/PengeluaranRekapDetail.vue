@@ -95,6 +95,11 @@ const lpjDialog = ref(false)
 const lpjLoading = ref(false)
 const fetchingLpj = ref(false)
 const exportingExcel = ref(false)
+const detailPreviewDialog = ref(false)
+const detailPreviewLoading = ref(false)
+const detailPreviewTab = ref("rab")
+const detailPreviewRows = ref([])
+const detailPreviewTotal = ref(0)
 const lpj = ref(null)
 const lpjRows = ref([])
 const namaInput = ref(null)
@@ -114,13 +119,34 @@ let rabSearchTimer = null
 let lpjSearchTimer = null
 const selectedIds = computed(() => activeDataTab.value === "rab" ? selectedRabIds.value : selectedLpjIds.value)
 const lpjEditorRowLimit = 999999
+const detailPreviewLimit = 500
 
-const detailExportPayload = computed(() => ({
-  tab: activeDataTab.value,
-  search: activeDataTab.value === "rab" ? rabSearch.value : lpjSearch.value,
-  sort_key: activeDataTab.value === "rab" ? sortBy.value.key : lpjSortBy.value.key,
-  sort_order: activeDataTab.value === "rab" ? sortBy.value.order : lpjSortBy.value.order,
-}))
+const detailExportPayload = tab => ({
+  tab,
+  search: tab === "rab" ? rabSearch.value : lpjSearch.value,
+  sort_key: tab === "rab" ? sortBy.value.key : lpjSortBy.value.key,
+  sort_order: tab === "rab" ? sortBy.value.order : lpjSortBy.value.order,
+})
+
+const detailPreviewHeaders = [
+  { title: "No", key: "no", sortable: false, width: 64 },
+  { title: "Tanggal", key: "tanggal", width: 140 },
+  { title: "Pegawai", key: "pegawai", sortable: false },
+  { title: "Uraian", key: "uraian", sortable: false },
+  { title: "Petugas", key: "petugas_nama" },
+  { title: "Jenis Pembayaran", key: "jenis_pembayaran", width: 160 },
+  { title: "Total", key: "total", align: "end", width: 150 },
+  { title: "Keterangan", key: "keterangan", sortable: false },
+]
+
+const detailPreviewShown = computed(() => detailPreviewRows.value.length)
+const detailPreviewTabLabel = computed(() => detailPreviewTab.value === "lpj" ? "LPJ" : "RAB")
+
+const detailPreviewAmount = computed(() => (
+  detailPreviewTab.value === "lpj"
+    ? Number(lpj.value?.total_lpj || 0)
+    : Number(rekap.value?.jumlah || 0)
+))
 
 const tableHeaders = computed(() => {
   const headers = [
@@ -132,7 +158,7 @@ const tableHeaders = computed(() => {
     headers.push({ title: "Kategori", key: "kategori_detail" })
   }
 
-  if (!["rumah-tangga", "sarana-prasarana", "transportasi"].includes(props.moduleType)) {
+  if (!["rumah-tangga", "sarana-prasarana", "transportasi", "umum"].includes(props.moduleType)) {
     headers.push({ title: "Pegawai", key: "pegawai", sortable: false })
   }
 
@@ -154,6 +180,11 @@ const tableHeaders = computed(() => {
       { title: "Satuan", key: "satuan" },
       { title: "Harga Satuan", key: "nominal" },
       { title: "Prioritas", key: "prioritas" },
+    )
+  } else if (props.moduleType === "umum") {
+    detailHeaders.push(
+      { title: "Nama Pengeluaran", key: "uraian", sortable: false },
+      { title: "Nominal", key: "nominal" },
     )
   } else {
     detailHeaders.push({ title: "Uraian", key: "uraian", sortable: false })
@@ -349,7 +380,71 @@ const fetchData = async () => {
   }
 }
 
-const exportDetailExcel = async () => {
+const fetchDetailExportPreview = async () => {
+  try {
+    detailPreviewLoading.value = true
+
+    if (detailPreviewTab.value === "lpj") {
+      const response = await $api(`${props.endpoint}/rekap/${rekapId.value}/lpj`, {
+        method: "GET",
+        body: {
+          page: 1,
+          limit: detailPreviewLimit,
+          sort_key: lpjSortBy.value.key,
+          sort_order: lpjSortBy.value.order,
+          search: lpjSearch.value,
+        },
+      })
+
+      const details = response.data?.details || []
+      const rows = Array.isArray(details) ? details : details.data || []
+
+      detailPreviewRows.value = rows
+      detailPreviewTotal.value = Number(details.total ?? rows.length)
+
+      return
+    }
+
+    const response = await $api(props.endpoint, {
+      method: "GET",
+      body: {
+        page: 1,
+        limit: detailPreviewLimit,
+        sort_key: sortBy.value.key,
+        sort_order: sortBy.value.order,
+        rekap_id: rekapId.value,
+        search: rabSearch.value,
+      },
+    })
+
+    const payload = response.data || {}
+    const rows = Array.isArray(payload) ? payload : payload.data || []
+
+    detailPreviewRows.value = rows
+    detailPreviewTotal.value = Number(payload.total ?? rows.length)
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    detailPreviewLoading.value = false
+  }
+}
+
+const openDetailExportPreview = async () => {
+  if (exportingExcel.value || detailPreviewLoading.value || !rekap.value) return
+
+  detailPreviewTab.value = activeDataTab.value
+  detailPreviewRows.value = []
+  detailPreviewTotal.value = activeDataTab.value === "lpj"
+    ? Number(lpj.value?.jumlah_data || lpjTotalItems.value || 0)
+    : Number(totalItems.value || 0)
+  detailPreviewDialog.value = true
+  await fetchDetailExportPreview()
+}
+
+const downloadDetailExcel = async () => {
   if (exportingExcel.value) return
 
   try {
@@ -365,16 +460,17 @@ const exportDetailExcel = async () => {
         Accept:
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       },
-      body: detailExportPayload.value,
+      body: detailExportPayload(detailPreviewTab.value),
     })
 
-    const prefix = activeDataTab.value === "lpj" ? "Detail LPJ" : "Detail RAB"
+    const prefix = detailPreviewTab.value === "lpj" ? "Detail LPJ" : "Detail RAB"
 
     downloadFileExport(response, `${prefix} ${rekap.value?.nama || props.title}.xlsx`)
     showSnackbar({
       text: "Detail rekap berhasil di download.",
       color: "success",
     })
+    detailPreviewDialog.value = false
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -441,6 +537,10 @@ const uraian = item => {
     return item.nama_kegiatan || "-"
   }
 
+  if (props.moduleType === "umum") {
+    return item.nama_kegiatan || "-"
+  }
+
   if (props.moduleType === "bulanan") {
     return `${numberValue(item.hari)} hari, harian ${formatRupiah(item.barokah_harian)}, bulanan ${formatRupiah(item.barokah_bulanan)}`
   }
@@ -476,6 +576,7 @@ const usesBatchAddForm = computed(() => [
   "rumah-tangga",
   "sarana-prasarana",
   "transportasi",
+  "umum",
   "dosen-bulanan",
   "bulanan",
 ].includes(props.moduleType))
@@ -871,7 +972,7 @@ onBeforeUnmount(() => {
               prepend-icon="ri-file-excel-2-line"
               :loading="exportingExcel"
               :disabled="exportingExcel || !rekap"
-              @click="exportDetailExcel"
+              @click="openDetailExportPreview"
             >
               Download Rekapan
             </VBtn>
@@ -1238,6 +1339,145 @@ onBeforeUnmount(() => {
     </VCard>
 
     <VDialog
+      v-model="detailPreviewDialog"
+      width="1120"
+      scrollable
+    >
+      <VCard>
+        <VCardItem class="pb-4">
+          <VCardTitle>Preview Detail {{ detailPreviewTabLabel }}</VCardTitle>
+          <VCardSubtitle>
+            {{ rekap?.nama || title }}
+          </VCardSubtitle>
+        </VCardItem>
+
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="detailPreviewDialog = false"
+        />
+
+        <VDivider />
+
+        <VCardText>
+          <div class="detail-preview-stats mb-4">
+            <div class="detail-preview-stat">
+              <span>Total {{ detailPreviewTabLabel }}</span>
+              <strong>{{ formatRupiah(detailPreviewAmount) }}</strong>
+            </div>
+            <div class="detail-preview-stat">
+              <span>Jumlah Data</span>
+              <strong>{{ detailPreviewTotal }}</strong>
+            </div>
+            <div class="detail-preview-stat">
+              <span>Data Ditampilkan</span>
+              <strong>{{ detailPreviewShown }} dari {{ detailPreviewTotal }}</strong>
+            </div>
+          </div>
+
+          <VAlert
+            v-if="detailPreviewTotal > detailPreviewShown"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            Preview menampilkan {{ detailPreviewShown }} data pertama sesuai filter aktif. File Excel tetap mengunduh seluruh detail {{ detailPreviewTabLabel }} sesuai filter.
+          </VAlert>
+
+          <VDataTable
+            :headers="detailPreviewHeaders"
+            :items="detailPreviewRows"
+            :loading="detailPreviewLoading"
+            :items-per-page="10"
+            item-value="id"
+            class="detail-preview-table"
+            no-data-text="Belum ada detail rekap."
+          >
+            <template #item.no="{ index }">
+              {{ index + 1 }}
+            </template>
+
+            <template #item.tanggal="{ item }">
+              {{ formatDate(item.tanggal) }}
+            </template>
+
+            <template #item.pegawai="{ item }">
+              <div class="font-weight-medium">
+                {{ pegawaiLabel(item) }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {{ pegawaiMeta(item) || "-" }}
+              </div>
+            </template>
+
+            <template #item.uraian="{ item }">
+              <div class="detail-preview-text">
+                {{ uraian(item) }}
+              </div>
+            </template>
+
+            <template #item.petugas_nama="{ item }">
+              {{ item.petugas_nama || "-" }}
+            </template>
+
+            <template #item.jenis_pembayaran="{ item }">
+              <VChip
+                v-if="item.jenis_pembayaran"
+                :color="paymentColor(item.jenis_pembayaran)"
+                size="small"
+                label
+              >
+                {{ item.jenis_pembayaran }}
+              </VChip>
+              <span v-else>-</span>
+            </template>
+
+            <template #item.total="{ item }">
+              <span class="font-weight-medium">{{ formatRupiah(item.total || 0) }}</span>
+            </template>
+
+            <template #item.keterangan="{ item }">
+              <div class="detail-preview-text">
+                {{ item.keterangan || "-" }}
+              </div>
+            </template>
+          </VDataTable>
+        </VCardText>
+
+        <VCardText class="detail-preview-actions">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="detailPreviewLoading || exportingExcel"
+            @click="detailPreviewDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            variant="tonal"
+            color="primary"
+            prepend-icon="ri-refresh-line"
+            :loading="detailPreviewLoading"
+            :disabled="exportingExcel"
+            @click="fetchDetailExportPreview"
+          >
+            Refresh Preview
+          </VBtn>
+          <VBtn
+            color="success"
+            prepend-icon="ri-file-excel-2-line"
+            :loading="exportingExcel"
+            :disabled="detailPreviewLoading || !rekap"
+            @click="downloadDetailExcel"
+          >
+            Download Excel
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <VDialog
       v-model="deleteItemsDialog"
       max-width="500"
     >
@@ -1577,6 +1817,40 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.detail-preview-stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-preview-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: 64px;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+}
+
+.detail-preview-stat span {
+  color: rgba(var(--v-theme-on-surface), 0.66);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.detail-preview-text {
+  min-inline-size: 180px;
+  white-space: normal;
+}
+
+.detail-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 @media (max-width: 1199px) {
   .detail-summary {
     grid-template-areas:
@@ -1613,6 +1887,10 @@ onBeforeUnmount(() => {
   .detail-actions :deep(.v-btn) {
     inline-size: 100%;
     min-inline-size: 0;
+  }
+
+  .detail-preview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1666,6 +1944,14 @@ onBeforeUnmount(() => {
   }
 
   .lpj-dialog-actions :deep(.v-btn) {
+    flex: 1 1 100%;
+  }
+
+  .detail-preview-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-preview-actions :deep(.v-btn) {
     flex: 1 1 100%;
   }
 }

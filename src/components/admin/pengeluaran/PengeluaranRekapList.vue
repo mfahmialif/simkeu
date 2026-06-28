@@ -118,8 +118,16 @@ const lpjItem = ref(null)
 const lpjLoading = ref(false)
 const exportingExcel = ref(false)
 const exportingDetailId = ref(null)
+const detailPreviewDialog = ref(false)
+const detailPreviewLoading = ref(false)
+const detailPreviewLoadingId = ref(null)
+const detailPreviewItem = ref(null)
+const detailPreviewRows = ref([])
+const detailPreviewTotal = ref(0)
 let searchTimer = null
 let stopListeningRekapUpdates = null
+
+const detailPreviewLimit = 500
 
 const monthYearPickerConfig = {
   altInput: true,
@@ -237,6 +245,35 @@ const petugasModuleKey = computed(() =>
   props.moduleKey || moduleKeyFromPengeluaranEndpoint(props.endpoint),
 )
 
+const previewModuleType = computed(() => {
+  const aliases = {
+    dosen_tatapmuka: "tatapmuka",
+    dosen_kegiatan: "kegiatan",
+    dosen_bulanan: "dosen-bulanan",
+    bulanan: "dosen-bulanan",
+    rumah_tangga: "rumah-tangga",
+    sarana_prasarana: "sarana-prasarana",
+    transportasi: "transportasi",
+    umum: "umum",
+  }
+
+  return aliases[petugasModuleKey.value] || petugasModuleKey.value
+})
+
+const detailPreviewHeaders = [
+  { title: "No", key: "no", sortable: false, width: 64 },
+  { title: "Tanggal", key: "tanggal", width: 140 },
+  { title: "Pegawai", key: "pegawai", sortable: false },
+  { title: "Uraian", key: "uraian", sortable: false },
+  { title: "Petugas", key: "petugas_nama" },
+  { title: "Jenis Pembayaran", key: "jenis_pembayaran", width: 160 },
+  { title: "Total", key: "total", align: "end", width: 150 },
+  { title: "Keterangan", key: "keterangan", sortable: false },
+]
+
+const detailPreviewShown = computed(() => detailPreviewRows.value.length)
+const detailPreviewAmount = computed(() => Number(detailPreviewItem.value?.jumlah || 0))
+
 const canDeleteRekap = item => {
   if (isBarokahRole) {
     return Number(item?.jumlah_data || 0) === 0 && Number(item?.jumlah_lpj || item?.total_lpj || 0) === 0
@@ -248,6 +285,67 @@ const canDeleteRekap = item => {
 const canExportDetailExcel = computed(() =>
   props.enableDetailExcelExport,
 )
+
+const numberValue = value => Number(value ?? 0)
+const amountValue = (value, fallback = 0) => value ?? fallback ?? 0
+
+const previewIsNonPegawai = item => item.kategori_detail === "non_pegawai"
+
+const previewPegawaiLabel = item => previewIsNonPegawai(item)
+  ? "Nonpegawai"
+  : item.nama_pegawai || item.nama_dosen || "-"
+
+const previewPegawaiMeta = item => previewIsNonPegawai(item)
+  ? "Tanpa pegawai"
+  : [
+    item.kode_pegawai || item.kode_dosen,
+    item.tipe_pegawai === "staff" ? "Staff" : item.tipe_pegawai === "dosen" ? "Dosen" : null,
+    item.jabatan_staff || item.nama_prodi_dosen,
+  ].filter(Boolean).join(" - ")
+
+const previewSubtotalTransport = item => {
+  const transportMotor = numberValue(amountValue(item.transport_motor, item.transport))
+  const hariMotor = numberValue(amountValue(item.hari_transport_motor, item.hari))
+  const transportMobil = numberValue(amountValue(item.transport_mobil, item.transport_mobil_tanpa_tol))
+  const hariMobil = numberValue(amountValue(item.hari_transport_mobil, item.hari_transport_mobil_tanpa_tol))
+
+  return transportMotor * hariMotor + transportMobil * hariMobil
+}
+
+const previewSubtotalMengajar = item => {
+  const barokahBiasa = numberValue(amountValue(item.barokah_mengajar_biasa, item.barokah))
+  const jamBiasa = numberValue(item.jam)
+  const barokahDoubleDegree = numberValue(item.barokah_mengajar_double_degree)
+  const jamDoubleDegree = numberValue(amountValue(item.jam_mengajar_double_degree, item.jam))
+
+  return Math.round((barokahBiasa * jamBiasa) + (barokahDoubleDegree * jamDoubleDegree))
+}
+
+const previewSubtotalSempro = item => numberValue(item.barokah_sempro) * numberValue(amountValue(item.jam_sempro, item.barokah_sempro ? 1 : 0))
+const previewSubtotalUas = item => numberValue(item.barokah_uas) * numberValue(item.jumlah_mahasiswa_uas)
+
+const previewUraian = item => {
+  if (["rumah-tangga", "sarana-prasarana", "kegiatan", "transportasi", "umum"].includes(previewModuleType.value)) {
+    return item.nama_kegiatan || "-"
+  }
+
+  if (previewModuleType.value === "bulanan") {
+    return `${numberValue(item.hari)} hari, harian ${formatRupiah(item.barokah_harian)}, bulanan ${formatRupiah(item.barokah_bulanan)}`
+  }
+
+  if (previewModuleType.value === "dosen-bulanan") {
+    return `Barokah Tetap ${formatRupiah(item.barokah_dosen_tetap)}, Struktural ${formatRupiah(item.barokah_struktural)}`
+  }
+
+  return `Transport ${formatRupiah(previewSubtotalTransport(item))}, mengajar ${formatRupiah(previewSubtotalMengajar(item))}, sempro ${formatRupiah(previewSubtotalSempro(item))}, UAS ${formatRupiah(previewSubtotalUas(item))}`
+}
+
+const previewPaymentColor = value => {
+  if (value === "Transfer") return "info"
+  if (value === "Tunai") return "secondary"
+
+  return "success"
+}
 
 const actionDialogMessage = computed(() => {
   if (actionType.value === "release") {
@@ -383,8 +481,52 @@ const exportRekapExcel = async () => {
   }
 }
 
-const exportRekapDetailExcel = async item => {
-  if (exportingDetailId.value) return
+const fetchDetailExportPreview = async item => {
+  try {
+    detailPreviewLoading.value = true
+    detailPreviewLoadingId.value = item.id
+
+    const response = await $api(props.endpoint, {
+      method: "GET",
+      body: {
+        page: 1,
+        limit: detailPreviewLimit,
+        sort_key: "id",
+        sort_order: "asc",
+        rekap_id: item.id,
+      },
+    })
+
+    const payload = response.data || {}
+    const rows = Array.isArray(payload) ? payload : payload.data || []
+
+    detailPreviewRows.value = rows
+    detailPreviewTotal.value = Number(payload.total ?? rows.length)
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    detailPreviewLoading.value = false
+    detailPreviewLoadingId.value = null
+  }
+}
+
+const openDetailExportPreview = async item => {
+  if (detailPreviewLoading.value || exportingDetailId.value) return
+
+  detailPreviewItem.value = item
+  detailPreviewRows.value = []
+  detailPreviewTotal.value = Number(item.jumlah_data || 0)
+  detailPreviewDialog.value = true
+  await fetchDetailExportPreview(item)
+}
+
+const downloadDetailPreviewExcel = async () => {
+  const item = detailPreviewItem.value
+
+  if (!item || exportingDetailId.value) return
 
   try {
     exportingDetailId.value = item.id
@@ -409,6 +551,7 @@ const exportRekapDetailExcel = async item => {
       text: "Detail rekap berhasil di download.",
       color: "success",
     })
+    detailPreviewDialog.value = false
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -1024,9 +1167,9 @@ onBeforeUnmount(() => {
                       size="small"
                       variant="text"
                       color="success"
-                      :loading="exportingDetailId === item.id"
-                      :disabled="Boolean(exportingDetailId)"
-                      @click="exportRekapDetailExcel(item)"
+                      :loading="detailPreviewLoadingId === item.id || exportingDetailId === item.id"
+                      :disabled="Boolean(detailPreviewLoadingId || exportingDetailId)"
+                      @click="openDetailExportPreview(item)"
                     />
                   </template>
                 </VTooltip>
@@ -1294,6 +1437,145 @@ onBeforeUnmount(() => {
     </VDialog>
 
     <VDialog
+      v-model="detailPreviewDialog"
+      width="1120"
+      scrollable
+    >
+      <VCard>
+        <VCardItem class="pb-4">
+          <VCardTitle>Preview Detail Rekapan</VCardTitle>
+          <VCardSubtitle>
+            {{ detailPreviewItem?.nama || title }}
+          </VCardSubtitle>
+        </VCardItem>
+
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="detailPreviewDialog = false"
+        />
+
+        <VDivider />
+
+        <VCardText>
+          <div class="detail-preview-stats mb-4">
+            <div class="detail-preview-stat">
+              <span>Total RAB</span>
+              <strong>{{ formatRupiah(detailPreviewAmount) }}</strong>
+            </div>
+            <div class="detail-preview-stat">
+              <span>Jumlah Data</span>
+              <strong>{{ detailPreviewTotal }}</strong>
+            </div>
+            <div class="detail-preview-stat">
+              <span>Data Ditampilkan</span>
+              <strong>{{ detailPreviewShown }} dari {{ detailPreviewTotal }}</strong>
+            </div>
+          </div>
+
+          <VAlert
+            v-if="detailPreviewTotal > detailPreviewShown"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            Preview menampilkan {{ detailPreviewShown }} data pertama. File Excel tetap mengunduh seluruh detail rekap.
+          </VAlert>
+
+          <VDataTable
+            :headers="detailPreviewHeaders"
+            :items="detailPreviewRows"
+            :loading="detailPreviewLoading"
+            :items-per-page="10"
+            item-value="id"
+            class="detail-preview-table"
+            no-data-text="Belum ada detail rekap."
+          >
+            <template #item.no="{ index }">
+              {{ index + 1 }}
+            </template>
+
+            <template #item.tanggal="{ item }">
+              {{ formatDate(item.tanggal) }}
+            </template>
+
+            <template #item.pegawai="{ item }">
+              <div class="font-weight-medium">
+                {{ previewPegawaiLabel(item) }}
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                {{ previewPegawaiMeta(item) || "-" }}
+              </div>
+            </template>
+
+            <template #item.uraian="{ item }">
+              <div class="detail-preview-text">
+                {{ previewUraian(item) }}
+              </div>
+            </template>
+
+            <template #item.petugas_nama="{ item }">
+              {{ item.petugas_nama || "-" }}
+            </template>
+
+            <template #item.jenis_pembayaran="{ item }">
+              <VChip
+                v-if="item.jenis_pembayaran"
+                :color="previewPaymentColor(item.jenis_pembayaran)"
+                size="small"
+                label
+              >
+                {{ item.jenis_pembayaran }}
+              </VChip>
+              <span v-else>-</span>
+            </template>
+
+            <template #item.total="{ item }">
+              <span class="font-weight-medium">{{ formatRupiah(item.total || 0) }}</span>
+            </template>
+
+            <template #item.keterangan="{ item }">
+              <div class="detail-preview-text">
+                {{ item.keterangan || "-" }}
+              </div>
+            </template>
+          </VDataTable>
+        </VCardText>
+
+        <VCardText class="detail-preview-actions">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="detailPreviewLoading || Boolean(exportingDetailId)"
+            @click="detailPreviewDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            variant="tonal"
+            color="primary"
+            prepend-icon="ri-refresh-line"
+            :loading="detailPreviewLoading"
+            :disabled="!detailPreviewItem || Boolean(exportingDetailId)"
+            @click="fetchDetailExportPreview(detailPreviewItem)"
+          >
+            Refresh Preview
+          </VBtn>
+          <VBtn
+            color="success"
+            prepend-icon="ri-file-excel-2-line"
+            :loading="exportingDetailId === detailPreviewItem?.id"
+            :disabled="detailPreviewLoading || !detailPreviewItem"
+            @click="downloadDetailPreviewExcel"
+          >
+            Download Excel
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <VDialog
       v-model="actionDialog"
       width="500"
     >
@@ -1416,6 +1698,40 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.detail-preview-stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-preview-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: 64px;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+}
+
+.detail-preview-stat span {
+  color: rgba(var(--v-theme-on-surface), 0.66);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.detail-preview-text {
+  min-inline-size: 180px;
+  white-space: normal;
+}
+
+.detail-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .rekap-header-icon,
 .rekap-empty-icon {
   display: grid;
@@ -1446,6 +1762,10 @@ onBeforeUnmount(() => {
   .rekap-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .detail-preview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 599px) {
@@ -1458,6 +1778,14 @@ onBeforeUnmount(() => {
   }
 
   .lpj-dialog-actions :deep(.v-btn) {
+    flex: 1 1 100%;
+  }
+
+  .detail-preview-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-preview-actions :deep(.v-btn) {
     flex: 1 1 100%;
   }
 }

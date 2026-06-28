@@ -383,6 +383,7 @@ declare module 'vue' {
     FormPengeluaranRumahTangga: typeof import('./src/components/admin/pengeluaran/rumah-tangga/FormPengeluaranRumahTangga.vue')['default']
     FormPengeluaranSaranaPrasarana: typeof import('./src/components/admin/pengeluaran/sarana-prasarana/FormPengeluaranSaranaPrasarana.vue')['default']
     FormPengeluaranTransportasi: typeof import('./src/components/admin/pengeluaran/transportasi/FormPengeluaranTransportasi.vue')['default']
+    FormPengeluaranUmum: typeof import('./src/components/admin/pengeluaran/umum/FormPengeluaranUmum.vue')['default']
     FormProdi: typeof import('./src/components/admin/prodi/FormProdi.vue')['default']
     FormProfile: typeof import('./src/components/admin/profile/FormProfile.vue')['default']
     FormSemesterPendek: typeof import('./src/components/admin/pemasukan/mahasiswa/SemesterPendek/FormSemesterPendek.vue')['default']

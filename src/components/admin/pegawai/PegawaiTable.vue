@@ -1,5 +1,5 @@
 <script setup>
-import { downloadFileExport } from "@/composables/exportFile"
+import { downloadFileExport, openFileExport } from "@/composables/exportFile"
 
 const props = defineProps({
   title: {
@@ -16,8 +16,6 @@ const props = defineProps({
     default: "",
   },
 })
-
-const router = useRouter()
 
 const userData = useCookie("userData").value ?? {}
 
@@ -44,6 +42,12 @@ const isImportDialogVisible = ref(false)
 const isImporting = ref(false)
 const importFile = ref(null)
 const importSummary = ref(null)
+const isSlipDialogVisible = ref(false)
+const isLoadingSlipPreview = ref(false)
+const isDownloadingSlip = ref(false)
+const slipPegawai = ref(null)
+const slipBulan = ref(currentMonthValue())
+const slipData = ref(null)
 let searchTimer = null
 
 const stats = ref({
@@ -59,6 +63,11 @@ const showProdiFilter = computed(() => props.fixedTipe === "dosen")
 const cardTitle = computed(() => props.title)
 const listNameLower = computed(() => props.title.toLowerCase())
 const addUrl = computed(() => "/admin/setting/pegawai/add")
+const detailUrl = id => `/admin/setting/pegawai/detail/${id}`
+const slipModules = computed(() => slipData.value?.modules || [])
+const slipRows = computed(() => slipData.value?.rows || [])
+const slipStats = computed(() => slipData.value?.stats || {})
+const slipPeriodLabel = computed(() => slipData.value?.filters?.label || "-")
 
 const filterColMd = computed(() => {
   if (props.fixedTipe === "staff") return 4
@@ -95,6 +104,13 @@ const statusOptions = [
   { title: "Aktif", value: "aktif" },
   { title: "Tidak Aktif", value: "tidak aktif" },
 ]
+
+function currentMonthValue() {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+
+  return `${now.getFullYear()}-${month}`
+}
 
 const statusStatCards = computed(() => [
   {
@@ -352,6 +368,84 @@ const importData = async () => {
   }
 }
 
+const fetchSlipBarokahPreview = async () => {
+  if (!slipPegawai.value?.id) return
+
+  try {
+    isLoadingSlipPreview.value = true
+
+    const response = await $api(`/admin/pegawai/${slipPegawai.value.id}/slip-barokah`, {
+      method: "GET",
+      params: {
+        bulan: slipBulan.value,
+      },
+    })
+
+    if (response.status === true) {
+      slipData.value = response.data || null
+
+      return
+    }
+
+    showSnackbar({
+      text: errorMessage(response),
+      color: "error",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    isLoadingSlipPreview.value = false
+  }
+}
+
+const openSlipBarokahDialog = item => {
+  const bulan = currentMonthValue()
+
+  slipPegawai.value = item
+  slipData.value = null
+  isSlipDialogVisible.value = true
+
+  if (slipBulan.value === bulan) {
+    fetchSlipBarokahPreview()
+  } else {
+    slipBulan.value = bulan
+  }
+}
+
+const downloadSlipBarokah = async () => {
+  if (!slipPegawai.value?.id) return
+
+  try {
+    isDownloadingSlip.value = true
+
+    const response = await $api(`/admin/pegawai/${slipPegawai.value.id}/slip-barokah/download`, {
+      method: "GET",
+      headers: {
+        Accept: "application/pdf",
+      },
+      params: {
+        bulan: slipBulan.value,
+      },
+    })
+
+    openFileExport(response)
+    showSnackbar({
+      text: "Slip barokah berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    isDownloadingSlip.value = false
+  }
+}
+
 const resetFilters = () => {
   selectedTipe.value = props.fixedTipe || null
   selectedJenisKelamin.value = null
@@ -376,6 +470,12 @@ watch(search, () => {
   searchTimer = setTimeout(() => {
     fetchData()
   }, 450)
+})
+
+watch(slipBulan, () => {
+  if (!isSlipDialogVisible.value || !slipPegawai.value?.id) return
+
+  fetchSlipBarokahPreview()
 })
 
 watch(
@@ -602,7 +702,12 @@ onMounted(() => {
 
         <template #item.nama="{ item }">
           <div class="d-flex flex-column">
-            <span class="font-weight-medium">{{ item.nama }}</span>
+            <RouterLink
+              :to="detailUrl(item.id)"
+              class="pegawai-name-link font-weight-medium"
+            >
+              {{ item.nama }}
+            </RouterLink>
             <small class="text-medium-emphasis">{{ item.hp || "-" }}</small>
           </div>
         </template>
@@ -657,9 +762,17 @@ onMounted(() => {
                 <VListItem
                   value="detail"
                   prepend-icon="ri-eye-line"
-                  @click="$router.push(`/admin/setting/pegawai/detail/${item.id}`)"
+                  @click="$router.push(detailUrl(item.id))"
                 >
                   Detail
+                </VListItem>
+
+                <VListItem
+                  value="slip-barokah"
+                  prepend-icon="ri-receipt-line"
+                  @click="openSlipBarokahDialog(item)"
+                >
+                  Slip Barokah
                 </VListItem>
 
                 <VListItem
@@ -726,6 +839,176 @@ onMounted(() => {
               class="me-1"
             />
             Hapus
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <VDialog
+      v-model="isSlipDialogVisible"
+      width="1040"
+      scrollable
+    >
+      <VCard>
+        <VCardItem class="pb-4">
+          <VCardTitle>Slip Barokah</VCardTitle>
+          <VCardSubtitle>
+            {{ slipPegawai?.nama || "-" }}
+          </VCardSubtitle>
+        </VCardItem>
+
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="isSlipDialogVisible = false"
+        />
+
+        <VDivider />
+
+        <VCardText>
+          <VRow class="align-center">
+            <VCol
+              cols="12"
+              md="4"
+            >
+              <VTextField
+                v-model="slipBulan"
+                type="month"
+                label="Bulan"
+                density="compact"
+                prepend-inner-icon="ri-calendar-line"
+                :disabled="isLoadingSlipPreview"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              sm="6"
+              md="4"
+            >
+              <div class="slip-summary-box">
+                <span class="text-medium-emphasis">Periode</span>
+                <strong>{{ slipPeriodLabel }}</strong>
+              </div>
+            </VCol>
+
+            <VCol
+              cols="12"
+              sm="6"
+              md="4"
+            >
+              <div class="slip-summary-box">
+                <span class="text-medium-emphasis">Total Barokah</span>
+                <strong>{{ formatRupiah(slipStats.total || 0) }}</strong>
+              </div>
+            </VCol>
+          </VRow>
+
+          <VProgressLinear
+            v-if="isLoadingSlipPreview"
+            indeterminate
+            color="primary"
+            class="mb-4"
+          />
+
+          <div class="slip-module-grid mb-4">
+            <div
+              v-for="module in slipModules"
+              :key="module.key"
+              class="slip-module-item"
+            >
+              <div class="d-flex align-center justify-space-between gap-3">
+                <div class="d-flex align-center gap-2">
+                  <VAvatar
+                    :color="module.color"
+                    variant="tonal"
+                    size="34"
+                  >
+                    <VIcon :icon="module.icon" />
+                  </VAvatar>
+                  <div>
+                    <div class="font-weight-medium">
+                      {{ module.short_label }}
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      {{ module.jumlah || 0 }} data
+                    </div>
+                  </div>
+                </div>
+                <div class="font-weight-semibold text-end">
+                  {{ formatRupiah(module.total || 0) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <VDataTable
+            :headers="[
+              { title: 'No', key: 'no', sortable: false, width: 64 },
+              { title: 'Tanggal', key: 'tanggal_label', width: 140 },
+              { title: 'Modul', key: 'module_label', width: 140 },
+              { title: 'Deskripsi', key: 'deskripsi' },
+              { title: 'Rincian', key: 'detail_text' },
+              { title: 'Total', key: 'total', align: 'end', width: 150 },
+            ]"
+            :items="slipRows"
+            :loading="isLoadingSlipPreview"
+            :items-per-page="10"
+            item-value="row_key"
+            class="slip-preview-table"
+            no-data-text="Belum ada pengeluaran pada bulan ini."
+          >
+            <template #item.no="{ index }">
+              {{ index + 1 }}
+            </template>
+
+            <template #item.module_label="{ item }">
+              <VChip
+                :color="item.module_color"
+                size="small"
+                label
+              >
+                {{ item.module_label }}
+              </VChip>
+            </template>
+
+            <template #item.deskripsi="{ item }">
+              <div class="slip-detail-text">
+                {{ item.deskripsi || "-" }}
+              </div>
+            </template>
+
+            <template #item.detail_text="{ item }">
+              <div class="slip-detail-text text-medium-emphasis">
+                {{ item.detail_text || "-" }}
+              </div>
+            </template>
+
+            <template #item.total="{ item }">
+              <span class="font-weight-medium">{{ formatRupiah(item.total || 0) }}</span>
+            </template>
+          </VDataTable>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end flex-wrap gap-4">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            prepend-icon="ri-refresh-line"
+            :loading="isLoadingSlipPreview"
+            @click="fetchSlipBarokahPreview"
+          >
+            Refresh
+          </VBtn>
+
+          <VBtn
+            color="primary"
+            prepend-icon="ri-file-pdf-2-line"
+            :loading="isDownloadingSlip"
+            :disabled="!slipPegawai?.id"
+            @click="downloadSlipBarokah"
+          >
+            Download Slip
           </VBtn>
         </VCardText>
       </VCard>
@@ -806,8 +1089,48 @@ onMounted(() => {
   gap: 16px;
 }
 
+.pegawai-name-link {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: none;
+}
+
+.pegawai-name-link:hover {
+  text-decoration: underline;
+}
+
+.slip-summary-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: 48px;
+  padding: 10px 14px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+}
+
+.slip-module-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.slip-module-item {
+  padding: 12px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+}
+
+.slip-detail-text {
+  min-inline-size: 180px;
+  white-space: normal;
+}
+
 @media (max-width: 959px) {
   .pegawai-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .slip-module-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -824,6 +1147,10 @@ onMounted(() => {
 
   .pegawai-action-btn {
     inline-size: 100%;
+  }
+
+  .slip-module-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

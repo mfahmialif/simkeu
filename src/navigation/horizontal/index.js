@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { computed } from "vue"
 import dashboard from "./dashboard"
 import pemasukan from "./pemasukan"
@@ -18,6 +19,7 @@ import rab from "./rab"
 import rumahTangga from "./rumah-tangga"
 import saranaPrasarana from "./sarana-prasarana"
 import transportasi from "./transportasi"
+import umum from "./umum"
 
 const userData = useCookie("userData")
 
@@ -36,6 +38,7 @@ const routesByRole = roleName => {
       ...rumahTangga,
       ...saranaPrasarana,
       ...transportasi,
+      ...umum,
       ...pegawai,
       ...hutang,
       ...rab,
@@ -51,6 +54,7 @@ const routesByRole = roleName => {
       ...rumahTangga,
       ...saranaPrasarana,
       ...transportasi,
+      ...umum,
       ...pegawai,
       ...hutang,
       ...rab,
@@ -81,6 +85,7 @@ const routesByRole = roleName => {
       ...rumahTangga,
       ...saranaPrasarana,
       ...transportasi,
+      ...umum,
       ...rab,
       ...laporanPengeluaran,
       ...setting,
@@ -91,6 +96,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...rumahTangga,
+      ...umum,
       ...setting,
     ],
 
@@ -99,6 +105,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...saranaPrasarana,
+      ...umum,
       ...setting,
     ],
 
@@ -107,6 +114,7 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...transportasi,
+      ...umum,
       ...setting,
     ],
 
@@ -115,12 +123,13 @@ const routesByRole = roleName => {
       ...pegawai,
       ...hutang,
       ...pengeluaranDosenTatapmuka,
+      ...umum,
       ...laporanPengeluaran,
       ...setting,
     ],
 
-    barokahdosen_kegiatan: [...dashboard, ...pegawai, ...hutang, ...pengeluaranDosenKegiatan, ...laporanPengeluaran, ...setting],
-    barokahdosen_bulanan: [...dashboard, ...pegawai, ...hutang, ...pengeluaranDosenBulanan, ...rab, ...laporanPengeluaran, ...setting],
+    barokahdosen_kegiatan: [...dashboard, ...pegawai, ...hutang, ...pengeluaranDosenKegiatan, ...umum, ...laporanPengeluaran, ...setting],
+    barokahdosen_bulanan: [...dashboard, ...pegawai, ...hutang, ...pengeluaranDosenBulanan, ...umum, ...rab, ...laporanPengeluaran, ...setting],
   }
 }
 
