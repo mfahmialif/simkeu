@@ -301,6 +301,7 @@ const activeFilterPayload = () => {
   const searchTerm = String(search.value || "").trim()
 
   return {
+    belum_cetak_rab: 1,
     ...(searchTerm && { search: searchTerm }),
     ...(selectedBulan.value && { bulan: selectedBulan.value }),
     ...(selectedTahun.value && { tahun: selectedTahun.value }),
@@ -618,7 +619,7 @@ const saveProsesRab = async () => {
       text: response.message,
       color: "success",
     })
-    fetchProsesRab()
+    await fetchData()
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -695,6 +696,7 @@ const deleteProsesRab = async item => {
       text: response.message,
       color: "success",
     })
+    await fetchData()
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
