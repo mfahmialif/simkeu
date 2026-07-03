@@ -1049,7 +1049,10 @@ onBeforeUnmount(() => {
 
       <VDivider />
 
-      <VWindow v-model="activeDataTab">
+      <VWindow
+        v-model="activeDataTab"
+        :touch="false"
+      >
         <VWindowItem value="rab">
           <VDataTableServer
             v-model:items-per-page="itemsPerPage"
@@ -1967,18 +1970,24 @@ onBeforeUnmount(() => {
   }
 
   .detail-data-header :deep(.v-card-item__append) {
+    inline-size: 100%;
     margin-inline-start: 0;
     padding-inline-start: 0;
   }
 
   .detail-data-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     inline-size: 100%;
   }
 
   .detail-data-actions :deep(.v-btn) {
     inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .detail-data-actions :deep(.v-btn__content) {
+    white-space: normal;
   }
 
   .detail-stats {

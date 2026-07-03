@@ -805,6 +805,7 @@ onMounted(() => {
           { title: 'Rekap', key: 'nama_rekap' },
           { title: 'Barokah Tetap', key: 'barokah_dosen_tetap' },
           { title: 'Struktural', key: 'barokah_struktural' },
+          { title: 'Potongan Piutang', key: 'piutang_potongan' },
           { title: 'Total', key: 'total' },
           { title: 'Jenis Pembayaran', key: 'jenis_pembayaran' },
           { title: 'Lampiran', key: 'lampiran', sortable: false },
@@ -878,6 +879,16 @@ onMounted(() => {
 
         <template #item.barokah_struktural="{ item }">
           {{ formatRupiah(item.barokah_struktural) }}
+        </template>
+
+        <template #item.piutang_potongan="{ item }">
+          <span
+            v-if="Number(item.piutang_potongan || 0) > 0"
+            class="text-warning font-weight-medium"
+          >
+            - {{ formatRupiah(item.piutang_potongan) }}
+          </span>
+          <span v-else>-</span>
         </template>
 
         <template #item.total="{ item }">

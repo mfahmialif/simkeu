@@ -1,5 +1,6 @@
 <script setup>
 /* eslint-disable camelcase */
+import { VDatePicker } from "vuetify/components/VDatePicker"
 import { downloadFileExport } from "@/composables/exportFile"
 import { formatRupiah } from "@/composables/formatRupiah"
 import PengeluaranPetugasFilter from "@/components/admin/pengeluaran/PengeluaranPetugasFilter.vue"
@@ -40,10 +41,11 @@ const statsLoading = ref(false)
 const exportingExcel = ref(false)
 const exportingRekapan = ref(false)
 const prosesRabList = ref([])
+const prosesRabKategoriOptions = ref([])
+const prosesRabKategoriHistory = ref([])
 const prosesRabLoading = ref(false)
 const prosesRabSearch = ref("")
-const selectedProsesRabBulan = ref(null)
-const selectedProsesRabTahun = ref(null)
+const prosesRabDateMenu = ref(false)
 const prosesRabDialog = ref(false)
 const prosesRabSaving = ref(false)
 const prosesRabDownloading = ref({})
@@ -122,10 +124,37 @@ const rekapForm = ref({
   keterangan: "",
 })
 
-const prosesRabForm = ref({
-  tanggal_cetak: todayDateValue(),
+const prosesRabDefaultTanggalCetak = () => {
+  const today = todayDateValue()
+  const todayMatch = today.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const tahun = Number(selectedTahun.value || todayMatch?.[1] || currentDate.getFullYear())
+  const bulan = Number(selectedBulan.value || todayMatch?.[2] || currentDate.getMonth() + 1)
+
+  if (!selectedBulan.value) {
+    return selectedTahun.value && tahun !== Number(todayMatch?.[1])
+      ? `${tahun}-01-01`
+      : today
+  }
+
+  const isCurrentMonth = tahun === Number(todayMatch?.[1]) && bulan === Number(todayMatch?.[2])
+  const tanggal = isCurrentMonth ? todayMatch?.[3] || "01" : "01"
+
+  return [
+    tahun,
+    String(bulan).padStart(2, "0"),
+    tanggal,
+  ].join("-")
+}
+
+const createDefaultProsesRabForm = () => ({
+  kategori_tipe: "rab",
+  susulan_kategori: null,
+  custom_kategori: "",
+  tanggal_cetak: prosesRabDefaultTanggalCetak(),
   keterangan: "",
 })
+
+const prosesRabForm = ref(createDefaultProsesRabForm())
 
 let searchTimer = null
 let prosesRabSearchTimer = null
@@ -174,6 +203,28 @@ const formatDate = value => {
     month: "long",
     year: "numeric",
   }).format(new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+}
+
+const parseDateValue = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/)
+
+  if (!match) return null
+
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+}
+
+const toDateValue = value => {
+  if (!value) return ""
+
+  const date = value instanceof Date ? value : new Date(value)
+
+  if (Number.isNaN(date.getTime())) return ""
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-")
 }
 
 const yearItems = computed(() => [...new Set([
@@ -297,11 +348,93 @@ const kasTipeItems = [
   { title: "Penyesuaian Keluar", value: "keluar" },
 ]
 
-const activeFilterPayload = () => {
+const prosesRabExistingKategoriItems = computed(() =>
+  prosesRabKategoriOptions.value.map(kategori => ({
+    title: kategori,
+    value: kategori,
+  })),
+)
+
+const prosesRabMonthKey = value => {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-\d{2}/)
+
+  return match ? `${match[1]}-${match[2]}` : ""
+}
+
+const prosesRabNextNumber = computed(() => {
+  const selectedMonth = prosesRabMonthKey(prosesRabForm.value.tanggal_cetak)
+
+  if (!selectedMonth) return 1
+
+  const usedNumbers = prosesRabKategoriHistory.value
+    .filter(item => prosesRabMonthKey(item.tanggal_cetak) === selectedMonth)
+    .map(item => {
+      const kategori = String(item.kategori || "").trim()
+
+      if (/\(\s*SUSULAN\s*\)$/i.test(kategori)) return 0
+
+      const match = kategori.match(/^RAB\s+(\d+)$/i)
+        || kategori.match(/^RAB\s*\(\s*RAB\s+(\d+)\s*\)$/i)
+
+      return match ? Number(match[1]) : 0
+    })
+
+  return Math.max(0, ...usedNumbers) + 1
+})
+
+const prosesRabAutoKategori = computed(() => `RAB ${prosesRabNextNumber.value}`)
+
+const prosesRabKategoriModeItems = computed(() => [
+  { title: prosesRabAutoKategori.value, value: "rab" },
+  { title: "RAB Susulan", value: "rab_susulan" },
+  { title: "BAROKAH STRUKTURAL", value: "barokah_struktural" },
+  { title: "BAROKAH MENGAJAR", value: "barokah_mengajar" },
+  { title: "Input lain", value: "custom" },
+])
+
+const susulanKategoriValue = value => {
+  const kategori = String(value || "").trim()
+
+  if (!kategori) return ""
+  if (/\(\s*SUSULAN\s*\)$/i.test(kategori)) return kategori
+
+  return `${kategori} ( SUSULAN )`
+}
+
+const prosesRabFinalKategori = computed(() => {
+  const form = prosesRabForm.value
+
+  if (form.kategori_tipe === "rab") {
+    return prosesRabAutoKategori.value
+  }
+
+  if (form.kategori_tipe === "rab_susulan") {
+    return susulanKategoriValue(form.susulan_kategori)
+  }
+
+  if (form.kategori_tipe === "barokah_struktural") return "BAROKAH STRUKTURAL"
+  if (form.kategori_tipe === "barokah_mengajar") return "BAROKAH MENGAJAR"
+  if (form.kategori_tipe === "custom") return String(form.custom_kategori || "").trim()
+
+  return ""
+})
+
+const prosesRabTanggalCetakPicker = computed({
+  get: () => parseDateValue(prosesRabForm.value.tanggal_cetak) || parseDateValue(todayDateValue()),
+  set: value => {
+    const nextValue = toDateValue(value)
+
+    if (nextValue) {
+      prosesRabForm.value.tanggal_cetak = nextValue
+      prosesRabDateMenu.value = false
+    }
+  },
+})
+
+const sharedRabFilterPayload = () => {
   const searchTerm = String(search.value || "").trim()
 
   return {
-    belum_cetak_rab: 1,
     ...(searchTerm && { search: searchTerm }),
     ...(selectedBulan.value && { bulan: selectedBulan.value }),
     ...(selectedTahun.value && { tahun: selectedTahun.value }),
@@ -310,15 +443,28 @@ const activeFilterPayload = () => {
   }
 }
 
+const activeFilterPayload = () => ({
+  belum_cetak_rab: 1,
+  ...sharedRabFilterPayload(),
+})
+
 const hasActiveFilters = () => Object.keys(activeFilterPayload()).length > 0
 
 const prosesRabFilterPayload = () => {
   const searchTerm = String(prosesRabSearch.value || "").trim()
+  const sharedPayload = sharedRabFilterPayload()
+
+  const {
+    bulan,
+    tahun,
+    ...rekapFilters
+  } = sharedPayload
 
   return {
+    ...rekapFilters,
+    ...(bulan && { proses_bulan: bulan }),
+    ...(tahun && { proses_tahun: tahun }),
     ...(searchTerm && { proses_search: searchTerm }),
-    ...(selectedProsesRabBulan.value && { proses_bulan: selectedProsesRabBulan.value }),
-    ...(selectedProsesRabTahun.value && { proses_tahun: selectedProsesRabTahun.value }),
   }
 }
 
@@ -369,6 +515,8 @@ const fetchProsesRab = async (silent = false) => {
     })
 
     prosesRabList.value = response.data || []
+    prosesRabKategoriOptions.value = response.filters?.kategori_options || []
+    prosesRabKategoriHistory.value = response.filters?.kategori_history || []
   } catch (err) {
     prosesRabList.value = []
 
@@ -562,10 +710,7 @@ const openProsesRabDialog = () => {
     return
   }
 
-  prosesRabForm.value = {
-    tanggal_cetak: todayDateValue(),
-    keterangan: "",
-  }
+  prosesRabForm.value = createDefaultProsesRabForm()
   prosesRabDialog.value = true
 }
 
@@ -590,6 +735,19 @@ const saveProsesRab = async () => {
     return
   }
 
+  const kategori = prosesRabFinalKategori.value
+
+  if (!kategori) {
+    showSnackbar({
+      text: prosesRabForm.value.kategori_tipe === "rab_susulan"
+        ? "Pilih kategori yang akan dibuat susulan."
+        : "Kategori wajib diisi.",
+      color: "warning",
+    })
+
+    return
+  }
+
   try {
     prosesRabSaving.value = true
 
@@ -597,6 +755,7 @@ const saveProsesRab = async () => {
       method: "POST",
       body: {
         tanggal_cetak: prosesRabForm.value.tanggal_cetak,
+        kategori,
         keterangan: prosesRabForm.value.keterangan,
         items: selectedRekapItems.value.map(item => ({
           module_key: item.module_key,
@@ -708,14 +867,6 @@ const deleteProsesRab = async item => {
       [item.id]: false,
     }
   }
-}
-
-const resetProsesRabFilters = () => {
-  clearTimeout(prosesRabSearchTimer)
-  prosesRabSearch.value = ""
-  selectedProsesRabBulan.value = null
-  selectedProsesRabTahun.value = null
-  fetchProsesRab()
 }
 
 const resetFilters = async () => {
@@ -1057,10 +1208,6 @@ const deleteKasManual = async item => {
 
 watch([selectedRekapKeys, dataTable], syncSelectedRekapCache, { deep: true })
 
-watch([selectedProsesRabBulan, selectedProsesRabTahun], () => {
-  fetchProsesRab()
-})
-
 watch(prosesRabSearch, () => {
   clearTimeout(prosesRabSearchTimer)
   prosesRabSearchTimer = setTimeout(fetchProsesRab, 350)
@@ -1278,61 +1425,16 @@ onBeforeUnmount(() => {
         <VRow align="center">
           <VCol
             cols="12"
-            md="4"
+            md="6"
           >
             <VTextField
               v-model="prosesRabSearch"
               label="Cari Proses RAB"
-              placeholder="Keterangan, nama rekap, petugas, atau jenis"
+              placeholder="Kategori, keterangan, nama rekap, petugas, atau jenis"
               prepend-inner-icon="ri-search-line"
               clearable
               hide-details
             />
-          </VCol>
-
-          <VCol
-            cols="12"
-            sm="6"
-            md="3"
-          >
-            <VSelect
-              v-model="selectedProsesRabBulan"
-              label="Bulan Cetak"
-              :items="bulanItems"
-              clearable
-              hide-details
-            />
-          </VCol>
-
-          <VCol
-            cols="12"
-            sm="6"
-            md="3"
-          >
-            <VSelect
-              v-model="selectedProsesRabTahun"
-              label="Tahun Cetak"
-              :items="yearItems"
-              clearable
-              hide-details
-            />
-          </VCol>
-
-          <VCol
-            cols="12"
-            md="2"
-          >
-            <VBtn
-              class="w-100"
-              height="56"
-              variant="outlined"
-              color="secondary"
-              prepend-icon="ri-refresh-line"
-              :disabled="prosesRabLoading"
-              @click="resetProsesRabFilters"
-            >
-              Reset
-            </VBtn>
           </VCol>
         </VRow>
       </VCardText>
@@ -1343,6 +1445,7 @@ onBeforeUnmount(() => {
         :headers="[
           { title: 'No', key: 'nomor', sortable: false },
           { title: 'Tanggal Cetak', key: 'tanggal_cetak' },
+          { title: 'Kategori', key: 'kategori', sortable: false },
           { title: 'Jumlah Rekap', key: 'jumlah_rekap', align: 'end' },
           { title: 'Total RAB', key: 'total_rab', align: 'end' },
           { title: 'Keterangan', key: 'keterangan', sortable: false },
@@ -1367,6 +1470,10 @@ onBeforeUnmount(() => {
           <div class="font-weight-medium">
             {{ formatDate(item.tanggal_cetak) }}
           </div>
+        </template>
+
+        <template #item.kategori="{ item }">
+          <span class="font-weight-medium">{{ item.kategori || "-" }}</span>
         </template>
 
         <template #item.jumlah_rekap="{ item }">
@@ -1818,14 +1925,70 @@ onBeforeUnmount(() => {
               cols="12"
               md="6"
             >
-              <AppDateTimePicker
-                v-model="prosesRabForm.tanggal_cetak"
-                label="Tanggal Cetak *"
-                :config="{
-                  altInput: true,
-                  altFormat: 'd F Y',
-                  dateFormat: 'Y-m-d',
-                }"
+              <VMenu
+                v-model="prosesRabDateMenu"
+                :close-on-content-click="false"
+                location="bottom"
+                offset="6"
+              >
+                <template #activator="{ props: menuProps }">
+                  <VTextField
+                    v-bind="menuProps"
+                    :model-value="formatDate(prosesRabForm.tanggal_cetak)"
+                    label="Tanggal Cetak *"
+                    prepend-inner-icon="ri-calendar-line"
+                    readonly
+                    :disabled="prosesRabSaving"
+                    :rules="[requiredValidator]"
+                  />
+                </template>
+
+                <VDatePicker
+                  v-model="prosesRabTanggalCetakPicker"
+                  color="primary"
+                  hide-header
+                  @update:model-value="prosesRabDateMenu = false"
+                />
+              </VMenu>
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VSelect
+                v-model="prosesRabForm.kategori_tipe"
+                label="Kategori *"
+                :items="prosesRabKategoriModeItems"
+                :disabled="prosesRabSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              v-if="prosesRabForm.kategori_tipe === 'rab_susulan'"
+              cols="12"
+              md="6"
+            >
+              <VSelect
+                v-model="prosesRabForm.susulan_kategori"
+                label="Kategori yang Disusulkan *"
+                :items="prosesRabExistingKategoriItems"
+                no-data-text="Belum ada kategori proses RAB"
+                :disabled="prosesRabSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              v-else-if="prosesRabForm.kategori_tipe === 'custom'"
+              cols="12"
+              md="6"
+            >
+              <VTextField
+                v-model="prosesRabForm.custom_kategori"
+                label="Kategori Lain *"
+                placeholder="Masukkan kategori"
                 :disabled="prosesRabSaving"
                 :rules="[requiredValidator]"
               />
@@ -1856,7 +2019,7 @@ onBeforeUnmount(() => {
             color="primary"
             prepend-icon="ri-save-line"
             :loading="prosesRabSaving"
-            :disabled="prosesRabSaving || selectedRekapItems.length === 0"
+            :disabled="prosesRabSaving || selectedRekapItems.length === 0 || !prosesRabFinalKategori"
             @click="saveProsesRab"
           >
             Simpan

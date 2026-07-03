@@ -47,10 +47,22 @@ const currentPage = ref(1)
 const rowsPerPage = ref(15)
 const loading = ref(false)
 const saving = ref(false)
+const openPiutangRows = ref([])
+const cicilanMode = ref("pisah")
 
 const jenisPembayaranList = ["CUZ BSI", "Transfer"]
 const rowsPerPageOptions = [15, 30, 50]
+const CICILAN_MODE_STORAGE_KEY = "simkeu.piutang.cicilanMode"
+
 const isBatchEdit = computed(() => route.query.edit_batch === "1")
+
+const normalizeCicilanMode = value => value === "gabung" ? "gabung" : "pisah"
+
+const loadCicilanMode = () => {
+  if (typeof window === "undefined") return
+
+  cicilanMode.value = normalizeCicilanMode(window.localStorage.getItem(CICILAN_MODE_STORAGE_KEY))
+}
 
 const returnPath = computed(() => {
   const value = Array.isArray(route.query.return_to)
@@ -117,11 +129,15 @@ const visibleRange = computed(() => {
 })
 
 const totalPegawai = computed(() => rows.value.filter(item =>
-  rowTotal(item) > 0,
+  rowGross(item) > 0,
 ).length)
 
 const totalBarokah = computed(() => rows.value.reduce((total, item) =>
   total + rowTotal(item), 0,
+))
+
+const totalPotonganPiutang = computed(() => rows.value.reduce((total, item) =>
+  total + rowPiutangPotongan(item), 0,
 ))
 
 const copiedRowsCount = computed(() => copyRekapId.value
@@ -132,8 +148,82 @@ const emptyCopiedRowsCount = computed(() => copyRekapId.value
   ? rows.value.length - copiedRowsCount.value
   : 0)
 
-const rowTotal = item =>
+const rowGross = item =>
   Math.round(Number(item.barokah_dosen_tetap || 0) + Number(item.barokah_struktural || 0))
+
+const rowPiutangPotongan = item => {
+  if (!item.piutang?.dipotong) return 0
+
+  return Math.max(0, Math.round(Number(item.piutang.nominal_potongan || 0)))
+}
+
+const rowTotal = item => Math.max(0, rowGross(item) - rowPiutangPotongan(item))
+
+const normalizePiutang = piutang => {
+  if (!piutang) return null
+
+  const sisa = Math.max(0, Number(piutang.sisa || 0))
+  const defaultCicilan = Math.max(0, Number(piutang.default_cicilan || 0))
+
+  const nominalPotongan = Math.min(
+    sisa,
+    Math.max(0, Number(piutang.nominal_potongan ?? defaultCicilan)),
+  )
+
+  return {
+    ...piutang,
+    jumlah_piutang: Number(piutang.jumlah_piutang || 0),
+    total_piutang: Number(piutang.total_piutang || 0),
+    total_terbayar: Number(piutang.total_terbayar || 0),
+    sisa,
+    default_cicilan: defaultCicilan,
+    dipotong: Boolean(piutang.dipotong),
+    nominal_potongan: nominalPotongan,
+  }
+}
+
+const piutangMaxPotongan = item => Math.min(
+  Number(item.piutang?.sisa || 0),
+  rowGross(item),
+)
+
+const clampPiutangPotongan = item => {
+  if (!item.piutang) return
+
+  const maxPotongan = piutangMaxPotongan(item)
+
+  item.piutang.nominal_potongan = Math.min(
+    maxPotongan,
+    Math.max(0, Math.round(Number(item.piutang.nominal_potongan || 0))),
+  )
+
+  if (maxPotongan <= 0) {
+    item.piutang.dipotong = false
+  }
+}
+
+const togglePiutangPanel = item => {
+  const key = item.pegawai_id
+
+  openPiutangRows.value = openPiutangRows.value.includes(key)
+    ? openPiutangRows.value.filter(value => value !== key)
+    : [...openPiutangRows.value, key]
+}
+
+const isPiutangPanelOpen = item => openPiutangRows.value.includes(item.pegawai_id)
+
+const onPiutangToggle = item => {
+  if (!item.piutang) return
+
+  if (item.piutang.dipotong && Number(item.piutang.nominal_potongan || 0) <= 0) {
+    item.piutang.nominal_potongan = Math.min(
+      piutangMaxPotongan(item),
+      Number(item.piutang.default_cicilan || 0),
+    )
+  }
+
+  clampPiutangPotongan(item)
+}
 
 const selectedBuktiTransferFile = item => {
   if (Array.isArray(item.bukti_transfer)) return item.bukti_transfer[0] ?? null
@@ -198,6 +288,7 @@ const fetchRows = async () => {
       method: "GET",
       body: {
         rekap_id: rekapId.value,
+        cicilan_mode: cicilanMode.value,
         ...(copyRekapId.value && { copy_rekap_id: copyRekapId.value }),
       },
     })
@@ -206,6 +297,7 @@ const fetchRows = async () => {
       ...item,
       barokah_dosen_tetap: Number(item.barokah_dosen_tetap || 0),
       barokah_struktural: Number(item.barokah_struktural || 0),
+      piutang: normalizePiutang(item.piutang),
       jenis_pembayaran: isBatchEdit.value && item.pengeluaran_id
         ? item.jenis_pembayaran || jenisPembayaran.value
         : jenisPembayaran.value,
@@ -238,7 +330,7 @@ const onSubmit = async () => {
     const formData = new FormData()
 
     const submitRows = rows.value.filter(item =>
-      rowTotal(item) > 0 || item.pengeluaran_id,
+      rowGross(item) > 0 || item.pengeluaran_id,
     )
 
     if (submitRows.length === 0) {
@@ -262,6 +354,8 @@ const onSubmit = async () => {
       pegawai_id: item.pegawai_id,
       barokah_dosen_tetap: Number(item.barokah_dosen_tetap || 0),
       barokah_struktural: Number(item.barokah_struktural || 0),
+      potong_piutang: Boolean(item.piutang?.dipotong),
+      piutang_nominal: rowPiutangPotongan(item),
       jenis_pembayaran: item.jenis_pembayaran || jenisPembayaran.value,
       hapus_lampiran: item.removed_lampiran || [],
     }))))
@@ -355,6 +449,8 @@ watch(() => filteredRows.value.length, () => {
 })
 
 onMounted(() => {
+  loadCicilanMode()
+
   const queryRekapId = Array.isArray(route.query.rekap_id)
     ? route.query.rekap_id[0]
     : route.query.rekap_id
@@ -453,7 +549,10 @@ onMounted(() => {
           <div>
             <VCardTitle>Daftar {{ pegawaiTitle }}</VCardTitle>
             <VCardSubtitle v-if="rekapId">
-              {{ totalPegawai }} {{ pegawaiTitle.toLowerCase() }} diisi, total {{ formatRupiah(totalBarokah) }}
+              {{ totalPegawai }} {{ pegawaiTitle.toLowerCase() }} diisi, dibayarkan {{ formatRupiah(totalBarokah) }}
+              <span v-if="totalPotonganPiutang > 0">
+                , potongan piutang {{ formatRupiah(totalPotonganPiutang) }}
+              </span>
             </VCardSubtitle>
           </div>
 
@@ -529,6 +628,21 @@ onMounted(() => {
             >
               {{ item.status }}
             </VChip>
+            <div
+              v-if="item.piutang"
+              class="mt-2"
+            >
+              <VBtn
+                size="x-small"
+                variant="tonal"
+                color="warning"
+                prepend-icon="ri-bank-card-line"
+                append-icon="ri-arrow-down-s-line"
+                @click="togglePiutangPanel(item)"
+              >
+                Piutang {{ formatRupiah(item.piutang.sisa) }}
+              </VBtn>
+            </div>
           </div>
 
           <VTextField
@@ -539,6 +653,7 @@ onMounted(() => {
             :hint="formatRupiah(item.barokah_dosen_tetap)"
             persistent-hint
             density="compact"
+            @update:model-value="clampPiutangPotongan(item)"
           />
 
           <VTextField
@@ -549,13 +664,20 @@ onMounted(() => {
             :hint="formatRupiah(item.barokah_struktural)"
             persistent-hint
             density="compact"
+            @update:model-value="clampPiutangPotongan(item)"
           />
 
           <div class="dosen-total">
-            <span class="text-caption text-medium-emphasis">Total</span>
+            <span class="text-caption text-medium-emphasis">Dibayarkan</span>
             <strong>
               {{ formatRupiah(rowTotal(item)) }}
             </strong>
+            <span
+              v-if="rowPiutangPotongan(item) > 0"
+              class="text-caption text-warning"
+            >
+              Potong {{ formatRupiah(rowPiutangPotongan(item)) }}
+            </span>
           </div>
 
           <VSelect
@@ -608,6 +730,52 @@ onMounted(() => {
                 v-model:removed-lampiran="item.removed_lampiran"
                 :existing-lampiran="item.existing_lampiran"
                 compact
+              />
+            </div>
+          </div>
+
+          <div
+            v-if="item.piutang && isPiutangPanelOpen(item)"
+            class="piutang-panel"
+          >
+            <div class="piutang-summary">
+              <div>
+                <span>Total Piutang</span>
+                <strong>{{ formatRupiah(item.piutang.total_piutang) }}</strong>
+              </div>
+              <div>
+                <span>Total Terbayar</span>
+                <strong>{{ formatRupiah(item.piutang.total_terbayar) }}</strong>
+              </div>
+              <div>
+                <span>Sisa Piutang</span>
+                <strong>{{ formatRupiah(item.piutang.sisa) }}</strong>
+              </div>
+              <div>
+                <span>Default Cicilan</span>
+                <strong>{{ formatRupiah(item.piutang.default_cicilan) }}</strong>
+              </div>
+            </div>
+
+            <div class="piutang-controls">
+              <VSwitch
+                v-model="item.piutang.dipotong"
+                color="primary"
+                label="Potong bulan ini"
+                hide-details
+                @update:model-value="onPiutangToggle(item)"
+              />
+              <VTextField
+                v-model.number="item.piutang.nominal_potongan"
+                type="number"
+                min="0"
+                :max="piutangMaxPotongan(item)"
+                label="Nominal Potongan"
+                :disabled="!item.piutang.dipotong"
+                :hint="formatRupiah(rowPiutangPotongan(item))"
+                persistent-hint
+                density="compact"
+                @update:model-value="clampPiutangPotongan(item)"
               />
             </div>
           </div>
@@ -749,6 +917,45 @@ onMounted(() => {
   min-inline-size: 0;
 }
 
+.piutang-panel {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.4fr);
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(var(--v-theme-warning), 0.22);
+  border-radius: 8px;
+  background: rgba(var(--v-theme-warning), 0.06);
+}
+
+.piutang-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.piutang-summary div {
+  min-inline-size: 0;
+}
+
+.piutang-summary span {
+  display: block;
+  color: rgba(var(--v-theme-on-surface), 0.62);
+  font-size: 0.75rem;
+}
+
+.piutang-summary strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.piutang-controls {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
+}
+
 .dosen-pagination {
   display: flex;
   align-items: center;
@@ -787,8 +994,18 @@ onMounted(() => {
   }
 
   .dosen-identity,
-  .dosen-total {
+  .dosen-total,
+  .piutang-panel {
     grid-column: 1 / -1;
+  }
+
+  .piutang-panel,
+  .piutang-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .piutang-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -806,6 +1023,10 @@ onMounted(() => {
   .dosen-identity,
   .dosen-total {
     grid-column: auto;
+  }
+
+  .piutang-summary {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dosen-pagination,

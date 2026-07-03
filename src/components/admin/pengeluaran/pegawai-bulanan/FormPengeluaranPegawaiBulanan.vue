@@ -71,6 +71,7 @@ const barokahDosenTetap = ref(null)
 const barokahStruktural = ref(null)
 const jenisPembayaran = ref("CUZ BSI")
 const rekapId = ref(null)
+const piutang = ref(null)
 const lampiran = ref([])
 const existingLampiran = ref([])
 const removedLampiran = ref([])
@@ -103,8 +104,69 @@ const formTitle = computed(() => {
 })
 
 const total = computed(() =>
+  Math.max(0, grossTotal.value - piutangPotongan.value),
+)
+
+const grossTotal = computed(() =>
   Math.round(Number(barokahDosenTetap.value || 0) + Number(barokahStruktural.value || 0)),
 )
+
+const piutangPotongan = computed(() => {
+  if (!piutang.value?.dipotong) return 0
+
+  return Math.max(0, Math.round(Number(piutang.value.nominal_potongan || 0)))
+})
+
+const normalizePiutang = value => {
+  if (!value) return null
+
+  const sisa = Math.max(0, Number(value.sisa || 0))
+  const defaultCicilan = Math.max(0, Number(value.default_cicilan || 0))
+  const nominalPotongan = Math.min(
+    sisa,
+    Math.max(0, Number(value.nominal_potongan ?? defaultCicilan)),
+  )
+
+  return {
+    ...value,
+    total_piutang: Number(value.total_piutang || 0),
+    total_terbayar: Number(value.total_terbayar || 0),
+    sisa,
+    default_cicilan: defaultCicilan,
+    dipotong: Boolean(value.dipotong),
+    nominal_potongan: nominalPotongan,
+  }
+}
+
+const piutangMaxPotongan = computed(() =>
+  Math.min(Number(piutang.value?.sisa || 0), grossTotal.value),
+)
+
+const clampPiutangPotongan = () => {
+  if (!piutang.value) return
+
+  piutang.value.nominal_potongan = Math.min(
+    piutangMaxPotongan.value,
+    Math.max(0, Math.round(Number(piutang.value.nominal_potongan || 0))),
+  )
+
+  if (piutangMaxPotongan.value <= 0) {
+    piutang.value.dipotong = false
+  }
+}
+
+const onPiutangToggle = () => {
+  if (!piutang.value) return
+
+  if (piutang.value.dipotong && Number(piutang.value.nominal_potongan || 0) <= 0) {
+    piutang.value.nominal_potongan = Math.min(
+      piutangMaxPotongan.value,
+      Number(piutang.value.default_cicilan || 0),
+    )
+  }
+
+  clampPiutangPotongan()
+}
 
 const periodValue = (month, year) => month && year
   ? `${year}-${String(month).padStart(2, "0")}`
@@ -153,6 +215,7 @@ const fillFormFromData = data => {
   barokahStruktural.value = data.barokah_struktural ?? 0
   jenisPembayaran.value = data.jenis_pembayaran ?? "CUZ BSI"
   rekapId.value = data.rekap_id ?? null
+  piutang.value = normalizePiutang(data.piutang)
   lampiran.value = []
   existingLampiran.value = data.lampiran ?? []
   removedLampiran.value = []
@@ -237,6 +300,8 @@ const onSubmit = async () => {
 
   formData.append("barokah_dosen_tetap", barokahDosenTetap.value ?? 0)
   formData.append("barokah_struktural", barokahStruktural.value ?? 0)
+  formData.append("potong_piutang", piutang.value?.dipotong ? "1" : "0")
+  formData.append("piutang_nominal", piutangPotongan.value)
   formData.append("total", total.value)
   formData.append("jenis_pembayaran", jenisPembayaran.value)
   formData.append("rekap_id", rekapId.value ?? "")
@@ -380,6 +445,7 @@ defineExpose({
               :rules="[requiredValidator]"
               :hint="formatRupiah(barokahDosenTetap)"
               persistent-hint
+              @update:model-value="clampPiutangPotongan"
             />
           </VCol>
 
@@ -394,7 +460,55 @@ defineExpose({
               :rules="[requiredValidator]"
               :hint="formatRupiah(barokahStruktural)"
               persistent-hint
+              @update:model-value="clampPiutangPotongan"
             />
+          </VCol>
+
+          <VCol
+            v-if="piutang"
+            cols="12"
+          >
+            <div class="piutang-section">
+              <div class="piutang-summary">
+                <div>
+                  <span>Total Piutang</span>
+                  <strong>{{ formatRupiah(piutang.total_piutang) }}</strong>
+                </div>
+                <div>
+                  <span>Total Terbayar</span>
+                  <strong>{{ formatRupiah(piutang.total_terbayar) }}</strong>
+                </div>
+                <div>
+                  <span>Sisa Piutang</span>
+                  <strong>{{ formatRupiah(piutang.sisa) }}</strong>
+                </div>
+                <div>
+                  <span>Default Cicilan</span>
+                  <strong>{{ formatRupiah(piutang.default_cicilan) }}</strong>
+                </div>
+              </div>
+
+              <div class="piutang-controls">
+                <VSwitch
+                  v-model="piutang.dipotong"
+                  color="primary"
+                  label="Potong piutang bulan ini"
+                  hide-details
+                  @update:model-value="onPiutangToggle"
+                />
+                <VTextField
+                  v-model.number="piutang.nominal_potongan"
+                  type="number"
+                  min="0"
+                  :max="piutangMaxPotongan"
+                  label="Nominal Potongan"
+                  :disabled="!piutang.dipotong"
+                  :hint="formatRupiah(piutangPotongan)"
+                  persistent-hint
+                  @update:model-value="clampPiutangPotongan"
+                />
+              </div>
+            </div>
           </VCol>
 
           <VCol
@@ -415,7 +529,7 @@ defineExpose({
           >
             <VTextField
               :model-value="formatRupiah(total)"
-              label="Total"
+              label="Total Dibayarkan"
               readonly
             />
           </VCol>
@@ -454,3 +568,56 @@ defineExpose({
     </VCardText>
   </VCard>
 </template>
+
+<style scoped>
+.piutang-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.42fr);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgba(var(--v-theme-warning), 0.22);
+  border-radius: 8px;
+  background: rgba(var(--v-theme-warning), 0.06);
+}
+
+.piutang-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.piutang-summary span {
+  display: block;
+  color: rgba(var(--v-theme-on-surface), 0.62);
+  font-size: 0.75rem;
+}
+
+.piutang-summary strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.piutang-controls {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  grid-template-columns: minmax(140px, max-content) minmax(0, 1fr);
+}
+
+@media (max-width: 959px) {
+  .piutang-section,
+  .piutang-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .piutang-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599px) {
+  .piutang-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>

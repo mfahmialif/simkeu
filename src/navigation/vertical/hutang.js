@@ -1,7 +1,16 @@
 export default [
   {
-    title: "Hutang",
+    title: "Hutang & Piutang",
     icon: { icon: "ri-hand-coin-line" },
-    to: "admin-hutang",
+    children: [
+      {
+        title: "Hutang",
+        to: "admin-hutang",
+      },
+      {
+        title: "Piutang",
+        to: "admin-piutang",
+      },
+    ],
   },
 ]
