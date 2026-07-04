@@ -39,7 +39,6 @@ const loading = ref(false)
 const initialLoading = ref(true)
 const statsLoading = ref(false)
 const exportingExcel = ref(false)
-const exportingRekapan = ref(false)
 const prosesRabList = ref([])
 const prosesRabKategoriOptions = ref([])
 const prosesRabKategoriHistory = ref([])
@@ -49,7 +48,18 @@ const prosesRabDateMenu = ref(false)
 const prosesRabDialog = ref(false)
 const prosesRabSaving = ref(false)
 const prosesRabDownloading = ref({})
+const exportingProsesRabRekapan = ref(false)
 const prosesRabDeleting = ref({})
+const prosesRabDetailDialog = ref(false)
+const prosesRabDetailLoading = ref(false)
+const prosesRabDetailItem = ref(null)
+const prosesRabDetailRows = ref([])
+const prosesRabEditingId = ref(null)
+const prosesRabEditingRows = ref([])
+const prosesRabSelectedKeys = ref([])
+const prosesRabPencairanDateMenus = ref({})
+const prosesRabBulkPencairanDateMenu = ref(false)
+const prosesRabBulkTanggalSaving = ref(false)
 const kasLoading = ref(false)
 const kasSummary = ref([])
 const kasTotals = ref({})
@@ -242,9 +252,49 @@ const selectedRekapItems = computed(() =>
     .filter(Boolean),
 )
 
-const selectedRekapTotal = computed(() =>
-  selectedRekapItems.value.reduce((total, item) => total + Number(item.jumlah || 0), 0),
+const prosesRabDialogRows = computed(() =>
+  prosesRabEditingId.value ? prosesRabEditingRows.value : selectedRekapItems.value,
 )
+
+const prosesRabSelectedRows = computed(() => {
+  const selectedKeys = new Set(prosesRabSelectedKeys.value)
+
+  return prosesRabDialogRows.value.filter(item => selectedKeys.has(item.row_key))
+})
+
+const prosesRabDialogTotal = computed(() =>
+  prosesRabDialogRows.value.reduce((total, item) => total + Number(item.jumlah || 0), 0),
+)
+
+const prosesRabDialogTotalLpj = computed(() =>
+  prosesRabDialogRows.value.reduce((total, item) => total + Number(item.total_lpj || 0), 0),
+)
+
+const prosesRabDetailTotalRab = computed(() =>
+  prosesRabDetailRows.value.reduce((total, item) => total + Number(item.jumlah || 0), 0),
+)
+
+const prosesRabDetailTotalLpj = computed(() =>
+  prosesRabDetailRows.value.reduce((total, item) => total + Number(item.total_lpj || 0), 0),
+)
+
+const prosesRabDialogTitle = computed(() =>
+  prosesRabEditingId.value ? "Edit Proses RAB" : "Proses RAB",
+)
+
+const prosesRabDialogHeaders = computed(() => [
+  { title: "Tanggal", key: "tanggal_rekap" },
+  { title: "Tanggal Pencairan", key: "tanggal_pencairan" },
+  { title: "Petugas", key: "petugas_nama" },
+  { title: "Jenis", key: "module_name" },
+  { title: "Nama Rekap", key: "nama" },
+  { title: "Jumlah RAB", key: "jumlah", align: "end" },
+  { title: "Jumlah LPJ", key: "total_lpj", align: "end" },
+  { title: "Keterangan", key: "keterangan", sortable: false },
+  ...(prosesRabEditingId.value
+    ? [{ title: "", key: "actions", sortable: false, align: "end" }]
+    : []),
+])
 
 const selectedPetugasName = computed(() => {
   if (kasPetugas.value?.name) return kasPetugas.value.name
@@ -531,6 +581,18 @@ const fetchProsesRab = async (silent = false) => {
   }
 }
 
+const fetchProsesRabDetail = async item => {
+  const response = await $api(`/admin/laporan/rab/proses/${item.id}`, {
+    method: "GET",
+    body: prosesRabFilterPayload(),
+  })
+
+  return {
+    proses: response.data?.proses || item,
+    items: response.data?.items || [],
+  }
+}
+
 const fetchDeferredStats = async filterPayload => {
   const requestToken = ++statsRequestToken
   const signature = JSON.stringify(filterPayload)
@@ -661,45 +723,6 @@ const exportRabExcel = async () => {
   }
 }
 
-const exportRekapanExcel = async () => {
-  if (exportingRekapan.value) return
-
-  try {
-    exportingRekapan.value = true
-    showSnackbar({
-      text: "Loading...",
-      color: "info",
-    })
-
-    const activeSort = sortBy.value?.[0] || { key: "tanggal_rekap", order: "desc" }
-
-    const response = await $api("/admin/laporan/rab/export-rekapan", {
-      method: "GET",
-      headers: {
-        Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      },
-      body: {
-        sort_key: activeSort.key,
-        sort_order: activeSort.order,
-        ...activeFilterPayload(),
-      },
-    })
-
-    downloadFileExport(response, "Rekapan RAB.xlsx")
-    showSnackbar({
-      text: "Rekapan berhasil di download.",
-      color: "success",
-    })
-  } catch (err) {
-    showSnackbar({
-      text: errorMessage(err),
-      color: "error",
-    })
-  } finally {
-    exportingRekapan.value = false
-  }
-}
-
 const openProsesRabDialog = () => {
   if (selectedRekapItems.value.length === 0) {
     showSnackbar({
@@ -710,14 +733,141 @@ const openProsesRabDialog = () => {
     return
   }
 
+  prosesRabEditingId.value = null
+  prosesRabEditingRows.value = []
+  prosesRabSelectedKeys.value = []
   prosesRabForm.value = createDefaultProsesRabForm()
   prosesRabDialog.value = true
+}
+
+const openProsesRabDetail = async item => {
+  if (prosesRabDetailLoading.value) return
+
+  try {
+    prosesRabDetailLoading.value = true
+    prosesRabDetailItem.value = item
+    prosesRabDetailRows.value = []
+    prosesRabDetailDialog.value = true
+
+    const detail = await fetchProsesRabDetail(item)
+
+    prosesRabDetailItem.value = detail.proses
+    prosesRabDetailRows.value = detail.items
+  } catch (err) {
+    prosesRabDetailDialog.value = false
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    prosesRabDetailLoading.value = false
+  }
+}
+
+const openEditProsesRab = async item => {
+  if (prosesRabSaving.value || prosesRabDetailLoading.value) return
+
+  try {
+    prosesRabDetailLoading.value = true
+
+    const detail = await fetchProsesRabDetail(item)
+    const proses = detail.proses
+
+    prosesRabEditingId.value = proses.id || item.id
+    prosesRabEditingRows.value = detail.items
+    prosesRabSelectedKeys.value = []
+    prosesRabForm.value = {
+      kategori_tipe: "custom",
+      susulan_kategori: null,
+      custom_kategori: proses.kategori || item.kategori || "",
+      tanggal_cetak: String(proses.tanggal_cetak || item.tanggal_cetak || "").slice(0, 10),
+      keterangan: proses.keterangan || item.keterangan || "",
+    }
+    prosesRabDetailDialog.value = false
+    prosesRabDialog.value = true
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    prosesRabDetailLoading.value = false
+  }
+}
+
+const releaseProsesRabItem = item => {
+  if (!prosesRabEditingId.value || prosesRabSaving.value) return
+
+  const targetKey = item.row_key || `${item.module_key}:${item.id}`
+
+  prosesRabEditingRows.value = prosesRabEditingRows.value.filter(row =>
+    (row.row_key || `${row.module_key}:${row.id}`) !== targetKey,
+  )
+  prosesRabSelectedKeys.value = prosesRabSelectedKeys.value.filter(key => key !== targetKey)
+}
+
+const releaseSelectedProsesRabItems = () => {
+  if (!prosesRabEditingId.value || prosesRabSaving.value || prosesRabSelectedRows.value.length === 0) return
+
+  const selectedKeys = new Set(prosesRabSelectedKeys.value)
+
+  prosesRabEditingRows.value = prosesRabEditingRows.value.filter(row =>
+    !selectedKeys.has(row.row_key || `${row.module_key}:${row.id}`),
+  )
+  prosesRabSelectedKeys.value = []
+}
+
+const setSelectedProsesRabPencairanDate = async value => {
+  const nextValue = toDateValue(value)
+
+  if (!nextValue || prosesRabSelectedRows.value.length === 0) return
+
+  try {
+    prosesRabBulkTanggalSaving.value = true
+    prosesRabBulkPencairanDateMenu.value = false
+
+    const response = await updateTanggalPencairan(prosesRabSelectedRows.value, nextValue)
+
+    showSnackbar({
+      text: response.message,
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    prosesRabBulkTanggalSaving.value = false
+  }
+}
+
+const clearSelectedProsesRabPencairanDate = async () => {
+  if (prosesRabSelectedRows.value.length === 0 || prosesRabBulkTanggalSaving.value) return
+
+  try {
+    prosesRabBulkTanggalSaving.value = true
+
+    const response = await updateTanggalPencairan(prosesRabSelectedRows.value, null)
+
+    showSnackbar({
+      text: response.message,
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    prosesRabBulkTanggalSaving.value = false
+  }
 }
 
 const saveProsesRab = async () => {
   if (prosesRabSaving.value) return
 
-  if (selectedRekapItems.value.length === 0) {
+  if (!prosesRabEditingId.value && selectedRekapItems.value.length === 0) {
     showSnackbar({
       text: "Centang rekap yang akan diproses terlebih dahulu.",
       color: "warning",
@@ -750,35 +900,59 @@ const saveProsesRab = async () => {
 
   try {
     prosesRabSaving.value = true
+    const isEditingProcess = Boolean(prosesRabEditingId.value)
 
-    const response = await $api("/admin/laporan/rab/proses", {
-      method: "POST",
-      body: {
-        tanggal_cetak: prosesRabForm.value.tanggal_cetak,
-        kategori,
-        keterangan: prosesRabForm.value.keterangan,
-        items: selectedRekapItems.value.map(item => ({
-          module_key: item.module_key,
-          id: item.id,
-        })),
-      },
-    })
+    const payload = {
+      tanggal_cetak: prosesRabForm.value.tanggal_cetak,
+      kategori,
+      keterangan: prosesRabForm.value.keterangan,
+    }
+
+    const response = isEditingProcess
+      ? await $api(`/admin/laporan/rab/proses/${prosesRabEditingId.value}`, {
+        method: "PUT",
+        body: {
+          ...payload,
+          items: prosesRabEditingRows.value.map(item => ({
+            module_key: item.module_key,
+            id: item.id,
+          })),
+        },
+      })
+      : await $api("/admin/laporan/rab/proses", {
+        method: "POST",
+        body: {
+          ...payload,
+          items: selectedRekapItems.value.map(item => ({
+            module_key: item.module_key,
+            id: item.id,
+          })),
+        },
+      })
 
     const updatedKeys = new Set(response.data?.row_keys || [])
 
-    dataTable.value.forEach(item => {
-      if (updatedKeys.has(item.row_key)) {
-        item.cetak_rab = true
-      }
-    })
+    if (!isEditingProcess) {
+      dataTable.value.forEach(item => {
+        if (updatedKeys.has(item.row_key)) {
+          item.cetak_rab = true
+        }
+      })
+      clearSelectedRekaps()
+    }
 
-    clearSelectedRekaps()
     prosesRabDialog.value = false
+    prosesRabEditingId.value = null
+    prosesRabEditingRows.value = []
+    prosesRabSelectedKeys.value = []
     showSnackbar({
       text: response.message,
       color: "success",
     })
-    await fetchData()
+    await Promise.all([
+      fetchData(),
+      fetchProsesRab(true),
+    ])
   } catch (err) {
     showSnackbar({
       text: errorMessage(err),
@@ -824,6 +998,35 @@ const downloadProsesRab = async item => {
       ...prosesRabDownloading.value,
       [item.id]: false,
     }
+  }
+}
+
+const downloadProsesRabRekapan = async () => {
+  if (exportingProsesRabRekapan.value) return
+
+  try {
+    exportingProsesRabRekapan.value = true
+
+    const response = await $api("/admin/laporan/rab/proses/export-rekapan", {
+      method: "GET",
+      headers: {
+        Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: prosesRabFilterPayload(),
+    })
+
+    downloadFileExport(response, "Rekapan RAB List Proses.xlsx")
+    showSnackbar({
+      text: "Rekapan list proses berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    exportingProsesRabRekapan.value = false
   }
 }
 
@@ -1062,6 +1265,18 @@ const updateTanggalPencairan = async (items, tanggalPencairan) => {
     }
   })
 
+  prosesRabEditingRows.value.forEach(item => {
+    if (updatedKeys.has(item.row_key)) {
+      item.tanggal_pencairan = response.data?.tanggal_pencairan || null
+    }
+  })
+
+  prosesRabDetailRows.value.forEach(item => {
+    if (updatedKeys.has(item.row_key)) {
+      item.tanggal_pencairan = response.data?.tanggal_pencairan || null
+    }
+  })
+
   return response
 }
 
@@ -1098,6 +1313,19 @@ const saveTanggalPencairan = async (item, value) => {
       [item.row_key]: false,
     }
   }
+}
+
+const setProsesRabPencairanDate = async (item, value) => {
+  const nextValue = toDateValue(value)
+
+  if (!nextValue) return
+
+  prosesRabPencairanDateMenus.value = {
+    ...prosesRabPencairanDateMenus.value,
+    [item.row_key]: false,
+  }
+
+  await saveTanggalPencairan(item, nextValue)
 }
 
 const saveBulkTanggalPencairan = async (clearDate = false) => {
@@ -1407,16 +1635,29 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <VBtn
-          variant="outlined"
-          color="secondary"
-          prepend-icon="ri-refresh-line"
-          :loading="prosesRabLoading"
-          :disabled="prosesRabLoading"
-          @click="fetchProsesRab"
-        >
-          Refresh
-        </VBtn>
+        <div class="d-flex flex-wrap justify-end gap-2">
+          <VBtn
+            color="success"
+            variant="tonal"
+            prepend-icon="ri-file-list-3-line"
+            :loading="exportingProsesRabRekapan"
+            :disabled="prosesRabLoading || exportingProsesRabRekapan || prosesRabList.length === 0"
+            @click="downloadProsesRabRekapan"
+          >
+            Download Rekapan
+          </VBtn>
+
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            prepend-icon="ri-refresh-line"
+            :loading="prosesRabLoading"
+            :disabled="prosesRabLoading || exportingProsesRabRekapan"
+            @click="fetchProsesRab"
+          >
+            Refresh
+          </VBtn>
+        </div>
       </VCardText>
 
       <VDivider />
@@ -1491,6 +1732,41 @@ onBeforeUnmount(() => {
         <template #item.actions="{ item }">
           <div class="d-flex justify-end gap-1">
             <VTooltip
+              text="Lihat detail proses"
+              location="top"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <VBtn
+                  v-bind="tooltipProps"
+                  icon="ri-eye-line"
+                  variant="text"
+                  color="primary"
+                  size="small"
+                  :loading="prosesRabDetailLoading && String(prosesRabDetailItem?.id) === String(item.id)"
+                  :disabled="Boolean(prosesRabDeleting[item.id]) || Boolean(prosesRabDownloading[item.id]) || exportingProsesRabRekapan"
+                  @click="openProsesRabDetail(item)"
+                />
+              </template>
+            </VTooltip>
+
+            <VTooltip
+              text="Edit proses"
+              location="top"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <VBtn
+                  v-bind="tooltipProps"
+                  icon="ri-edit-2-line"
+                  variant="text"
+                  color="warning"
+                  size="small"
+                  :disabled="Boolean(prosesRabDeleting[item.id]) || Boolean(prosesRabDownloading[item.id]) || prosesRabDetailLoading || exportingProsesRabRekapan"
+                  @click="openEditProsesRab(item)"
+                />
+              </template>
+            </VTooltip>
+
+            <VTooltip
               text="Download RAB"
               location="top"
             >
@@ -1502,7 +1778,7 @@ onBeforeUnmount(() => {
                   color="success"
                   size="small"
                   :loading="Boolean(prosesRabDownloading[item.id])"
-                  :disabled="Boolean(prosesRabDeleting[item.id])"
+                  :disabled="Boolean(prosesRabDeleting[item.id]) || exportingProsesRabRekapan"
                   @click="downloadProsesRab(item)"
                 />
               </template>
@@ -1520,7 +1796,7 @@ onBeforeUnmount(() => {
                   color="error"
                   size="small"
                   :loading="Boolean(prosesRabDeleting[item.id])"
-                  :disabled="Boolean(prosesRabDownloading[item.id])"
+                  :disabled="Boolean(prosesRabDownloading[item.id]) || exportingProsesRabRekapan"
                   @click="deleteProsesRab(item)"
                 />
               </template>
@@ -1529,6 +1805,149 @@ onBeforeUnmount(() => {
         </template>
       </VDataTable>
     </VCard>
+
+    <VDialog
+      v-model="prosesRabDetailDialog"
+      max-width="1120"
+    >
+      <VCard>
+        <VCardTitle class="d-flex align-center justify-space-between gap-3">
+          <div class="min-w-0">
+            <div class="text-h6 font-weight-semibold text-truncate">
+              Detail Proses RAB
+            </div>
+            <div class="text-body-2 text-medium-emphasis text-truncate">
+              {{ prosesRabDetailItem?.kategori || "-" }} - {{ formatDate(prosesRabDetailItem?.tanggal_cetak) }}
+            </div>
+          </div>
+
+          <DialogCloseBtn
+            variant="text"
+            size="default"
+            @click="prosesRabDetailDialog = false"
+          />
+        </VCardTitle>
+
+        <VDivider />
+
+        <VCardText>
+          <div class="rab-process-summary mb-4">
+            <div>
+              <span>Jumlah Rekap</span>
+              <strong>{{ Number(prosesRabDetailItem?.jumlah_rekap || prosesRabDetailRows.length || 0).toLocaleString("id-ID") }}</strong>
+            </div>
+            <div>
+              <span>Total RAB</span>
+              <strong>{{ formatRupiah(prosesRabDetailItem?.total_rab || prosesRabDetailTotalRab) }}</strong>
+            </div>
+            <div>
+              <span>Total LPJ</span>
+              <strong>{{ formatRupiah(prosesRabDetailTotalLpj) }}</strong>
+            </div>
+            <div>
+              <span>Keterangan</span>
+              <strong>{{ prosesRabDetailItem?.keterangan || "-" }}</strong>
+            </div>
+          </div>
+
+          <VDataTable
+            :headers="[
+              { title: 'Tanggal', key: 'tanggal_rekap' },
+              { title: 'Tanggal Pencairan', key: 'tanggal_pencairan' },
+              { title: 'Petugas', key: 'petugas_nama' },
+              { title: 'Jenis', key: 'module_name' },
+              { title: 'Nama Rekap', key: 'nama' },
+              { title: 'Jumlah RAB', key: 'jumlah', align: 'end' },
+              { title: 'Jumlah LPJ', key: 'total_lpj', align: 'end' },
+              { title: 'Keterangan', key: 'keterangan', sortable: false },
+              { title: '', key: 'actions', sortable: false, align: 'end' },
+            ]"
+            :items="prosesRabDetailRows"
+            :loading="prosesRabDetailLoading"
+            density="compact"
+            fixed-header
+            height="420"
+            item-value="row_key"
+            :items-per-page="10"
+          >
+            <template #item.tanggal_rekap="{ item }">
+              {{ formatDate(item.tanggal_rekap) }}
+            </template>
+
+            <template #item.tanggal_pencairan="{ item }">
+              {{ formatDate(item.tanggal_pencairan) }}
+            </template>
+
+            <template #item.petugas_nama="{ item }">
+              {{ item.petugas_nama || "-" }}
+            </template>
+
+            <template #item.module_name="{ item }">
+              <VChip
+                :color="moduleColor(item.module_key)"
+                size="x-small"
+                label
+              >
+                {{ item.module_name }}
+              </VChip>
+            </template>
+
+            <template #item.nama="{ item }">
+              <span class="font-weight-medium">{{ item.nama }}</span>
+            </template>
+
+            <template #item.jumlah="{ item }">
+              <strong>{{ formatRupiah(item.jumlah || 0) }}</strong>
+            </template>
+
+            <template #item.total_lpj="{ item }">
+              <strong>{{ formatRupiah(item.total_lpj || 0) }}</strong>
+            </template>
+
+            <template #item.keterangan="{ item }">
+              <span class="text-medium-emphasis">{{ item.keterangan || "-" }}</span>
+            </template>
+
+            <template #item.actions="{ item }">
+              <VTooltip
+                text="Buka rekap"
+                location="top"
+              >
+                <template #activator="{ props: tooltipProps }">
+                  <VBtn
+                    v-bind="tooltipProps"
+                    icon="ri-arrow-right-line"
+                    variant="text"
+                    color="primary"
+                    size="small"
+                    @click="openDetail(item)"
+                  />
+                </template>
+              </VTooltip>
+            </template>
+          </VDataTable>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="prosesRabDetailDialog = false"
+          >
+            Tutup
+          </VBtn>
+          <VBtn
+            color="warning"
+            variant="tonal"
+            prepend-icon="ri-edit-2-line"
+            :disabled="!prosesRabDetailItem || prosesRabDetailLoading"
+            @click="openEditProsesRab(prosesRabDetailItem)"
+          >
+            Edit Proses
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
 
     <VCard>
       <VCardText class="rab-table-header">
@@ -1552,18 +1971,6 @@ onBeforeUnmount(() => {
             @click="exportRabExcel"
           >
             Download RAB
-          </VBtn>
-
-          <VBtn
-            class="rab-export-button"
-            color="success"
-            variant="tonal"
-            prepend-icon="ri-file-list-3-line"
-            :loading="exportingRekapan"
-            :disabled="exportingRekapan"
-            @click="exportRekapanExcel"
-          >
-            Download Rekapan
           </VBtn>
 
           <VBtn
@@ -1838,7 +2245,7 @@ onBeforeUnmount(() => {
       v-model="prosesRabDialog"
       max-width="1120"
     >
-      <VCard title="Proses RAB">
+      <VCard :title="prosesRabDialogTitle">
         <DialogCloseBtn
           variant="text"
           size="default"
@@ -1848,12 +2255,16 @@ onBeforeUnmount(() => {
         <VCardText>
           <div class="rab-process-summary mb-4">
             <div>
-              <span>Rekap Dipilih</span>
-              <strong>{{ selectedRekapItems.length.toLocaleString("id-ID") }}</strong>
+              <span>{{ prosesRabEditingId ? "Isi Proses" : "Rekap Dipilih" }}</span>
+              <strong>{{ prosesRabDialogRows.length.toLocaleString("id-ID") }}</strong>
             </div>
             <div>
               <span>Total RAB</span>
-              <strong>{{ formatRupiah(selectedRekapTotal) }}</strong>
+              <strong>{{ formatRupiah(prosesRabDialogTotal) }}</strong>
+            </div>
+            <div>
+              <span>Total LPJ</span>
+              <strong>{{ formatRupiah(prosesRabDialogTotalLpj) }}</strong>
             </div>
           </div>
 
@@ -1862,25 +2273,84 @@ onBeforeUnmount(() => {
               <div class="font-weight-semibold">
                 Data yang Diproses
               </div>
-              <VChip
-                color="primary"
-                variant="tonal"
-                label
-              >
-                {{ selectedRekapItems.length }} rekap
-              </VChip>
+              <div class="d-flex flex-wrap justify-end gap-2">
+                <VChip
+                  v-if="prosesRabEditingId"
+                  color="secondary"
+                  variant="tonal"
+                  label
+                >
+                  {{ prosesRabSelectedRows.length }} dipilih
+                </VChip>
+
+                <VMenu
+                  v-if="prosesRabEditingId && canEditTanggalPencairan"
+                  v-model="prosesRabBulkPencairanDateMenu"
+                  :close-on-content-click="false"
+                  location="bottom"
+                  offset="6"
+                >
+                  <template #activator="{ props: menuProps }">
+                    <VBtn
+                      v-bind="menuProps"
+                      size="small"
+                      variant="tonal"
+                      color="primary"
+                      prepend-icon="ri-calendar-check-line"
+                      :loading="prosesRabBulkTanggalSaving"
+                      :disabled="prosesRabBulkTanggalSaving || prosesRabSelectedRows.length === 0"
+                    >
+                      Isi Tanggal
+                    </VBtn>
+                  </template>
+
+                  <VDatePicker
+                    :model-value="parseDateValue(todayDateValue())"
+                    color="primary"
+                    hide-header
+                    @update:model-value="setSelectedProsesRabPencairanDate"
+                  />
+                </VMenu>
+
+                <VBtn
+                  v-if="prosesRabEditingId && canEditTanggalPencairan"
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  prepend-icon="ri-eraser-line"
+                  :disabled="prosesRabBulkTanggalSaving || prosesRabSelectedRows.length === 0"
+                  @click="clearSelectedProsesRabPencairanDate"
+                >
+                  Kosongkan
+                </VBtn>
+
+                <VBtn
+                  v-if="prosesRabEditingId"
+                  size="small"
+                  variant="tonal"
+                  color="error"
+                  prepend-icon="ri-delete-bin-line"
+                  :disabled="prosesRabSaving || prosesRabBulkTanggalSaving || prosesRabSelectedRows.length === 0"
+                  @click="releaseSelectedProsesRabItems"
+                >
+                  Lepas
+                </VBtn>
+
+                <VChip
+                  color="primary"
+                  variant="tonal"
+                  label
+                >
+                  {{ prosesRabDialogRows.length }} rekap
+                </VChip>
+              </div>
             </div>
 
             <VDataTable
-              :headers="[
-                { title: 'Tanggal', key: 'tanggal_rekap' },
-                { title: 'Petugas', key: 'petugas_nama' },
-                { title: 'Jenis', key: 'module_name' },
-                { title: 'Nama Rekap', key: 'nama' },
-                { title: 'Nominal', key: 'jumlah', align: 'end' },
-                { title: 'Keterangan', key: 'keterangan', sortable: false },
-              ]"
-              :items="selectedRekapItems"
+              v-model:model-value="prosesRabSelectedKeys"
+              :show-select="Boolean(prosesRabEditingId)"
+              :headers="prosesRabDialogHeaders"
+              :items="prosesRabDialogRows"
               density="compact"
               fixed-header
               height="320"
@@ -1890,6 +2360,66 @@ onBeforeUnmount(() => {
             >
               <template #item.tanggal_rekap="{ item }">
                 {{ formatDate(item.tanggal_rekap) }}
+              </template>
+
+              <template #item.tanggal_pencairan="{ item }">
+                <div
+                  v-if="prosesRabEditingId && canEditTanggalPencairan"
+                  class="rab-inline-date"
+                >
+                  <VMenu
+                    v-model="prosesRabPencairanDateMenus[item.row_key]"
+                    :close-on-content-click="false"
+                    location="bottom"
+                    offset="6"
+                  >
+                    <template #activator="{ props: menuProps }">
+                      <VTextField
+                        v-bind="menuProps"
+                        :model-value="item.tanggal_pencairan ? formatDate(item.tanggal_pencairan) : 'Belum cair'"
+                        prepend-inner-icon="ri-calendar-check-line"
+                        readonly
+                        hide-details
+                        density="compact"
+                        :disabled="prosesRabSaving || Boolean(tanggalPencairanSaving[item.row_key])"
+                      />
+                    </template>
+
+                    <VDatePicker
+                      :model-value="parseDateValue(item.tanggal_pencairan) || parseDateValue(todayDateValue())"
+                      color="primary"
+                      hide-header
+                      @update:model-value="value => setProsesRabPencairanDate(item, value)"
+                    />
+                  </VMenu>
+
+                  <VBtn
+                    icon="ri-eraser-line"
+                    variant="text"
+                    color="secondary"
+                    size="small"
+                    :disabled="prosesRabSaving || Boolean(tanggalPencairanSaving[item.row_key]) || !item.tanggal_pencairan"
+                    @click="saveTanggalPencairan(item, null)"
+                  />
+
+                  <VProgressCircular
+                    v-if="tanggalPencairanSaving[item.row_key]"
+                    indeterminate
+                    color="primary"
+                    size="18"
+                    width="2"
+                  />
+                </div>
+
+                <VChip
+                  v-else
+                  :color="item.tanggal_pencairan ? 'success' : 'warning'"
+                  size="small"
+                  variant="tonal"
+                  label
+                >
+                  {{ item.tanggal_pencairan ? formatDate(item.tanggal_pencairan) : "Belum cair" }}
+                </VChip>
               </template>
 
               <template #item.petugas_nama="{ item }">
@@ -1914,10 +2444,43 @@ onBeforeUnmount(() => {
                 <strong>{{ formatRupiah(item.jumlah || 0) }}</strong>
               </template>
 
+              <template #item.total_lpj="{ item }">
+                <strong>{{ formatRupiah(item.total_lpj || 0) }}</strong>
+              </template>
+
               <template #item.keterangan="{ item }">
                 <span class="text-medium-emphasis">{{ item.keterangan || "-" }}</span>
               </template>
+
+              <template #item.actions="{ item }">
+                <VTooltip
+                  text="Lepas dari proses"
+                  location="top"
+                >
+                  <template #activator="{ props: tooltipProps }">
+                    <VBtn
+                      v-bind="tooltipProps"
+                      icon="ri-delete-bin-line"
+                      variant="text"
+                      color="error"
+                      size="small"
+                      :disabled="prosesRabSaving"
+                      @click="releaseProsesRabItem(item)"
+                    />
+                  </template>
+                </VTooltip>
+              </template>
             </VDataTable>
+
+            <VAlert
+              v-if="prosesRabEditingId && prosesRabDialogRows.length === 0"
+              class="mt-3"
+              type="warning"
+              variant="tonal"
+              density="compact"
+            >
+              Semua rekap dilepas. Saat disimpan, proses RAB ini akan dihapus.
+            </VAlert>
           </div>
 
           <VRow>
@@ -2019,10 +2582,10 @@ onBeforeUnmount(() => {
             color="primary"
             prepend-icon="ri-save-line"
             :loading="prosesRabSaving"
-            :disabled="prosesRabSaving || selectedRekapItems.length === 0 || !prosesRabFinalKategori"
+            :disabled="prosesRabSaving || (!prosesRabEditingId && selectedRekapItems.length === 0) || !prosesRabFinalKategori"
             @click="saveProsesRab"
           >
-            Simpan
+            {{ prosesRabEditingId ? "Simpan Perubahan" : "Simpan" }}
           </VBtn>
         </VCardText>
       </VCard>
