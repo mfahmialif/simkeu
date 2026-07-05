@@ -22,6 +22,9 @@ const summary = ref({ jumlah: 0, total_piutang: 0, total_terbayar: 0, sisa: 0 })
 const loading = ref(true)
 const initialLoading = ref(true)
 const cicilanMode = ref("pisah")
+const deleteDialog = ref(false)
+const deleteData = ref(null)
+const deleting = ref(false)
 let filterTimer = null
 let filtersReady = false
 
@@ -64,7 +67,11 @@ const requestParams = computed(() => ({
 }))
 
 const errorMessage = err => {
-  const message = err?.data?.message || err?.message
+  const message =
+    err?.data?.message
+    || err?.response?._data?.message
+    || err?.response?.data?.message
+    || err?.message
 
   if (typeof message === "object") {
     return Object.values(message).flat().join("; ")
@@ -110,6 +117,42 @@ const resetFilters = () => {
 }
 
 const statusColor = status => String(status).toLowerCase() === "lunas" ? "success" : "warning"
+
+const openDeleteDialog = item => {
+  deleteData.value = item
+  deleteDialog.value = true
+}
+
+const closeDeleteDialog = () => {
+  if (deleting.value) return
+
+  deleteDialog.value = false
+  deleteData.value = null
+}
+
+const deletePiutang = async () => {
+  if (!deleteData.value?.pegawai_id || deleting.value) return
+
+  try {
+    deleting.value = true
+
+    const response = await $api(`/admin/piutang/pegawai/${deleteData.value.pegawai_id}`, {
+      method: "DELETE",
+    })
+
+    showSnackbar({
+      color: "success",
+      text: response.message || "Piutang berhasil dihapus.",
+    })
+    deleteDialog.value = false
+    deleteData.value = null
+    fetchData()
+  } catch (err) {
+    showSnackbar({ color: "error", text: errorMessage(err) })
+  } finally {
+    deleting.value = false
+  }
+}
 
 watch([search, selectedStatus, tanggalMulai, tanggalSelesai, cicilanMode], () => {
   if (!filtersReady) return
@@ -401,12 +444,63 @@ onMounted(() => {
                 >
                   Detail
                 </VListItem>
+                <VListItem
+                  prepend-icon="ri-delete-bin-line"
+                  class="text-error"
+                  @click="openDeleteDialog(item)"
+                >
+                  Hapus
+                </VListItem>
               </VList>
             </VMenu>
           </IconBtn>
         </template>
       </VDataTableServer>
     </VCard>
+
+    <VDialog
+      v-model="deleteDialog"
+      max-width="480"
+    >
+      <VCard title="Hapus Piutang">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          :disabled="deleting"
+          @click="closeDeleteDialog"
+        />
+
+        <VCardText>
+          <div class="text-body-1 mb-2">
+            Hapus piutang milik
+            <strong>{{ deleteData?.nama_pegawai || "-" }}</strong>?
+          </div>
+          <div class="text-body-2 text-medium-emphasis">
+            {{ deleteData?.jumlah_piutang || 0 }} data piutang akan dihapus. Data yang sudah memiliki pembayaran atau sudah masuk proses RAB tidak dapat dihapus.
+          </div>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="deleting"
+            @click="closeDeleteDialog"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="error"
+            prepend-icon="ri-delete-bin-line"
+            :loading="deleting"
+            :disabled="deleting"
+            @click="deletePiutang"
+          >
+            Hapus
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 

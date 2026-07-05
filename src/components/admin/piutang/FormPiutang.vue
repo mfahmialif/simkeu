@@ -87,9 +87,14 @@ const isNotFoundError = err => {
   const status = err?.statusCode
     || err?.response?.status
     || err?.response?.statusCode
+    || err?.response?._data?.statusCode
+    || err?.response?._data?.status
     || err?.data?.statusCode
+    || err?.data?.status
 
-  return Number(status) === 404
+  const message = String(errorMessage(err) || "").toLowerCase()
+
+  return Number(status) === 404 || message.includes("piutang pegawai tidak ditemukan")
 }
 
 const applyPreviewDefaultCicilan = () => {
@@ -376,14 +381,12 @@ onMounted(() => {
                 </VDataTable>
               </template>
 
-              <VAlert
+              <div
                 v-else-if="previewLoaded"
-                type="info"
-                variant="tonal"
-                density="compact"
+                class="text-body-2 text-medium-emphasis"
               >
-                Pegawai ini belum memiliki data piutang.
-              </VAlert>
+                Belum ada data piutang sebelumnya.
+              </div>
             </div>
           </VCol>
 

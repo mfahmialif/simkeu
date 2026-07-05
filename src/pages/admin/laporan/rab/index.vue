@@ -10,6 +10,7 @@ import { showSnackbar } from "@/composables/snackbar"
 const router = useRouter()
 const route = useRoute()
 const currentDate = new Date()
+const PIUTANG_MODULE_KEY = "piutang"
 
 const todayDateValue = () => {
   const date = new Date()
@@ -25,7 +26,7 @@ const page = ref(1)
 const itemsPerPage = ref(10)
 const sortBy = ref([{ key: "tanggal_rekap", order: "desc" }])
 const search = ref("")
-const selectedBulan = ref(currentDate.getMonth() + 1)
+const selectedBulan = ref([currentDate.getMonth() + 1])
 const selectedTahun = ref(currentDate.getFullYear())
 const selectedModule = ref(null)
 const selectedPetugasId = ref(null)
@@ -75,6 +76,8 @@ const rekapTanggalPencairanMenu = ref(false)
 const rekapSaving = ref(false)
 const rekapPetugasLoading = ref(false)
 const rekapPetugasList = ref([])
+const piutangPegawaiLoading = ref(false)
+const piutangPegawaiList = ref([])
 const selectedRekapKeys = ref([])
 const selectedRekapCache = ref({})
 const bulkTanggalPencairan = ref(null)
@@ -121,8 +124,10 @@ const kasForm = ref({
 })
 
 const rekapForm = ref({
+  input_piutang: false,
   module_key: null,
   petugas_id: null,
+  piutang_pegawai_id: null,
   nama: "",
   bulan: currentDate.getMonth() + 1,
   tahun: currentDate.getFullYear(),
@@ -133,16 +138,44 @@ const rekapForm = ref({
   ].join("-"),
   tanggal_pencairan: null,
   jumlah_sementara: 0,
+  default_cicilan: null,
   keterangan: "",
 })
+
+const monthFilterValues = value => {
+  const rawValues = Array.isArray(value) ? value : value ? [value] : []
+
+  return [...new Set(
+    rawValues
+      .flatMap(item => String(item).split(","))
+      .map(item => Number(item))
+      .filter(month => month >= 1 && month <= 12),
+  )]
+}
+
+const selectedBulanFilterValues = () => monthFilterValues(selectedBulan.value)
+
+const selectedBulanForDefault = () => {
+  const values = selectedBulanFilterValues()
+  const currentMonth = currentDate.getMonth() + 1
+
+  return values.includes(currentMonth) ? currentMonth : values[0] || null
+}
+
+const selectedBulanFilterParam = () => {
+  const values = selectedBulanFilterValues()
+
+  return values.length ? values.join(",") : null
+}
 
 const prosesRabDefaultTanggalCetak = () => {
   const today = todayDateValue()
   const todayMatch = today.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   const tahun = Number(selectedTahun.value || todayMatch?.[1] || currentDate.getFullYear())
-  const bulan = Number(selectedBulan.value || todayMatch?.[2] || currentDate.getMonth() + 1)
+  const selectedMonths = selectedBulanFilterValues()
+  const bulan = Number(selectedBulanForDefault() || todayMatch?.[2] || currentDate.getMonth() + 1)
 
-  if (!selectedBulan.value) {
+  if (!selectedMonths.length) {
     return selectedTahun.value && tahun !== Number(todayMatch?.[1])
       ? `${tahun}-01-01`
       : today
@@ -243,6 +276,16 @@ const yearItems = computed(() => [...new Set([
   currentDate.getFullYear(),
   ...years.value,
 ])].sort((a, b) => b - a))
+
+const regularModuleItems = computed(() =>
+  modules.value.filter(item => item.value !== PIUTANG_MODULE_KEY),
+)
+
+const selectedPiutangPegawai = computed(() =>
+  piutangPegawaiList.value.find(item =>
+    String(item.value) === String(rekapForm.value.piutang_pegawai_id),
+  ) || null,
+)
 
 const saldoAdjustmentTotal = computed(() =>
   Number(kasTotals.value.manual_masuk || 0) - Number(kasTotals.value.manual_keluar || 0),
@@ -393,6 +436,7 @@ const moduleColor = key => ({
   tatap_muka: "primary",
   kegiatan: "warning",
   dosen_bulanan: "info",
+  [PIUTANG_MODULE_KEY]: "success",
 }[key] || "secondary")
 
 const kasTipeItems = [
@@ -509,13 +553,14 @@ const rekapTanggalPencairanPicker = computed({
 
 const sharedRabFilterPayload = () => {
   const searchTerm = String(search.value || "").trim()
+  const bulan = selectedBulanFilterParam()
 
   return {
     ...(searchTerm && { search: searchTerm }),
-    ...(selectedBulan.value && { bulan: selectedBulan.value }),
+    ...(bulan && { bulan }),
     ...(selectedTahun.value && { tahun: selectedTahun.value }),
     ...(selectedModule.value && { module_key: selectedModule.value }),
-    ...(selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
+    ...(selectedModule.value !== PIUTANG_MODULE_KEY && selectedPetugasId.value && { petugas_id: selectedPetugasId.value }),
   }
 }
 
@@ -556,6 +601,69 @@ const errorMessage = err => {
   }
 
   return message || "Terjadi kesalahan."
+}
+
+const defaultRegularModuleKey = () => {
+  if (selectedModule.value && selectedModule.value !== PIUTANG_MODULE_KEY) {
+    return selectedModule.value
+  }
+
+  return regularModuleItems.value?.[0]?.value || "tatap_muka"
+}
+
+const piutangPegawaiTitle = item =>
+  `${item.nama || "-"} (${item.kode || "-"}) - ${item.tipe || "pegawai"}`
+
+const buildPiutangRekapName = () => {
+  const pegawaiName = selectedPiutangPegawai.value?.nama || ""
+  const keterangan = String(rekapForm.value.keterangan || "").trim()
+  const suffix = keterangan ? ` ( ${keterangan} )` : ""
+
+  return ["CASHBON", pegawaiName]
+    .filter(Boolean)
+    .join(" ") + suffix
+}
+
+const syncPiutangRekapName = () => {
+  if (!rekapForm.value.input_piutang) return
+
+  rekapForm.value.nama = buildPiutangRekapName()
+}
+
+const fetchPiutangPegawaiOptions = async () => {
+  if (piutangPegawaiList.value.length || piutangPegawaiLoading.value) return
+
+  try {
+    piutangPegawaiLoading.value = true
+
+    const response = await $api("/admin/pegawai", {
+      method: "GET",
+      body: {
+        limit: 0,
+        status: "aktif",
+        sort_key: "nama",
+        sort_order: "asc",
+      },
+    })
+
+    const rows = response.data?.data || response.data || []
+
+    piutangPegawaiList.value = rows.map(item => ({
+      title: piutangPegawaiTitle(item),
+      value: item.id,
+      nama: item.nama || "",
+      kode: item.kode || "",
+      tipe: item.tipe || "pegawai",
+    }))
+    syncPiutangRekapName()
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    piutangPegawaiLoading.value = false
+  }
 }
 
 const fetchKas = async () => {
@@ -1104,7 +1212,7 @@ const resetFilters = async () => {
   clearTimeout(searchTimer)
   clearSelectedRekaps()
   search.value = ""
-  selectedBulan.value = null
+  selectedBulan.value = []
   selectedTahun.value = null
   selectedModule.value = null
   selectedPetugasId.value = null
@@ -1115,6 +1223,13 @@ const resetFilters = async () => {
 }
 
 const fetchPetugas = async () => {
+  if (selectedModule.value === PIUTANG_MODULE_KEY) {
+    petugasList.value = []
+    selectedPetugasId.value = null
+
+    return
+  }
+
   try {
     const items = await fetchPetugasPengeluaranOptions(selectedModule.value || "rab")
 
@@ -1148,7 +1263,7 @@ const openKasForm = (item = null) => {
   kasEditingId.value = item?.id || null
   kasForm.value = {
     petugas_id: item?.petugas_id || selectedPetugasId.value || null,
-    module_key: item?.module_key || selectedModule.value || modules.value?.[0]?.value || "tatap_muka",
+    module_key: item?.module_key || defaultRegularModuleKey(),
     tanggal: item?.tanggal || [
       currentDate.getFullYear(),
       String(currentDate.getMonth() + 1).padStart(2, "0"),
@@ -1162,7 +1277,7 @@ const openKasForm = (item = null) => {
 }
 
 const fetchRekapPetugas = async moduleKey => {
-  if (!moduleKey) {
+  if (!moduleKey || moduleKey === PIUTANG_MODULE_KEY) {
     rekapPetugasList.value = []
     rekapForm.value.petugas_id = null
 
@@ -1196,13 +1311,16 @@ const fetchRekapPetugas = async moduleKey => {
 }
 
 const openRekapForm = async () => {
-  const moduleKey = selectedModule.value || modules.value?.[0]?.value || "tatap_muka"
+  const inputPiutang = selectedModule.value === PIUTANG_MODULE_KEY
+  const moduleKey = inputPiutang ? PIUTANG_MODULE_KEY : defaultRegularModuleKey()
 
   rekapForm.value = {
+    input_piutang: inputPiutang,
     module_key: moduleKey,
-    petugas_id: selectedPetugasId.value || null,
+    petugas_id: inputPiutang ? null : selectedPetugasId.value || null,
+    piutang_pegawai_id: null,
     nama: "",
-    bulan: selectedBulan.value || currentDate.getMonth() + 1,
+    bulan: selectedBulanForDefault() || currentDate.getMonth() + 1,
     tahun: selectedTahun.value || currentDate.getFullYear(),
     tanggal_rekap: [
       currentDate.getFullYear(),
@@ -1211,16 +1329,76 @@ const openRekapForm = async () => {
     ].join("-"),
     tanggal_pencairan: null,
     jumlah_sementara: 0,
+    default_cicilan: null,
     keterangan: "",
   }
   rekapTanggalRekapMenu.value = false
   rekapTanggalPencairanMenu.value = false
   rekapFormDialog.value = true
+
+  if (inputPiutang) {
+    syncPiutangRekapName()
+    await fetchPiutangPegawaiOptions()
+
+    return
+  }
+
   await fetchRekapPetugas(moduleKey)
 }
 
 const saveRekap = async () => {
   if (rekapSaving.value) return
+
+  if (rekapForm.value.input_piutang) {
+    syncPiutangRekapName()
+
+    const nominal = Number(rekapForm.value.jumlah_sementara || 0)
+
+    if (
+      !rekapForm.value.piutang_pegawai_id
+      || !rekapForm.value.tanggal_rekap
+      || nominal <= 0
+    ) {
+      showSnackbar({
+        text: "Pegawai, tanggal, dan nominal piutang wajib diisi.",
+        color: "warning",
+      })
+
+      return
+    }
+
+    try {
+      rekapSaving.value = true
+
+      const response = await $api("/admin/piutang", {
+        method: "POST",
+        body: {
+          pegawai_id: rekapForm.value.piutang_pegawai_id,
+          tanggal: rekapForm.value.tanggal_rekap,
+          tanggal_pencairan: rekapForm.value.tanggal_pencairan || null,
+          nominal,
+          default_cicilan: Number(rekapForm.value.default_cicilan || 0),
+          keterangan: rekapForm.value.keterangan,
+        },
+      })
+
+      rekapFormDialog.value = false
+      showSnackbar({
+        text: response.message,
+        color: "success",
+      })
+      fetchData()
+    } catch (err) {
+      showSnackbar({
+        text: errorMessage(err),
+        color: "error",
+      })
+    } finally {
+      rekapSaving.value = false
+    }
+
+    return
+  }
 
   const bulan = Number(rekapForm.value.bulan)
   const tahun = Number(rekapForm.value.tahun)
@@ -1476,13 +1654,45 @@ watch([selectedBulan, selectedTahun, selectedModule, selectedPetugasId], () => {
   clearSelectedRekaps()
   page.value = 1
   fetchData()
-})
+}, { deep: true })
 
 watch(selectedModule, fetchPetugas)
 
 watch(() => rekapForm.value.module_key, moduleKey => {
-  if (rekapFormDialog.value) fetchRekapPetugas(moduleKey)
+  if (rekapFormDialog.value && !rekapForm.value.input_piutang) {
+    fetchRekapPetugas(moduleKey)
+  }
 })
+
+watch(() => rekapForm.value.input_piutang, async inputPiutang => {
+  if (!rekapFormDialog.value) return
+
+  if (inputPiutang) {
+    rekapForm.value.module_key = PIUTANG_MODULE_KEY
+    rekapForm.value.petugas_id = null
+    syncPiutangRekapName()
+    await fetchPiutangPegawaiOptions()
+
+    return
+  }
+
+  const moduleKey = defaultRegularModuleKey()
+
+  rekapForm.value.module_key = moduleKey
+  rekapForm.value.piutang_pegawai_id = null
+  rekapForm.value.nama = ""
+  await fetchRekapPetugas(moduleKey)
+})
+
+watch(
+  [
+    () => rekapForm.value.piutang_pegawai_id,
+    () => rekapForm.value.keterangan,
+    piutangPegawaiList,
+  ],
+  syncPiutangRekapName,
+  { deep: true },
+)
 
 watch(search, () => {
   if (resettingFilters.value) return
@@ -1598,6 +1808,10 @@ onBeforeUnmount(() => {
               v-model="selectedBulan"
               label="Bulan"
               :items="bulanItems"
+              multiple
+              chips
+              closable-chips
+              placeholder="Semua bulan"
               clearable
               hide-details
             />
@@ -2624,7 +2838,7 @@ onBeforeUnmount(() => {
       v-model="rekapFormDialog"
       width="760"
     >
-      <VCard title="Tambah Rekap Anggaran">
+      <VCard :title="rekapForm.input_piutang ? 'Tambah Piutang Cashbon' : 'Tambah Rekap Anggaran'">
         <DialogCloseBtn
           variant="text"
           size="default"
@@ -2633,29 +2847,57 @@ onBeforeUnmount(() => {
 
         <VCardText>
           <VRow>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <VSelect
-                v-model="rekapForm.module_key"
-                label="Jenis Rekap *"
-                :items="modules"
+            <VCol cols="12">
+              <VCheckbox
+                v-model="rekapForm.input_piutang"
+                label="Input Piutang"
+                density="compact"
+                hide-details
                 :disabled="rekapSaving"
-                :rules="[requiredValidator]"
               />
             </VCol>
 
+            <template v-if="!rekapForm.input_piutang">
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <VSelect
+                  v-model="rekapForm.module_key"
+                  label="Jenis Rekap *"
+                  :items="regularModuleItems"
+                  :disabled="rekapSaving"
+                  :rules="[requiredValidator]"
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <VAutocomplete
+                  v-model="rekapForm.petugas_id"
+                  label="Petugas *"
+                  :items="rekapPetugasList"
+                  :loading="rekapPetugasLoading"
+                  :disabled="rekapSaving || !rekapForm.module_key"
+                  :rules="[requiredValidator]"
+                  clearable
+                />
+              </VCol>
+            </template>
+
             <VCol
+              v-else
               cols="12"
               md="6"
             >
               <VAutocomplete
-                v-model="rekapForm.petugas_id"
-                label="Petugas *"
-                :items="rekapPetugasList"
-                :loading="rekapPetugasLoading"
-                :disabled="rekapSaving || !rekapForm.module_key"
+                v-model="rekapForm.piutang_pegawai_id"
+                label="Pegawai *"
+                :items="piutangPegawaiList"
+                :loading="piutangPegawaiLoading"
+                :disabled="rekapSaving"
                 :rules="[requiredValidator]"
                 clearable
               />
@@ -2665,13 +2907,15 @@ onBeforeUnmount(() => {
               <VTextField
                 v-model="rekapForm.nama"
                 label="Nama Rekap *"
-                placeholder="Contoh: RAB Kegiatan Juni 2026"
+                :placeholder="rekapForm.input_piutang ? 'CASHBON Nama Pegawai ( Keterangan )' : 'Contoh: RAB Kegiatan Juni 2026'"
+                :readonly="rekapForm.input_piutang"
                 :disabled="rekapSaving"
                 :rules="[requiredValidator]"
               />
             </VCol>
 
             <VCol
+              v-if="!rekapForm.input_piutang"
               cols="12"
               sm="6"
               md="4"
@@ -2686,6 +2930,7 @@ onBeforeUnmount(() => {
             </VCol>
 
             <VCol
+              v-if="!rekapForm.input_piutang"
               cols="12"
               sm="6"
               md="4"
@@ -2701,7 +2946,7 @@ onBeforeUnmount(() => {
 
             <VCol
               cols="12"
-              md="4"
+              :md="rekapForm.input_piutang ? 6 : 4"
             >
               <VMenu
                 v-model="rekapTanggalRekapMenu"
@@ -2713,7 +2958,7 @@ onBeforeUnmount(() => {
                   <VTextField
                     v-bind="menuProps"
                     :model-value="formatDate(rekapForm.tanggal_rekap)"
-                    label="Tanggal Rekap *"
+                    :label="rekapForm.input_piutang ? 'Tanggal Piutang *' : 'Tanggal Rekap *'"
                     prepend-inner-icon="ri-calendar-line"
                     readonly
                     :disabled="rekapSaving"
@@ -2731,7 +2976,7 @@ onBeforeUnmount(() => {
 
             <VCol
               cols="12"
-              md="4"
+              :md="rekapForm.input_piutang ? 6 : 4"
             >
               <VMenu
                 v-model="rekapTanggalPencairanMenu"
@@ -2767,14 +3012,31 @@ onBeforeUnmount(() => {
             >
               <VTextField
                 v-model="rekapForm.jumlah_sementara"
-                label="Jumlah RAB Sementara *"
+                :label="rekapForm.input_piutang ? 'Nominal Piutang *' : 'Jumlah RAB Sementara *'"
                 type="number"
-                min="0"
+                :min="rekapForm.input_piutang ? 1 : 0"
                 prefix="Rp"
                 :hint="formatRupiah(rekapForm.jumlah_sementara)"
                 persistent-hint
                 :disabled="rekapSaving"
                 :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              v-if="rekapForm.input_piutang"
+              cols="12"
+              md="6"
+            >
+              <VTextField
+                v-model="rekapForm.default_cicilan"
+                label="Default Cicilan"
+                type="number"
+                min="0"
+                prefix="Rp"
+                :hint="formatRupiah(rekapForm.default_cicilan)"
+                persistent-hint
+                :disabled="rekapSaving"
               />
             </VCol>
 
@@ -2803,7 +3065,7 @@ onBeforeUnmount(() => {
             color="primary"
             prepend-icon="ri-save-line"
             :loading="rekapSaving"
-            :disabled="rekapSaving || rekapPetugasLoading"
+            :disabled="rekapSaving || rekapPetugasLoading || piutangPegawaiLoading"
             @click="saveRekap"
           >
             Simpan
@@ -3050,7 +3312,7 @@ onBeforeUnmount(() => {
               <VSelect
                 v-model="kasForm.module_key"
                 label="Kategori *"
-                :items="modules"
+                :items="regularModuleItems"
                 :rules="[requiredValidator]"
               />
             </VCol>
