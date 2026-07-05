@@ -70,6 +70,8 @@ const kasFormDialog = ref(false)
 const kasEditingId = ref(null)
 const kasSaving = ref(false)
 const rekapFormDialog = ref(false)
+const rekapTanggalRekapMenu = ref(false)
+const rekapTanggalPencairanMenu = ref(false)
 const rekapSaving = ref(false)
 const rekapPetugasLoading = ref(false)
 const rekapPetugasList = ref([])
@@ -477,6 +479,30 @@ const prosesRabTanggalCetakPicker = computed({
     if (nextValue) {
       prosesRabForm.value.tanggal_cetak = nextValue
       prosesRabDateMenu.value = false
+    }
+  },
+})
+
+const rekapTanggalRekapPicker = computed({
+  get: () => parseDateValue(rekapForm.value.tanggal_rekap) || parseDateValue(todayDateValue()),
+  set: value => {
+    const nextValue = toDateValue(value)
+
+    if (nextValue) {
+      rekapForm.value.tanggal_rekap = nextValue
+      rekapTanggalRekapMenu.value = false
+    }
+  },
+})
+
+const rekapTanggalPencairanPicker = computed({
+  get: () => parseDateValue(rekapForm.value.tanggal_pencairan) || parseDateValue(todayDateValue()),
+  set: value => {
+    const nextValue = toDateValue(value)
+
+    if (nextValue) {
+      rekapForm.value.tanggal_pencairan = nextValue
+      rekapTanggalPencairanMenu.value = false
     }
   },
 })
@@ -900,6 +926,7 @@ const saveProsesRab = async () => {
 
   try {
     prosesRabSaving.value = true
+
     const isEditingProcess = Boolean(prosesRabEditingId.value)
 
     const payload = {
@@ -1186,6 +1213,8 @@ const openRekapForm = async () => {
     jumlah_sementara: 0,
     keterangan: "",
   }
+  rekapTanggalRekapMenu.value = false
+  rekapTanggalPencairanMenu.value = false
   rekapFormDialog.value = true
   await fetchRekapPetugas(moduleKey)
 }
@@ -2674,35 +2703,62 @@ onBeforeUnmount(() => {
               cols="12"
               md="4"
             >
-              <AppDateTimePicker
-                v-model="rekapForm.tanggal_rekap"
-                label="Tanggal Rekap *"
-                :config="{
-                  altInput: true,
-                  altFormat: 'd F Y',
-                  dateFormat: 'Y-m-d',
-                }"
-                :disabled="rekapSaving"
-                :rules="[requiredValidator]"
-              />
+              <VMenu
+                v-model="rekapTanggalRekapMenu"
+                :close-on-content-click="false"
+                location="bottom"
+                offset="6"
+              >
+                <template #activator="{ props: menuProps }">
+                  <VTextField
+                    v-bind="menuProps"
+                    :model-value="formatDate(rekapForm.tanggal_rekap)"
+                    label="Tanggal Rekap *"
+                    prepend-inner-icon="ri-calendar-line"
+                    readonly
+                    :disabled="rekapSaving"
+                    :rules="[requiredValidator]"
+                  />
+                </template>
+
+                <VDatePicker
+                  v-model="rekapTanggalRekapPicker"
+                  color="primary"
+                  hide-header
+                />
+              </VMenu>
             </VCol>
 
             <VCol
               cols="12"
               md="4"
             >
-              <AppDateTimePicker
-                v-model="rekapForm.tanggal_pencairan"
-                label="Tanggal Pencairan (Opsional)"
-                placeholder="Belum ditentukan"
-                clearable
-                :config="{
-                  altInput: true,
-                  altFormat: 'd F Y',
-                  dateFormat: 'Y-m-d',
-                }"
-                :disabled="rekapSaving"
-              />
+              <VMenu
+                v-model="rekapTanggalPencairanMenu"
+                :close-on-content-click="false"
+                location="bottom"
+                offset="6"
+              >
+                <template #activator="{ props: menuProps }">
+                  <VTextField
+                    v-bind="menuProps"
+                    :model-value="rekapForm.tanggal_pencairan ? formatDate(rekapForm.tanggal_pencairan) : ''"
+                    label="Tanggal Pencairan (Opsional)"
+                    placeholder="Belum ditentukan"
+                    prepend-inner-icon="ri-calendar-check-line"
+                    readonly
+                    clearable
+                    :disabled="rekapSaving"
+                    @click:clear="rekapForm.tanggal_pencairan = null"
+                  />
+                </template>
+
+                <VDatePicker
+                  v-model="rekapTanggalPencairanPicker"
+                  color="primary"
+                  hide-header
+                />
+              </VMenu>
             </VCol>
 
             <VCol

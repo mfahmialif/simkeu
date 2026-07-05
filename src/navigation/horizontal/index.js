@@ -8,7 +8,7 @@ import { settingItemsForRole } from "./setting"
 import dashboardStaff from "./staff/dashboardStaff"
 import pemasukanStaff from "./staff/pemasukanStaff"
 import user from "./user"
-import hutang from "./hutang"
+import { hutangItemsForRole } from "./hutang"
 import {
   pengeluaranDosenBulanan,
   pengeluaranDosenKegiatan,
@@ -29,6 +29,7 @@ const currentRole = computed(() =>
 
 const routesByRole = roleName => {
   const setting = settingItemsForRole(roleName)
+  const hutang = hutangItemsForRole(roleName)
 
   return {
     admin: [

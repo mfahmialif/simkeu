@@ -5,6 +5,36 @@ import "nprogress/nprogress.css"
 // Konfigurasi NProgress seperti YouTube
 NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.1 })
 
+const normalizeRole = roleName => String(roleName || "").toLowerCase()
+
+const routeRoles = to => to.matched.flatMap(route => {
+  const roles = route.meta?.roles
+
+  return Array.isArray(roles) ? roles : []
+})
+
+const canAccessByRole = (to, userData) => {
+  const roles = routeRoles(to)
+
+  if (!roles.length) return true
+
+  const userRole = normalizeRole(userData?.role?.name)
+
+  return roles.some(role => normalizeRole(role) === userRole)
+}
+
+const unauthorizedRedirect = (to, isLoggedIn) => {
+  if (isLoggedIn) return { name: "not-authorized" }
+
+  return {
+    name: "login",
+    query: {
+      ...to.query,
+      to: to.fullPath !== "/" ? to.path : undefined,
+    },
+  }
+}
+
 export const setupGuards = router => {
   // 👉 router.beforeEach
   // Docs: https://router.vuejs.org/guide/advanced/navigation-guards.html#global-before-guards
@@ -22,9 +52,9 @@ export const setupGuards = router => {
      * Check if user is logged in by checking if token & user data exists in local storage
      * Feel free to update this logic to suit your needs
      */
-    const isLoggedIn = !!(
-      useCookie("userData").value && useCookie("accessToken").value
-    )
+    const userData = useCookie("userData").value
+    const accessToken = useCookie("accessToken").value
+    const isLoggedIn = !!(userData && accessToken)
 
     /*
           If user is logged in and is trying to access login like page, redirect to home
@@ -35,18 +65,11 @@ export const setupGuards = router => {
       if (isLoggedIn) return "/home"
       else return undefined
     }
+    if (!canAccessByRole(to, userData) && to.matched.length)
+      return unauthorizedRedirect(to, isLoggedIn)
+
     if (!canNavigate(to) && to.matched.length) {
-      /* eslint-disable indent */
-      return isLoggedIn
-        ? { name: "not-authorized" }
-        : {
-            name: "login",
-            query: {
-              ...to.query,
-              to: to.fullPath !== "/" ? to.path : undefined,
-            },
-          }
-      /* eslint-enable indent */
+      return unauthorizedRedirect(to, isLoggedIn)
     }
   })
 

@@ -3,6 +3,12 @@
 import { formatRupiah } from "@/composables/formatRupiah"
 import { showSnackbar } from "@/composables/snackbar"
 
+definePage({
+  meta: {
+    roles: ["admin", "pimpinan", "kabag_pengeluaran", "barokahdosen_bulanan"],
+  },
+})
+
 const page = ref(1)
 const itemsPerPage = ref(10)
 const sortBy = ref({ key: "tanggal", order: "desc" })

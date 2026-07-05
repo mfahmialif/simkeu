@@ -15,7 +15,7 @@ import pemasukanStaff from "./staff/pemasukanStaff"
 import user from "./user"
 import laporan, { laporanPengeluaran } from "./laporan"
 import rab from "./rab"
-import hutang from "./hutang"
+import { hutangItemsForRole } from "./hutang"
 import rumahTangga from "./rumah-tangga"
 import saranaPrasarana from "./sarana-prasarana"
 import transportasi from "./transportasi"
@@ -34,6 +34,7 @@ const currentRole = computed(() =>
 
 const routesByRole = roleName => {
   const setting = settingItemsForRole(roleName)
+  const hutang = hutangItemsForRole(roleName)
 
   return {
     admin: [

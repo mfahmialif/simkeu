@@ -2,7 +2,12 @@
 import FormPiutang from "@/components/admin/piutang/FormPiutang.vue"
 import { showSnackbar } from "@/composables/snackbar"
 
-definePage({ meta: { navActiveLink: "admin-piutang" } })
+definePage({
+  meta: {
+    navActiveLink: "admin-piutang",
+    roles: ["admin", "pimpinan", "kabag_pengeluaran", "barokahdosen_bulanan"],
+  },
+})
 
 const route = useRoute()
 const router = useRouter()
