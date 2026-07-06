@@ -61,6 +61,9 @@ const prosesRabSelectedKeys = ref([])
 const prosesRabPencairanDateMenus = ref({})
 const prosesRabBulkPencairanDateMenu = ref(false)
 const prosesRabBulkTanggalSaving = ref(false)
+const appendProsesRabDialog = ref(false)
+const appendProsesRabTargetId = ref(null)
+const appendProsesRabSaving = ref(false)
 const kasLoading = ref(false)
 const kasSummary = ref([])
 const kasTotals = ref({})
@@ -449,6 +452,17 @@ const prosesRabExistingKategoriItems = computed(() =>
     title: kategori,
     value: kategori,
   })),
+)
+
+const appendProsesRabOptions = computed(() =>
+  prosesRabList.value.map(item => ({
+    title: `${item.kategori || `Proses #${item.id}`} - ${formatDate(item.tanggal_cetak)} (${Number(item.jumlah_rekap || 0).toLocaleString("id-ID")} rekap, ${formatRupiah(item.total_rab || 0)})`,
+    value: item.id,
+  })),
+)
+
+const selectedAppendProsesRab = computed(() =>
+  prosesRabList.value.find(item => String(item.id) === String(appendProsesRabTargetId.value)) || null,
 )
 
 const prosesRabMonthKey = value => {
@@ -872,6 +886,95 @@ const openProsesRabDialog = () => {
   prosesRabSelectedKeys.value = []
   prosesRabForm.value = createDefaultProsesRabForm()
   prosesRabDialog.value = true
+}
+
+const openAppendProsesRabDialog = () => {
+  if (selectedRekapItems.value.length === 0) {
+    showSnackbar({
+      text: "Centang rekap yang akan dimasukkan terlebih dahulu.",
+      color: "warning",
+    })
+
+    return
+  }
+
+  if (prosesRabList.value.length === 0) {
+    showSnackbar({
+      text: "Belum ada proses RAB tujuan sesuai filter.",
+      color: "warning",
+    })
+
+    return
+  }
+
+  prosesRabEditingId.value = null
+  prosesRabEditingRows.value = []
+  prosesRabSelectedKeys.value = []
+  appendProsesRabTargetId.value = prosesRabList.value[0]?.id || null
+  appendProsesRabDialog.value = true
+}
+
+const saveAppendProsesRab = async () => {
+  if (appendProsesRabSaving.value) return
+
+  if (selectedRekapItems.value.length === 0) {
+    showSnackbar({
+      text: "Centang rekap yang akan dimasukkan terlebih dahulu.",
+      color: "warning",
+    })
+
+    return
+  }
+
+  if (!appendProsesRabTargetId.value) {
+    showSnackbar({
+      text: "Pilih proses RAB tujuan terlebih dahulu.",
+      color: "warning",
+    })
+
+    return
+  }
+
+  try {
+    appendProsesRabSaving.value = true
+
+    const response = await $api(`/admin/laporan/rab/proses/${appendProsesRabTargetId.value}/items`, {
+      method: "POST",
+      body: {
+        items: selectedRekapItems.value.map(item => ({
+          module_key: item.module_key,
+          id: item.id,
+        })),
+      },
+    })
+
+    const updatedKeys = new Set(response.data?.row_keys || [])
+
+    dataTable.value.forEach(item => {
+      if (updatedKeys.has(item.row_key)) {
+        item.cetak_rab = true
+      }
+    })
+
+    appendProsesRabDialog.value = false
+    appendProsesRabTargetId.value = null
+    clearSelectedRekaps()
+    showSnackbar({
+      text: response.message,
+      color: "success",
+    })
+    await Promise.all([
+      fetchData(),
+      fetchProsesRab(true),
+    ])
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    appendProsesRabSaving.value = false
+  }
 }
 
 const openProsesRabDetail = async item => {
@@ -2229,6 +2332,18 @@ onBeforeUnmount(() => {
           </VBtn>
 
           <VBtn
+            v-if="canProcessRab"
+            class="rab-export-button"
+            color="info"
+            variant="tonal"
+            prepend-icon="ri-folder-add-line"
+            :disabled="selectedRekapItems.length === 0 || appendProsesRabSaving"
+            @click="openAppendProsesRabDialog"
+          >
+            Masukkan di Proses RAB
+          </VBtn>
+
+          <VBtn
             class="rab-add-button"
             color="primary"
             prepend-icon="ri-add-line"
@@ -2483,6 +2598,124 @@ onBeforeUnmount(() => {
         </template>
       </VDataTableServer>
     </VCard>
+
+    <VDialog
+      v-model="appendProsesRabDialog"
+      max-width="920"
+    >
+      <VCard title="Masukkan di Proses RAB">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="appendProsesRabDialog = false"
+        />
+
+        <VCardText>
+          <div class="rab-process-summary mb-4">
+            <div>
+              <span>Rekap Dipilih</span>
+              <strong>{{ selectedRekapItems.length.toLocaleString("id-ID") }}</strong>
+            </div>
+            <div>
+              <span>Total RAB</span>
+              <strong>{{ formatRupiah(prosesRabDialogTotal) }}</strong>
+            </div>
+            <div>
+              <span>Proses Tujuan</span>
+              <strong>{{ selectedAppendProsesRab?.kategori || "-" }}</strong>
+            </div>
+          </div>
+
+          <VAutocomplete
+            v-model="appendProsesRabTargetId"
+            label="Proses RAB Tujuan *"
+            placeholder="Pilih proses RAB"
+            :items="appendProsesRabOptions"
+            prepend-inner-icon="ri-folder-add-line"
+            no-data-text="Belum ada proses RAB sesuai filter"
+            :loading="prosesRabLoading"
+            :disabled="appendProsesRabSaving"
+            :rules="[requiredValidator]"
+          />
+        </VCardText>
+
+        <VDivider />
+
+        <VCardText>
+          <div class="font-weight-semibold mb-3">
+            Data yang Dimasukkan
+          </div>
+
+          <VDataTable
+            :headers="prosesRabDialogHeaders"
+            :items="selectedRekapItems"
+            density="compact"
+            fixed-header
+            height="300"
+            item-value="row_key"
+            :items-per-page="5"
+          >
+            <template #item.tanggal_rekap="{ item }">
+              {{ formatDate(item.tanggal_rekap) }}
+            </template>
+
+            <template #item.tanggal_pencairan="{ item }">
+              {{ formatDate(item.tanggal_pencairan) }}
+            </template>
+
+            <template #item.petugas_nama="{ item }">
+              {{ item.petugas_nama || "-" }}
+            </template>
+
+            <template #item.module_name="{ item }">
+              <VChip
+                :color="moduleColor(item.module_key)"
+                size="x-small"
+                label
+              >
+                {{ item.module_name }}
+              </VChip>
+            </template>
+
+            <template #item.nama="{ item }">
+              <span class="font-weight-medium">{{ item.nama }}</span>
+            </template>
+
+            <template #item.jumlah="{ item }">
+              <strong>{{ formatRupiah(item.jumlah || 0) }}</strong>
+            </template>
+
+            <template #item.total_lpj="{ item }">
+              <strong>{{ formatRupiah(item.total_lpj || 0) }}</strong>
+            </template>
+
+            <template #item.keterangan="{ item }">
+              <span class="text-medium-emphasis">{{ item.keterangan || "-" }}</span>
+            </template>
+          </VDataTable>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="appendProsesRabSaving"
+            @click="appendProsesRabDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="info"
+            prepend-icon="ri-folder-add-line"
+            :loading="appendProsesRabSaving"
+            :disabled="appendProsesRabSaving || selectedRekapItems.length === 0 || !appendProsesRabTargetId"
+            @click="saveAppendProsesRab"
+          >
+            Masukkan
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
 
     <VDialog
       v-model="prosesRabDialog"
