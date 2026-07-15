@@ -2,6 +2,7 @@
 /* eslint-disable camelcase */
 import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue"
 import SatuanInput from "@/components/admin/pengeluaran/SatuanInput.vue"
+import { fDate } from "@/composables/fDate"
 import { formatRupiah } from "@/composables/formatRupiah"
 import { showSnackbar } from "@/composables/snackbar"
 import { appendLampiranFormData } from "@/utils/lampiran"
@@ -87,6 +88,7 @@ const isRumahTangga = computed(() => ["rumah-tangga", "sarana-prasarana"].includ
 const isTransportasi = computed(() => props.moduleType === "transportasi")
 const isUmum = computed(() => props.moduleType === "umum")
 const isDosenBulanan = computed(() => props.moduleType === "dosen-bulanan")
+const isAbsensi = computed(() => props.moduleType === "absensi")
 
 const currentDateValue = () => {
   const date = new Date()
@@ -207,6 +209,15 @@ const newRow = () => {
     }
   }
 
+  if (isAbsensi.value) {
+    return {
+      ...base,
+      total_hari: 0,
+      total_jam: 0,
+      total_barokah: 0,
+    }
+  }
+
   return {
     ...base,
     hari: 0,
@@ -247,6 +258,10 @@ const rowTotal = row => {
 
   if (isDosenBulanan.value) {
     return Math.round(numberValue(row.barokah_dosen_tetap) + numberValue(row.barokah_struktural))
+  }
+
+  if (isAbsensi.value) {
+    return Math.round(numberValue(row.total_barokah || row.total || 0))
   }
 
   return Math.round((numberValue(row.barokah_harian) * numberValue(row.hari)) + numberValue(row.barokah_bulanan))
@@ -440,22 +455,238 @@ const errorMessage = err => {
   return message || "Terjadi kesalahan."
 }
 
-const detailToRow = item => ({
-  ...newRow(),
-  ...item,
-  key: `lpj-${item.id}`,
-  pegawai_id: item.pegawai_id || null,
-  kategori_detail: item.kategori_detail === "non_pegawai" ? "non_pegawai" : "pegawai",
-  prioritas: item.prioritas || "Sedang",
-  jenis_pembayaran: item.jenis_pembayaran || (
-    isRumahTangga.value || isTransportasi.value || isUmum.value || item.kategori_detail === "non_pegawai" ? "Tunai" : "CUZ BSI"
-  ),
-  bukti_transfer: null,
-  existing_bukti_transfer_url: item.bukti_transfer_url || null,
-  lampiran: [],
-  existing_lampiran: selectedFileSafeArray(item.lampiran),
-  removed_lampiran: [],
+const detailToRow = item => {
+  const row = {
+    ...newRow(),
+    ...item,
+    key: `lpj-${item.id}`,
+    pegawai_id: item.pegawai_id || null,
+    kategori_detail: item.kategori_detail === "non_pegawai" ? "non_pegawai" : "pegawai",
+    prioritas: item.prioritas || "Sedang",
+    jenis_pembayaran: item.jenis_pembayaran || (
+      isRumahTangga.value || isTransportasi.value || isUmum.value || item.kategori_detail === "non_pegawai" ? "Tunai" : "CUZ BSI"
+    ),
+    bukti_transfer: null,
+    existing_bukti_transfer_url: item.bukti_transfer_url || null,
+    lampiran: [],
+    existing_lampiran: selectedFileSafeArray(item.lampiran),
+    removed_lampiran: [],
+  }
+
+  if (isAbsensi.value) {
+    row.total_hari = Number(item.total_hari || 0)
+    row.total_jam = Number(item.total_jam || 0)
+    row.total_barokah = Number(item.total_barokah || item.total || 0)
+  }
+
+  return row
+}
+
+const isImportSectionOpen = ref(true)
+const webAbsensiLoading = ref(false)
+const webAbsensiRows = ref([])
+const webAbsensiPeriode = ref(null)
+const importMode = ref("bulan_tahun")
+const importModeOptions = [
+  { title: "Bulan & Tahun", value: "bulan_tahun" },
+  { title: "Rentang Tanggal", value: "range" },
+]
+const importDept = ref(null)
+const importDeptOptions = [
+  { title: "Semua Departemen", value: null },
+  { title: "Dosen", value: "Dosen" },
+  { title: "Staff", value: "Staff" },
+  { title: "Admin", value: "Admin" },
+]
+const importBulan = ref(new Date().getMonth() + 1)
+const importTahun = ref(new Date().getFullYear())
+const importStartDate = ref(fDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
+const importEndDate = ref(fDate(new Date()))
+const importOptionHariJam = ref(true)
+const importOptionBarokah = ref(true)
+
+const bulanOptions = [
+  { title: "Januari", value: 1 },
+  { title: "Februari", value: 2 },
+  { title: "Maret", value: 3 },
+  { title: "April", value: 4 },
+  { title: "Mei", value: 5 },
+  { title: "Juni", value: 6 },
+  { title: "Juli", value: 7 },
+  { title: "Agustus", value: 8 },
+  { title: "September", value: 9 },
+  { title: "Oktober", value: 10 },
+  { title: "November", value: 11 },
+  { title: "Desember", value: 12 },
+]
+
+const fetchWebAbsensi = async () => {
+  try {
+    webAbsensiLoading.value = true
+    webAbsensiRows.value = []
+    webAbsensiPeriode.value = null
+
+    const params = {
+      mode: importMode.value,
+    }
+
+    if (importMode.value === "bulan_tahun") {
+      params.bulan = importBulan.value
+      params.tahun = importTahun.value
+    } else {
+      params.start_date = importStartDate.value
+      params.end_date = importEndDate.value
+    }
+
+    if (importDept.value) {
+      params.departemen = importDept.value
+    }
+
+    const response = await $api(`${props.endpoint}/web-absensi/rekap`, {
+      method: "GET",
+      params,
+    })
+
+    webAbsensiRows.value = response.data || []
+    webAbsensiPeriode.value = response.periode || null
+    showSnackbar({
+      text: response.message || "Data dari Web Absensi berhasil dimuat.",
+      color: "success",
+    })
+  } catch (err) {
+    webAbsensiRows.value = []
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    webAbsensiLoading.value = false
+  }
+}
+
+const findSimkeuMatch = webItem => {
+  const kode = String(
+    webItem?.user?.kode
+    || webItem?.kode
+    || webItem?.user?.kode_pegawai
+    || webItem?.user?.nip
+    || webItem?.user?.nik
+    || webItem?.user?.kode_dosen
+    || "",
+  ).trim().toLowerCase()
+
+  const username = String(webItem?.user?.username || "").trim().toLowerCase()
+  const name = String(webItem?.user?.name || "").trim().toLowerCase()
+
+  if (!rows.value || rows.value.length === 0) return null
+
+  if (kode) {
+    const matchByKode = rows.value.find(item => {
+      const p = pegawaiItem(item.pegawai_id)
+      const itemKode = String(item.kode_pegawai || item.kode_dosen || p?.kode || "").trim().toLowerCase()
+
+      return itemKode === kode
+    })
+    if (matchByKode) return matchByKode
+  }
+
+  if (username) {
+    const matchByUsername = rows.value.find(item => {
+      const p = pegawaiItem(item.pegawai_id)
+      const itemKode = String(item.kode_pegawai || item.kode_dosen || p?.kode || "").trim().toLowerCase()
+
+      return itemKode === username
+    })
+    if (matchByUsername) return matchByUsername
+  }
+
+  if (name) {
+    const matchByName = rows.value.find(item => {
+      const p = pegawaiItem(item.pegawai_id)
+      const itemNama = String(item.nama_pegawai || item.nama_dosen || p?.nama || "").trim().toLowerCase()
+
+      return itemNama === name
+    })
+    if (matchByName) return matchByName
+  }
+
+  return null
+}
+
+const findPegawaiItemMatch = webItem => {
+  const kode = String(
+    webItem?.user?.kode
+    || webItem?.kode
+    || webItem?.user?.kode_pegawai
+    || webItem?.user?.nip
+    || webItem?.user?.nik
+    || webItem?.user?.kode_dosen
+    || "",
+  ).trim().toLowerCase()
+
+  const username = String(webItem?.user?.username || "").trim().toLowerCase()
+  const name = String(webItem?.user?.name || "").trim().toLowerCase()
+
+  return pegawaiItems.value.find(p => {
+    const pKode = String(p.kode || "").trim().toLowerCase()
+    const pNama = String(p.nama || "").trim().toLowerCase()
+
+    return (kode && pKode === kode) || (username && pKode === username) || (name && pNama === name)
+  }) || null
+}
+
+const matchedWebAbsensiCount = computed(() => {
+  if (!webAbsensiRows.value || webAbsensiRows.value.length === 0) return 0
+
+  return webAbsensiRows.value.filter(item => findSimkeuMatch(item) || findPegawaiItemMatch(item)).length
 })
+
+const applyWebAbsensiToTable = () => {
+  if (!webAbsensiRows.value || webAbsensiRows.value.length === 0) return
+
+  let countApplied = 0
+  webAbsensiRows.value.forEach(webItem => {
+    let simkeuItem = findSimkeuMatch(webItem)
+    if (!simkeuItem) {
+      const pMatch = findPegawaiItemMatch(webItem)
+      if (pMatch) {
+        if (rows.value.length === 1 && !rows.value[0].pegawai_id && !rows.value[0].total_barokah) {
+          simkeuItem = rows.value[0]
+        } else {
+          simkeuItem = newRow()
+          rows.value.push(simkeuItem)
+        }
+        simkeuItem.pegawai_id = pMatch.id
+        simkeuItem.nama_pegawai = pMatch.nama
+        simkeuItem.kode_pegawai = pMatch.kode
+      }
+    }
+
+    if (simkeuItem) {
+      if (importOptionHariJam.value) {
+        const totalHari = Array.isArray(webItem?.rekap_per_kategori)
+          ? webItem.rekap_per_kategori.reduce((acc, kat) => acc + Number(kat?.jumlah || 0), 0)
+          : 0
+        const totalJam = Number(webItem?.total_jam_keseluruhan?.total_jam || 0)
+
+        simkeuItem.total_hari = totalHari
+        simkeuItem.total_jam = totalJam
+      }
+
+      if (importOptionBarokah.value) {
+        const totalDana = Number(webItem?.total_perolehan_dana || 0)
+        simkeuItem.total_barokah = totalDana
+      }
+
+      countApplied++
+    }
+  })
+
+  showSnackbar({
+    text: `Berhasil menerapkan data dari Web Absensi ke ${countApplied} pegawai.`,
+    color: "success",
+  })
+}
 
 const fetchData = async () => {
   try {
@@ -488,6 +719,17 @@ const fetchData = async () => {
 
     rekap.value = response.data?.rekap || null
     lpj.value = response.data?.lpj || null
+
+    if (isAbsensi.value && rekap.value?.tanggal_rekap) {
+      const d = new Date(rekap.value.tanggal_rekap)
+      if (!Number.isNaN(d.getTime())) {
+        importBulan.value = d.getMonth() + 1
+        importTahun.value = d.getFullYear()
+        const firstDay = new Date(d.getFullYear(), d.getMonth(), 1)
+        importStartDate.value = fDate(firstDay)
+        importEndDate.value = fDate(d)
+      }
+    }
 
     const details = response.data?.details || []
     if (isRumahTangga.value) {
@@ -576,7 +818,7 @@ const duplicateSubItem = (itemIndex, index) => {
   const duplicated = {
     ...newRow(),
     ...Object.fromEntries(Object.entries(source).filter(([key]) => !["id", "key", "rab_detail_id", "lampiran"].includes(key))),
-    key: `\${Date.now()}-\${Math.random()}`,
+    key: `${Date.now()}-${Math.random()}`,
     rab_detail_id: null,
     lampiran: [],
     existing_lampiran: [],
@@ -682,6 +924,10 @@ const validateRows = () => {
     }
     if (isRumahTangga.value && !String(row.nama_kegiatan || "").trim()) {
       return `${label}: uraian wajib diisi.`
+    }
+    if (isAbsensi.value) {
+      if (!row.pegawai_id) return `${label}: pegawai wajib dipilih.`
+      continue
     }
     if (!isKegiatan.value || isPegawaiKegiatan(row)) {
       if (isRumahTangga.value) continue
@@ -854,6 +1100,291 @@ onMounted(() => {
           </div>
         </div>
       </VCardText>
+    </VCard>
+
+    <VCard
+      v-if="isAbsensi"
+      class="mb-6 border border-primary border-opacity-25"
+      variant="outlined"
+    >
+      <VCardItem class="pb-2">
+        <template #append>
+          <VBtn
+            icon
+            variant="text"
+            size="small"
+            @click="isImportSectionOpen = !isImportSectionOpen"
+          >
+            <VIcon :icon="isImportSectionOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" />
+          </VBtn>
+        </template>
+        <VCardTitle class="d-flex align-center gap-2 text-primary">
+          <VIcon
+            icon="ri-cloud-download-line"
+            size="24"
+          />
+          <span class="font-weight-bold">IMPORT DATA DARI WEB ABSENSI</span>
+        </VCardTitle>
+        <VCardSubtitle
+          class="text-wrap mt-1"
+          style="white-space: normal;"
+        >
+          Ambil data rekap kehadiran dari web absensi dan terapkan otomatis ke daftar pegawai di bawah.
+        </VCardSubtitle>
+      </VCardItem>
+
+      <VExpandTransition>
+        <div v-show="isImportSectionOpen">
+          <VDivider />
+
+          <VCardText>
+            <VRow class="align-center">
+              <VCol
+                cols="12"
+                sm="6"
+                md="3"
+              >
+                <VSelect
+                  v-model="importMode"
+                  :items="importModeOptions"
+                  label="Mode *"
+                  density="compact"
+                  hide-details
+                />
+              </VCol>
+
+              <template v-if="importMode === 'bulan_tahun'">
+                <VCol
+                  cols="12"
+                  sm="6"
+                  md="3"
+                >
+                  <VSelect
+                    v-model="importBulan"
+                    :items="bulanOptions"
+                    label="Bulan *"
+                    density="compact"
+                    hide-details
+                  />
+                </VCol>
+
+                <VCol
+                  cols="12"
+                  sm="6"
+                  md="3"
+                >
+                  <VTextField
+                    v-model.number="importTahun"
+                    label="Tahun *"
+                    type="number"
+                    density="compact"
+                    hide-details
+                  />
+                </VCol>
+              </template>
+
+              <template v-else>
+                <VCol
+                  cols="12"
+                  sm="6"
+                  md="3"
+                >
+                  <AppDateTimePicker
+                    v-model="importStartDate"
+                    label="Tanggal Mulai *"
+                    density="compact"
+                    hide-details
+                    :config="{
+                      altInput: true,
+                      altFormat: 'j F Y',
+                      dateFormat: 'Y-m-d',
+                    }"
+                  />
+                </VCol>
+
+                <VCol
+                  cols="12"
+                  sm="6"
+                  md="3"
+                >
+                  <AppDateTimePicker
+                    v-model="importEndDate"
+                    label="Tanggal Selesai *"
+                    density="compact"
+                    hide-details
+                    :config="{
+                      altInput: true,
+                      altFormat: 'j F Y',
+                      dateFormat: 'Y-m-d',
+                    }"
+                  />
+                </VCol>
+              </template>
+
+              <VCol
+                cols="12"
+                sm="6"
+                md="3"
+              >
+                <VSelect
+                  v-model="importDept"
+                  :items="importDeptOptions"
+                  label="Departemen"
+                  density="compact"
+                  clearable
+                  hide-details
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                class="d-flex justify-end mt-2"
+              >
+                <VBtn
+                  color="primary"
+                  prepend-icon="ri-download-cloud-2-line"
+                  :loading="webAbsensiLoading"
+                  :disabled="webAbsensiLoading"
+                  @click="fetchWebAbsensi"
+                >
+                  Ambil Data dari Web Absensi
+                </VBtn>
+              </VCol>
+            </VRow>
+          </VCardText>
+
+          <template v-if="webAbsensiRows.length > 0">
+            <VDivider />
+
+            <div class="pa-4 d-flex flex-wrap align-center justify-space-between gap-4">
+              <div>
+                <div class="font-weight-medium text-body-1">
+                  Hasil Rekap: {{ webAbsensiRows.length }} Data Pegawai Ditemukan
+                </div>
+                <div
+                  v-if="webAbsensiPeriode"
+                  class="text-caption text-medium-emphasis"
+                >
+                  Periode: {{ webAbsensiPeriode.start_date }} s/d {{ webAbsensiPeriode.end_date }}
+                </div>
+              </div>
+
+              <div class="d-flex flex-wrap align-center gap-4">
+                <VCheckbox
+                  v-model="importOptionHariJam"
+                  label="Isi Total Hari & Jam"
+                  density="compact"
+                  hide-details
+                />
+                <VCheckbox
+                  v-model="importOptionBarokah"
+                  label="Isi Total Barokah (Nominal)"
+                  density="compact"
+                  hide-details
+                />
+                <VBtn
+                  color="success"
+                  prepend-icon="ri-check-double-line"
+                  :disabled="matchedWebAbsensiCount === 0 || (!importOptionHariJam && !importOptionBarokah)"
+                  @click="applyWebAbsensiToTable"
+                >
+                  Terapkan ke Daftar Pegawai ({{ matchedWebAbsensiCount }} Cocok)
+                </VBtn>
+              </div>
+            </div>
+
+            <VDivider />
+
+            <div
+              class="table-responsive"
+              style="max-block-size: 380px; overflow-y: auto;"
+            >
+              <table class="text-sm w-100 import-table">
+                <thead class="bg-var-theme-background sticky-top">
+                  <tr>
+                    <th class="text-left py-2 px-3">Pegawai (Web)</th>
+                    <th class="text-left py-2 px-3">Pegawai (SIMKEU)</th>
+                    <th class="text-right py-2 px-3">Total Hari</th>
+                    <th class="text-right py-2 px-3">Total Jam</th>
+                    <th class="text-right py-2 px-3">Barokah (Rp)</th>
+                    <th class="text-center py-2 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(wItem, idx) in webAbsensiRows"
+                    :key="idx"
+                    class="border-b"
+                  >
+                    <td class="py-2 px-3">
+                      <div class="font-weight-medium">
+                        {{ wItem.user?.name || '-' }}
+                      </div>
+                      <div class="text-caption text-medium-emphasis">
+                        {{ wItem.user?.kode || wItem.user?.username || '-' }} | {{ wItem.user?.departemen || '-' }}
+                      </div>
+                    </td>
+                    <td class="py-2 px-3">
+                      <template v-if="findSimkeuMatch(wItem)">
+                        <div class="font-weight-medium text-success">
+                          {{ findSimkeuMatch(wItem).nama_pegawai || findSimkeuMatch(wItem).nama_dosen || pegawaiItem(findSimkeuMatch(wItem).pegawai_id)?.nama || '-' }}
+                        </div>
+                        <div class="text-caption text-medium-emphasis">
+                          {{ findSimkeuMatch(wItem).kode_pegawai || findSimkeuMatch(wItem).kode_dosen || pegawaiItem(findSimkeuMatch(wItem).pegawai_id)?.kode || '-' }}
+                        </div>
+                      </template>
+                      <template v-else-if="findPegawaiItemMatch(wItem)">
+                        <div class="font-weight-medium text-info">
+                          {{ findPegawaiItemMatch(wItem).nama || '-' }} (Baris Baru)
+                        </div>
+                        <div class="text-caption text-medium-emphasis">
+                          {{ findPegawaiItemMatch(wItem).kode || '-' }}
+                        </div>
+                      </template>
+                      <span
+                        v-else
+                        class="text-error text-caption"
+                      >Tidak Ditemukan</span>
+                    </td>
+                    <td class="text-right py-2 px-3">
+                      {{ Array.isArray(wItem.rekap_per_kategori) ? wItem.rekap_per_kategori.reduce((a, b) => a + Number(b.jumlah || 0), 0) : 0 }} hari
+                    </td>
+                    <td class="text-right py-2 px-3">
+                      {{ Number(wItem.total_jam_keseluruhan?.total_jam || 0) }} jam
+                    </td>
+                    <td class="text-right py-2 px-3 font-weight-medium">
+                      {{ formatRupiah(wItem.total_perolehan_dana || 0) }}
+                    </td>
+                    <td class="text-center py-2 px-3">
+                      <VChip
+                        v-if="findSimkeuMatch(wItem)"
+                        color="success"
+                        size="x-small"
+                      >
+                        Cocok
+                      </VChip>
+                      <VChip
+                        v-else-if="findPegawaiItemMatch(wItem)"
+                        color="info"
+                        size="x-small"
+                      >
+                        Tambah Baru
+                      </VChip>
+                      <VChip
+                        v-else
+                        color="error"
+                        size="x-small"
+                      >
+                        Skip
+                      </VChip>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+      </VExpandTransition>
     </VCard>
 
     <VCard>
@@ -2133,12 +2664,165 @@ onMounted(() => {
                   </VCol>
                 </VRow>
 
+                <VRow v-else-if="isAbsensi">
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <AppDateTimePicker
+                      v-model="row.tanggal"
+                      label="Tanggal"
+                      density="compact"
+                      hide-details
+                      :config="{ altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d' }"
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="10"
+                  >
+                    <VAutocomplete
+                      v-model="row.pegawai_id"
+                      label="Pegawai / Dosen *"
+                      :items="pegawaiItems"
+                      item-title="display"
+                      item-value="id"
+                      density="compact"
+                      hide-details
+                      clearable
+                    />
+                  </VCol>
+
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model.number="row.total_hari"
+                      type="number"
+                      min="0"
+                      label="Total Hari"
+                      density="compact"
+                      hide-details="auto"
+                      hint="Hari"
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      v-model.number="row.total_jam"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      label="Total Jam"
+                      density="compact"
+                      hide-details="auto"
+                      hint="Jam"
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
+                    <VTextField
+                      v-model.number="row.total_barokah"
+                      type="number"
+                      min="0"
+                      label="Total Barokah"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.total_barokah)"
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="2"
+                  >
+                    <VTextField
+                      :model-value="formatRupiah(rowTotal(row))"
+                      label="Total"
+                      density="compact"
+                      hide-details
+                      readonly
+                    />
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    md="3"
+                  >
+                    <VSelect
+                      v-model="row.jenis_pembayaran"
+                      label="Jenis Pembayaran"
+                      :items="paymentItems(row)"
+                      density="compact"
+                      hide-details
+                      @update:model-value="row.bukti_transfer = null"
+                    />
+                  </VCol>
+                  <VCol
+                    v-if="row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="3"
+                  >
+                    <VFileInput
+                      v-model="row.bukti_transfer"
+                      :prepend-icon="null"
+                      label="Bukti Transfer"
+                      accept="image/png, image/jpeg, application/pdf"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+                  <VCol
+                    v-if="row.existing_bukti_transfer_url && row.jenis_pembayaran === 'Transfer'"
+                    cols="12"
+                    md="2"
+                  >
+                    <VBtn
+                      variant="outlined"
+                      color="primary"
+                      prepend-icon="ri-file-paper-2-line"
+                      :href="row.existing_bukti_transfer_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="w-100"
+                    >
+                      Bukti Lama
+                    </VBtn>
+                  </VCol>
+                  <VCol
+                    cols="12"
+                    :md="row.jenis_pembayaran === 'Transfer' ? (row.existing_bukti_transfer_url ? 4 : 6) : 12"
+                  >
+                    <VTextField
+                      v-model="row.keterangan"
+                      label="Keterangan"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+
+                  <VCol cols="12">
+                    <PengeluaranLampiranInput
+                      v-model="row.lampiran"
+                      v-model:removed-lampiran="row.removed_lampiran"
+                      :existing-lampiran="row.existing_lampiran"
+                      compact
+                    />
+                  </VCol>
+                </VRow>
+
                 <VRow v-else>
                   <VCol
                     cols="12"
                     md="2"
                   >
-                    <LazyTextField
+                    <AppDateTimePicker
                       v-model="row.tanggal"
                       type="date"
                       label="Tanggal"

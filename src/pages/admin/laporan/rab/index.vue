@@ -75,8 +75,11 @@ const kasEditingId = ref(null)
 const kasSaving = ref(false)
 const rekapFormDialog = ref(false)
 const rekapTanggalRekapMenu = ref(false)
-const rekapTanggalPencairanMenu = ref(false)
 const rekapSaving = ref(false)
+const mergerDialog = ref(false)
+const mergerTanggalRekapMenu = ref(false)
+const mergerTanggalPencairanMenu = ref(false)
+const mergerSaving = ref(false)
 const rekapPetugasLoading = ref(false)
 const rekapPetugasList = ref([])
 const piutangPegawaiLoading = ref(false)
@@ -142,6 +145,21 @@ const rekapForm = ref({
   tanggal_pencairan: null,
   jumlah_sementara: 0,
   default_cicilan: null,
+  keterangan: "",
+})
+
+const mergerForm = ref({
+  module_key: "",
+  petugas_id: null,
+  nama: "",
+  bulan: currentDate.getMonth() + 1,
+  tahun: currentDate.getFullYear(),
+  tanggal_rekap: [
+    currentDate.getFullYear(),
+    String(currentDate.getMonth() + 1).padStart(2, "0"),
+    String(currentDate.getDate()).padStart(2, "0"),
+  ].join("-"),
+  tanggal_pencairan: null,
   keterangan: "",
 })
 
@@ -561,6 +579,30 @@ const rekapTanggalPencairanPicker = computed({
     if (nextValue) {
       rekapForm.value.tanggal_pencairan = nextValue
       rekapTanggalPencairanMenu.value = false
+    }
+  },
+})
+
+const mergerTanggalRekapPicker = computed({
+  get: () => parseDateValue(mergerForm.value.tanggal_rekap) || parseDateValue(todayDateValue()),
+  set: value => {
+    const nextValue = toDateValue(value)
+
+    if (nextValue) {
+      mergerForm.value.tanggal_rekap = nextValue
+      mergerTanggalRekapMenu.value = false
+    }
+  },
+})
+
+const mergerTanggalPencairanPicker = computed({
+  get: () => parseDateValue(mergerForm.value.tanggal_pencairan) || parseDateValue(todayDateValue()),
+  set: value => {
+    const nextValue = toDateValue(value)
+
+    if (nextValue) {
+      mergerForm.value.tanggal_pencairan = nextValue
+      mergerTanggalPencairanMenu.value = false
     }
   },
 })
@@ -1555,6 +1597,108 @@ const saveRekap = async () => {
   }
 }
 
+const openMergerDialog = async () => {
+  if (selectedRekapItems.value.length < 2) return
+
+  const moduleKeys = new Set(selectedRekapItems.value.map(item => item.module_key))
+  if (moduleKeys.size > 1) {
+    showSnackbar({
+      text: "Hanya bisa merger rekap dengan jenis/kategori yang sejenis.",
+      color: "error",
+    })
+    return
+  }
+
+  const moduleKey = selectedRekapItems.value[0]?.module_key
+  if (moduleKey === PIUTANG_MODULE_KEY) {
+    showSnackbar({
+      text: "Rekap Cashbon tidak dapat dimerger.",
+      color: "error",
+    })
+    return
+  }
+
+  await fetchRekapPetugas(moduleKey)
+
+  const firstItemPetugasId = selectedRekapItems.value[0]?.petugas_id || selectedPetugasId.value || rekapPetugasList.value[0]?.id || null
+
+  mergerForm.value = {
+    module_key: moduleKey,
+    petugas_id: firstItemPetugasId,
+    nama: "",
+    bulan: selectedBulanForDefault() || currentDate.getMonth() + 1,
+    tahun: selectedTahun.value || currentDate.getFullYear(),
+    tanggal_rekap: [
+      currentDate.getFullYear(),
+      String(currentDate.getMonth() + 1).padStart(2, "0"),
+      String(currentDate.getDate()).padStart(2, "0"),
+    ].join("-"),
+    tanggal_pencairan: null,
+    keterangan: "",
+  }
+
+  mergerTanggalRekapMenu.value = false
+  mergerTanggalPencairanMenu.value = false
+  mergerDialog.value = true
+}
+
+const saveMerger = async () => {
+  if (mergerSaving.value) return
+
+  const bulan = Number(mergerForm.value.bulan)
+  const tahun = Number(mergerForm.value.tahun)
+
+  if (
+    !mergerForm.value.petugas_id
+    || !String(mergerForm.value.nama || "").trim()
+    || !bulan
+    || !tahun
+    || !mergerForm.value.tanggal_rekap
+  ) {
+    showSnackbar({
+      text: "Petugas, nama rekap baru, periode, dan tanggal rekap wajib diisi.",
+      color: "warning",
+    })
+    return
+  }
+
+  try {
+    mergerSaving.value = true
+
+    const response = await $api("/admin/laporan/rab/merger", {
+      method: "POST",
+      body: {
+        items: selectedRekapItems.value.map(item => ({
+          module_key: item.module_key,
+          id: item.id,
+        })),
+        petugas_id: mergerForm.value.petugas_id,
+        nama: mergerForm.value.nama,
+        bulan_tahun: `${tahun}-${String(bulan).padStart(2, "0")}`,
+        tanggal_rekap: mergerForm.value.tanggal_rekap,
+        tanggal_pencairan: mergerForm.value.tanggal_pencairan || null,
+        keterangan: mergerForm.value.keterangan,
+      },
+    })
+
+    mergerDialog.value = false
+    selectedRekapKeys.value = []
+    selectedRekapCache.value = {}
+    showSnackbar({
+      text: response.message || "Rekap berhasil dimerger.",
+      color: "success",
+    })
+    fetchData()
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    mergerSaving.value = false
+  }
+}
+
 const updateTanggalPencairan = async (items, tanggalPencairan) => {
   const response = await $api("/admin/laporan/rab/tanggal-pencairan", {
     method: "PUT",
@@ -2341,6 +2485,18 @@ onBeforeUnmount(() => {
             @click="openAppendProsesRabDialog"
           >
             Masukkan di Proses RAB
+          </VBtn>
+
+          <VBtn
+            v-if="canSelectRekap"
+            class="rab-export-button"
+            color="success"
+            variant="tonal"
+            prepend-icon="ri-git-merge-line"
+            :disabled="selectedRekapItems.length < 2 || mergerSaving"
+            @click="openMergerDialog"
+          >
+            Merger
           </VBtn>
 
           <VBtn
@@ -3302,6 +3458,199 @@ onBeforeUnmount(() => {
             @click="saveRekap"
           >
             Simpan
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <VDialog
+      v-model="mergerDialog"
+      width="760"
+    >
+      <VCard title="Merger Rekap Anggaran">
+        <DialogCloseBtn
+          variant="text"
+          size="default"
+          @click="mergerDialog = false"
+        />
+
+        <VCardText>
+          <VAlert
+            color="info"
+            variant="tonal"
+            class="mb-4"
+          >
+            <div class="font-weight-medium mb-1">
+              Anda akan menggabungkan {{ selectedRekapItems.length }} rekap ({{ selectedRekapItems[0]?.module_name }}):
+            </div>
+            <ul class="pl-4 text-caption my-2">
+              <li
+                v-for="item in selectedRekapItems"
+                :key="item.row_key"
+              >
+                {{ item.nama }} (Rp {{ Number(item.jumlah || 0).toLocaleString("id-ID") }})
+              </li>
+            </ul>
+            <div class="text-caption font-weight-medium">
+              Catatan: Seluruh data pengeluaran dan LPJ dari rekap-rekap di atas akan dipindahkan ke rekap baru, dan data rekap lama akan dihapus.
+            </div>
+          </VAlert>
+
+          <VRow>
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VTextField
+                :model-value="selectedRekapItems[0]?.module_name || ''"
+                label="Jenis Rekap"
+                readonly
+                disabled
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VAutocomplete
+                v-model="mergerForm.petugas_id"
+                label="Petugas *"
+                :items="rekapPetugasList"
+                :loading="rekapPetugasLoading"
+                :disabled="mergerSaving"
+                :rules="[requiredValidator]"
+                clearable
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <VTextField
+                v-model="mergerForm.nama"
+                label="Nama Rekap Baru *"
+                placeholder="Contoh: RAB Gabungan Kegiatan Juni 2026"
+                :disabled="mergerSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              sm="6"
+            >
+              <VSelect
+                v-model="mergerForm.bulan"
+                label="Bulan Periode *"
+                :items="bulanItems"
+                :disabled="mergerSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              sm="6"
+            >
+              <VSelect
+                v-model="mergerForm.tahun"
+                label="Tahun Periode *"
+                :items="yearItems"
+                :disabled="mergerSaving"
+                :rules="[requiredValidator]"
+              />
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VMenu
+                v-model="mergerTanggalRekapMenu"
+                :close-on-content-click="false"
+                location="bottom"
+                offset="6"
+              >
+                <template #activator="{ props: menuProps }">
+                  <VTextField
+                    v-bind="menuProps"
+                    :model-value="formatDate(mergerForm.tanggal_rekap)"
+                    label="Tanggal Rekap *"
+                    prepend-inner-icon="ri-calendar-line"
+                    readonly
+                    :disabled="mergerSaving"
+                    :rules="[requiredValidator]"
+                  />
+                </template>
+
+                <VDatePicker
+                  v-model="mergerTanggalRekapPicker"
+                  color="primary"
+                  hide-header
+                />
+              </VMenu>
+            </VCol>
+
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VMenu
+                v-model="mergerTanggalPencairanMenu"
+                :close-on-content-click="false"
+                location="bottom"
+                offset="6"
+              >
+                <template #activator="{ props: menuProps }">
+                  <VTextField
+                    v-bind="menuProps"
+                    :model-value="mergerForm.tanggal_pencairan ? formatDate(mergerForm.tanggal_pencairan) : ''"
+                    label="Tanggal Pencairan (Opsional)"
+                    placeholder="Belum ditentukan"
+                    prepend-inner-icon="ri-calendar-check-line"
+                    readonly
+                    clearable
+                    :disabled="mergerSaving"
+                    @click:clear="mergerForm.tanggal_pencairan = null"
+                  />
+                </template>
+
+                <VDatePicker
+                  v-model="mergerTanggalPencairanPicker"
+                  color="primary"
+                  hide-header
+                />
+              </VMenu>
+            </VCol>
+
+            <VCol cols="12">
+              <VTextarea
+                v-model="mergerForm.keterangan"
+                label="Keterangan"
+                placeholder="Catatan mengenai merger rekap ini"
+                auto-grow
+                :disabled="mergerSaving"
+              />
+            </VCol>
+          </VRow>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="mergerSaving"
+            @click="mergerDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="primary"
+            prepend-icon="ri-git-merge-line"
+            :loading="mergerSaving"
+            :disabled="mergerSaving || rekapPetugasLoading"
+            @click="saveMerger"
+          >
+            Merger
           </VBtn>
         </VCardText>
       </VCard>
