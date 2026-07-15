@@ -29,8 +29,14 @@ export const pengeluaranDosenBulanan = barokahDosenSingleMenu(
   "admin-pengeluaran-bulanan",
 )
 
+export const pengeluaranAbsensi = barokahDosenSingleMenu(
+  "Absensi",
+  "admin-pengeluaran-absensi",
+)
+
 export default barokahDosenMenu([
   { title: "Tatapmuka", to: "admin-pengeluaran-dosen-tatapmuka" },
   { title: "Kegiatan", to: "admin-pengeluaran-dosen-kegiatan" },
   { title: "Bulanan", to: "admin-pengeluaran-bulanan" },
+  { title: "Absensi", to: "admin-pengeluaran-absensi" },
 ])

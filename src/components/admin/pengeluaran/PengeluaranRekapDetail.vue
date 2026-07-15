@@ -175,6 +175,12 @@ const tableHeaders = computed(() => {
       { title: "Nama Pengeluaran", key: "uraian", sortable: false },
       { title: "Nominal", key: "nominal" },
     )
+  } else if (props.moduleType === "absensi") {
+    detailHeaders.push(
+      { title: "Total Hari", key: "total_hari" },
+      { title: "Total Jam", key: "total_jam" },
+      { title: "Total Barokah", key: "total_barokah" },
+    )
   } else {
     detailHeaders.push({ title: "Uraian", key: "uraian", sortable: false })
   }
@@ -186,7 +192,7 @@ const tableHeaders = computed(() => {
     ...detailHeaders,
     { title: "Jenis Pembayaran", key: "jenis_pembayaran" },
     { title: "Bukti Transfer", key: "bukti_transfer", sortable: false },
-    { title: "Total", key: "total" },
+    ...(props.moduleType === "absensi" ? [] : [{ title: "Total", key: "total" }]),
     { title: "Keterangan", key: "keterangan" },
     { title: "Lampiran", key: "lampiran", sortable: false },
   ]
@@ -1143,6 +1149,18 @@ onBeforeUnmount(() => {
               <span v-else>-</span>
             </template>
 
+            <template #item.total_hari="{ item }">
+              {{ item.total_hari || 0 }}
+            </template>
+
+            <template #item.total_jam="{ item }">
+              {{ item.total_jam || 0 }}
+            </template>
+
+            <template #item.total_barokah="{ item }">
+              <span class="font-weight-medium">{{ formatRupiah(item.total_barokah || item.total || 0) }}</span>
+            </template>
+
             <template #item.total="{ item }">
               {{ formatRupiah(item.total) }}
             </template>
@@ -1466,6 +1484,18 @@ onBeforeUnmount(() => {
                 {{ item.jenis_pembayaran }}
               </VChip>
               <span v-else>-</span>
+            </template>
+
+            <template #item.total_hari="{ item }">
+              {{ item.total_hari || 0 }}
+            </template>
+
+            <template #item.total_jam="{ item }">
+              {{ item.total_jam || 0 }}
+            </template>
+
+            <template #item.total_barokah="{ item }">
+              <span class="font-weight-medium">{{ formatRupiah(item.total_barokah || item.total || 0) }}</span>
             </template>
 
             <template #item.total="{ item }">

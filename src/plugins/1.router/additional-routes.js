@@ -149,6 +149,17 @@ export const routes = [
       moduleType: "dosen-bulanan",
     },
   },
+  {
+    path: "/admin/pengeluaran/absensi/rekap/:id/lpj",
+    name: "admin-pengeluaran-absensi-rekap-id-lpj",
+    component: lpjRouteComponent,
+    props: {
+      title: "Barokah Absensi",
+      endpoint: "/admin/pengeluaran/absensi",
+      basePath: "/admin/pengeluaran/absensi",
+      moduleType: "absensi",
+    },
+  },
 
   // Email filter
   {

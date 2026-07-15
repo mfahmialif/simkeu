@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AbsensiTable: typeof import('./src/components/admin/pengeluaran/absensi/AbsensiTable.vue')['default']
     AddAuthenticatorAppDialog: typeof import('./src/components/dialogs/AddAuthenticatorAppDialog.vue')['default']
     AddEditAddressDialog: typeof import('./src/components/dialogs/AddEditAddressDialog.vue')['default']
     AddEditPermissionDialog: typeof import('./src/components/dialogs/AddEditPermissionDialog.vue')['default']
@@ -365,6 +366,8 @@ declare module 'vue' {
     DropZone: typeof import('./src/@core/components/DropZone.vue')['default']
     EnableOneTimePasswordDialog: typeof import('./src/components/dialogs/EnableOneTimePasswordDialog.vue')['default']
     ErrorHeader: typeof import('./src/components/ErrorHeader.vue')['default']
+    FormAbsensi: typeof import('./src/components/admin/pengeluaran/absensi/FormAbsensi.vue')['default']
+    FormAbsensiBatch: typeof import('./src/components/admin/pengeluaran/absensi/FormAbsensiBatch.vue')['default']
     FormCatatanHarian: typeof import('./src/components/admin/saldo/catatan-harian/FormCatatanHarian.vue')['default']
     FormDeposit: typeof import('./src/components/admin/deposit/FormDeposit.vue')['default']
     FormDispensasi: typeof import('./src/components/admin/pemasukan/mahasiswa/dispensasi/FormDispensasi.vue')['default']
@@ -452,6 +455,7 @@ declare module 'vue' {
     UserProfileHeader: typeof import('./src/components/admin/profile/UserProfileHeader.vue')['default']
     UserUpgradePlanDialog: typeof import('./src/components/dialogs/UserUpgradePlanDialog.vue')['default']
     VueApexCharts: typeof import('vue3-apexcharts')['default']
+    WebAbsensiData: typeof import('./src/components/admin/pengeluaran/absensi/WebAbsensiData.vue')['default']
     WidgetPembayaranMahasiswa: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/WidgetPembayaranMahasiswa.vue')['default']
     WidgetPembayaranMahasiswaTambahan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/WidgetPembayaranMahasiswaTambahan.vue')['default']
     WidgetSemesterPendek: typeof import('./src/components/admin/pemasukan/mahasiswa/SemesterPendek/WidgetSemesterPendek.vue')['default']
