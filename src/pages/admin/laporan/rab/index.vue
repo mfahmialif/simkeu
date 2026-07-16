@@ -457,6 +457,7 @@ const moduleColor = key => ({
   tatap_muka: "primary",
   kegiatan: "warning",
   dosen_bulanan: "info",
+  absensi: "error",
   [PIUTANG_MODULE_KEY]: "success",
 }[key] || "secondary")
 

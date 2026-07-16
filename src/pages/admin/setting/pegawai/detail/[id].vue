@@ -143,6 +143,7 @@ const identityItems = computed(() => [
   { label: "Jenis Kelamin", value: employee.value?.jenis_kelamin || "-", icon: "ri-user-heart-line" },
   { label: "Tempat Lahir", value: employee.value?.tempat_lahir || "-", icon: "ri-building-2-line" },
   { label: "Tanggal Lahir", value: formatDate(employee.value?.tanggal_lahir), icon: "ri-calendar-line" },
+  { label: "Status Absensi", value: employee.value?.status_absensi === "aktif" ? "Aktif (Tampil)" : "Tidak Aktif (Sembunyikan)", icon: "ri-checkbox-circle-line" },
 ])
 
 const detailItems = computed(() => {
@@ -201,7 +202,7 @@ const statCards = computed(() => [
   },
 ])
 
-const chartColors = ["#666CFF", "#28C76F", "#16B1FF"]
+const chartColors = ["#666CFF", "#28C76F", "#16B1FF", "#9E69FD", "#FFB400"]
 
 const monthlyChartSeries = computed(() => barokah.value?.charts?.monthly?.series || [])
 
@@ -462,6 +463,13 @@ onMounted(() => {
                       size="small"
                     >
                       {{ employee?.status || "-" }}
+                    </VChip>
+                    <VChip
+                      :color="employee?.status_absensi === 'aktif' ? 'success' : 'secondary'"
+                      variant="tonal"
+                      size="small"
+                    >
+                      Absensi: {{ employee?.status_absensi === 'aktif' ? 'Aktif' : 'Tidak Aktif' }}
                     </VChip>
                   </div>
 

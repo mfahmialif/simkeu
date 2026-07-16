@@ -28,13 +28,18 @@ const itemsPerPage = ref(10)
 const sortBy = ref({ key: "id", order: "desc" })
 const search = ref("")
 const selectedRows = ref([])
+const selectAllPages = ref(false)
+const isBatchUpdating = ref(false)
 const dataTable = ref([])
 const totalItems = ref(0)
 const loading = ref(true)
 const initialLoading = ref(true)
+const route = useRoute()
+const isAbsensiSettingMode = computed(() => route.query.filter_absensi === "1" || route.query.filter_absensi === "aktif" || route.query.filter_absensi === "tidak_aktif")
 const selectedTipe = ref(props.fixedTipe)
 const selectedJenisKelamin = ref(null)
 const selectedStatus = ref(null)
+const selectedStatusAbsensi = ref(route.query.filter_absensi === "aktif" ? "aktif" : (route.query.filter_absensi === "tidak_aktif" ? "tidak aktif" : null))
 const selectedProdi = ref(null)
 const prodiOptions = ref([])
 const isLoadingExport = ref(false)
@@ -56,6 +61,8 @@ const stats = ref({
   staff: 0,
   aktif: 0,
   tidak_aktif: 0,
+  absensi_aktif: 0,
+  absensi_tidak_aktif: 0,
 })
 
 const isTipeLocked = computed(() => Boolean(props.fixedTipe))
@@ -85,6 +92,7 @@ const currentFilterPayload = () => {
       jenis_kelamin: selectedJenisKelamin.value,
     }),
     ...(selectedStatus.value && { status: selectedStatus.value }),
+    ...(selectedStatusAbsensi.value && { status_absensi: selectedStatusAbsensi.value }),
     ...(showProdiFilter.value &&
       selectedProdi.value && { prodi_id: selectedProdi.value }),
   }
@@ -105,6 +113,11 @@ const statusOptions = [
   { title: "Tidak Aktif", value: "tidak aktif" },
 ]
 
+const statusAbsensiOptions = [
+  { title: "Aktif di Absensi", value: "aktif" },
+  { title: "Tidak Aktif / Sembunyikan", value: "tidak aktif" },
+]
+
 function currentMonthValue() {
   const now = new Date()
   const month = String(now.getMonth() + 1).padStart(2, "0")
@@ -114,10 +127,16 @@ function currentMonthValue() {
 
 const statusStatCards = computed(() => [
   {
-    title: "Aktif",
+    title: "Aktif Umum",
     value: stats.value.aktif,
     icon: "ri-checkbox-circle-line",
     color: "success",
+  },
+  {
+    title: "Aktif Absensi",
+    value: stats.value.absensi_aktif || 0,
+    icon: "ri-user-follow-line",
+    color: "info",
   },
   {
     title: "Tidak Aktif",
@@ -280,6 +299,55 @@ const deleteDataSubmit = async id => {
     })
   } finally {
     isDialogDeleteVisible.value = false
+  }
+}
+
+const selectedIds = computed(() => selectedRows.value
+  .map(row => (typeof row === "object" ? row?.id : row))
+  .filter(Boolean))
+
+const selectedCount = computed(() => (
+  selectAllPages.value
+    ? Number(totalItems.value || 0)
+    : selectedIds.value.length
+))
+
+const batchUpdateStatusAbsensi = async status => {
+  if (selectedCount.value === 0) return
+
+  isBatchUpdating.value = true
+  try {
+    const response = await $api("/admin/pegawai/update-status-absensi", {
+      method: "POST",
+      body: {
+        all_pages: selectAllPages.value,
+        ids: selectedIds.value,
+        filters: currentFilterPayload(),
+        status_absensi: status,
+      },
+    })
+
+    if (response.status === true) {
+      showSnackbar({
+        text: response.message || "Status absensi berhasil diperbarui",
+        color: "success",
+      })
+      selectedRows.value = []
+      selectAllPages.value = false
+      fetchData()
+    } else {
+      showSnackbar({
+        text: response.message || "Gagal memperbarui status absensi",
+        color: "error",
+      })
+    }
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    isBatchUpdating.value = false
   }
 }
 
@@ -450,6 +518,7 @@ const resetFilters = () => {
   selectedTipe.value = props.fixedTipe || null
   selectedJenisKelamin.value = null
   selectedStatus.value = null
+  selectedStatusAbsensi.value = null
   selectedProdi.value = null
   search.value = ""
   page.value = 1
@@ -457,12 +526,24 @@ const resetFilters = () => {
 }
 
 watch(
-  [selectedTipe, selectedJenisKelamin, selectedStatus, selectedProdi],
+  [selectedTipe, selectedJenisKelamin, selectedStatus, selectedStatusAbsensi, selectedProdi],
   () => {
+    selectedRows.value = []
+    selectAllPages.value = false
     page.value = 1
     fetchData()
   },
 )
+
+watch(selectAllPages, enabled => {
+  selectedRows.value = enabled ? dataTable.value.map(item => item.id) : []
+})
+
+watch(dataTable, () => {
+  if (selectAllPages.value) {
+    selectedRows.value = dataTable.value.map(item => item.id)
+  }
+})
 
 watch(search, () => {
   page.value = 1
@@ -583,7 +664,21 @@ onMounted(() => {
             <VSelect
               v-model="selectedStatus"
               :items="statusOptions"
-              label="Status"
+              label="Status Umum"
+              density="compact"
+              clearable
+              clear-icon="ri-close-line"
+            />
+          </VCol>
+
+          <VCol
+            cols="12"
+            :md="filterColMd"
+          >
+            <VSelect
+              v-model="selectedStatusAbsensi"
+              :items="statusAbsensiOptions"
+              label="Status Absensi"
               density="compact"
               clearable
               clear-icon="ri-close-line"
@@ -649,12 +744,81 @@ onMounted(() => {
             Add Data
           </VBtn>
         </div>
+
+        <VAlert
+          v-if="isAbsensiSettingMode"
+          color="info"
+          variant="tonal"
+          icon="ri-user-settings-line"
+          class="mt-4 w-100"
+        >
+          <div class="d-flex flex-column flex-sm-row justify-space-between align-sm-center gap-4">
+            <div>
+              <h4 class="text-h6 font-weight-bold text-info mb-1">
+                Pengaturan Tampilan Pegawai di Form Absensi
+              </h4>
+              <p class="mb-0 text-body-2">
+                Centang pegawai pada tabel di bawah ini, kemudian klik tombol <strong>Aktifkan di Absensi (Tampil)</strong> untuk menampilkan pegawai atau <strong>Nonaktifkan dari Absensi (Sembunyikan)</strong> untuk menyembunyikan dari form Add & Edit Absensi.
+              </p>
+            </div>
+          </div>
+        </VAlert>
+
+        <VCard
+          v-if="isAdmin && selectedCount > 0"
+          color="light-info"
+          class="mt-4 w-100 pa-4 border border-info"
+        >
+          <div class="d-flex flex-column flex-sm-row align-center justify-space-between gap-4">
+            <div class="d-flex align-center flex-wrap gap-4">
+              <div class="d-flex align-center gap-2">
+                <VIcon icon="ri-checkbox-multiple-line" color="info" size="24" />
+                <span class="font-weight-medium text-info">
+                  {{ selectedCount }} pegawai dipilih
+                </span>
+              </div>
+              <VCheckbox
+                v-model="selectAllPages"
+                label="Pilih semua halaman (sesuai filter aktif)"
+                color="info"
+                density="compact"
+                hide-details
+              />
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <VBtn
+                color="success"
+                prepend-icon="ri-check-line"
+                :loading="isBatchUpdating"
+                @click="batchUpdateStatusAbsensi('aktif')"
+              >
+                Aktifkan di Absensi (Tampil)
+              </VBtn>
+              <VBtn
+                color="secondary"
+                prepend-icon="ri-close-line"
+                :loading="isBatchUpdating"
+                @click="batchUpdateStatusAbsensi('tidak aktif')"
+              >
+                Nonaktifkan dari Absensi (Sembunyikan)
+              </VBtn>
+              <VBtn
+                variant="text"
+                color="error"
+                @click="selectedRows = []; selectAllPages = false"
+              >
+                Batal Pilih
+              </VBtn>
+            </div>
+          </div>
+        </VCard>
       </VCardText>
 
       <VDataTableServer
         v-model:model-value="selectedRows"
         v-model:items-per-page="itemsPerPage"
         v-model:page="page"
+        :show-select="isAdmin"
         :headers="[
           { title: 'No', key: 'id', width: 60 },
           { title: 'Nama', key: 'nama' },
@@ -664,7 +828,8 @@ onMounted(() => {
           { title: 'Prodi/Jabatan', key: 'unit' },
           { title: 'Email', key: 'email' },
           { title: 'Rekening', key: 'rekening', sortable: false },
-          { title: 'Status', key: 'status' },
+          { title: 'Status Umum', key: 'status' },
+          { title: 'Status Absensi', key: 'status_absensi' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
         :items="dataTable"
@@ -750,6 +915,16 @@ onMounted(() => {
             label
           >
             {{ item.status === "aktif" ? "Aktif" : "Tidak Aktif" }}
+          </VChip>
+        </template>
+
+        <template #item.status_absensi="{ item }">
+          <VChip
+            :color="item.status_absensi === 'aktif' ? 'info' : 'secondary'"
+            size="small"
+            label
+          >
+            {{ item.status_absensi === "aktif" ? "Aktif (Tampil)" : "Tidak Aktif (Sembunyikan)" }}
           </VChip>
         </template>
 

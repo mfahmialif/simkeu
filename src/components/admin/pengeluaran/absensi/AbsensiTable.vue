@@ -686,6 +686,20 @@ onMounted(() => {
       </VCol>
     </VRow>
 
+    <VCard class="mb-4 border border-info">
+      <VCardItem class="cursor-pointer bg-light-info" @click="$router.push('/admin/setting/pegawai?filter_absensi=1')">
+        <template #title>
+          <div class="d-flex align-center justify-space-between">
+            <div class="d-flex align-center gap-2">
+              <VIcon icon="ri-user-settings-line" color="info" class="mr-2" />
+              <span class="font-weight-bold text-info">KLIK DISINI UNTUK MENGATUR PEGAWAI YANG DITAMPILKAN DI FORM ADD & EDIT ABSENSI</span>
+            </div>
+            <VIcon icon="ri-arrow-right-line" color="info" />
+          </div>
+        </template>
+      </VCardItem>
+    </VCard>
+
     <VCard class="mb-6 border border-primary">
       <VCardItem class="cursor-pointer bg-light-primary" @click="$router.push(`${basePath}/web-absensi`)">
         <template #title>

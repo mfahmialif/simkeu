@@ -40,6 +40,7 @@ const form = reactive({
   nama_pemilik_rekening: "",
   bank: "",
   status: "aktif",
+  status_absensi: "aktif",
   dosen_kode: "",
   nidn: "",
   gelar_depan: "",
@@ -61,6 +62,11 @@ const tipeOptions = [
 const statusOptions = [
   { title: "Aktif", value: "aktif" },
   { title: "Tidak Aktif", value: "tidak aktif" },
+]
+
+const statusAbsensiOptions = [
+  { title: "Aktif (Tampil di Absensi)", value: "aktif" },
+  { title: "Tidak Aktif (Sembunyikan)", value: "tidak aktif" },
 ]
 
 const errorMessage = err => {
@@ -113,6 +119,7 @@ const applyData = data => {
   form.nama_pemilik_rekening = data?.nama_pemilik_rekening || ""
   form.bank = data?.bank || ""
   form.status = data?.status || "aktif"
+  form.status_absensi = data?.status_absensi || "aktif"
   form.dosen_kode = data?.dosen?.kode || data?.kode || ""
   form.nidn = data?.dosen?.nidn || ""
   form.gelar_depan = data?.dosen?.gelar_depan || ""
@@ -173,6 +180,7 @@ const onSubmit = async () => {
     nama_pemilik_rekening: form.nama_pemilik_rekening || null,
     bank: form.bank || null,
     status: form.status,
+    status_absensi: form.status_absensi,
     dosen_kode: form.tipe === "dosen" ? form.dosen_kode || form.kode : null,
     nidn: form.tipe === "dosen" ? form.nidn || null : null,
     gelar_depan: form.tipe === "dosen" ? form.gelar_depan || null : null,
@@ -283,7 +291,21 @@ onMounted(() => {
           v-model="form.status"
           :items="statusOptions"
           :rules="[requiredValidator]"
-          label="Status"
+          label="Status Umum"
+          :readonly="readOnly"
+          :disabled="readOnly"
+        />
+      </VCol>
+
+      <VCol
+        cols="12"
+        md="4"
+      >
+        <VSelect
+          v-model="form.status_absensi"
+          :items="statusAbsensiOptions"
+          :rules="[requiredValidator]"
+          label="Status Absensi"
           :readonly="readOnly"
           :disabled="readOnly"
         />
