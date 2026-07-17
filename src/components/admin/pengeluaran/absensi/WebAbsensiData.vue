@@ -679,9 +679,7 @@ onMounted(() => {
         </template>
 
         <template #item.hari="{ item }">
-          <div :class="['Kamis', 'Jumat'].includes(formatIndoDay(item.tgl_absen)) ? 'bg-error text-white px-2 py-1 rounded font-weight-bold text-center d-inline-block' : ''">
-            {{ formatIndoDay(item.tgl_absen) }}
-          </div>
+          {{ formatIndoDay(item.tgl_absen) }}
         </template>
 
         <template #item.jam_datang="{ item }">
