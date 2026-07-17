@@ -75,6 +75,7 @@ const kasEditingId = ref(null)
 const kasSaving = ref(false)
 const rekapFormDialog = ref(false)
 const rekapTanggalRekapMenu = ref(false)
+const rekapTanggalPencairanMenu = ref(false)
 const rekapSaving = ref(false)
 const mergerDialog = ref(false)
 const mergerTanggalRekapMenu = ref(false)
@@ -1607,6 +1608,7 @@ const openMergerDialog = async () => {
       text: "Hanya bisa merger rekap dengan jenis/kategori yang sejenis.",
       color: "error",
     })
+
     return
   }
 
@@ -1616,6 +1618,7 @@ const openMergerDialog = async () => {
       text: "Rekap Cashbon tidak dapat dimerger.",
       color: "error",
     })
+
     return
   }
 
@@ -1660,6 +1663,7 @@ const saveMerger = async () => {
       text: "Petugas, nama rekap baru, periode, dan tanggal rekap wajib diisi.",
       color: "warning",
     })
+
     return
   }
 
@@ -3484,7 +3488,7 @@ onBeforeUnmount(() => {
             <div class="font-weight-medium mb-1">
               Anda akan menggabungkan {{ selectedRekapItems.length }} rekap ({{ selectedRekapItems[0]?.module_name }}):
             </div>
-            <ul class="pl-4 text-caption my-2">
+            <ul class="ps-4 text-caption my-2">
               <li
                 v-for="item in selectedRekapItems"
                 :key="item.row_key"

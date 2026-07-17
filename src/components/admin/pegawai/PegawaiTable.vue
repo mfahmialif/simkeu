@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable camelcase */
 import { downloadFileExport, openFileExport } from "@/composables/exportFile"
 
 const props = defineProps({
@@ -22,6 +23,12 @@ const userData = useCookie("userData").value ?? {}
 const isAdmin = computed(
   () => String(userData.role?.name || "").toLowerCase() === "admin",
 )
+
+const canManageAbsensiStatus = computed(() => [
+  "admin",
+  "kabag_pengeluaran",
+  "barokahdosen_bulanan",
+].includes(String(userData.role?.name || "").toLowerCase()))
 
 const page = ref(1)
 const itemsPerPage = ref(10)
@@ -765,14 +772,18 @@ onMounted(() => {
         </VAlert>
 
         <VCard
-          v-if="isAdmin && selectedCount > 0"
+          v-if="canManageAbsensiStatus && selectedCount > 0"
           color="light-info"
           class="mt-4 w-100 pa-4 border border-info"
         >
           <div class="d-flex flex-column flex-sm-row align-center justify-space-between gap-4">
             <div class="d-flex align-center flex-wrap gap-4">
               <div class="d-flex align-center gap-2">
-                <VIcon icon="ri-checkbox-multiple-line" color="info" size="24" />
+                <VIcon
+                  icon="ri-checkbox-multiple-line"
+                  color="info"
+                  size="24"
+                />
                 <span class="font-weight-medium text-info">
                   {{ selectedCount }} pegawai dipilih
                 </span>
@@ -818,7 +829,7 @@ onMounted(() => {
         v-model:model-value="selectedRows"
         v-model:items-per-page="itemsPerPage"
         v-model:page="page"
-        :show-select="isAdmin"
+        :show-select="canManageAbsensiStatus"
         :headers="[
           { title: 'No', key: 'id', width: 60 },
           { title: 'Nama', key: 'nama' },
