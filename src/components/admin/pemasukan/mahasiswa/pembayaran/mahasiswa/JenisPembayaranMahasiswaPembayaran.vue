@@ -15,6 +15,20 @@ const jenisPembayaran = ref([])
 const selectedJenisPembayaran = ref()
 const loadingJenisPembayaran = ref(false)
 
+const getJenisPembayaranId = data => data?.jenis_pembayaran_detail?.jenis_pembayaran_id
+  ?? data?.jenis_pembayaran_detail?.jenis_pembayaran?.id
+  ?? null
+
+const syncSelectedJenisPembayaran = data => {
+  if (props.typeForm !== "edit" || !data) return
+
+  const jenisPembayaranId = getJenisPembayaranId(data)
+
+  selectedJenisPembayaran.value = jenisPembayaran.value.find(
+    item => String(item.value) === String(jenisPembayaranId),
+  ) ?? jenisPembayaranId
+}
+
 const fetchJenisPembayaran = async () => {
   try {
     loadingJenisPembayaran.value = true
@@ -32,6 +46,8 @@ const fetchJenisPembayaran = async () => {
       display: `${item.nama} - ${item.kategori}`,
       value: item.id,
     }))
+
+    syncSelectedJenisPembayaran(props.dataForm)
   } catch (error) {
     showSnackbar({
       text: error,
@@ -51,10 +67,7 @@ onMounted(() => {
 watch(
   () => props.dataForm,
   newVal => {
-    if (props.typeForm === "edit" && newVal) {
-      console.log(newVal)
-      selectedJenisPembayaran.value = newVal.jenis_pembayaran_detail.jenis_pembayaran_id
-    }
+    syncSelectedJenisPembayaran(newVal)
   },
 )
 </script>
@@ -72,6 +85,8 @@ watch(
             :items="jenisPembayaran"
             label="Metode Pembayaran"
             item-title="display"
+            item-value="value"
+            return-object
             clearable
             :loading="loadingJenisPembayaran"
           />

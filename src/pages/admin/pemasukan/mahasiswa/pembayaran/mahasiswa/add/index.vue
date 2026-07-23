@@ -10,6 +10,14 @@ const router = useRouter()
 const disabled = ref(false)
 const isAdmin = ref(false)
 
+function resolveJenisPembayaranValue(jenisPembayaran) {
+  if (jenisPembayaran && typeof jenisPembayaran === "object") {
+    return jenisPembayaran.value ?? ""
+  }
+
+  return jenisPembayaran ?? ""
+}
+
 const submitData = async () => {
   const formData = buildPembayaranFormData()
   if (!formData) {
@@ -85,8 +93,9 @@ function buildPembayaranFormData() {
 
   const jenisPembayaran =
         jenisPembayaranRef.value?.selectedJenisPembayaran ?? null
+  const jenisPembayaranValue = resolveJenisPembayaranValue(jenisPembayaran)
 
-  if (thAkademik === null || tanggal === null || jenisPembayaran === null) {
+  if (thAkademik === null || tanggal === null || !jenisPembayaranValue) {
     showSnackbar({
       text: "Harap memilih tahun akademik, tanggal, dan jenis pembayaran",
       color: "error",
@@ -111,7 +120,7 @@ function buildPembayaranFormData() {
   fd.append("tanggal", tanggal)
   fd.append("tahun_akademik", thAkademik?.value ?? "")
   fd.append("nim", m.nim ?? "")
-  fd.append("jenis_pembayaran", jenisPembayaran?.value ?? "")
+  fd.append("jenis_pembayaran", jenisPembayaranValue)
   fd.append("jk_id", m.jkId ?? "")
 
   // Nullable

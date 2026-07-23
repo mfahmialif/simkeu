@@ -11,14 +11,23 @@ const id = route.params.id
 
 const disabled = ref(false)
 
+function resolveJenisPembayaranValue(jenisPembayaran) {
+  if (jenisPembayaran && typeof jenisPembayaran === "object") {
+    return jenisPembayaran.value ?? ""
+  }
+
+  return jenisPembayaran ?? ""
+}
+
 const submitData = async () => {
   const thAkademik = akademikRef.value?.selectedThAkademik ?? null
   const tanggal = akademikRef.value?.tanggal ?? null
 
   const jenisPembayaran =
     jenisPembayaranRef.value?.selectedJenisPembayaran ?? null
+  const jenisPembayaranValue = resolveJenisPembayaranValue(jenisPembayaran)
 
-  if (thAkademik === null || tanggal === null || jenisPembayaran === null) {
+  if (thAkademik === null || tanggal === null || !jenisPembayaranValue) {
     showSnackbar({
       text: "Harap memilih tahun akademik, tanggal, dan jenis pembayaran",
       color: "error",
@@ -32,7 +41,7 @@ const submitData = async () => {
   fd.append("tanggal", akademikRef.value.tanggal)
   fd.append("th_akademik_id", akademikRef.value.selectedThAkademik.value)
   fd.append("jumlah", pembayaranRef.value.rows[0].dibayar)
-  fd.append("jenis_pembayaran", jenisPembayaran?.value ?? "")
+  fd.append("jenis_pembayaran", jenisPembayaranValue)
 
   fd.append("_method", "PUT")
 
