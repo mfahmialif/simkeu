@@ -720,14 +720,14 @@ onMounted(() => {
             <div class="font-weight-medium">
               {{
                 item.kategori_detail === "non_pegawai"
-                  ? "Nonpegawai"
+                  ? item.nama || "Nonpegawai"
                   : item.nama_pegawai || item.nama_dosen || "-"
               }}
             </div>
             <div class="text-caption text-medium-emphasis">
               {{
                 item.kategori_detail === "non_pegawai"
-                  ? "Tanpa pegawai"
+                  ? item.nama ? "Nonpegawai" : "Tanpa pegawai"
                   : item.kode_pegawai || item.kode_dosen || "-"
               }}
             </div>

@@ -1,7 +1,7 @@
 <script setup>
 import { formatRupiah } from "@/composables/formatRupiah"
 import { showSnackbar } from "@/composables/snackbar"
-import { computed, onMounted, ref, watch } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect/index.js"
 import "flatpickr/dist/plugins/monthSelect/style.css"
 
@@ -24,7 +24,8 @@ const barokah = ref({
 
 const isLoading = ref(false)
 const isBarokahLoading = ref(false)
-const filterMode = ref("bulan")
+const filterMode = ref("semua")
+let filterFetchTimer = null
 
 const today = new Date()
 const selectedMonth = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`)
@@ -171,6 +172,13 @@ const recentRows = computed(() => barokah.value?.recent || [])
 const stats = computed(() => barokah.value?.stats || {})
 const hasBarokahData = computed(() => Number(stats.value?.total || 0) > 0 || modules.value.some(item => Number(item.jumlah || 0) > 0))
 
+const barokahFilterInfo = computed(() => {
+  if (filterMode.value === "bulan") return "Filter bulan menampilkan data pada satu bulan pilihan."
+  if (filterMode.value === "rentang") return "Filter rentang menampilkan data dari tanggal mulai sampai tanggal akhir."
+
+  return "Mode semua menampilkan seluruh data barokah pegawai yang tercatat."
+})
+
 const statCards = computed(() => [
   {
     title: "Total Barokah",
@@ -311,10 +319,14 @@ const barokahParams = computed(() => {
     }
   }
 
-  return {
-    mode: "bulan",
-    bulan: selectedMonth.value,
+  if (filterMode.value === "bulan") {
+    return {
+      mode: "bulan",
+      bulan: selectedMonth.value,
+    }
   }
+
+  return { mode: "semua" }
 })
 
 const fetchPegawai = async () => {
@@ -417,9 +429,20 @@ watch(filterMode, value => {
   }
 })
 
+watch(barokahParams, () => {
+  if (isLoading.value) return
+
+  clearTimeout(filterFetchTimer)
+  filterFetchTimer = setTimeout(fetchBarokah, 250)
+}, { deep: true })
+
 onMounted(() => {
   document.title = "Pegawai Detail - SIMKEU"
   fetchPageData()
+})
+
+onBeforeUnmount(() => {
+  clearTimeout(filterFetchTimer)
 })
 </script>
 
@@ -671,12 +694,21 @@ onMounted(() => {
         <VCard class="barokah-card">
           <VCardItem
             title="Barokah Pegawai"
-            subtitle="Rekap lintas modul berdasarkan bulan atau rentang tanggal"
+            subtitle="Rekap lintas modul dengan filter semua data, bulan, atau rentang tanggal"
           />
 
           <VDivider />
 
           <VCardText class="barokah-filter-shell">
+            <VAlert
+              color="info"
+              variant="tonal"
+              density="compact"
+              class="mb-3"
+            >
+              {{ barokahFilterInfo }}
+            </VAlert>
+
             <div class="barokah-filter">
               <VBtnToggle
                 v-model="filterMode"
@@ -686,6 +718,13 @@ onMounted(() => {
                 color="primary"
                 class="barokah-mode-toggle"
               >
+                <VBtn value="semua">
+                  <VIcon
+                    icon="ri-list-check"
+                    size="18"
+                  />
+                  <span class="ms-2">Semua</span>
+                </VBtn>
                 <VBtn value="bulan">
                   <VIcon
                     icon="ri-calendar-2-line"
@@ -711,7 +750,7 @@ onMounted(() => {
                 :config="monthPickerConfig"
                 class="filter-field"
               />
-              <template v-else>
+              <template v-else-if="filterMode === 'rentang'">
                 <AppDateTimePicker
                   v-model="dateRange.start"
                   density="compact"
@@ -892,7 +931,7 @@ onMounted(() => {
         <VCard>
           <VCardItem
             title="Aktivitas Barokah Terbaru"
-            subtitle="Sepuluh transaksi terakhir pada periode terpilih"
+            subtitle="Sepuluh transaksi terakhir sesuai filter aktif"
           />
           <VDivider />
           <VCardText>

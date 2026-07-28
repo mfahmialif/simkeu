@@ -344,11 +344,11 @@ const amountValue = (value, fallback = 0) => value ?? fallback ?? 0
 const previewIsNonPegawai = item => item.kategori_detail === "non_pegawai"
 
 const previewPegawaiLabel = item => previewIsNonPegawai(item)
-  ? "Nonpegawai"
+  ? item.nama || "Nonpegawai"
   : item.nama_pegawai || item.nama_dosen || "-"
 
 const previewPegawaiMeta = item => previewIsNonPegawai(item)
-  ? "Tanpa pegawai"
+  ? item.nama ? "Nonpegawai" : "Tanpa pegawai"
   : [
     item.kode_pegawai || item.kode_dosen,
     item.tipe_pegawai === "staff" ? "Staff" : item.tipe_pegawai === "dosen" ? "Dosen" : null,

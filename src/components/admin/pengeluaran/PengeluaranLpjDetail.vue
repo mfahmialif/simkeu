@@ -162,6 +162,7 @@ const newRow = () => {
     return {
       ...base,
       kategori_detail: "pegawai",
+      nama: "",
       nama_kegiatan: rekap.value?.nama || "",
       transport: 0,
       barokah: 0,
@@ -1654,7 +1655,10 @@ onMounted(() => {
                 {{ index + 1 }}
               </div>
               <div class="lpj-row-content">
-                <VRow v-if="isKegiatan">
+                <VRow
+                  v-if="isKegiatan"
+                  class="lpj-row-fields"
+                >
                   <VCol
                     cols="12"
                     md="2"
@@ -1744,27 +1748,9 @@ onMounted(() => {
                     cols="12"
                     md="3"
                   >
-                    <VTextField
-                      v-model="row.nominal"
-                      type="number"
-                      min="0"
-                      label="Nominal *"
-                      density="compact"
-                      hide-details="auto"
-                      :hint="formatRupiah(row.nominal || 0)"
-                      persistent-hint
-                      class="mb-3"
-                    />
-                  </VCol>
-
-                  <VCol
-                    v-if="!isPegawaiKegiatan(row)"
-                    cols="12"
-                    md="3"
-                  >
                     <LazyTextField
-                      v-model="row.nama_kegiatan"
-                      label="Uraian Pengeluaran"
+                      v-model="row.nama"
+                      label="Nama"
                       density="compact"
                       hide-details
                       class="mb-3"
@@ -1776,11 +1762,15 @@ onMounted(() => {
                     cols="12"
                     md="2"
                   >
-                    <LazyTextField
-                      v-model="row.keterangan"
-                      label="Keterangan"
+                    <VTextField
+                      v-model="row.nominal"
+                      type="number"
+                      min="0"
+                      label="Nominal *"
                       density="compact"
-                      hide-details
+                      hide-details="auto"
+                      :hint="formatRupiah(row.nominal || 0)"
+                      persistent-hint
                       class="mb-3"
                     />
                   </VCol>
@@ -1836,6 +1826,34 @@ onMounted(() => {
                   </VCol>
 
                   <VCol
+                    v-if="!isPegawaiKegiatan(row)"
+                    cols="12"
+                    md="4"
+                  >
+                    <LazyTextField
+                      v-model="row.nama_kegiatan"
+                      label="Uraian Pengeluaran"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                  </VCol>
+
+                  <VCol
+                    v-if="!isPegawaiKegiatan(row)"
+                    cols="12"
+                    md="3"
+                  >
+                    <LazyTextField
+                      v-model="row.keterangan"
+                      label="Keterangan"
+                      density="compact"
+                      hide-details
+                      class="mb-3"
+                    />
+                  </VCol>
+
+                  <VCol
                     v-if="isPegawaiKegiatan(row)"
                     cols="12"
                     :md="row.jenis_pembayaran === 'Transfer' ? 3 : 6"
@@ -1857,6 +1875,7 @@ onMounted(() => {
                       v-model="row.lampiran"
                       v-model:removed-lampiran="row.removed_lampiran"
                       :existing-lampiran="row.existing_lampiran"
+                      compact
                     />
                   </VCol>
 
@@ -3155,8 +3174,8 @@ onMounted(() => {
   grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: start;
   border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  padding: 20px;
-  gap: 14px;
+  padding: 14px 16px;
+  gap: 10px;
 }
 
 .lpj-row:last-child {
@@ -3176,6 +3195,15 @@ onMounted(() => {
 
 .lpj-row-content {
   min-inline-size: 0;
+}
+
+.lpj-row-fields {
+  margin: -6px;
+}
+
+.lpj-row-fields :deep(.v-col),
+.lpj-row-fields :deep([class*="v-col-"]) {
+  padding: 6px;
 }
 
 .lpj-row-petugas {

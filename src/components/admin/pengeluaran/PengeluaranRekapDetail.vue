@@ -513,11 +513,11 @@ const isNonPegawai = item => item.kategori_detail === "non_pegawai"
 const isRumahTangga = computed(() => ["rumah-tangga", "sarana-prasarana"].includes(props.moduleType))
 
 const pegawaiLabel = item => isNonPegawai(item)
-  ? "Nonpegawai"
+  ? item.nama || "Nonpegawai"
   : item.nama_pegawai || item.nama_dosen || "-"
 
 const pegawaiMeta = item => isNonPegawai(item)
-  ? "Tanpa pegawai"
+  ? item.nama ? "Nonpegawai" : "Tanpa pegawai"
   : [
     item.kode_pegawai || item.kode_dosen,
     item.tipe_pegawai === "staff" ? "Staff" : item.tipe_pegawai === "dosen" ? "Dosen" : null,

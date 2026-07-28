@@ -57,6 +57,7 @@ const pegawaiId = ref(null)
 const pegawaiItems = ref([])
 const pegawaiSearch = ref("")
 const loadingPegawai = ref(false)
+const nama = ref("")
 const namaKegiatan = ref("")
 const transport = ref(null)
 const barokah = ref(null)
@@ -209,6 +210,7 @@ const fillFormFromData = data => {
   kategoriDetail.value = data.kategori_detail || "pegawai"
   tanggal.value = data.tanggal ?? tanggal.value
   pegawaiId.value = data.pegawai_id ?? null
+  nama.value = data.nama ?? ""
   namaKegiatan.value = data.nama_kegiatan ?? ""
   transport.value = data.transport ?? 0
   barokah.value = data.barokah ?? 0
@@ -282,6 +284,7 @@ const onSubmit = async () => {
   if (isPegawai.value) {
     formData.append("pegawai_id", selectedPegawaiId)
   }
+  formData.append("nama", isPegawai.value ? "" : (nama.value ?? ""))
   formData.append("nama_kegiatan", isPegawai.value ? rekapNamaKegiatan.value : (namaKegiatan.value || rekapNamaKegiatan.value))
   formData.append("transport", isPegawai.value ? (transport.value ?? 0) : 0)
   formData.append("barokah", isPegawai.value ? (barokah.value ?? 0) : 0)
@@ -471,8 +474,8 @@ defineExpose({
             md="6"
           >
             <VTextField
-              v-model="namaKegiatan"
-              label="Uraian Pengeluaran"
+              v-model="nama"
+              label="Nama"
             />
           </VCol>
 
@@ -489,6 +492,17 @@ defineExpose({
               :rules="[requiredValidator]"
               :hint="formatRupiah(nominal)"
               persistent-hint
+            />
+          </VCol>
+
+          <VCol
+            v-if="!isPegawai"
+            cols="12"
+            md="6"
+          >
+            <VTextField
+              v-model="namaKegiatan"
+              label="Uraian Pengeluaran"
             />
           </VCol>
 

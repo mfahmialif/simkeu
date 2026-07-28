@@ -62,6 +62,7 @@ const newRow = () => ({
   kategori_detail: "pegawai",
   tanggal: defaultRowDate(),
   pegawai_id: null,
+  nama: "",
   nama_kegiatan: "",
   transport: 0,
   barokah: 0,
@@ -211,6 +212,7 @@ const detailToRow = item => ({
   kategori_detail: item.kategori_detail || "pegawai",
   tanggal: item.tanggal || defaultRowDate(),
   pegawai_id: item.pegawai_id || null,
+  nama: item.nama || "",
   nama_kegiatan: item.nama_kegiatan || "",
   transport: Number(item.transport || 0),
   barokah: Number(item.barokah || 0),
@@ -324,6 +326,7 @@ const appendRowFormData = (formData, row, prefix = null) => {
   if (isPegawai(row)) {
     formData.append(key("pegawai_id"), row.pegawai_id)
   }
+  formData.append(key("nama"), isPegawai(row) ? "" : (row.nama || ""))
   formData.append(key("nama_kegiatan"), isPegawai(row) ? rekapNamaKegiatan.value : (row.nama_kegiatan || rekapNamaKegiatan.value))
   formData.append(key("transport"), isPegawai(row) ? Number(row.transport || 0) : 0)
   formData.append(key("barokah"), isPegawai(row) ? Number(row.barokah || 0) : 0)
@@ -561,7 +564,7 @@ onMounted(() => {
               </div>
 
               <div class="expense-row-content">
-                <VRow>
+                <VRow class="expense-row-fields">
                   <VCol
                     cols="12"
                     md="2"
@@ -571,6 +574,8 @@ onMounted(() => {
                       label="Kategori *"
                       :items="kategoriItems"
                       :rules="[requiredValidator]"
+                      density="compact"
+                      hide-details="auto"
                       @update:model-value="onCategoryChange(row)"
                     />
                   </VCol>
@@ -588,6 +593,8 @@ onMounted(() => {
                         altFormat: 'd F Y',
                         dateFormat: 'Y-m-d',
                       }"
+                      density="compact"
+                      hide-details="auto"
                     />
                   </VCol>
 
@@ -606,6 +613,8 @@ onMounted(() => {
                       :rules="[requiredValidator]"
                       auto-select-first
                       clearable
+                      density="compact"
+                      hide-details="auto"
                     />
                   </VCol>
 
@@ -619,6 +628,8 @@ onMounted(() => {
                         type="number"
                         min="0"
                         label="Transport"
+                        density="compact"
+                        hide-details="auto"
                         :hint="formatRupiah(row.transport || 0)"
                         persistent-hint
                       />
@@ -633,6 +644,8 @@ onMounted(() => {
                         type="number"
                         min="0"
                         label="Barokah"
+                        density="compact"
+                        hide-details="auto"
                         :hint="formatRupiah(row.barokah || 0)"
                         persistent-hint
                       />
@@ -645,24 +658,10 @@ onMounted(() => {
                     md="3"
                   >
                     <VTextField
-                      v-model="row.nominal"
-                      type="number"
-                      min="0"
-                      label="Nominal *"
-                      :rules="[requiredValidator]"
-                      :hint="formatRupiah(row.nominal || 0)"
-                      persistent-hint
-                    />
-                  </VCol>
-
-                  <VCol
-                    v-if="!isPegawai(row)"
-                    cols="12"
-                    md="3"
-                  >
-                    <VTextField
-                      v-model="row.nama_kegiatan"
-                      label="Uraian Pengeluaran"
+                      v-model="row.nama"
+                      label="Nama"
+                      density="compact"
+                      hide-details
                     />
                   </VCol>
 
@@ -672,8 +671,15 @@ onMounted(() => {
                     md="2"
                   >
                     <VTextField
-                      v-model="row.keterangan"
-                      label="Keterangan"
+                      v-model="row.nominal"
+                      type="number"
+                      min="0"
+                      label="Nominal *"
+                      :rules="[requiredValidator]"
+                      density="compact"
+                      hide-details="auto"
+                      :hint="formatRupiah(row.nominal || 0)"
+                      persistent-hint
                     />
                   </VCol>
 
@@ -686,6 +692,8 @@ onMounted(() => {
                       label="Pembayaran *"
                       :items="paymentItems(row)"
                       :rules="[requiredValidator]"
+                      density="compact"
+                      hide-details="auto"
                       @update:model-value="row.bukti_transfer = null"
                     />
                   </VCol>
@@ -701,6 +709,8 @@ onMounted(() => {
                       accept="image/png, image/jpeg, application/pdf"
                       :prepend-icon="null"
                       :rules="transferFileRules(row)"
+                      density="compact"
+                      hide-details="auto"
                     />
                   </VCol>
 
@@ -717,9 +727,36 @@ onMounted(() => {
                       target="_blank"
                       rel="noopener noreferrer"
                       class="w-100"
+                      density="compact"
                     >
                       Bukti Lama
                     </VBtn>
+                  </VCol>
+
+                  <VCol
+                    v-if="!isPegawai(row)"
+                    cols="12"
+                    md="4"
+                  >
+                    <VTextField
+                      v-model="row.nama_kegiatan"
+                      label="Uraian Pengeluaran"
+                      density="compact"
+                      hide-details
+                    />
+                  </VCol>
+
+                  <VCol
+                    v-if="!isPegawai(row)"
+                    cols="12"
+                    md="3"
+                  >
+                    <VTextField
+                      v-model="row.keterangan"
+                      label="Keterangan"
+                      density="compact"
+                      hide-details
+                    />
                   </VCol>
 
                   <VCol
@@ -730,6 +767,8 @@ onMounted(() => {
                     <VTextField
                       v-model="row.keterangan"
                       label="Keterangan"
+                      density="compact"
+                      hide-details
                     />
                   </VCol>
 
@@ -741,6 +780,7 @@ onMounted(() => {
                       v-model="row.lampiran"
                       v-model:removed-lampiran="row.removed_lampiran"
                       :existing-lampiran="row.existing_lampiran"
+                      compact
                     />
                   </VCol>
 
@@ -752,6 +792,8 @@ onMounted(() => {
                       :model-value="formatRupiah(rowTotal(row))"
                       label="Total"
                       readonly
+                      density="compact"
+                      hide-details
                     />
                   </VCol>
                 </VRow>
@@ -873,8 +915,8 @@ onMounted(() => {
   grid-template-columns: 38px minmax(0, 1fr) 40px;
   align-items: start;
   border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  padding: 20px;
-  gap: 14px;
+  padding: 14px 16px;
+  gap: 10px;
 }
 
 .expense-row:last-child {
@@ -894,6 +936,15 @@ onMounted(() => {
 
 .expense-row-content {
   min-inline-size: 0;
+}
+
+.expense-row-fields {
+  margin: -6px;
+}
+
+.expense-row-fields :deep(.v-col),
+.expense-row-fields :deep([class*="v-col-"]) {
+  padding: 6px;
 }
 
 .expense-row-actions {

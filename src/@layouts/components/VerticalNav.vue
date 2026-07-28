@@ -36,6 +36,7 @@ const isHovered = useElementHover(refNav)
 provide(injectionKeyIsVerticalNavHovered, isHovered)
 
 const configStore = useLayoutConfigStore()
+const isOverlayNav = computed(() => configStore.isLessThanOverlayNavBreakpoint)
 
 const resolveNavItemComponent = item => {
   if ('heading' in item)
@@ -133,11 +134,25 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
       name="nav-items"
       :update-is-vertical-nav-scrolled="updateIsVerticalNavScrolled"
     >
+      <ul
+        v-if="isOverlayNav"
+        class="nav-items nav-items-native-scroll"
+        @scroll.passive="handleNavScroll"
+      >
+        <Component
+          :is="resolveNavItemComponent(item)"
+          v-for="(item, index) in navItems"
+          :key="index"
+          :item="item"
+        />
+      </ul>
+
       <PerfectScrollbar
+        v-else
         :key="configStore.isAppRTL"
         tag="ul"
         class="nav-items"
-        :options="{ wheelPropagation: false }"
+        :options="{ wheelPropagation: false, suppressScrollX: true }"
         @ps-scroll-y="handleNavScroll"
       >
         <Component
@@ -181,12 +196,16 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
   inline-size: variables.$layout-vertical-nav-width;
   inset-block-start: 0;
   inset-inline-start: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
   transition: inline-size 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+  touch-action: pan-y;
   will-change: transform, inline-size;
 
   .nav-header {
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
 
     .header-action {
       cursor: pointer;
@@ -207,13 +226,25 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
   }
 
   .nav-items {
-    block-size: 100%;
+    flex: 1 1 auto;
+    min-block-size: 0;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    overscroll-behavior-y: contain;
 
     // ℹ️ We no loner needs this overflow styles as perfect scrollbar applies it
     // overflow-x: hidden;
 
     // // ℹ️ We used `overflow-y` instead of `overflow` to mitigate overflow x. Revert back if any issue found.
     // overflow-y: auto;
+  }
+
+  .nav-items-native-scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 
   .nav-item-title {
@@ -234,12 +265,20 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
 // Small screen vertical nav transition
 @media (max-width: 1279px) {
   .layout-vertical-nav {
+    block-size: 100dvh;
+    max-block-size: 100dvh;
+    inset-block-end: 0;
+
     &:not(.visible) {
       transform: translateX(-#{variables.$layout-vertical-nav-width});
 
       @include mixins.rtl {
         transform: translateX(variables.$layout-vertical-nav-width);
       }
+    }
+
+    .nav-items-native-scroll {
+      padding-block-end: calc(1rem + env(safe-area-inset-bottom));
     }
 
     transition: transform 0.25s ease-in-out;

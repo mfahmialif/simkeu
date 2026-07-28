@@ -77,6 +77,7 @@ const rekapFormDialog = ref(false)
 const rekapTanggalRekapMenu = ref(false)
 const rekapTanggalPencairanMenu = ref(false)
 const rekapSaving = ref(false)
+const rekapEditingItem = ref(null)
 const mergerDialog = ref(false)
 const mergerTanggalRekapMenu = ref(false)
 const mergerTanggalPencairanMenu = ref(false)
@@ -403,6 +404,45 @@ const clearSelectedRekaps = () => {
   selectedRekapKeys.value = []
   selectedRekapCache.value = {}
 }
+
+const isEditingRekap = computed(() => Boolean(rekapEditingItem.value))
+
+const rekapEditingHasDetails = computed(() =>
+  Number(rekapEditingItem.value?.jumlah_data || 0) > 0,
+)
+
+const rekapEditingHasLpj = computed(() =>
+  Number(rekapEditingItem.value?.total_lpj || 0) > 0,
+)
+
+const rekapCanMoveModule = computed(() =>
+  !isEditingRekap.value
+  || (
+    !rekapEditingHasDetails.value
+    && !rekapEditingHasLpj.value
+    && !rekapEditingItem.value?.cetak_rab
+  ),
+)
+
+const rekapFormTitle = computed(() => {
+  if (rekapForm.value.input_piutang) return "Tambah Piutang Cashbon"
+
+  return isEditingRekap.value ? "Edit Rekap Anggaran" : "Tambah Rekap Anggaran"
+})
+
+const rekapAmountLabel = computed(() =>
+  isEditingRekap.value && rekapEditingHasDetails.value
+    ? "Jumlah RAB dari Detail"
+    : rekapForm.value.input_piutang
+      ? "Nominal Piutang *"
+      : "Jumlah Sementara *",
+)
+
+const rekapAmountHint = computed(() =>
+  isEditingRekap.value && rekapEditingHasDetails.value
+    ? "Jumlah dihitung otomatis dari total data pengeluaran."
+    : formatRupiah(rekapForm.value.jumlah_sementara),
+)
 
 const isStatsPending = computed(() => statsLoading.value && Boolean(stats.value?.partial))
 
@@ -1458,6 +1498,7 @@ const fetchRekapPetugas = async moduleKey => {
 }
 
 const openRekapForm = async () => {
+  rekapEditingItem.value = null
   const inputPiutang = selectedModule.value === PIUTANG_MODULE_KEY
   const moduleKey = inputPiutang ? PIUTANG_MODULE_KEY : defaultRegularModuleKey()
 
@@ -1493,10 +1534,45 @@ const openRekapForm = async () => {
   await fetchRekapPetugas(moduleKey)
 }
 
+const openEditRekapForm = async item => {
+  if (!item || item.module_key === PIUTANG_MODULE_KEY) return
+
+  const periodMatch = String(item.bulan_tahun || "").match(/^(\d{4})-(\d{2})/)
+
+  rekapEditingItem.value = { ...item }
+  rekapForm.value = {
+    input_piutang: false,
+    module_key: item.module_key,
+    petugas_id: item.petugas_id || null,
+    piutang_pegawai_id: null,
+    nama: item.nama || "",
+    bulan: Number(periodMatch?.[2] || currentDate.getMonth() + 1),
+    tahun: Number(periodMatch?.[1] || currentDate.getFullYear()),
+    tanggal_rekap: String(item.tanggal_rekap || "").slice(0, 10) || todayDateValue(),
+    tanggal_pencairan: String(item.tanggal_pencairan || "").slice(0, 10) || null,
+    jumlah_sementara: Number(
+      Number(item.jumlah_data || 0) > 0
+        ? item.jumlah
+        : (item.jumlah_sementara ?? item.jumlah ?? 0),
+    ),
+    default_cicilan: null,
+    keterangan: item.keterangan || "",
+  }
+  rekapTanggalRekapMenu.value = false
+  rekapTanggalPencairanMenu.value = false
+  rekapFormDialog.value = true
+  await fetchRekapPetugas(item.module_key)
+}
+
+const closeRekapForm = () => {
+  rekapFormDialog.value = false
+  rekapEditingItem.value = null
+}
+
 const saveRekap = async () => {
   if (rekapSaving.value) return
 
-  if (rekapForm.value.input_piutang) {
+  if (!isEditingRekap.value && rekapForm.value.input_piutang) {
     syncPiutangRekapName()
 
     const nominal = Number(rekapForm.value.jumlah_sementara || 0)
@@ -1569,25 +1645,33 @@ const saveRekap = async () => {
   try {
     rekapSaving.value = true
 
-    const response = await $api("/admin/laporan/rab", {
-      method: "POST",
-      body: {
-        module_key: rekapForm.value.module_key,
-        petugas_id: rekapForm.value.petugas_id,
-        nama: rekapForm.value.nama,
-        bulan_tahun: `${tahun}-${String(bulan).padStart(2, "0")}`,
-        tanggal_rekap: rekapForm.value.tanggal_rekap,
-        tanggal_pencairan: rekapForm.value.tanggal_pencairan || null,
-        jumlah_sementara: Number(rekapForm.value.jumlah_sementara || 0),
-        keterangan: rekapForm.value.keterangan,
+    const isEditing = isEditingRekap.value
+    const response = await $api(
+      isEditing
+        ? `/admin/laporan/rab/${rekapEditingItem.value.module_key}/${rekapEditingItem.value.id}`
+        : "/admin/laporan/rab",
+      {
+        method: isEditing ? "PUT" : "POST",
+        body: {
+          module_key: rekapForm.value.module_key,
+          petugas_id: rekapForm.value.petugas_id,
+          nama: rekapForm.value.nama,
+          bulan_tahun: `${tahun}-${String(bulan).padStart(2, "0")}`,
+          tanggal_rekap: rekapForm.value.tanggal_rekap,
+          tanggal_pencairan: rekapForm.value.tanggal_pencairan || null,
+          jumlah_sementara: Number(rekapForm.value.jumlah_sementara || 0),
+          keterangan: rekapForm.value.keterangan,
+        },
       },
-    })
+    )
 
     rekapFormDialog.value = false
+    rekapEditingItem.value = null
     showSnackbar({
       text: response.message,
       color: "success",
     })
+    clearSelectedRekaps()
     fetchData()
   } catch (err) {
     showSnackbar({
@@ -1910,6 +1994,12 @@ watch([selectedBulan, selectedTahun, selectedModule, selectedPetugasId], () => {
 
 watch(selectedModule, fetchPetugas)
 
+watch(rekapFormDialog, isOpen => {
+  if (!isOpen) {
+    rekapEditingItem.value = null
+  }
+})
+
 watch(() => rekapForm.value.module_key, moduleKey => {
   if (rekapFormDialog.value && !rekapForm.value.input_piutang) {
     fetchRekapPetugas(moduleKey)
@@ -1917,7 +2007,7 @@ watch(() => rekapForm.value.module_key, moduleKey => {
 })
 
 watch(() => rekapForm.value.input_piutang, async inputPiutang => {
-  if (!rekapFormDialog.value) return
+  if (!rekapFormDialog.value || isEditingRekap.value) return
 
   if (inputPiutang) {
     rekapForm.value.module_key = PIUTANG_MODULE_KEY
@@ -2741,21 +2831,40 @@ onBeforeUnmount(() => {
         </template>
 
         <template #item.actions="{ item }">
-          <VTooltip
-            text="Lihat detail rekap"
-            location="top"
-          >
-            <template #activator="{ props: tooltipProps }">
-              <VBtn
-                v-bind="tooltipProps"
-                icon="ri-arrow-right-line"
-                variant="text"
-                color="primary"
-                size="small"
-                @click="openDetail(item)"
-              />
-            </template>
-          </VTooltip>
+          <div class="d-flex justify-end gap-1">
+            <VTooltip
+              v-if="canEditTanggalPencairan && item.module_key !== PIUTANG_MODULE_KEY"
+              text="Edit rekap"
+              location="top"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <VBtn
+                  v-bind="tooltipProps"
+                  icon="ri-edit-line"
+                  variant="text"
+                  color="primary"
+                  size="small"
+                  @click.stop="openEditRekapForm(item)"
+                />
+              </template>
+            </VTooltip>
+
+            <VTooltip
+              text="Lihat detail rekap"
+              location="top"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <VBtn
+                  v-bind="tooltipProps"
+                  icon="ri-arrow-right-line"
+                  variant="text"
+                  color="primary"
+                  size="small"
+                  @click="openDetail(item)"
+                />
+              </template>
+            </VTooltip>
+          </div>
         </template>
       </VDataTableServer>
     </VCard>
@@ -3232,16 +3341,19 @@ onBeforeUnmount(() => {
       v-model="rekapFormDialog"
       width="760"
     >
-      <VCard :title="rekapForm.input_piutang ? 'Tambah Piutang Cashbon' : 'Tambah Rekap Anggaran'">
+      <VCard :title="rekapFormTitle">
         <DialogCloseBtn
           variant="text"
           size="default"
-          @click="rekapFormDialog = false"
+          @click="closeRekapForm"
         />
 
         <VCardText>
           <VRow>
-            <VCol cols="12">
+            <VCol
+              v-if="!isEditingRekap"
+              cols="12"
+            >
               <VCheckbox
                 v-model="rekapForm.input_piutang"
                 label="Input Piutang"
@@ -3260,7 +3372,11 @@ onBeforeUnmount(() => {
                   v-model="rekapForm.module_key"
                   label="Jenis Rekap *"
                   :items="regularModuleItems"
-                  :disabled="rekapSaving"
+                  :disabled="rekapSaving || (isEditingRekap && !rekapCanMoveModule)"
+                  :hint="isEditingRekap
+                    ? 'Jenis rekap hanya bisa diubah jika detail RAB, LPJ, dan proses RAB masih kosong.'
+                    : undefined"
+                  :persistent-hint="isEditingRekap"
                   :rules="[requiredValidator]"
                 />
               </VCol>
@@ -3406,13 +3522,13 @@ onBeforeUnmount(() => {
             >
               <VTextField
                 v-model="rekapForm.jumlah_sementara"
-                :label="rekapForm.input_piutang ? 'Nominal Piutang *' : 'Jumlah RAB Sementara *'"
+                :label="rekapAmountLabel"
                 type="number"
                 :min="rekapForm.input_piutang ? 1 : 0"
                 prefix="Rp"
-                :hint="formatRupiah(rekapForm.jumlah_sementara)"
+                :hint="rekapAmountHint"
                 persistent-hint
-                :disabled="rekapSaving"
+                :disabled="rekapSaving || (isEditingRekap && rekapEditingHasDetails)"
                 :rules="[requiredValidator]"
               />
             </VCol>
@@ -3451,7 +3567,7 @@ onBeforeUnmount(() => {
             variant="outlined"
             color="secondary"
             :disabled="rekapSaving"
-            @click="rekapFormDialog = false"
+            @click="closeRekapForm"
           >
             Batal
           </VBtn>
@@ -3462,7 +3578,7 @@ onBeforeUnmount(() => {
             :disabled="rekapSaving || rekapPetugasLoading || piutangPegawaiLoading"
             @click="saveRekap"
           >
-            Simpan
+            {{ isEditingRekap ? "Simpan Perubahan" : "Simpan" }}
           </VBtn>
         </VCardText>
       </VCard>
