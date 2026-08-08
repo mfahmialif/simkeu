@@ -28,6 +28,9 @@ const summaryLoading = ref(false)
 const summaryData = ref(null)
 const testPaymentsLoading = ref(false)
 const testPayments = ref([])
+const testPaymentDeletingId = ref(null)
+const deleteTestPaymentDialog = ref(false)
+const selectedTestPayment = ref(null)
 const messagingLogsLoading = ref(false)
 const messagingLogs = ref([])
 const messagingLogsPage = ref(1)
@@ -56,6 +59,8 @@ const form = reactive({
   reconciliationSecret: '',
   reconciliationEmail: '',
   paymentExpiryMinutes: 1440,
+  adminFeeBearer: 'institution',
+  adminFeeAmount: 2500,
   timestampTolerance: 300,
   allowedIpsText: '',
   enforceIpAllowlist: false,
@@ -87,6 +92,8 @@ const applySettings = data => {
     reconciliationSecret: data.reconciliation_secret || '',
     reconciliationEmail: data.reconciliation_email || '',
     paymentExpiryMinutes: Number(data.payment_expiry_minutes || 1440),
+    adminFeeBearer: data.admin_fee_bearer || 'institution',
+    adminFeeAmount: Number(data.admin_fee_amount ?? 2500),
     timestampTolerance: Number(data.timestamp_tolerance ?? 300),
     allowedIpsText: (data.allowed_ips || []).join('\n'),
     enforceIpAllowlist: Boolean(data.enforce_ip_allowlist),
@@ -132,6 +139,8 @@ const saveSettings = async () => {
         'reconciliation_secret': form.reconciliationSecret || null,
         'reconciliation_email': form.reconciliationEmail || null,
         'payment_expiry_minutes': Number(form.paymentExpiryMinutes),
+        'admin_fee_bearer': form.adminFeeBearer,
+        'admin_fee_amount': Number(form.adminFeeAmount),
         'timestamp_tolerance': Number(form.timestampTolerance),
         'allowed_ips': allowedIps,
         'enforce_ip_allowlist': form.enforceIpAllowlist,
@@ -518,6 +527,53 @@ const cancelSimulationPayment = async () => {
     showSnackbar({ text: errorMessage(error), color: 'error' })
   } finally {
     simulationCancelling.value = false
+  }
+}
+
+const openDeleteTestPaymentDialog = payment => {
+  selectedTestPayment.value = payment
+  deleteTestPaymentDialog.value = true
+}
+
+const closeDeleteTestPaymentDialog = () => {
+  if (testPaymentDeletingId.value)
+    return
+
+  deleteTestPaymentDialog.value = false
+  selectedTestPayment.value = null
+}
+
+const deleteTestPayment = async () => {
+  const payment = selectedTestPayment.value
+
+  if (!payment?.id)
+    return
+
+  testPaymentDeletingId.value = payment.id
+  try {
+    const response = await $api(`/admin/setting/bsi/simulation/payments/${payment.id}`, {
+      method: 'DELETE',
+    })
+
+    showSnackbar({ text: response.message, color: 'success' })
+
+    if (simulationResult.value?.request_id === payment.request_id)
+      simulationResult.value = null
+
+    deleteTestPaymentDialog.value = false
+    selectedTestPayment.value = null
+
+    await Promise.all([
+      loadTestPayments(),
+      loadSummary(),
+    ])
+
+    if (String(simulationNim.value || '').trim())
+      await loadSimulationBills()
+  } catch (error) {
+    showSnackbar({ text: errorMessage(error), color: 'error' })
+  } finally {
+    testPaymentDeletingId.value = null
   }
 }
 
@@ -1113,6 +1169,54 @@ onMounted(async () => {
                     <p class="text-caption text-warning mt-3 mb-0">
                       Penerbitan ulang langsung menonaktifkan nilai lama. Salin nilai baru ke portal BSI sebelum pengujian berikutnya.
                     </p>
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VSelect
+                      v-model="form.adminFeeBearer"
+                      label="Penanggung Biaya Admin BSI"
+                      :items="[
+                        { title: 'Dibebankan ke institusi', value: 'institution' },
+                        { title: 'Dibebankan ke pembayar', value: 'payer' },
+                      ]"
+                    />
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VTextField
+                      v-model.number="form.adminFeeAmount"
+                      type="number"
+                      min="0"
+                      prefix="Rp"
+                      label="Nominal Biaya Admin BSI"
+                      hint="Dapat diubah jika tarif BSI berubah."
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                  >
+                    <VAlert
+                      type="info"
+                      variant="tonal"
+                    >
+                      <template v-if="form.adminFeeBearer === 'payer'">
+                        Biaya dibebankan ke pembayar. Contoh tagihan Rp10.000 akan ditampilkan di BSI sebesar
+                        <strong>{{ rupiah(10000 + Number(form.adminFeeAmount || 0)) }}</strong>;
+                        ledger tagihan tetap hanya mencatat Rp10.000.
+                      </template>
+                      <template v-else>
+                        Biaya ditanggung institusi. Pembayar tetap membayar sesuai tagihan; dana settlement diperkirakan
+                        berkurang <strong>{{ rupiah(form.adminFeeAmount) }}</strong>.
+                      </template>
+                    </VAlert>
                   </VCol>
                   <VCol
                     v-show="configurationSection === 'security'"
@@ -2056,7 +2160,14 @@ onMounted(async () => {
                     cols="12"
                     md="4"
                   >
-                    <strong>Total:</strong> {{ rupiah(simulationResult.total) }}
+                    <div><strong>Nilai tagihan:</strong> {{ rupiah(simulationResult.total) }}</div>
+                    <div class="text-body-2">
+                      <strong>Biaya admin:</strong> {{ rupiah(simulationResult.admin_fee_amount) }}
+                      ({{ simulationResult.admin_fee_bearer === 'payer' ? 'pembayar' : 'institusi' }})
+                    </div>
+                    <div class="text-body-2 text-primary">
+                      <strong>Total dibayar di BSI:</strong> {{ rupiah(simulationResult.payable_total) }}
+                    </div>
                   </VCol>
                   <VCol
                     cols="12"
@@ -2134,9 +2245,12 @@ onMounted(async () => {
                     <th>Mahasiswa</th>
                     <th>Nomor Pembayaran</th>
                     <th class="text-end">
-                      Nominal
+                      Tagihan / Total BSI
                     </th>
                     <th>Status</th>
+                    <th class="text-center">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2167,7 +2281,10 @@ onMounted(async () => {
                       </div>
                     </td>
                     <td class="text-end font-weight-medium">
-                      {{ rupiah(payment.total) }}
+                      <div>{{ rupiah(payment.total) }}</div>
+                      <div class="text-caption text-primary">
+                        BSI: {{ rupiah(payment.payable_total) }}
+                      </div>
                     </td>
                     <td>
                       <div class="d-flex flex-column align-start gap-1">
@@ -2186,6 +2303,18 @@ onMounted(async () => {
                           DATA TEST
                         </VChip>
                       </div>
+                    </td>
+                    <td class="text-center">
+                      <VBtn
+                        icon="ri-delete-bin-line"
+                        color="error"
+                        variant="text"
+                        size="small"
+                        title="Hapus transaksi mode uji"
+                        :loading="testPaymentDeletingId === payment.id"
+                        :disabled="Boolean(testPaymentDeletingId)"
+                        @click="openDeleteTestPaymentDialog(payment)"
+                      />
                     </td>
                   </tr>
                 </tbody>
@@ -2431,6 +2560,50 @@ onMounted(async () => {
         </VCard>
       </VWindowItem>
     </VWindow>
+
+    <VDialog
+      v-model="deleteTestPaymentDialog"
+      max-width="560"
+      :persistent="Boolean(testPaymentDeletingId)"
+    >
+      <VCard title="Hapus Transaksi Mode Uji?">
+        <VCardText>
+          <VAlert
+            type="warning"
+            variant="tonal"
+            class="mb-4"
+          >
+            Tindakan ini menghapus payment order uji beserta ledger pembayaran, nota, dan detail metode bayar yang terkait.
+          </VAlert>
+
+          <div v-if="selectedTestPayment">
+            <div class="font-weight-medium">
+              {{ selectedTestPayment.nama_mahasiswa || selectedTestPayment.nim }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis">
+              {{ selectedTestPayment.bsi_payment_number || selectedTestPayment.va_number }} · {{ rupiah(selectedTestPayment.total) }}
+            </div>
+          </div>
+        </VCardText>
+        <VCardActions class="justify-end">
+          <VBtn
+            variant="text"
+            :disabled="Boolean(testPaymentDeletingId)"
+            @click="closeDeleteTestPaymentDialog"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="error"
+            prepend-icon="ri-delete-bin-line"
+            :loading="Boolean(testPaymentDeletingId)"
+            @click="deleteTestPayment"
+          >
+            Hapus Data Uji
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <VDialog
       v-model="logDetailDialog"
