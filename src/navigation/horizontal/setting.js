@@ -7,6 +7,7 @@ export const settingMenu = {
     { title: "Mata Uang", to: "admin-setting-mata-uang" },
     { title: "Pimpinan", to: "admin-setting-pimpinan" },
     { title: "Form Schedule", to: "admin-setting-form-schadule" },
+    { title: "Konfig BSI", to: "admin-setting-bsi" },
     { title: "Aktifkan Mahasiswa", to: "admin-setting-aktifkan-mahasiswa" },
   ],
 }

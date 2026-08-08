@@ -124,6 +124,7 @@ declare module 'vue-router/auto-routes' {
     'admin-saldo': RouteRecordInfo<'admin-saldo', '/admin/saldo', Record<never, never>, Record<never, never>>,
     'admin-saldo-id': RouteRecordInfo<'admin-saldo-id', '/admin/saldo/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-setting-aktifkan-mahasiswa': RouteRecordInfo<'admin-setting-aktifkan-mahasiswa', '/admin/setting/aktifkan-mahasiswa', Record<never, never>, Record<never, never>>,
+    'admin-setting-bsi': RouteRecordInfo<'admin-setting-bsi', '/admin/setting/bsi', Record<never, never>, Record<never, never>>,
     'admin-setting-form-schadule': RouteRecordInfo<'admin-setting-form-schadule', '/admin/setting/form-schadule', Record<never, never>, Record<never, never>>,
     'admin-setting-form-schadule-add': RouteRecordInfo<'admin-setting-form-schadule-add', '/admin/setting/form-schadule/add', Record<never, never>, Record<never, never>>,
     'admin-setting-form-schadule-edit-id': RouteRecordInfo<'admin-setting-form-schadule-edit-id', '/admin/setting/form-schadule/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,

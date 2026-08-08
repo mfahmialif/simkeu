@@ -7,6 +7,7 @@ export const settingMenu = {
     { title: "Mata Uang", icon: { icon: "ri-money-dollar-circle-line" }, to: "admin-setting-mata-uang" },
     { title: "Pimpinan", icon: { icon: "ri-user-star-line" }, to: "admin-setting-pimpinan" },
     { title: "Form Schedule", icon: { icon: "ri-time-line" }, to: "admin-setting-form-schadule" },
+    { title: "Konfig BSI", icon: { icon: "ri-bank-line" }, to: "admin-setting-bsi" },
     {
       title: "Aktifkan Mahasiswa",
       icon: { icon: "ri-user-follow-line" },

@@ -30,6 +30,7 @@ const statusOptions = [
   { title: 'Menunggu Pembayaran', value: 'pending' },
   { title: 'Sudah Dibayar', value: 'paid' },
   { title: 'Perlu Ditinjau', value: 'needs_review' },
+  { title: 'Berhasil', value: 'success' },
   { title: 'Sudah Diposting', value: 'posted' },
   { title: 'Ditolak', value: 'rejected' },
   { title: 'Kedaluwarsa', value: 'expired' },
@@ -52,6 +53,7 @@ const statusMeta = {
   pending: { label: 'Menunggu', color: 'warning' },
   paid: { label: 'Dibayar', color: 'success' },
   'needs_review': { label: 'Perlu Ditinjau', color: 'error' },
+  success: { label: 'Berhasil', color: 'success' },
   posted: { label: 'Diposting', color: 'primary' },
   rejected: { label: 'Ditolak', color: 'error' },
   expired: { label: 'Kedaluwarsa', color: 'secondary' },
@@ -233,8 +235,8 @@ const submitReject = async () => {
   }
 }
 
-const canPost = item => canProcess.value && item.status === 'paid'
-const canReject = item => canProcess.value && !['posted', 'rejected'].includes(item.status)
+const canPost = item => canProcess.value && ['paid', 'needs_review'].includes(item.status)
+const canReject = item => canProcess.value && !['success', 'posted', 'rejected'].includes(item.status)
 
 watch([search, selectedStatus], () => {
   page.value = 1
@@ -253,7 +255,7 @@ onMounted(() => {
         <div>
           <VCardTitle>Pembayaran VA BSI</VCardTitle>
           <VCardSubtitle>
-            Verifikasi callback bank sebelum transaksi masuk ke pembayaran mahasiswa.
+            Monitoring payment order, transaksi BI-SNAP, dan rekonsiliasi BSI.
           </VCardSubtitle>
         </div>
 
@@ -555,6 +557,75 @@ onMounted(() => {
         >
           {{ selectedPayment.rejection_reason }}
         </VAlert>
+
+        <template v-if="selectedPayment.snap_logs?.length">
+          <h4 class="text-h6 mt-6 mb-3">
+            Log BI-SNAP
+          </h4>
+          <VTable density="compact">
+            <thead>
+              <tr>
+                <th>Operasi</th>
+                <th>External ID</th>
+                <th>Response</th>
+                <th>Durasi</th>
+                <th>Waktu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="log in selectedPayment.snap_logs"
+                :key="log.id"
+              >
+                <td class="text-capitalize">
+                  {{ log.operation }}
+                </td>
+                <td>{{ log.external_id || '-' }}</td>
+                <td><code>{{ log.response_code || log.http_status }}</code></td>
+                <td>{{ log.duration_ms }} ms</td>
+                <td>{{ formatDateTime(log.requested_at) }}</td>
+              </tr>
+            </tbody>
+          </VTable>
+        </template>
+
+        <template v-if="selectedPayment.reconciliations?.length">
+          <h4 class="text-h6 mt-6 mb-3">
+            Rekonsiliasi
+          </h4>
+          <VTable density="compact">
+            <thead>
+              <tr>
+                <th>ID Rekon</th>
+                <th>Status</th>
+                <th class="text-end">
+                  Nominal
+                </th>
+                <th>Settlement</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="recon in selectedPayment.reconciliations"
+                :key="recon.id"
+              >
+                <td>{{ recon.recon_id }}</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    :color="recon.match_status === 'matched' ? 'success' : 'error'"
+                  >
+                    {{ recon.match_status }}
+                  </VChip>
+                </td>
+                <td class="text-end">
+                  {{ formatCurrency(recon.payment_amount) }}
+                </td>
+                <td>{{ recon.settlement_code || '-' }}</td>
+              </tr>
+            </tbody>
+          </VTable>
+        </template>
       </VCardText>
 
       <VCardActions class="justify-end">
