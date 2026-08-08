@@ -7,6 +7,8 @@ const validating = ref(false)
 const rotatingKey = ref(false)
 const rotatingH2hCredentials = ref(false)
 const rotatingReconciliationSecret = ref(false)
+const clientSecretVisible = ref(false)
+const reconciliationSecretVisible = ref(false)
 const generatedApiKey = ref('')
 const apiKeyDialog = ref(false)
 const credentialDialog = ref(false)
@@ -42,6 +44,10 @@ const form = reactive({
   timestampTolerance: 300,
   allowedIpsText: '',
   enforceIpAllowlist: false,
+  verifySignatures: true,
+  logPayloads: true,
+  serveTestVa: false,
+  databaseFailureMode: 'none',
 })
 
 const errorMessage = error => {
@@ -61,14 +67,18 @@ const applySettings = data => {
     institutionName: data.institution_name || '',
     kodeBpi: data.kode_bpi || '',
     clientId: data.client_id || '',
-    clientSecret: '',
+    clientSecret: data.client_secret || '',
     bpiPublicKey: data.bpi_public_key || '',
-    reconciliationSecret: '',
+    reconciliationSecret: data.reconciliation_secret || '',
     reconciliationEmail: data.reconciliation_email || '',
     paymentExpiryMinutes: Number(data.payment_expiry_minutes || 1440),
     timestampTolerance: Number(data.timestamp_tolerance ?? 300),
     allowedIpsText: (data.allowed_ips || []).join('\n'),
     enforceIpAllowlist: Boolean(data.enforce_ip_allowlist),
+    verifySignatures: data.verify_signatures !== false,
+    logPayloads: data.log_payloads !== false,
+    serveTestVa: Boolean(data.serve_test_va),
+    databaseFailureMode: data.database_failure_mode || 'none',
   })
 }
 
@@ -110,6 +120,10 @@ const saveSettings = async () => {
         'timestamp_tolerance': Number(form.timestampTolerance),
         'allowed_ips': allowedIps,
         'enforce_ip_allowlist': form.enforceIpAllowlist,
+        'verify_signatures': form.verifySignatures,
+        'log_payloads': form.logPayloads,
+        'serve_test_va': form.serveTestVa,
+        'database_failure_mode': form.databaseFailureMode,
       },
     })
 
@@ -253,11 +267,13 @@ const secretDisplay = (value, configured, label) => {
 const adminPanelText = computed(() => [
   `Status & Spesifikasi: ${hostToHostSpecification}`,
   'Skema Pembayaran: Close amount — nominal harus sama persis',
+  `Token Host to Host (Secret Key): ${hostToHostToken.value || ''}`,
   `URL Host to Host Inquiry: ${endpoints.value.inquiry || ''}`,
   `URL Host to Host Payment: ${endpoints.value.payment || ''}`,
   `URL Otentikasi: ${endpoints.value.auth || ''}`,
   `URL Advice: ${endpoints.value.advice || ''}`,
   `Email Tujuan Rekonsiliasi: ${form.reconciliationEmail || ''}`,
+  `Token Custom Report: ${reconciliationToken.value || ''}`,
   `URL Webservice Custom Report Rekonsiliasi: ${endpoints.value.reconciliation || ''}`,
 ].join('\n'))
 
@@ -569,6 +585,19 @@ onMounted(async () => {
       Matikan mode uji setelah SIT selesai agar transaksi production tidak ditandai sebagai test.
     </VAlert>
 
+    <VAlert
+      v-if="settingsData?.database_failure_mode && settingsData.database_failure_mode !== 'none'"
+      type="error"
+      variant="tonal"
+      class="mb-6"
+    >
+      <strong>Simulasi DB Error aktif.</strong>
+      {{ settingsData.database_failure_mode === 'all'
+        ? 'Auth dan seluruh transaksi BSI sedang dipaksa gagal.'
+        : 'Inquiry, Payment, Advice, dan Rekonsiliasi sedang dipaksa gagal; Auth tetap berjalan.' }}
+      Nonaktifkan kembali setelah tester BSI selesai.
+    </VAlert>
+
     <VProgressLinear
       v-if="loading"
       indeterminate
@@ -810,18 +839,7 @@ onMounted(async () => {
                   <VCol
                     v-show="configurationSection === 'identity'"
                     cols="12"
-                    md="6"
-                  >
-                    <VSwitch
-                      v-model="form.enabled"
-                      label="Aktifkan integrasi BSI"
-                      color="success"
-                    />
-                  </VCol>
-                  <VCol
-                    v-show="configurationSection === 'identity'"
-                    cols="12"
-                    md="6"
+                    md="12"
                   >
                     <VSelect
                       v-model="form.environment"
@@ -859,6 +877,8 @@ onMounted(async () => {
                     <VTextField
                       v-model="form.clientId"
                       label="Client ID"
+                      append-inner-icon="ri-file-copy-line"
+                      @click:append-inner="copyText(form.clientId, 'Client ID')"
                     />
                   </VCol>
                   <VCol
@@ -868,10 +888,26 @@ onMounted(async () => {
                   >
                     <VTextField
                       v-model="form.clientSecret"
-                      type="password"
+                      :type="clientSecretVisible ? 'text' : 'password'"
                       label="Client Secret"
-                      :placeholder="settingsData?.client_secret_configured ? 'Sudah tersimpan — kosongkan jika tidak diubah' : 'Masukkan Client Secret'"
-                    />
+                      :placeholder="settingsData?.client_secret_configured ? 'Sudah tersimpan terenkripsi' : 'Masukkan Client Secret'"
+                    >
+                      <template #append-inner>
+                        <VBtn
+                          :icon="clientSecretVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
+                          variant="text"
+                          size="small"
+                          @click="clientSecretVisible = !clientSecretVisible"
+                        />
+                        <VBtn
+                          icon="ri-file-copy-line"
+                          variant="text"
+                          size="small"
+                          :disabled="!form.clientSecret"
+                          @click="copyText(form.clientSecret, 'Client Secret')"
+                        />
+                      </template>
+                    </VTextField>
                   </VCol>
                   <VCol
                     v-show="configurationSection === 'credentials'"
@@ -883,7 +919,17 @@ onMounted(async () => {
                       rows="7"
                       auto-grow
                       placeholder="-----BEGIN PUBLIC KEY-----"
-                    />
+                    >
+                      <template #append-inner>
+                        <VBtn
+                          icon="ri-file-copy-line"
+                          variant="text"
+                          size="small"
+                          :disabled="!form.bpiPublicKey"
+                          @click="copyText(form.bpiPublicKey, 'BPI RSA Public Key')"
+                        />
+                      </template>
+                    </VTextarea>
                   </VCol>
                   <VCol
                     v-show="configurationSection === 'credentials'"
@@ -892,10 +938,26 @@ onMounted(async () => {
                   >
                     <VTextField
                       v-model="form.reconciliationSecret"
-                      type="password"
+                      :type="reconciliationSecretVisible ? 'text' : 'password'"
                       label="Reconciliation Secret"
-                      :placeholder="settingsData?.reconciliation_secret_configured ? 'Sudah tersimpan — kosongkan jika tidak diubah' : 'Opsional, fallback ke Client Secret'"
-                    />
+                      :placeholder="settingsData?.reconciliation_secret_configured ? 'Sudah tersimpan terenkripsi' : 'Opsional, fallback ke Client Secret'"
+                    >
+                      <template #append-inner>
+                        <VBtn
+                          :icon="reconciliationSecretVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
+                          variant="text"
+                          size="small"
+                          @click="reconciliationSecretVisible = !reconciliationSecretVisible"
+                        />
+                        <VBtn
+                          icon="ri-file-copy-line"
+                          variant="text"
+                          size="small"
+                          :disabled="!form.reconciliationSecret"
+                          @click="copyText(form.reconciliationSecret, 'Reconciliation Secret')"
+                        />
+                      </template>
+                    </VTextField>
                   </VCol>
                   <VCol
                     v-show="configurationSection === 'credentials'"
@@ -907,6 +969,8 @@ onMounted(async () => {
                       type="email"
                       label="Email Tujuan Rekonsiliasi"
                       placeholder="keuangan@institusi.ac.id"
+                      append-inner-icon="ri-file-copy-line"
+                      @click:append-inner="copyText(form.reconciliationEmail, 'Email Rekonsiliasi')"
                     />
                   </VCol>
                   <VCol
@@ -977,24 +1041,160 @@ onMounted(async () => {
                       hint="Satu IP per baris. Utamakan whitelist pada Cloudflare/firewall."
                       persistent-hint
                     />
-                    <VSwitch
-                      v-model="form.enforceIpAllowlist"
-                      label="Terapkan IP allowlist juga di aplikasi"
-                      color="warning"
-                      class="mt-3"
-                    />
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VCard
+                      variant="outlined"
+                      class="h-100"
+                    >
+                      <VCardText>
+                        <VSwitch
+                          v-model="form.enabled"
+                          label="Aktifkan endpoint H2H"
+                          color="success"
+                          hide-details
+                        />
+                        <div class="text-caption text-medium-emphasis ms-10">
+                          Bila dimatikan, semua request BSI dibalas Service Unavailable.
+                        </div>
+                      </VCardText>
+                    </VCard>
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VCard
+                      variant="outlined"
+                      class="h-100"
+                    >
+                      <VCardText>
+                        <VSwitch
+                          v-model="form.enforceIpAllowlist"
+                          label="Terapkan IP whitelist"
+                          color="warning"
+                          hide-details
+                        />
+                        <div class="text-caption text-medium-emphasis ms-10">
+                          Tolak request dari IP di luar daftar.
+                        </div>
+                      </VCardText>
+                    </VCard>
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VCard
+                      variant="outlined"
+                      class="h-100"
+                    >
+                      <VCardText>
+                        <VSwitch
+                          v-model="form.verifySignatures"
+                          label="Terapkan verifikasi signature"
+                          color="warning"
+                          hide-details
+                        />
+                        <div class="text-caption text-medium-emphasis ms-10">
+                          Matikan hanya sementara saat menelusuri kegagalan SIT.
+                        </div>
+                      </VCardText>
+                    </VCard>
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VCard
+                      variant="outlined"
+                      class="h-100"
+                    >
+                      <VCardText>
+                        <VSwitch
+                          v-model="form.logPayloads"
+                          label="Simpan body request/response"
+                          color="warning"
+                          hide-details
+                        />
+                        <div class="text-caption text-medium-emphasis ms-10">
+                          Diperlukan untuk menelusuri kegagalan signature dan SIT.
+                        </div>
+                      </VCardText>
+                    </VCard>
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VCard
+                      variant="outlined"
+                      class="h-100"
+                    >
+                      <VCardText>
+                        <VSwitch
+                          v-model="form.testMode"
+                          label="Mode uji (semua NIM)"
+                          color="warning"
+                          hide-details
+                        />
+                        <div class="text-caption text-medium-emphasis ms-10">
+                          Payment order baru akan ditandai data_test=true.
+                        </div>
+                      </VCardText>
+                    </VCard>
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VCard
+                      variant="outlined"
+                      class="h-100"
+                    >
+                      <VCardText>
+                        <VSwitch
+                          v-model="form.serveTestVa"
+                          label="Layani nomor VA uji (9999xxxxxx)"
+                          color="warning"
+                          hide-details
+                        />
+                        <div class="text-caption text-medium-emphasis ms-10">
+                          Matikan di produksi; hanya VA uji yang sudah dibuat di SIMKEU yang dilayani.
+                        </div>
+                      </VCardText>
+                    </VCard>
                   </VCol>
                   <VCol
                     v-show="configurationSection === 'security'"
                     cols="12"
                   >
-                    <VSwitch
-                      v-model="form.testMode"
-                      label="Aktifkan Mode Uji"
-                      color="warning"
-                      hint="Payment order baru akan ditandai data_test=true."
-                      persistent-hint
+                    <VSelect
+                      v-model="form.databaseFailureMode"
+                      label="Simulasi DB Down (Skenario SIT A4 / B3)"
+                      :items="[
+                        { title: 'Nonaktif — layanan normal', value: 'none' },
+                        { title: 'Transaksi saja — Inquiry/Payment balas DB Error, Auth tetap jalan', value: 'transactions' },
+                        { title: 'Semua — Auth ikut gagal, seperti DB benar-benar mati', value: 'all' },
+                      ]"
                     />
+                    <VAlert
+                      v-if="form.databaseFailureMode !== 'none'"
+                      type="error"
+                      variant="tonal"
+                      density="compact"
+                    >
+                      Simulasi DB Error sedang aktif. Nonaktifkan kembali segera setelah pengujian BSI selesai.
+                    </VAlert>
                   </VCol>
                 </VRow>
               </VCardText>
@@ -1059,18 +1259,18 @@ onMounted(async () => {
                 prepend-icon="ri-file-copy-line"
                 @click="copyText(adminPanelText, 'Data Admin Panel BSI')"
               >
-                Salin Semua Non-Secret
+                Salin Semua
               </VBtn>
             </div>
           </VCardItem>
 
           <VCardText>
             <VAlert
-              type="warning"
+              type="info"
               variant="tonal"
               class="mb-6"
             >
-              Secret yang sudah tersimpan tidak pernah dikirim kembali oleh API. Untuk menyalinnya ke portal BSI, isi ulang Client Secret atau Reconciliation Secret pada form di atas; nilainya tidak perlu disimpan ulang bila tidak berubah.
+              Secret disimpan terenkripsi di database dan hanya ditampilkan pada menu admin ini. Gunakan tombol salin untuk mengisikan nilainya ke portal BSI.
             </VAlert>
 
             <VRow>
