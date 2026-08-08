@@ -400,7 +400,10 @@ onMounted(() => {
           {{ formatTanggal(item.tanggal_transaksi) }}
         </template>
         <template #item.nominal="{ item }">
-          <span class="font-weight-bold">{{ formatMoney(item.nominal, item.mata_uang) }}</span>
+          <span
+            class="font-weight-bold"
+            :class="{ 'text-error': Number(item.nominal) < 0 }"
+          >{{ formatMoney(item.nominal, item.mata_uang) }}</span>
         </template>
         <template #bottom>
           <VDivider />

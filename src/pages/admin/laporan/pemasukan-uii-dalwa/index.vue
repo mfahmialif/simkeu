@@ -610,7 +610,10 @@ onMounted(() => {
                 v-for="(row, index) in tableData"
                 :key="index"
                 class="data-row"
-                :class="{ 'even-row': index % 2 === 0 }"
+                :class="{
+                  'even-row': index % 2 === 0,
+                  'service-fee-row': row.kategori === 'BIAYA LAYANAN BSI',
+                }"
               >
                 <td class="col-no text-center border-cell">
                   {{ row.no }}
@@ -702,7 +705,10 @@ onMounted(() => {
                   v-for="(row, index) in monthInfo.data"
                   :key="index"
                   class="data-row"
-                  :class="{ 'even-row': index % 2 === 0 }"
+                  :class="{
+                    'even-row': index % 2 === 0,
+                    'service-fee-row': row.kategori === 'BIAYA LAYANAN BSI',
+                  }"
                 >
                   <td class="col-no text-center border-cell">
                     {{ row.no }}
@@ -918,6 +924,12 @@ onMounted(() => {
 
 .report-table .even-row td {
   background-color: rgba(var(--v-theme-on-surface), 0.02);
+}
+
+.report-table .service-fee-row td {
+  color: rgb(var(--v-theme-error));
+  background-color: rgba(var(--v-theme-error), 0.08) !important;
+  font-weight: 700;
 }
 
 .total-row td {

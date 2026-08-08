@@ -721,7 +721,10 @@ onMounted(() => {
                   v-for="col in columns"
                   :key="col.key"
                   class="col-amount text-right"
-                  :class="{ 'has-value': row[col.key] > 0 }"
+                  :class="{
+                    'has-value': row[col.key] > 0,
+                    'is-deduction': row[col.key] < 0,
+                  }"
                 >
                   {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
                 </td>
@@ -878,7 +881,10 @@ onMounted(() => {
                   v-for="col in columns"
                   :key="col.key"
                   class="col-amount text-right"
-                  :class="{ 'has-value': row[col.key] > 0 }"
+                  :class="{
+                    'has-value': row[col.key] > 0,
+                    'is-deduction': row[col.key] < 0,
+                  }"
                 >
                   {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
                 </td>
@@ -1148,6 +1154,11 @@ onMounted(() => {
 
 .has-value-total {
   color: rgb(var(--v-theme-success)) !important;
+  font-weight: 700;
+}
+
+.is-deduction {
+  color: rgb(var(--v-theme-error)) !important;
   font-weight: 700;
 }
 

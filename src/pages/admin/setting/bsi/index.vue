@@ -1222,7 +1222,8 @@ onMounted(async () => {
                     >
                       <template v-if="sandboxAdminFeeLocked">
                         <strong>Ketentuan Sandbox:</strong> biaya admin tetap <strong>Rp3.000</strong>
-                        dan selalu dibebankan kepada pembayar. Pengaturan ini dikunci dan tidak dapat diubah.
+                        dan selalu dibebankan kepada pembayar. SIMKEU hanya mengirim nominal pokok tagihan;
+                        kanal BSI yang menambahkan biaya tersebut satu kali. Pengaturan ini dikunci dan tidak dapat diubah.
                       </template>
                       <template v-else-if="form.adminFeeBearer === 'payer'">
                         Biaya dibebankan ke pembayar. Contoh tagihan Rp10.000 akan ditampilkan di BSI sebesar
@@ -2182,7 +2183,21 @@ onMounted(async () => {
                       <strong>Biaya admin:</strong> {{ rupiah(simulationResult.admin_fee_amount) }}
                       ({{ simulationResult.admin_fee_bearer === 'payer' ? 'pembayar' : 'institusi' }})
                     </div>
-                    <div class="text-body-2 text-primary">
+                    <template v-if="sandboxAdminFeeLocked">
+                      <div class="text-body-2">
+                        <strong>Nominal dikirim ke BSI:</strong> {{ rupiah(simulationResult.total) }}
+                      </div>
+                      <div class="text-body-2 text-primary">
+                        <strong>Perkiraan total di kanal BSI:</strong> {{ rupiah(simulationResult.payable_total) }}
+                      </div>
+                      <div class="text-caption text-warning">
+                        Biaya Rp3.000 ditambahkan oleh sandbox BSI, bukan oleh nominal API SIMKEU.
+                      </div>
+                    </template>
+                    <div
+                      v-else
+                      class="text-body-2 text-primary"
+                    >
                       <strong>Total dibayar di BSI:</strong> {{ rupiah(simulationResult.payable_total) }}
                     </div>
                   </VCol>
