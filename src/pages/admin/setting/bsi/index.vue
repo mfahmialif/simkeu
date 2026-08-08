@@ -307,10 +307,10 @@ const formatDateTime = value => value
 
 const formatJson = value => JSON.stringify(value ?? null, null, 2)
 
-const messagingLogCustomerNo = log => log.payment?.bsi_payment_number
+const messagingLogCustomerNo = log => log.request_payload?.customerNo
   || log.payment?.customer_no
-  || log.request_payload?.virtualAccountNo
-  || log.request_payload?.customerNo
+  || log.payment?.bsi_payment_number
+  || log.request_payload?.virtualAccountNo?.trim()
   || '-'
 
 const messagingLogMessage = log => log.response_payload?.responseMessage
@@ -372,10 +372,12 @@ const loadMessagingLogs = async (page = messagingLogsPage.value) => {
   messagingLogsLoading.value = true
   try {
     const response = await $api('/admin/setting/bsi/messaging-logs', {
-      query: {
+      params: {
         page,
         limit: 20,
-        search: messagingLogSearch.value || undefined,
+        ...(String(messagingLogSearch.value || '').trim()
+          ? { search: String(messagingLogSearch.value).trim() }
+          : {}),
         operation: messagingLogOperation.value,
         'failed_only': messagingLogFailedOnly.value ? 1 : 0,
       },
@@ -395,10 +397,12 @@ const loadReconciliations = async (page = reconciliationsPage.value) => {
   reconciliationsLoading.value = true
   try {
     const response = await $api('/admin/setting/bsi/reconciliations', {
-      query: {
+      params: {
         page,
         limit: 20,
-        search: reconciliationSearch.value || undefined,
+        ...(String(reconciliationSearch.value || '').trim()
+          ? { search: String(reconciliationSearch.value).trim() }
+          : {}),
         status: reconciliationStatus.value,
       },
     })
@@ -2580,13 +2584,15 @@ onMounted(async () => {
   position: relative;
   overflow-x: auto;
   padding: 18px;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border: 1px solid rgba(148, 163, 184, 32%);
   border-radius: 8px;
-  background: rgb(var(--v-theme-surface-variant));
+  background: #111827;
+  color: #e5e7eb;
 }
 
 .code-block pre {
   margin: 0;
+  color: inherit;
   font-family: "JetBrains Mono", Consolas, monospace;
   font-size: 0.84rem;
   white-space: pre-wrap;
