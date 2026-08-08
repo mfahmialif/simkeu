@@ -28,6 +28,21 @@ const summaryLoading = ref(false)
 const summaryData = ref(null)
 const testPaymentsLoading = ref(false)
 const testPayments = ref([])
+const messagingLogsLoading = ref(false)
+const messagingLogs = ref([])
+const messagingLogsPage = ref(1)
+const messagingLogsLastPage = ref(1)
+const messagingLogSearch = ref('')
+const messagingLogOperation = ref('all')
+const messagingLogFailedOnly = ref(false)
+const logDetailDialog = ref(false)
+const selectedMessagingLog = ref(null)
+const reconciliationsLoading = ref(false)
+const reconciliations = ref([])
+const reconciliationsPage = ref(1)
+const reconciliationsLastPage = ref(1)
+const reconciliationSearch = ref('')
+const reconciliationStatus = ref('all')
 
 const form = reactive({
   enabled: false,
@@ -290,6 +305,30 @@ const formatDateTime = value => value
   }).format(new Date(value))
   : '-'
 
+const formatJson = value => JSON.stringify(value ?? null, null, 2)
+
+const messagingLogCustomerNo = log => log.payment?.bsi_payment_number
+  || log.payment?.customer_no
+  || log.request_payload?.virtualAccountNo
+  || log.request_payload?.customerNo
+  || '-'
+
+const messagingLogMessage = log => log.response_payload?.responseMessage
+  || (Array.isArray(log.response_payload) ? `${log.response_payload.length} baris diterima` : null)
+  || (log.outcome === 'success' ? 'Successful' : 'Request gagal')
+
+const showMessagingLogDetail = log => {
+  selectedMessagingLog.value = log
+  logDetailDialog.value = true
+}
+
+const reconciliationMatchLabel = item => {
+  if (item.match_status === 'matched')
+    return 'cocok'
+
+  return item.payment ? 'tidak cocok' : 'tidak ditemukan'
+}
+
 const paymentStatusColor = status => ({
   pending: 'warning',
   success: 'success',
@@ -326,6 +365,51 @@ const loadTestPayments = async () => {
     showSnackbar({ text: errorMessage(error), color: 'error' })
   } finally {
     testPaymentsLoading.value = false
+  }
+}
+
+const loadMessagingLogs = async (page = messagingLogsPage.value) => {
+  messagingLogsLoading.value = true
+  try {
+    const response = await $api('/admin/setting/bsi/messaging-logs', {
+      query: {
+        page,
+        limit: 20,
+        search: messagingLogSearch.value || undefined,
+        operation: messagingLogOperation.value,
+        'failed_only': messagingLogFailedOnly.value ? 1 : 0,
+      },
+    })
+
+    messagingLogs.value = response.data?.data || []
+    messagingLogsPage.value = Number(response.data?.current_page || 1)
+    messagingLogsLastPage.value = Number(response.data?.last_page || 1)
+  } catch (error) {
+    showSnackbar({ text: errorMessage(error), color: 'error' })
+  } finally {
+    messagingLogsLoading.value = false
+  }
+}
+
+const loadReconciliations = async (page = reconciliationsPage.value) => {
+  reconciliationsLoading.value = true
+  try {
+    const response = await $api('/admin/setting/bsi/reconciliations', {
+      query: {
+        page,
+        limit: 20,
+        search: reconciliationSearch.value || undefined,
+        status: reconciliationStatus.value,
+      },
+    })
+
+    reconciliations.value = response.data?.data || []
+    reconciliationsPage.value = Number(response.data?.current_page || 1)
+    reconciliationsLastPage.value = Number(response.data?.last_page || 1)
+  } catch (error) {
+    showSnackbar({ text: errorMessage(error), color: 'error' })
+  } finally {
+    reconciliationsLoading.value = false
   }
 }
 
@@ -506,6 +590,12 @@ watch(activeTab, tab => {
 
   if (tab === 'simulation')
     loadTestPayments()
+
+  if (tab === 'messaging')
+    loadMessagingLogs()
+
+  if (tab === 'reconciliation')
+    loadReconciliations()
 })
 
 onMounted(async () => {
@@ -558,6 +648,18 @@ onMounted(async () => {
           prepend-icon="ri-settings-3-line"
         >
           Konfigurasi H2H
+        </VTab>
+        <VTab
+          value="messaging"
+          prepend-icon="ri-list-check-3"
+        >
+          Log Messaging
+        </VTab>
+        <VTab
+          value="reconciliation"
+          prepend-icon="ri-file-list-3-line"
+        >
+          Rekonsiliasi
         </VTab>
         <VTab
           value="docs"
@@ -770,7 +872,7 @@ onMounted(async () => {
                       {{ bsiVaSample }}
                     </div>
                     <div class="text-caption">
-                      kode BPI ({{ form.kodeBpi || '0000' }}) + customer number maksimal 12 digit
+                      kode BPI ({{ form.kodeBpi || '0000' }}) + NIM tanpa titik, maksimal 12 digit
                     </div>
                   </VCardText>
                 </VCard>
@@ -788,7 +890,7 @@ onMounted(async () => {
                       {{ interbankVaSample }}
                     </div>
                     <div class="text-caption">
-                      900 + kode BPI + customer number, maksimal 19 digit
+                      900 + kode BPI + NIM tanpa titik, maksimal 19 digit
                     </div>
                   </VCardText>
                 </VCard>
@@ -1396,12 +1498,326 @@ onMounted(async () => {
         </VCard>
       </VWindowItem>
 
+      <VWindowItem value="messaging">
+        <VCard>
+          <VCardItem>
+            <div class="d-flex flex-wrap align-center gap-3">
+              <div>
+                <VCardTitle>Log Messaging H2H</VCardTitle>
+                <VCardSubtitle>
+                  Riwayat Auth, Inquiry, Payment, Advice, dan Rekonsiliasi yang diterima dari BSI.
+                </VCardSubtitle>
+              </div>
+              <VSpacer />
+              <VBtn
+                variant="tonal"
+                prepend-icon="ri-refresh-line"
+                :loading="messagingLogsLoading"
+                @click="loadMessagingLogs(1)"
+              >
+                Muat Ulang
+              </VBtn>
+            </div>
+          </VCardItem>
+
+          <VCardText>
+            <VRow align="center">
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <VTextField
+                  v-model="messagingLogSearch"
+                  label="Cari customer number / external ID / kode"
+                  prepend-inner-icon="ri-search-line"
+                  clearable
+                  @keyup.enter="loadMessagingLogs(1)"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="3"
+              >
+                <VSelect
+                  v-model="messagingLogOperation"
+                  label="Event"
+                  :items="[
+                    { title: 'Semua event', value: 'all' },
+                    { title: 'Auth', value: 'auth' },
+                    { title: 'Inquiry', value: 'inquiry' },
+                    { title: 'Payment', value: 'payment' },
+                    { title: 'Advice', value: 'advice' },
+                    { title: 'Rekonsiliasi', value: 'reconciliation' },
+                  ]"
+                  @update:model-value="loadMessagingLogs(1)"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="3"
+              >
+                <VCheckbox
+                  v-model="messagingLogFailedOnly"
+                  label="Hanya gagal"
+                  hide-details
+                  @update:model-value="loadMessagingLogs(1)"
+                />
+              </VCol>
+            </VRow>
+          </VCardText>
+
+          <VProgressLinear
+            v-if="messagingLogsLoading"
+            indeterminate
+            color="primary"
+          />
+
+          <VTable class="text-no-wrap">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Event</th>
+                <th>Customer No.</th>
+                <th>Kode</th>
+                <th>Pesan</th>
+                <th class="text-center">
+                  SIG
+                </th>
+                <th class="text-end">
+                  MS
+                </th>
+                <th>IP</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="log in messagingLogs"
+                :key="log.id"
+              >
+                <td>{{ formatDateTime(log.requested_at) }}</td>
+                <td class="font-weight-medium text-uppercase">
+                  {{ log.operation }}
+                </td>
+                <td class="font-monospace">
+                  {{ messagingLogCustomerNo(log) }}
+                </td>
+                <td>
+                  <VChip
+                    :color="log.outcome === 'success' ? 'success' : 'error'"
+                    size="small"
+                    label
+                  >
+                    {{ log.response_code || log.http_status || '-' }}
+                  </VChip>
+                </td>
+                <td>{{ messagingLogMessage(log) }}</td>
+                <td class="text-center">
+                  <VIcon
+                    v-if="log.signature_valid === true"
+                    icon="ri-shield-check-line"
+                    color="success"
+                  />
+                  <VIcon
+                    v-else-if="log.signature_valid === false"
+                    icon="ri-shield-cross-line"
+                    color="error"
+                  />
+                  <span
+                    v-else
+                    class="text-medium-emphasis"
+                  >—</span>
+                </td>
+                <td class="text-end">
+                  {{ log.duration_ms }}
+                </td>
+                <td class="font-monospace">
+                  {{ log.source_ip || '-' }}
+                </td>
+                <td class="text-end">
+                  <VBtn
+                    variant="text"
+                    size="small"
+                    @click="showMessagingLogDetail(log)"
+                  >
+                    Detail
+                  </VBtn>
+                </td>
+              </tr>
+              <tr v-if="!messagingLogsLoading && !messagingLogs.length">
+                <td
+                  colspan="9"
+                  class="text-center text-medium-emphasis py-8"
+                >
+                  Belum ada log messaging yang sesuai filter.
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+
+          <VCardActions
+            v-if="messagingLogsLastPage > 1"
+            class="justify-center py-4"
+          >
+            <VPagination
+              v-model="messagingLogsPage"
+              :length="messagingLogsLastPage"
+              :total-visible="7"
+              @update:model-value="loadMessagingLogs"
+            />
+          </VCardActions>
+        </VCard>
+      </VWindowItem>
+
+      <VWindowItem value="reconciliation">
+        <VCard>
+          <VCardItem>
+            <div class="d-flex flex-wrap align-center gap-3">
+              <div>
+                <VCardTitle>Data Rekonsiliasi dari BSI</VCardTitle>
+                <VCardSubtitle>
+                  Hasil pencocokan pembayaran, settlement, dan checksum laporan BSI.
+                </VCardSubtitle>
+              </div>
+              <VSpacer />
+              <VBtn
+                variant="tonal"
+                prepend-icon="ri-refresh-line"
+                :loading="reconciliationsLoading"
+                @click="loadReconciliations(1)"
+              >
+                Muat Ulang
+              </VBtn>
+            </div>
+          </VCardItem>
+
+          <VCardText>
+            <VRow align="center">
+              <VCol
+                cols="12"
+                md="8"
+              >
+                <VTextField
+                  v-model="reconciliationSearch"
+                  label="Cari ID rekon / nomor pembayaran / jurnal / mahasiswa"
+                  prepend-inner-icon="ri-search-line"
+                  clearable
+                  @keyup.enter="loadReconciliations(1)"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VSelect
+                  v-model="reconciliationStatus"
+                  label="Hasil Pencocokan"
+                  :items="[
+                    { title: 'Semua hasil', value: 'all' },
+                    { title: 'Cocok', value: 'matched' },
+                    { title: 'Tidak cocok / tidak ditemukan', value: 'mismatch' },
+                  ]"
+                  @update:model-value="loadReconciliations(1)"
+                />
+              </VCol>
+            </VRow>
+          </VCardText>
+
+          <VProgressLinear
+            v-if="reconciliationsLoading"
+            indeterminate
+            color="primary"
+          />
+
+          <VTable class="text-no-wrap">
+            <thead>
+              <tr>
+                <th>ID Rekon</th>
+                <th>Waktu Transaksi</th>
+                <th>Nomor Bayar</th>
+                <th>Nama</th>
+                <th class="text-end">
+                  Pembayaran
+                </th>
+                <th class="text-end">
+                  Settlement
+                </th>
+                <th>Kode FT</th>
+                <th class="text-center">
+                  Checksum
+                </th>
+                <th>Cocok</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="item in reconciliations"
+                :key="item.id"
+              >
+                <td class="font-monospace">
+                  {{ item.recon_id }}
+                </td>
+                <td>{{ formatDateTime(item.transaction_at) }}</td>
+                <td class="font-monospace">
+                  {{ item.payment_number || item.payment?.bsi_payment_number || '-' }}
+                </td>
+                <td>{{ item.payment?.nama_mahasiswa || '-' }}</td>
+                <td class="text-end font-weight-medium">
+                  {{ rupiah(item.payment_amount) }}
+                </td>
+                <td class="text-end">
+                  {{ rupiah(item.settlement_amount) }}
+                </td>
+                <td class="font-monospace">
+                  {{ [item.journal_number, item.settlement_code].filter(Boolean).join(' / ') || '-' }}
+                </td>
+                <td class="text-center">
+                  <VIcon
+                    :icon="item.checksum_valid ? 'ri-shield-check-line' : 'ri-shield-cross-line'"
+                    :color="item.checksum_valid ? 'success' : 'error'"
+                  />
+                </td>
+                <td>
+                  <VChip
+                    :color="item.match_status === 'matched' ? 'success' : 'error'"
+                    size="small"
+                    label
+                  >
+                    {{ reconciliationMatchLabel(item) }}
+                  </VChip>
+                </td>
+              </tr>
+              <tr v-if="!reconciliationsLoading && !reconciliations.length">
+                <td
+                  colspan="9"
+                  class="text-center text-medium-emphasis py-8"
+                >
+                  Belum ada data rekonsiliasi yang sesuai filter.
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+
+          <VCardActions
+            v-if="reconciliationsLastPage > 1"
+            class="justify-center py-4"
+          >
+            <VPagination
+              v-model="reconciliationsPage"
+              :length="reconciliationsLastPage"
+              :total-visible="7"
+              @update:model-value="loadReconciliations"
+            />
+          </VCardActions>
+        </VCard>
+      </VWindowItem>
+
       <VWindowItem value="simulation">
         <VCard>
           <VCardItem>
             <VCardTitle>Simulasi Pembayaran BSI</VCardTitle>
             <VCardSubtitle>
-              Cari mahasiswa, pilih tagihan, lalu tentukan nominal pembayaran maksimal sebesar sisa yang tersedia.
+              Cari mahasiswa, pilih tagihan, lalu tentukan nominal pembayaran maksimal sebesar sisa yang tersedia. Customer number memakai NIM tanpa titik.
             </VCardSubtitle>
           </VCardItem>
 
@@ -2013,6 +2429,84 @@ onMounted(async () => {
     </VWindow>
 
     <VDialog
+      v-model="logDetailDialog"
+      max-width="1000"
+      scrollable
+    >
+      <VCard title="Detail Log Messaging H2H">
+        <VCardText v-if="selectedMessagingLog">
+          <VRow class="mb-4">
+            <VCol
+              cols="12"
+              md="4"
+            >
+              <div class="text-caption text-medium-emphasis">
+                Event / Waktu
+              </div>
+              <div class="font-weight-medium text-uppercase">
+                {{ selectedMessagingLog.operation }}
+              </div>
+              <div>{{ formatDateTime(selectedMessagingLog.requested_at) }}</div>
+            </VCol>
+            <VCol
+              cols="12"
+              md="4"
+            >
+              <div class="text-caption text-medium-emphasis">
+                Respons
+              </div>
+              <div class="font-weight-medium">
+                {{ selectedMessagingLog.response_code || selectedMessagingLog.http_status || '-' }}
+                — {{ messagingLogMessage(selectedMessagingLog) }}
+              </div>
+              <div>{{ selectedMessagingLog.duration_ms }} ms</div>
+            </VCol>
+            <VCol
+              cols="12"
+              md="4"
+            >
+              <div class="text-caption text-medium-emphasis">
+                Customer / External ID
+              </div>
+              <div class="font-weight-medium font-monospace">
+                {{ messagingLogCustomerNo(selectedMessagingLog) }}
+              </div>
+              <div class="font-monospace">
+                {{ selectedMessagingLog.external_id || '-' }}
+              </div>
+            </VCol>
+          </VRow>
+
+          <h4 class="text-subtitle-1 mb-2">
+            Request Headers
+          </h4>
+          <div class="code-block mb-5">
+            <pre>{{ formatJson(selectedMessagingLog.request_headers) }}</pre>
+          </div>
+
+          <h4 class="text-subtitle-1 mb-2">
+            Request Body
+          </h4>
+          <div class="code-block mb-5">
+            <pre>{{ formatJson(selectedMessagingLog.request_payload) }}</pre>
+          </div>
+
+          <h4 class="text-subtitle-1 mb-2">
+            Response Body
+          </h4>
+          <div class="code-block">
+            <pre>{{ formatJson(selectedMessagingLog.response_payload) }}</pre>
+          </div>
+        </VCardText>
+        <VCardActions class="justify-end">
+          <VBtn @click="logDetailDialog = false">
+            Tutup
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <VDialog
       v-model="apiKeyDialog"
       max-width="720"
       persistent
@@ -2052,11 +2546,11 @@ onMounted(async () => {
       <VCard :title="credentialDialogTitle">
         <VCardText>
           <VAlert
-            type="warning"
+            type="info"
             variant="tonal"
             class="mb-4"
           >
-            Salin seluruh nilai berikut ke portal SmartBilling BSI sekarang. Secret lengkap tidak akan dikirim kembali setelah dialog ditutup.
+            Salin seluruh nilai berikut ke portal SmartBilling BSI. Nilainya juga tersimpan terenkripsi dan dapat disalin kembali dari menu Kredensial Host-to-Host.
           </VAlert>
           <VTextField
             v-for="credential in generatedCredentials"
