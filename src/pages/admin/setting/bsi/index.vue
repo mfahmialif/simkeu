@@ -59,8 +59,9 @@ const form = reactive({
   reconciliationSecret: '',
   reconciliationEmail: '',
   paymentExpiryMinutes: 1440,
-  adminFeeBearer: 'payer',
-  adminFeeAmount: 3000,
+  adminFeeBearer: 'institution',
+  adminFeeAmount: 2500,
+  sandboxAdminFeeAmount: 3000,
   timestampTolerance: 300,
   allowedIpsText: '',
   enforceIpAllowlist: false,
@@ -70,13 +71,24 @@ const form = reactive({
   databaseFailureMode: 'none',
 })
 
-const sandboxAdminFeeLocked = computed(() => form.environment === 'sandbox')
+const isSandbox = computed(() => form.environment === 'sandbox')
 
-watch(() => form.environment, environment => {
-  if (environment === 'sandbox') {
-    form.adminFeeBearer = 'payer'
-    form.adminFeeAmount = 3000
-  }
+const adminFeeBearerInput = computed({
+  get: () => isSandbox.value ? 'payer' : form.adminFeeBearer,
+  set: value => {
+    if (!isSandbox.value)
+      form.adminFeeBearer = value
+  },
+})
+
+const adminFeeAmountInput = computed({
+  get: () => isSandbox.value ? form.sandboxAdminFeeAmount : form.adminFeeAmount,
+  set: value => {
+    if (isSandbox.value)
+      form.sandboxAdminFeeAmount = Number(value)
+    else
+      form.adminFeeAmount = Number(value)
+  },
 })
 
 const errorMessage = error => {
@@ -101,8 +113,9 @@ const applySettings = data => {
     reconciliationSecret: data.reconciliation_secret || '',
     reconciliationEmail: data.reconciliation_email || '',
     paymentExpiryMinutes: Number(data.payment_expiry_minutes || 1440),
-    adminFeeBearer: data.admin_fee_bearer || 'institution',
-    adminFeeAmount: Number(data.admin_fee_amount ?? 2500),
+    adminFeeBearer: data.production_admin_fee_bearer || data.admin_fee_bearer || 'institution',
+    adminFeeAmount: Number(data.production_admin_fee_amount ?? data.admin_fee_amount ?? 2500),
+    sandboxAdminFeeAmount: Number(data.sandbox_admin_fee_amount ?? 3000),
     timestampTolerance: Number(data.timestamp_tolerance ?? 300),
     allowedIpsText: (data.allowed_ips || []).join('\n'),
     enforceIpAllowlist: Boolean(data.enforce_ip_allowlist),
@@ -148,8 +161,9 @@ const saveSettings = async () => {
         'reconciliation_secret': form.reconciliationSecret || null,
         'reconciliation_email': form.reconciliationEmail || null,
         'payment_expiry_minutes': Number(form.paymentExpiryMinutes),
-        'admin_fee_bearer': sandboxAdminFeeLocked.value ? 'payer' : form.adminFeeBearer,
-        'admin_fee_amount': sandboxAdminFeeLocked.value ? 3000 : Number(form.adminFeeAmount),
+        'admin_fee_bearer': form.adminFeeBearer,
+        'admin_fee_amount': Number(form.adminFeeAmount),
+        'sandbox_admin_fee_amount': Number(form.sandboxAdminFeeAmount),
         'timestamp_tolerance': Number(form.timestampTolerance),
         'allowed_ips': allowedIps,
         'enforce_ip_allowlist': form.enforceIpAllowlist,
@@ -1185,9 +1199,9 @@ onMounted(async () => {
                     md="6"
                   >
                     <VSelect
-                      v-model="form.adminFeeBearer"
+                      v-model="adminFeeBearerInput"
                       label="Penanggung Biaya Admin BSI"
-                      :disabled="sandboxAdminFeeLocked"
+                      :disabled="isSandbox"
                       :items="[
                         { title: 'Dibebankan ke institusi', value: 'institution' },
                         { title: 'Dibebankan ke pembayar', value: 'payer' },
@@ -1200,14 +1214,13 @@ onMounted(async () => {
                     md="6"
                   >
                     <VTextField
-                      v-model.number="form.adminFeeAmount"
+                      v-model.number="adminFeeAmountInput"
                       type="number"
                       min="0"
                       prefix="Rp"
                       label="Nominal Biaya Admin BSI"
-                      :disabled="sandboxAdminFeeLocked"
-                      :hint="sandboxAdminFeeLocked
-                        ? 'Nilai sandbox ditetapkan tetap oleh BSI.'
+                      :hint="isSandbox
+                        ? 'Biaya sandbox dapat disesuaikan; penanggungnya tetap pembayar.'
                         : 'Dapat diubah jika tarif BSI berubah.'"
                       persistent-hint
                     />
@@ -1217,18 +1230,18 @@ onMounted(async () => {
                     cols="12"
                   >
                     <VAlert
-                      :type="sandboxAdminFeeLocked ? 'warning' : 'info'"
+                      :type="isSandbox ? 'warning' : 'info'"
                       variant="tonal"
                     >
-                      <template v-if="sandboxAdminFeeLocked">
-                        <strong>Ketentuan Sandbox:</strong> biaya admin tetap <strong>Rp3.000</strong>
+                      <template v-if="isSandbox">
+                        <strong>Ketentuan Sandbox:</strong> biaya admin <strong>{{ rupiah(form.sandboxAdminFeeAmount) }}</strong>
                         dan selalu dibebankan kepada pembayar. SIMKEU hanya mengirim nominal pokok tagihan;
-                        kanal BSI yang menambahkan biaya tersebut satu kali. Pengaturan ini dikunci dan tidak dapat diubah.
+                        kanal BSI yang menambahkan biaya tersebut satu kali.
                       </template>
                       <template v-else-if="form.adminFeeBearer === 'payer'">
                         Biaya dibebankan ke pembayar. Contoh tagihan Rp10.000 akan ditampilkan di BSI sebesar
                         <strong>{{ rupiah(10000 + Number(form.adminFeeAmount || 0)) }}</strong>;
-                        ledger tagihan tetap hanya mencatat Rp10.000.
+                        transaksi BSI tetap menyimpan nilai pokok tagihan Rp10.000.
                       </template>
                       <template v-else>
                         Biaya ditanggung institusi. Pembayar tetap membayar sesuai tagihan; dana settlement diperkirakan
@@ -1953,7 +1966,7 @@ onMounted(async () => {
               variant="tonal"
               class="mb-6"
             >
-              Simulasi ini membuat payment order BSI berstatus <code>pending</code>. Pembayaran baru masuk ledger setelah endpoint Payment dipanggil BSI.
+              Simulasi ini membuat payment order BSI berstatus <code>pending</code>. Endpoint Payment hanya memperbarui transaksi BSI dan tidak menulis ledger mahasiswa.
             </VAlert>
 
             <VRow align="center">
@@ -2183,7 +2196,7 @@ onMounted(async () => {
                       <strong>Biaya admin:</strong> {{ rupiah(simulationResult.admin_fee_amount) }}
                       ({{ simulationResult.admin_fee_bearer === 'payer' ? 'pembayar' : 'institusi' }})
                     </div>
-                    <template v-if="sandboxAdminFeeLocked">
+                    <template v-if="!simulationResult.production">
                       <div class="text-body-2">
                         <strong>Nominal dikirim ke BSI:</strong> {{ rupiah(simulationResult.total) }}
                       </div>
@@ -2191,7 +2204,8 @@ onMounted(async () => {
                         <strong>Perkiraan total di kanal BSI:</strong> {{ rupiah(simulationResult.payable_total) }}
                       </div>
                       <div class="text-caption text-warning">
-                        Biaya Rp3.000 ditambahkan oleh sandbox BSI, bukan oleh nominal API SIMKEU.
+                        Biaya {{ rupiah(simulationResult.admin_fee_amount) }} ditambahkan oleh sandbox BSI,
+                        bukan oleh nominal API SIMKEU.
                       </div>
                     </template>
                     <div
@@ -2531,7 +2545,7 @@ onMounted(async () => {
               <thead><tr><th>Status</th><th>Arti</th></tr></thead>
               <tbody>
                 <tr><td><code>pending</code></td><td>Menunggu pembayaran mahasiswa.</td></tr>
-                <tr><td><code>success</code></td><td>Pembayaran BSI telah diposting ke ledger SIMKEU.</td></tr>
+                <tr><td><code>success</code></td><td>Pembayaran telah dikonfirmasi dan tersimpan pada data BSI.</td></tr>
                 <tr><td><code>expired</code></td><td>Masa berlaku nomor pembayaran habis.</td></tr>
                 <tr><td><code>cancelled</code></td><td>Dibatalkan oleh SIAKAD/admin sebelum dibayar.</td></tr>
                 <tr><td><code>needs_review</code></td><td>Memerlukan pemeriksaan staf keuangan.</td></tr>
@@ -2605,7 +2619,7 @@ onMounted(async () => {
             variant="tonal"
             class="mb-4"
           >
-            Tindakan ini menghapus payment order uji beserta ledger pembayaran, nota, dan detail metode bayar yang terkait.
+            Tindakan ini hanya menghapus payment order dan detail transaksi uji BSI.
           </VAlert>
 
           <div v-if="selectedTestPayment">

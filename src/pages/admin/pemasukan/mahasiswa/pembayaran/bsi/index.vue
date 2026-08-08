@@ -12,9 +12,6 @@ const detailDialog = ref(false)
 const selectedPayment = ref(null)
 const detailLoading = ref(false)
 
-const postDialog = ref(false)
-const postTarget = ref(null)
-const confirmReview = ref(false)
 const actionLoading = ref(false)
 
 const rejectDialog = ref(false)
@@ -145,51 +142,6 @@ const showDetail = async item => {
   }
 }
 
-const showPostDialog = item => {
-  postTarget.value = item
-  confirmReview.value = false
-  postDialog.value = true
-}
-
-const submitPost = async () => {
-  if (postTarget.value?.status === 'needs_review' && !confirmReview.value) {
-    showSnackbar({
-      text: 'Konfirmasi nominal wajib dicentang sebelum transaksi diposting.',
-      color: 'warning',
-    })
-
-    return
-  }
-
-  actionLoading.value = true
-
-  try {
-    const response = await $api(
-      `/admin/pemasukan/mahasiswa/pembayaran-bsi/${postTarget.value.id}/post`,
-      {
-        method: 'POST',
-        body: {
-          'confirm_review': confirmReview.value,
-        },
-      },
-    )
-
-    showSnackbar({
-      text: response.message,
-      color: 'success',
-    })
-    postDialog.value = false
-    await fetchData()
-  } catch (error) {
-    showSnackbar({
-      text: errorMessage(error),
-      color: 'error',
-    })
-  } finally {
-    actionLoading.value = false
-  }
-}
-
 const showRejectDialog = item => {
   rejectTarget.value = item
   rejectionReason.value = ''
@@ -235,7 +187,6 @@ const submitReject = async () => {
   }
 }
 
-const canPost = item => canProcess.value && ['paid', 'needs_review'].includes(item.status)
 const canReject = item => canProcess.value && !['success', 'posted', 'rejected'].includes(item.status)
 
 watch([search, selectedStatus], () => {
@@ -414,16 +365,6 @@ onMounted(() => {
           </IconBtn>
 
           <IconBtn
-            v-if="canPost(item)"
-            size="small"
-            color="success"
-            title="Posting pembayaran"
-            @click="showPostDialog(item)"
-          >
-            <VIcon icon="ri-checkbox-circle-line" />
-          </IconBtn>
-
-          <IconBtn
             v-if="canReject(item)"
             size="small"
             color="error"
@@ -499,6 +440,20 @@ onMounted(() => {
             </div>
             <div>{{ selectedPayment.va_number }}</div>
           </VCol>
+          <VCol
+            cols="12"
+            md="6"
+          >
+            <div class="text-caption text-medium-emphasis">
+              Environment Transaksi
+            </div>
+            <VChip
+              size="small"
+              :color="selectedPayment.production ? 'success' : 'warning'"
+            >
+              {{ selectedPayment.production ? 'PRODUCTION' : 'SANDBOX' }}
+            </VChip>
+          </VCol>
         </VRow>
 
         <VDivider class="my-5" />
@@ -545,8 +500,8 @@ onMounted(() => {
           variant="tonal"
           class="mt-5"
         >
-          Nominal callback bank berbeda dari total transaksi. Periksa payload callback sebelum
-          melakukan posting.
+          Nominal callback bank berbeda dari total transaksi. Periksa payload callback dan
+          rekonsiliasi transaksi.
         </VAlert>
 
         <VAlert
@@ -641,46 +596,6 @@ onMounted(() => {
   </VDialog>
 
   <VDialog
-    v-model="postDialog"
-    max-width="560"
-  >
-    <VCard title="Posting Pembayaran BSI">
-      <DialogCloseBtn @click="postDialog = false" />
-
-      <VCardText>
-        Transaksi <strong>{{ postTarget?.nomor }}</strong> sebesar
-        <strong>{{ formatCurrency(postTarget?.total) }}</strong> akan dibuat menjadi transaksi
-        pembayaran mahasiswa.
-
-        <VCheckbox
-          v-if="postTarget?.status === 'needs_review'"
-          v-model="confirmReview"
-          class="mt-4"
-          label="Saya sudah memeriksa dan menyetujui perbedaan nominal callback."
-        />
-      </VCardText>
-
-      <VCardActions class="justify-end">
-        <VBtn
-          variant="outlined"
-          color="secondary"
-          :disabled="actionLoading"
-          @click="postDialog = false"
-        >
-          Batal
-        </VBtn>
-        <VBtn
-          color="success"
-          :loading="actionLoading"
-          @click="submitPost"
-        >
-          Posting
-        </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
-
-  <VDialog
     v-model="rejectDialog"
     max-width="560"
   >
@@ -689,8 +604,7 @@ onMounted(() => {
 
       <VCardText>
         <p>
-          Transaksi <strong>{{ rejectTarget?.nomor }}</strong> akan ditolak dan tidak dapat
-          diposting.
+          Transaksi <strong>{{ rejectTarget?.nomor }}</strong> akan ditolak.
         </p>
         <VTextarea
           v-model="rejectionReason"
