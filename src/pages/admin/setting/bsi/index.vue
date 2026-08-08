@@ -59,8 +59,8 @@ const form = reactive({
   reconciliationSecret: '',
   reconciliationEmail: '',
   paymentExpiryMinutes: 1440,
-  adminFeeBearer: 'institution',
-  adminFeeAmount: 2500,
+  adminFeeBearer: 'payer',
+  adminFeeAmount: 3000,
   timestampTolerance: 300,
   allowedIpsText: '',
   enforceIpAllowlist: false,
@@ -68,6 +68,15 @@ const form = reactive({
   logPayloads: true,
   serveTestVa: false,
   databaseFailureMode: 'none',
+})
+
+const sandboxAdminFeeLocked = computed(() => form.environment === 'sandbox')
+
+watch(() => form.environment, environment => {
+  if (environment === 'sandbox') {
+    form.adminFeeBearer = 'payer'
+    form.adminFeeAmount = 3000
+  }
 })
 
 const errorMessage = error => {
@@ -139,8 +148,8 @@ const saveSettings = async () => {
         'reconciliation_secret': form.reconciliationSecret || null,
         'reconciliation_email': form.reconciliationEmail || null,
         'payment_expiry_minutes': Number(form.paymentExpiryMinutes),
-        'admin_fee_bearer': form.adminFeeBearer,
-        'admin_fee_amount': Number(form.adminFeeAmount),
+        'admin_fee_bearer': sandboxAdminFeeLocked.value ? 'payer' : form.adminFeeBearer,
+        'admin_fee_amount': sandboxAdminFeeLocked.value ? 3000 : Number(form.adminFeeAmount),
         'timestamp_tolerance': Number(form.timestampTolerance),
         'allowed_ips': allowedIps,
         'enforce_ip_allowlist': form.enforceIpAllowlist,
@@ -1178,6 +1187,7 @@ onMounted(async () => {
                     <VSelect
                       v-model="form.adminFeeBearer"
                       label="Penanggung Biaya Admin BSI"
+                      :disabled="sandboxAdminFeeLocked"
                       :items="[
                         { title: 'Dibebankan ke institusi', value: 'institution' },
                         { title: 'Dibebankan ke pembayar', value: 'payer' },
@@ -1195,7 +1205,10 @@ onMounted(async () => {
                       min="0"
                       prefix="Rp"
                       label="Nominal Biaya Admin BSI"
-                      hint="Dapat diubah jika tarif BSI berubah."
+                      :disabled="sandboxAdminFeeLocked"
+                      :hint="sandboxAdminFeeLocked
+                        ? 'Nilai sandbox ditetapkan tetap oleh BSI.'
+                        : 'Dapat diubah jika tarif BSI berubah.'"
                       persistent-hint
                     />
                   </VCol>
@@ -1204,10 +1217,14 @@ onMounted(async () => {
                     cols="12"
                   >
                     <VAlert
-                      type="info"
+                      :type="sandboxAdminFeeLocked ? 'warning' : 'info'"
                       variant="tonal"
                     >
-                      <template v-if="form.adminFeeBearer === 'payer'">
+                      <template v-if="sandboxAdminFeeLocked">
+                        <strong>Ketentuan Sandbox:</strong> biaya admin tetap <strong>Rp3.000</strong>
+                        dan selalu dibebankan kepada pembayar. Pengaturan ini dikunci dan tidak dapat diubah.
+                      </template>
+                      <template v-else-if="form.adminFeeBearer === 'payer'">
                         Biaya dibebankan ke pembayar. Contoh tagihan Rp10.000 akan ditampilkan di BSI sebesar
                         <strong>{{ rupiah(10000 + Number(form.adminFeeAmount || 0)) }}</strong>;
                         ledger tagihan tetap hanya mencatat Rp10.000.
