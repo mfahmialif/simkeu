@@ -13,6 +13,11 @@ const selectedPayment = ref(null)
 const detailLoading = ref(false)
 
 const actionLoading = ref(false)
+const reconciliationStatsLoading = ref(false)
+const reconciliationStats = ref(null)
+const reconciliationDateStart = ref('')
+const reconciliationDateEnd = ref('')
+const router = useRouter()
 
 const rejectDialog = ref(false)
 const rejectTarget = ref(null)
@@ -42,6 +47,7 @@ const headers = [
   { title: 'Virtual Account', key: 'va_number', sortable: false },
   { title: 'Total', key: 'total', sortable: false, align: 'end' },
   { title: 'Status', key: 'status', sortable: false },
+  { title: 'Sinkronisasi', key: 'transferred', sortable: false },
   { title: 'Waktu', key: 'created_at', sortable: false },
   { title: 'Aksi', key: 'actions', sortable: false, align: 'center' },
 ]
@@ -113,6 +119,26 @@ const fetchData = async () => {
     initialLoading.value = false
   }
 }
+
+const fetchReconciliationStats = async () => {
+  reconciliationStatsLoading.value = true
+  try {
+    const response = await $api('/admin/pemasukan/mahasiswa/pembayaran-bsi/reconciliation-stats', {
+      params: {
+        ...(reconciliationDateStart.value ? { 'tanggal_mulai': reconciliationDateStart.value } : {}),
+        ...(reconciliationDateEnd.value ? { 'tanggal_akhir': reconciliationDateEnd.value } : {}),
+      },
+    })
+
+    reconciliationStats.value = response.data
+  } catch (error) {
+    showSnackbar({ text: errorMessage(error), color: 'error' })
+  } finally {
+    reconciliationStatsLoading.value = false
+  }
+}
+
+const refreshAll = () => Promise.all([fetchData(), fetchReconciliationStats()])
 
 const loadItems = ({ page: nextPage, itemsPerPage: nextItemsPerPage }) => {
   page.value = nextPage
@@ -195,11 +221,102 @@ watch([search, selectedStatus], () => {
 
 onMounted(() => {
   document.title = 'Pembayaran VA BSI - SIMKEU'
-  fetchData()
+  refreshAll()
 })
 </script>
 
 <template>
+  <VCard class="mb-4">
+    <VCardText>
+      <VRow align="center">
+        <VCol
+          cols="12"
+          md="4"
+        >
+          <div class="text-h6">
+            Statistik Rekonsiliasi
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            Filter berdasarkan waktu rekonsiliasi BSI.
+          </div>
+        </VCol>
+        <VCol
+          cols="12"
+          md="3"
+        >
+          <VTextField
+            v-model="reconciliationDateStart"
+            type="date"
+            label="Tanggal mulai"
+            density="compact"
+            hide-details
+          />
+        </VCol>
+        <VCol
+          cols="12"
+          md="3"
+        >
+          <VTextField
+            v-model="reconciliationDateEnd"
+            type="date"
+            label="Tanggal akhir"
+            density="compact"
+            hide-details
+          />
+        </VCol>
+        <VCol
+          cols="12"
+          md="2"
+        >
+          <VBtn
+            block
+            variant="tonal"
+            :loading="reconciliationStatsLoading"
+            @click="fetchReconciliationStats"
+          >
+            Terapkan
+          </VBtn>
+        </VCol>
+      </VRow>
+    </VCardText>
+  </VCard>
+
+  <VRow class="mb-4">
+    <VCol
+      v-for="card in [
+        { key: 'total', title: 'Total Rekonsiliasi', color: 'primary', icon: 'ri-file-list-3-line' },
+        { key: 'matched', title: 'Sudah Cocok', color: 'success', icon: 'ri-checkbox-circle-line' },
+        { key: 'mismatch', title: 'Belum Cocok', color: 'error', icon: 'ri-error-warning-line' },
+      ]"
+      :key="card.key"
+      cols="12"
+      md="4"
+    >
+      <VCard :loading="reconciliationStatsLoading">
+        <VCardText class="d-flex align-center gap-4">
+          <VAvatar
+            :color="card.color"
+            variant="tonal"
+            size="48"
+          >
+            <VIcon :icon="card.icon" />
+          </VAvatar>
+          <div>
+            <div class="text-body-2 text-medium-emphasis">
+              {{ card.title }}
+            </div>
+            <div class="text-h5 font-weight-bold">
+              {{ reconciliationStats?.[card.key]?.count || 0 }} data
+            </div>
+            <div class="text-body-2">
+              {{ formatCurrency(reconciliationStats?.[card.key]?.amount || 0) }}
+            </div>
+          </div>
+        </VCardText>
+      </VCard>
+    </VCol>
+  </VRow>
+
   <VCard>
     <VCardItem class="pb-4">
       <div class="d-flex flex-wrap align-center gap-3">
@@ -213,10 +330,19 @@ onMounted(() => {
         <VSpacer />
 
         <VBtn
+          v-if="canProcess"
+          color="primary"
+          prepend-icon="ri-loop-left-line"
+          @click="router.push('/admin/pemasukan/mahasiswa/pembayaran/bsi/sinkronisasi')"
+        >
+          Sinkronisasi
+        </VBtn>
+
+        <VBtn
           variant="tonal"
           prepend-icon="ri-refresh-line"
           :loading="loading"
-          @click="fetchData"
+          @click="refreshAll"
         >
           Muat Ulang
         </VBtn>
@@ -333,6 +459,16 @@ onMounted(() => {
           label
         >
           {{ getStatusMeta(item.status).label }}
+        </VChip>
+      </template>
+
+      <template #item.transferred="{ item }">
+        <VChip
+          :color="item.transferred ? 'success' : 'warning'"
+          size="small"
+          label
+        >
+          {{ item.transferred ? 'Sudah' : 'Belum' }}
         </VChip>
       </template>
 

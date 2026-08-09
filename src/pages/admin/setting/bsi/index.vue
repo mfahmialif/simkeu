@@ -46,6 +46,10 @@ const reconciliationsPage = ref(1)
 const reconciliationsLastPage = ref(1)
 const reconciliationSearch = ref('')
 const reconciliationStatus = ref('all')
+const reconciliationDateStart = ref('')
+const reconciliationDateEnd = ref('')
+const reconciliationStatsLoading = ref(false)
+const reconciliationStats = ref(null)
 
 const form = reactive({
   enabled: false,
@@ -58,7 +62,8 @@ const form = reactive({
   bpiPublicKey: '',
   reconciliationSecret: '',
   reconciliationEmail: '',
-  paymentExpiryMinutes: 1440,
+  paymentExpiryValue: '1440',
+  paymentExpiryUnit: 'minutes',
   adminFeeBearer: 'institution',
   adminFeeAmount: 2500,
   sandboxAdminFeeAmount: 3000,
@@ -69,6 +74,7 @@ const form = reactive({
   logPayloads: true,
   serveTestVa: false,
   databaseFailureMode: 'none',
+  autoTransferEnabled: false,
 })
 
 const isSandbox = computed(() => form.environment === 'sandbox')
@@ -112,7 +118,8 @@ const applySettings = data => {
     bpiPublicKey: data.bpi_public_key || '',
     reconciliationSecret: data.reconciliation_secret || '',
     reconciliationEmail: data.reconciliation_email || '',
-    paymentExpiryMinutes: Number(data.payment_expiry_minutes || 1440),
+    paymentExpiryValue: String(Number(data.payment_expiry_minutes || 1440)),
+    paymentExpiryUnit: 'minutes',
     adminFeeBearer: data.production_admin_fee_bearer || data.admin_fee_bearer || 'institution',
     adminFeeAmount: Number(data.production_admin_fee_amount ?? data.admin_fee_amount ?? 2500),
     sandboxAdminFeeAmount: Number(data.sandbox_admin_fee_amount ?? 3000),
@@ -123,7 +130,36 @@ const applySettings = data => {
     logPayloads: data.log_payloads !== false,
     serveTestVa: Boolean(data.serve_test_va),
     databaseFailureMode: data.database_failure_mode || 'none',
+    autoTransferEnabled: Boolean(data.auto_transfer_enabled),
   })
+}
+
+const expiryMinutes = () => {
+  const raw = String(form.paymentExpiryValue ?? '').trim()
+
+  const validPattern = form.paymentExpiryUnit === 'minutes'
+    ? /^\d+$/
+    : /^\d+(?:[.,]\d+)?$/
+
+  if (!validPattern.test(raw))
+    throw new Error(form.paymentExpiryUnit === 'minutes'
+      ? 'Expiry dalam menit harus berupa bilangan bulat.'
+      : 'Expiry jam/hari harus berupa angka; koma dan titik dapat digunakan sebagai desimal.')
+
+  const value = Number(raw.replace(',', '.'))
+
+  const multiplier = {
+    minutes: 1,
+    hours: 60,
+    days: 1440,
+  }[form.paymentExpiryUnit]
+
+  const minutes = Math.ceil(value * multiplier)
+
+  if (!Number.isFinite(minutes) || minutes < 5 || minutes > 10080)
+    throw new Error('Expiry setelah dikonversi harus antara 5 menit dan 7 hari.')
+
+  return minutes
 }
 
 const fetchSettings = async () => {
@@ -160,7 +196,7 @@ const saveSettings = async () => {
         'bpi_public_key': form.bpiPublicKey || null,
         'reconciliation_secret': form.reconciliationSecret || null,
         'reconciliation_email': form.reconciliationEmail || null,
-        'payment_expiry_minutes': Number(form.paymentExpiryMinutes),
+        'payment_expiry_minutes': expiryMinutes(),
         'admin_fee_bearer': form.adminFeeBearer,
         'admin_fee_amount': Number(form.adminFeeAmount),
         'sandbox_admin_fee_amount': Number(form.sandboxAdminFeeAmount),
@@ -171,6 +207,7 @@ const saveSettings = async () => {
         'log_payloads': form.logPayloads,
         'serve_test_va': form.serveTestVa,
         'database_failure_mode': form.databaseFailureMode,
+        'auto_transfer_enabled': form.autoTransferEnabled,
       },
     })
 
@@ -436,6 +473,8 @@ const loadReconciliations = async (page = reconciliationsPage.value) => {
           ? { search: String(reconciliationSearch.value).trim() }
           : {}),
         status: reconciliationStatus.value,
+        ...(reconciliationDateStart.value ? { 'tanggal_mulai': reconciliationDateStart.value } : {}),
+        ...(reconciliationDateEnd.value ? { 'tanggal_akhir': reconciliationDateEnd.value } : {}),
       },
     })
 
@@ -447,6 +486,31 @@ const loadReconciliations = async (page = reconciliationsPage.value) => {
   } finally {
     reconciliationsLoading.value = false
   }
+}
+
+const loadReconciliationStats = async () => {
+  reconciliationStatsLoading.value = true
+  try {
+    const response = await $api('/admin/pemasukan/mahasiswa/pembayaran-bsi/reconciliation-stats', {
+      params: {
+        ...(reconciliationDateStart.value ? { 'tanggal_mulai': reconciliationDateStart.value } : {}),
+        ...(reconciliationDateEnd.value ? { 'tanggal_akhir': reconciliationDateEnd.value } : {}),
+      },
+    })
+
+    reconciliationStats.value = response.data
+  } catch (error) {
+    showSnackbar({ text: errorMessage(error), color: 'error' })
+  } finally {
+    reconciliationStatsLoading.value = false
+  }
+}
+
+const loadReconciliationData = async () => {
+  await Promise.all([
+    loadReconciliations(1),
+    loadReconciliationStats(),
+  ])
 }
 
 const loadSimulationBills = async () => {
@@ -678,7 +742,7 @@ watch(activeTab, tab => {
     loadMessagingLogs()
 
   if (tab === 'reconciliation')
-    loadReconciliations()
+    loadReconciliationData()
 })
 
 onMounted(async () => {
@@ -1255,9 +1319,26 @@ onMounted(async () => {
                     md="3"
                   >
                     <VTextField
-                      v-model.number="form.paymentExpiryMinutes"
-                      type="number"
-                      label="Expiry (menit)"
+                      v-model="form.paymentExpiryValue"
+                      inputmode="decimal"
+                      label="Masa berlaku VA"
+                      hint="Jam dan hari mendukung koma; menit harus bulat."
+                      persistent-hint
+                    />
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="3"
+                  >
+                    <VSelect
+                      v-model="form.paymentExpiryUnit"
+                      label="Satuan expiry"
+                      :items="[
+                        { title: 'Menit', value: 'minutes' },
+                        { title: 'Jam', value: 'hours' },
+                        { title: 'Hari', value: 'days' },
+                      ]"
                     />
                   </VCol>
                   <VCol
@@ -1270,6 +1351,29 @@ onMounted(async () => {
                       type="number"
                       label="Toleransi waktu (detik)"
                     />
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VCard
+                      variant="outlined"
+                      class="h-100"
+                    >
+                      <VCardText>
+                        <VSwitch
+                          v-model="form.autoTransferEnabled"
+                          label="Sinkronisasi pembayaran otomatis"
+                          color="success"
+                          hide-details
+                        />
+                        <div class="text-caption text-medium-emphasis ms-10">
+                          Saat aktif, transaksi production yang success langsung dipindahkan ke pembukuan.
+                          Jika gagal, transaksi tetap dapat disinkronkan secara manual.
+                        </div>
+                      </VCardText>
+                    </VCard>
                   </VCol>
                   <VCol
                     v-show="configurationSection === 'security'"
@@ -1809,6 +1913,42 @@ onMounted(async () => {
       </VWindowItem>
 
       <VWindowItem value="reconciliation">
+        <VRow class="mb-4">
+          <VCol
+            v-for="card in [
+              { key: 'total', title: 'Total Rekonsiliasi', color: 'primary', icon: 'ri-file-list-3-line' },
+              { key: 'matched', title: 'Sudah Cocok', color: 'success', icon: 'ri-checkbox-circle-line' },
+              { key: 'mismatch', title: 'Belum Cocok', color: 'error', icon: 'ri-error-warning-line' },
+            ]"
+            :key="card.key"
+            cols="12"
+            md="4"
+          >
+            <VCard :loading="reconciliationStatsLoading">
+              <VCardText class="d-flex align-center gap-4">
+                <VAvatar
+                  :color="card.color"
+                  variant="tonal"
+                  size="48"
+                >
+                  <VIcon :icon="card.icon" />
+                </VAvatar>
+                <div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ card.title }}
+                  </div>
+                  <div class="text-h5 font-weight-bold">
+                    {{ reconciliationStats?.[card.key]?.count || 0 }} data
+                  </div>
+                  <div class="text-body-2">
+                    {{ rupiah(reconciliationStats?.[card.key]?.amount || 0) }}
+                  </div>
+                </div>
+              </VCardText>
+            </VCard>
+          </VCol>
+        </VRow>
+
         <VCard>
           <VCardItem>
             <div class="d-flex flex-wrap align-center gap-3">
@@ -1823,7 +1963,7 @@ onMounted(async () => {
                 variant="tonal"
                 prepend-icon="ri-refresh-line"
                 :loading="reconciliationsLoading"
-                @click="loadReconciliations(1)"
+                @click="loadReconciliationData"
               >
                 Muat Ulang
               </VBtn>
@@ -1834,7 +1974,7 @@ onMounted(async () => {
             <VRow align="center">
               <VCol
                 cols="12"
-                md="8"
+                md="6"
               >
                 <VTextField
                   v-model="reconciliationSearch"
@@ -1846,7 +1986,7 @@ onMounted(async () => {
               </VCol>
               <VCol
                 cols="12"
-                md="4"
+                md="2"
               >
                 <VSelect
                   v-model="reconciliationStatus"
@@ -1857,6 +1997,28 @@ onMounted(async () => {
                     { title: 'Tidak cocok / tidak ditemukan', value: 'mismatch' },
                   ]"
                   @update:model-value="loadReconciliations(1)"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="2"
+              >
+                <VTextField
+                  v-model="reconciliationDateStart"
+                  type="date"
+                  label="Tanggal mulai"
+                  @update:model-value="loadReconciliationData"
+                />
+              </VCol>
+              <VCol
+                cols="12"
+                md="2"
+              >
+                <VTextField
+                  v-model="reconciliationDateEnd"
+                  type="date"
+                  label="Tanggal akhir"
+                  @update:model-value="loadReconciliationData"
                 />
               </VCol>
             </VRow>
