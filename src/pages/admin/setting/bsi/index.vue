@@ -382,9 +382,14 @@ const messagingLogCustomerNo = log => log.request_payload?.customerNo
   || log.request_payload?.virtualAccountNo?.trim()
   || '-'
 
-const messagingLogMessage = log => log.response_payload?.responseMessage
-  || (Array.isArray(log.response_payload) ? `${log.response_payload.length} baris diterima` : null)
-  || (log.outcome === 'success' ? 'Successful' : 'Request gagal')
+const messagingLogMessage = log => {
+  if (log.response_code === '4017300')
+    return 'Unauthorized Client — X-CLIENT-KEY berbeda dari Client ID aktif'
+
+  return log.response_payload?.responseMessage
+    || (Array.isArray(log.response_payload) ? `${log.response_payload.length} baris diterima` : null)
+    || (log.outcome === 'success' ? 'Successful' : 'Request gagal')
+}
 
 const showMessagingLogDetail = log => {
   selectedMessagingLog.value = log
@@ -2861,6 +2866,16 @@ onMounted(async () => {
               </div>
             </VCol>
           </VRow>
+
+          <VAlert
+            v-if="selectedMessagingLog.response_code === '4017300'"
+            type="warning"
+            variant="tonal"
+            class="mb-5"
+          >
+            Auth ditolak karena <code>X-CLIENT-KEY</code> dari BSI tidak sama dengan Client ID aktif.
+            Gunakan Client ID dan Client Secret SIMKEU yang sama pada seluruh skenario flagging BSI.
+          </VAlert>
 
           <h4 class="text-subtitle-1 mb-2">
             Request Headers
