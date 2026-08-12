@@ -64,6 +64,7 @@ const form = reactive({
   reconciliationEmail: '',
   paymentExpiryValue: '1440',
   paymentExpiryUnit: 'minutes',
+  paymentMode: 'open',
   adminFeeBearer: 'institution',
   adminFeeAmount: 2500,
   sandboxAdminFeeAmount: 3000,
@@ -120,6 +121,7 @@ const applySettings = data => {
     reconciliationEmail: data.reconciliation_email || '',
     paymentExpiryValue: String(Number(data.payment_expiry_minutes || 1440)),
     paymentExpiryUnit: 'minutes',
+    paymentMode: data.payment_mode || 'open',
     adminFeeBearer: data.production_admin_fee_bearer || data.admin_fee_bearer || 'institution',
     adminFeeAmount: Number(data.production_admin_fee_amount ?? data.admin_fee_amount ?? 2500),
     sandboxAdminFeeAmount: Number(data.sandbox_admin_fee_amount ?? 3000),
@@ -197,6 +199,7 @@ const saveSettings = async () => {
         'reconciliation_secret': form.reconciliationSecret || null,
         'reconciliation_email': form.reconciliationEmail || null,
         'payment_expiry_minutes': expiryMinutes(),
+        'payment_mode': form.paymentMode,
         'admin_fee_bearer': form.adminFeeBearer,
         'admin_fee_amount': Number(form.adminFeeAmount),
         'sandbox_admin_fee_amount': Number(form.sandboxAdminFeeAmount),
@@ -1261,6 +1264,22 @@ onMounted(async () => {
                     <p class="text-caption text-warning mt-3 mb-0">
                       Penerbitan ulang langsung menonaktifkan nilai lama. Salin nilai baru ke portal BSI sebelum pengujian berikutnya.
                     </p>
+                  </VCol>
+                  <VCol
+                    v-show="configurationSection === 'security'"
+                    cols="12"
+                    md="6"
+                  >
+                    <VSelect
+                      v-model="form.paymentMode"
+                      label="Mode Pembayaran"
+                      :items="[
+                        { title: 'Open Payment', value: 'open' },
+                        { title: 'Close Payment', value: 'close' },
+                      ]"
+                      hint="Open menerima nominal berbeda dan membaginya dari detail teratas."
+                      persistent-hint
+                    />
                   </VCol>
                   <VCol
                     v-show="configurationSection === 'security'"
