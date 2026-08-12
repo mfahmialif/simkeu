@@ -693,6 +693,7 @@ onMounted(() => {
                   Nominal
                 </th>
                 <th>Settlement</th>
+                <th>Deskripsi Ketidakcocokan</th>
               </tr>
             </thead>
             <tbody>
@@ -713,6 +714,9 @@ onMounted(() => {
                   {{ formatCurrency(recon.payment_amount) }}
                 </td>
                 <td>{{ recon.settlement_code || '-' }}</td>
+                <td style="min-width: 280px; white-space: normal">
+                  {{ recon.mismatch_description || '-' }}
+                </td>
               </tr>
             </tbody>
           </VTable>

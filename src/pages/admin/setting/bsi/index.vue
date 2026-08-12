@@ -2072,6 +2072,7 @@ onMounted(async () => {
                   Checksum
                 </th>
                 <th>Cocok</th>
+                <th>Deskripsi Ketidakcocokan</th>
               </tr>
             </thead>
             <tbody>
@@ -2111,10 +2112,16 @@ onMounted(async () => {
                     {{ reconciliationMatchLabel(item) }}
                   </VChip>
                 </td>
+                <td
+                  style="min-width: 320px; white-space: normal"
+                  class="text-body-2"
+                >
+                  {{ item.mismatch_description || '-' }}
+                </td>
               </tr>
               <tr v-if="!reconciliationsLoading && !reconciliations.length">
                 <td
-                  colspan="9"
+                  colspan="10"
                   class="text-center text-medium-emphasis py-8"
                 >
                   Belum ada data rekonsiliasi yang sesuai filter.
