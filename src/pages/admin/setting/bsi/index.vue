@@ -14,7 +14,6 @@ const apiKeyDialog = ref(false)
 const credentialDialog = ref(false)
 const credentialDialogTitle = ref('')
 const generatedCredentials = ref([])
-const responseCodeTab = ref('auth')
 const settingsData = ref(null)
 const simulationNim = ref('')
 const simulationLoading = ref(false)
@@ -674,14 +673,110 @@ const deleteTestPayment = async () => {
 
 const billsEndpoint = computed(() => endpoints.value.siakad_bills || '/api/v1/integrations/siakad/bsi/bills/{nim}')
 const ordersEndpoint = computed(() => endpoints.value.siakad_payment_orders || '/api/v1/integrations/siakad/bsi/payment-orders')
+const requestIdExample = 'SIAKAD-ORDER-000001'
+
+const siakadEndpoints = computed(() => [
+  {
+    key: 'bills',
+    method: 'GET',
+    title: 'Ambil tagihan mahasiswa',
+    url: billsEndpoint.value,
+  },
+  {
+    key: 'create',
+    method: 'POST',
+    title: 'Buat payment order',
+    url: ordersEndpoint.value,
+  },
+  {
+    key: 'status',
+    method: 'GET',
+    title: 'Cek status payment order',
+    url: `${ordersEndpoint.value}/{request_id}`,
+  },
+  {
+    key: 'cancel',
+    method: 'POST',
+    title: 'Batalkan payment order',
+    url: `${ordersEndpoint.value}/{request_id}/cancel`,
+  },
+])
+
+const paymentModeDescription = computed(() => settingsData.value?.payment_mode === 'close'
+  ? 'Nominal yang dibayar di kanal BSI wajib sama dengan nilai transaksi yang ditagihkan.'
+  : 'Nominal pembayaran dapat berbeda. Dana dialokasikan ke detail tagihan sesuai urutan; kelebihan pokok menjadi deposit pada transaksi production non-test.')
 
 const createOrderBody = `{
-  "request_id": "SIAKAD-20260808-000001",
+  "request_id": "${requestIdExample}",
   "nim": "20240001",
   "items": [
     { "tagihan_id": 10, "jumlah": 250000 },
     { "tagihan_id": 12, "jumlah": 100000 }
   ]
+}`
+
+const billsResponseExample = `{
+  "status": true,
+  "data": {
+    "nim": "20240001",
+    "nama_mahasiswa": "Nama Mahasiswa",
+    "nama_prodi": "S1 Sistem Informasi",
+    "nama_kelas": "A",
+    "semester": 5,
+    "list_tagihan": [
+      {
+        "id": 10,
+        "nama": "Daftar Ulang",
+        "th_akademik_id": 25,
+        "th_akademik_kode": "20261",
+        "tahun_akademik": "2026/2027 Ganjil",
+        "jumlah_tagihan": 500000,
+        "sisa_resmi": 500000,
+        "reservasi_bsi": 0,
+        "tersedia": 500000,
+        "mata_uang_kode": "IDR",
+        "tidak_bisa_dibayar": false,
+        "keterangan_pembayaran": null
+      }
+    ],
+    "total_tersedia": 500000
+  }
+}`
+
+const orderResponseExample = `{
+  "status": true,
+  "created": true,
+  "message": "Payment order BSI berhasil dibuat.",
+  "data": {
+    "request_id": "${requestIdExample}",
+    "reference_no": "BSI-20260813-00000001",
+    "nim": "20240001",
+    "nama_mahasiswa": "Nama Mahasiswa",
+    "customer_no": "20240001",
+    "bsi_payment_number": "509020240001",
+    "interbank_va_number": "900509020240001",
+    "total": "350000.00",
+    "admin_fee_bearer": "institution",
+    "admin_fee_amount": 2500,
+    "payable_total": 350000,
+    "expected_settlement_total": 347500,
+    "currency": "IDR",
+    "status": "pending",
+    "data_test": false,
+    "production": true,
+    "transferred": false,
+    "expired_at": "2026-08-14T10:00:00+07:00",
+    "paid_at": null,
+    "posted_at": null,
+    "details": [
+      {
+        "tagihan_id": 10,
+        "tagihan_nama": "Daftar Ulang",
+        "jumlah": "250000.00",
+        "cara_bayar": "cicilan"
+      }
+    ]
+  }
 }`
 
 const curlBills = computed(() => `curl --request GET \\
@@ -697,12 +792,12 @@ const curlCreate = computed(() => `curl --request POST \\
   --data '${createOrderBody.replaceAll("'", "'\\''")}'`)
 
 const curlStatus = computed(() => `curl --request GET \\
-  --url '${ordersEndpoint.value}/SIAKAD-20260808-000001' \\
+  --url '${ordersEndpoint.value}/${requestIdExample}' \\
   --header 'Accept: application/json' \\
   --header 'X-SIAKAD-API-KEY: GANTI_DENGAN_API_KEY'`)
 
 const curlCancel = computed(() => `curl --request POST \\
-  --url '${ordersEndpoint.value}/SIAKAD-20260808-000001/cancel' \\
+  --url '${ordersEndpoint.value}/${requestIdExample}/cancel' \\
   --header 'Accept: application/json' \\
   --header 'X-SIAKAD-API-KEY: GANTI_DENGAN_API_KEY'`)
 
@@ -712,7 +807,7 @@ $response = Http::withHeaders([
     'X-SIAKAD-API-KEY' => env('SIMKEU_BSI_API_KEY'),
     'Accept' => 'application/json',
 ])->post('${ordersEndpoint.value}', [
-    'request_id' => 'SIAKAD-20260808-000001',
+    'request_id' => '${requestIdExample}',
     'nim' => '20240001',
     'items' => [
         ['tagihan_id' => 10, 'jumlah' => 250000],
@@ -730,7 +825,7 @@ const javascriptExample = computed(() => `const response = await fetch('${orders
     'X-SIAKAD-API-KEY': process.env.SIMKEU_BSI_API_KEY,
   },
   body: JSON.stringify({
-    request_id: 'SIAKAD-20260808-000001',
+    request_id: '${requestIdExample}',
     nim: '20240001',
     items: [{ tagihan_id: 10, jumlah: 250000 }],
   }),
@@ -820,7 +915,7 @@ onMounted(async () => {
           value="docs"
           prepend-icon="ri-code-box-line"
         >
-          Docs API
+          API SIAKAD
         </VTab>
         <VTab
           value="simulation"
@@ -2584,7 +2679,7 @@ onMounted(async () => {
                   density="compact"
                   class="mb-4"
                 >
-                  API key dipakai SIAKAD pada header <code>X-SIAKAD-API-KEY</code>.
+                  API key dipakai SIAKAD pada header <code>X-SIAKAD-API-KEY</code> dan hanya ditampilkan satu kali saat dibuat.
                 </VAlert>
                 <VBtn
                   block
@@ -2595,6 +2690,9 @@ onMounted(async () => {
                 >
                   {{ settingsData?.siakad_api_key_configured ? 'Rotasi API Key' : 'Buat API Key' }}
                 </VBtn>
+                <p class="text-caption text-medium-emphasis mb-0 mt-3">
+                  Rotasi langsung menonaktifkan key lama. Perbarui key di server SIAKAD pada waktu yang sama.
+                </p>
               </VCardText>
             </VCard>
           </VCol>
@@ -2610,15 +2708,25 @@ onMounted(async () => {
             >
               <VList density="compact">
                 <VListItem
-                  v-for="(url, name) in endpoints"
-                  :key="name"
-                  :title="name.replaceAll('_', ' ').toUpperCase()"
-                  :subtitle="url"
+                  v-for="endpoint in siakadEndpoints"
+                  :key="endpoint.key"
+                  :title="endpoint.title"
+                  :subtitle="endpoint.url"
                 >
+                  <template #prepend>
+                    <VChip
+                      :color="endpoint.method === 'GET' ? 'info' : 'primary'"
+                      size="small"
+                      label
+                      class="me-3"
+                    >
+                      {{ endpoint.method }}
+                    </VChip>
+                  </template>
                   <template #append>
                     <IconBtn
                       size="small"
-                      @click="copyText(url, `URL ${name}`)"
+                      @click="copyText(endpoint.url, `URL ${endpoint.title}`)"
                     >
                       <VIcon icon="ri-file-copy-line" />
                     </IconBtn>
@@ -2629,14 +2737,61 @@ onMounted(async () => {
           </VCol>
         </VRow>
 
-        <VCard>
+        <VCard
+          title="Kontrak Aktif"
+          class="mb-6"
+        >
           <VCardText>
+            <div class="d-flex flex-wrap gap-3 mb-4">
+              <VChip
+                :color="settingsData?.enabled ? 'success' : 'error'"
+                label
+              >
+                {{ settingsData?.enabled ? 'Integrasi aktif' : 'Integrasi nonaktif' }}
+              </VChip>
+              <VChip
+                color="primary"
+                variant="tonal"
+                label
+              >
+                {{ settingsData?.payment_mode === 'close' ? 'Close Payment' : 'Open Payment' }}
+              </VChip>
+              <VChip
+                color="info"
+                variant="tonal"
+                label
+              >
+                Expiry {{ settingsData?.payment_expiry_minutes || 1440 }} menit
+              </VChip>
+              <VChip
+                color="secondary"
+                variant="tonal"
+                label
+              >
+                Biaya admin {{ settingsData?.admin_fee_bearer === 'payer' ? 'dibayar mahasiswa' : 'ditanggung institusi' }}
+                · {{ rupiah(settingsData?.admin_fee_amount || 0) }}
+              </VChip>
+            </div>
+
             <VAlert
               type="info"
               variant="tonal"
+              density="compact"
+            >
+              <strong>{{ settingsData?.payment_mode === 'close' ? 'Close Payment:' : 'Open Payment:' }}</strong>
+              {{ paymentModeDescription }}
+            </VAlert>
+          </VCardText>
+        </VCard>
+
+        <VCard>
+          <VCardText>
+            <VAlert
+              :type="settingsData?.enabled && settingsData?.siakad_api_key_configured ? 'info' : 'warning'"
+              variant="tonal"
               class="mb-6"
             >
-              SIAKAD bertanggung jawab atas login mahasiswa dan UI pemilihan tagihan. Semua request server-to-server wajib menyertakan <code>X-SIAKAD-API-KEY</code>.
+              SIAKAD menangani login mahasiswa dan UI pemilihan tagihan. Semua request dilakukan dari server SIAKAD, memakai <code>Accept: application/json</code> dan <code>X-SIAKAD-API-KEY</code>. Jangan panggil endpoint ini langsung dari browser mahasiswa karena API key dapat terekspos.
             </VAlert>
 
             <h3 class="text-h5 mb-3">
@@ -2644,6 +2799,9 @@ onMounted(async () => {
             </h3>
             <p class="mb-3">
               <code>GET {{ billsEndpoint }}</code>
+            </p>
+            <p class="mb-3">
+              Gunakan NIM mahasiswa sebagai parameter path. Respons berisi profil ringkas, daftar tagihan yang masih mempunyai nominal <code>tersedia</code>, aturan dapat dibayar, dan total seluruh tagihan tersedia.
             </p>
             <div class="code-block mb-6">
               <IconBtn
@@ -2654,12 +2812,41 @@ onMounted(async () => {
               </IconBtn><pre>{{ curlBills }}</pre>
             </div>
 
+            <h4 class="text-h6 mb-3">
+              Contoh Respons Tagihan
+            </h4>
+            <div class="code-block mb-6">
+              <IconBtn
+                class="copy-btn"
+                @click="copyText(billsResponseExample, 'Respons tagihan')"
+              >
+                <VIcon icon="ri-file-copy-line" />
+              </IconBtn><pre>{{ billsResponseExample }}</pre>
+            </div>
+
+            <VAlert
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mb-8"
+            >
+              Kirim hanya tagihan bermata uang <code>IDR</code>, <code>tidak_bisa_dibayar: false</code>, dan nominal antara 0,01 sampai nilai <code>tersedia</code>. Validasi final tetap dilakukan SIMKEU saat payment order dibuat.
+            </VAlert>
+
             <h3 class="text-h5 mb-3">
               2. Buat Payment Order
             </h3>
             <p class="mb-3">
               <code>POST {{ ordersEndpoint }}</code>
             </p>
+            <ul class="mb-4 ps-5">
+              <li><code>request_id</code> wajib unik dan stabil untuk satu transaksi SIAKAD.</li>
+              <li>NIM setelah titik dan spasi dihapus harus terdiri dari 5–12 digit.</li>
+              <li>Pengiriman ulang <code>request_id</code> dengan payload yang sama bersifat idempoten dan mengembalikan HTTP 200 dengan <code>created: false</code>.</li>
+              <li><code>request_id</code> yang sama dengan payload berbeda ditolak dengan HTTP 422.</li>
+              <li><code>items</code> berisi 1–100 tagihan unik. Nominal setiap item tidak boleh melebihi <code>tersedia</code>.</li>
+              <li>Satu mahasiswa hanya dapat memiliki satu payment order aktif pada saat yang sama.</li>
+            </ul>
             <div class="code-block mb-4">
               <IconBtn
                 class="copy-btn"
@@ -2677,11 +2864,43 @@ onMounted(async () => {
               </IconBtn><pre>{{ curlCreate }}</pre>
             </div>
 
+            <h4 class="text-h6 mb-3">
+              Contoh Respons Payment Order
+            </h4>
+            <div class="code-block mb-4">
+              <IconBtn
+                class="copy-btn"
+                @click="copyText(orderResponseExample, 'Respons payment order')"
+              >
+                <VIcon icon="ri-file-copy-line" />
+              </IconBtn><pre>{{ orderResponseExample }}</pre>
+            </div>
+
+            <VTable
+              density="compact"
+              class="mb-8"
+            >
+              <thead><tr><th>Field</th><th>Keterangan</th></tr></thead>
+              <tbody>
+                <tr><td><code>bsi_payment_number</code></td><td>Nomor pembayaran untuk kanal BSI.</td></tr>
+                <tr><td><code>interbank_va_number</code></td><td>Nomor VA untuk pembayaran dari bank lain.</td></tr>
+                <tr><td><code>total</code></td><td>Total pokok item yang dipilih; pada Open Payment dapat berubah mengikuti nominal pokok yang benar-benar dibayar.</td></tr>
+                <tr><td><code>payable_total</code></td><td>Pokok ditambah biaya admin apabila biaya dibebankan kepada mahasiswa.</td></tr>
+                <tr><td><code>expected_settlement_total</code></td><td>Perkiraan dana bersih setelah biaya yang ditanggung institusi.</td></tr>
+                <tr><td><code>data_test</code> / <code>production</code></td><td>Penanda lingkungan dan data uji pada saat order dibuat.</td></tr>
+                <tr><td><code>transferred</code></td><td><code>true</code> jika pembayaran BSI sudah disinkronkan ke ledger pembayaran resmi SIMKEU.</td></tr>
+                <tr><td><code>details</code></td><td>Snapshot tagihan, nominal, dan cara bayar yang diproses.</td></tr>
+              </tbody>
+            </VTable>
+
             <h3 class="text-h5 mb-3">
               3. Cek Status Payment Order
             </h3>
             <p class="mb-3">
               <code>GET {{ ordersEndpoint }}/{request_id}</code>
+            </p>
+            <p class="mb-3">
+              Poll endpoint ini menggunakan <code>request_id</code> milik SIAKAD. Respons memakai struktur <code>data</code> yang sama seperti respons pembuatan order dan selalu menjalankan pengecekan kedaluwarsa order <code>pending</code> terlebih dahulu.
             </p>
             <div class="code-block mb-6">
               <IconBtn
@@ -2696,7 +2915,7 @@ onMounted(async () => {
               4. Batalkan Payment Order
             </h3>
             <p class="mb-3">
-              Hanya payment order berstatus <code>pending</code> yang dapat dibatalkan.
+              Hanya payment order berstatus <code>pending</code> yang dapat dibatalkan. Pengulangan pembatalan order yang sudah <code>cancelled</code> tetap mengembalikan sukses; status lainnya ditolak dengan HTTP 422.
             </p>
             <div class="code-block mb-6">
               <IconBtn
@@ -2732,59 +2951,59 @@ onMounted(async () => {
             </div>
 
             <h3 class="text-h5 mb-3">
-              Status Payment Order
+              Referensi Status Payment Order
             </h3>
-            <VTable density="compact">
+            <VTable
+              density="compact"
+              class="mb-6"
+            >
               <thead><tr><th>Status</th><th>Arti</th></tr></thead>
               <tbody>
                 <tr><td><code>pending</code></td><td>Menunggu pembayaran mahasiswa.</td></tr>
-                <tr><td><code>success</code></td><td>Pembayaran telah dikonfirmasi dan tersimpan pada data BSI.</td></tr>
+                <tr><td><code>paid</code></td><td>Status antara/kompatibilitas transaksi lama yang masih menahan order aktif.</td></tr>
+                <tr><td><code>success</code></td><td>Pembayaran dikonfirmasi BSI. Cek <code>transferred</code> untuk status sinkronisasi ke ledger resmi.</td></tr>
+                <tr><td><code>posted</code></td><td>Status posting pada data lama; integrasi baru memakai <code>success</code> dan <code>transferred</code>.</td></tr>
+                <tr><td><code>needs_review</code></td><td>Nominal/status callback bermasalah dan perlu pemeriksaan staf keuangan.</td></tr>
                 <tr><td><code>expired</code></td><td>Masa berlaku nomor pembayaran habis.</td></tr>
                 <tr><td><code>cancelled</code></td><td>Dibatalkan oleh SIAKAD/admin sebelum dibayar.</td></tr>
-                <tr><td><code>needs_review</code></td><td>Memerlukan pemeriksaan staf keuangan.</td></tr>
+                <tr><td><code>failed</code></td><td>Pembayaran dinyatakan gagal.</td></tr>
+                <tr><td><code>rejected</code></td><td>Transaksi ditolak oleh staf keuangan.</td></tr>
               </tbody>
             </VTable>
+
+            <VAlert
+              type="info"
+              variant="tonal"
+              density="compact"
+            >
+              Gunakan kombinasi <code>status === 'success'</code> dan <code>transferred === true</code> jika SIAKAD perlu memastikan pembayaran sudah masuk ke ledger resmi SIMKEU. Timestamp terkait tersedia pada <code>paid_at</code> dan <code>posted_at</code>.
+            </VAlert>
 
             <VDivider class="my-8" />
 
             <h3 class="text-h5 mb-2">
-              Kode Respons BI-SNAP v3.5
+              Kode HTTP API SIAKAD
             </h3>
             <p class="mb-4">
-              Daftar berikut mengikuti tabel Auth, Inquiry, dan Payment pada Specification Host to Host BI-SNAP Smart Billing BPI v3.5.
+              Selalu periksa HTTP status dan body JSON. Kesalahan validasi memakai properti <code>message</code> dan <code>errors</code> sesuai format Laravel.
             </p>
 
-            <VTabs v-model="responseCodeTab">
-              <VTab value="auth">
-                Auth
-              </VTab>
-              <VTab value="inquiry">
-                Inquiry
-              </VTab>
-              <VTab value="payment">
-                Payment & Advice
-              </VTab>
-            </VTabs>
-
-            <VTable class="mt-4">
+            <VTable>
               <thead>
                 <tr>
                   <th>HTTP</th>
-                  <th>Kode Respons</th>
-                  <th>Pesan</th>
                   <th>Kondisi</th>
+                  <th>Tindakan SIAKAD</th>
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="item in settingsData?.response_codes?.[responseCodeTab] || []"
-                  :key="`${responseCodeTab}-${item.code}`"
-                >
-                  <td>{{ item.http_status }}</td>
-                  <td><code>{{ item.code }}</code></td>
-                  <td>{{ item.message }}</td>
-                  <td>{{ item.description }}</td>
-                </tr>
+                <tr><td><code>200</code></td><td>Request berhasil, termasuk replay idempoten dan pembatalan ulang.</td><td>Gunakan nilai terbaru pada <code>data</code>.</td></tr>
+                <tr><td><code>201</code></td><td>Payment order baru berhasil dibuat.</td><td>Simpan seluruh data order dan tampilkan nomor pembayaran.</td></tr>
+                <tr><td><code>401</code></td><td>Header API key tidak ada atau tidak valid.</td><td>Periksa secret server; jangan melakukan retry tanpa memperbaiki key.</td></tr>
+                <tr><td><code>404</code></td><td><code>request_id</code> payment order tidak ditemukan.</td><td>Periksa ID yang disimpan SIAKAD.</td></tr>
+                <tr><td><code>422</code></td><td>Payload tidak valid, order aktif masih ada, konflik idempotensi, atau status tidak dapat dibatalkan.</td><td>Tampilkan pesan dari <code>errors</code> dan koreksi request.</td></tr>
+                <tr><td><code>500</code></td><td>API key belum dikonfigurasi atau terjadi kesalahan server.</td><td>Hubungi admin SIMKEU dan simpan request untuk penelusuran.</td></tr>
+                <tr><td><code>503</code></td><td>Integrasi BSI sedang dinonaktifkan.</td><td>Hentikan retry cepat dan tampilkan layanan belum tersedia.</td></tr>
               </tbody>
             </VTable>
 
@@ -2793,7 +3012,7 @@ onMounted(async () => {
               variant="tonal"
               class="mt-4"
             >
-              Kode timeout adalah hasil batas waktu layanan/SmartBilling. Untuk Payment, timeout dapat membuat dana ditangguhkan sehingga pengecekan Advice dan rekonsiliasi wajib tersedia.
+              Jika respons create order timeout/tidak diterima, kirim ulang <code>request_id</code> dan payload yang sama. Jangan membuat <code>request_id</code> baru sebelum hasil order lama dipastikan agar tidak menimbulkan transaksi ganda.
             </VAlert>
           </VCardText>
         </VCard>
