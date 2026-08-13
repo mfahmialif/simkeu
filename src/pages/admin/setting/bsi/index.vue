@@ -672,6 +672,7 @@ const deleteTestPayment = async () => {
 }
 
 const billsEndpoint = computed(() => endpoints.value.siakad_bills || '/api/v1/integrations/siakad/bsi/bills/{nim}')
+const paymentHistoryEndpoint = computed(() => endpoints.value.siakad_payment_history || '/api/v1/integrations/siakad/bsi/payment-history/{nim}')
 const ordersEndpoint = computed(() => endpoints.value.siakad_payment_orders || '/api/v1/integrations/siakad/bsi/payment-orders')
 const requestIdExample = 'SIAKAD-ORDER-000001'
 
@@ -681,6 +682,12 @@ const siakadEndpoints = computed(() => [
     method: 'GET',
     title: 'Ambil tagihan mahasiswa',
     url: billsEndpoint.value,
+  },
+  {
+    key: 'payment-history',
+    method: 'GET',
+    title: 'Riwayat pembayaran mahasiswa',
+    url: paymentHistoryEndpoint.value,
   },
   {
     key: 'create',
@@ -743,6 +750,35 @@ const billsResponseExample = `{
   }
 }`
 
+const paymentHistoryResponseExample = `{
+  "status": true,
+  "data": {
+    "nim": "20240001",
+    "total_transaksi": 2,
+    "total_pembayaran": 425000,
+    "riwayat": [
+      {
+        "nota": "130826-00001-L-123",
+        "tanggal": "2026-08-13 09:00:00",
+        "nim": "2024.0001",
+        "total": 350000,
+        "jumlah_item": 2,
+        "items": [
+          {
+            "pembayaran_id": 101,
+            "nomor": "PAY-001",
+            "th_akademik_id": 25,
+            "tagihan_id": 10,
+            "semester": 5,
+            "jumlah_sks": 1,
+            "jumlah": 250000
+          }
+        ]
+      }
+    ]
+  }
+}`
+
 const orderResponseExample = `{
   "status": true,
   "created": true,
@@ -781,6 +817,11 @@ const orderResponseExample = `{
 
 const curlBills = computed(() => `curl --request GET \\
   --url '${billsEndpoint.value.replace('{nim}', '20240001')}' \\
+  --header 'Accept: application/json' \\
+  --header 'X-SIAKAD-API-KEY: GANTI_DENGAN_API_KEY'`)
+
+const curlPaymentHistory = computed(() => `curl --request GET \\
+  --url '${paymentHistoryEndpoint.value.replace('{nim}', '20240001')}' \\
   --header 'Accept: application/json' \\
   --header 'X-SIAKAD-API-KEY: GANTI_DENGAN_API_KEY'`)
 
@@ -2935,7 +2976,45 @@ onMounted(async () => {
             </VAlert>
 
             <h3 class="text-h5 mb-3">
-              2. Buat Payment Order
+              2. Ambil Riwayat Pembayaran Mahasiswa
+            </h3>
+            <p class="mb-3">
+              <code>GET {{ paymentHistoryEndpoint }}</code>
+            </p>
+            <p class="mb-3">
+              <strong>Path wajib:</strong> <code>nim</code>. <strong>Body:</strong> tidak ada. Endpoint ini hanya membaca pembayaran yang sudah masuk ke ledger resmi <code>keuangan_pembayaran</code>; data payment order BSI standalone tidak ikut ditampilkan.
+            </p>
+            <VAlert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+            >
+              Satu pembayaran mahasiswa dapat tersimpan sebagai beberapa baris. Baris dengan nilai <code>keuangan_nota.nota</code> yang sama dibundel menjadi satu transaksi, lengkap dengan <code>total</code> dan daftar <code>items</code>. Baris lama tanpa nota menjadi satu bundel tersendiri menggunakan nilai <code>nomor</code> pembayaran.
+            </VAlert>
+            <div class="code-block mb-6">
+              <IconBtn
+                class="copy-btn"
+                @click="copyText(curlPaymentHistory, 'Contoh riwayat pembayaran')"
+              >
+                <VIcon icon="ri-file-copy-line" />
+              </IconBtn><pre>{{ curlPaymentHistory }}</pre>
+            </div>
+
+            <h4 class="text-h6 mb-3">
+              Contoh Respons Riwayat Pembayaran
+            </h4>
+            <div class="code-block mb-8">
+              <IconBtn
+                class="copy-btn"
+                @click="copyText(paymentHistoryResponseExample, 'Respons riwayat pembayaran')"
+              >
+                <VIcon icon="ri-file-copy-line" />
+              </IconBtn><pre>{{ paymentHistoryResponseExample }}</pre>
+            </div>
+
+            <h3 class="text-h5 mb-3">
+              3. Buat Payment Order
             </h3>
             <p class="mb-3">
               <code>POST {{ ordersEndpoint }}</code>
@@ -2998,7 +3077,7 @@ onMounted(async () => {
             </VTable>
 
             <h3 class="text-h5 mb-3">
-              3. Cek Status Payment Order
+              4. Cek Status Payment Order
             </h3>
             <p class="mb-3">
               <code>GET {{ ordersEndpoint }}/{request_id}</code>
@@ -3016,7 +3095,7 @@ onMounted(async () => {
             </div>
 
             <h3 class="text-h5 mb-3">
-              4. Batalkan Payment Order
+              5. Batalkan Payment Order
             </h3>
             <p class="mb-3">
               <strong>Path wajib:</strong> <code>request_id</code>. <strong>Body:</strong> tidak ada. Hanya payment order berstatus <code>pending</code> yang dapat dibatalkan. Pengulangan pembatalan order yang sudah <code>cancelled</code> tetap mengembalikan sukses; status lainnya ditolak dengan HTTP 422.
@@ -3031,7 +3110,7 @@ onMounted(async () => {
             </div>
 
             <h3 class="text-h5 mb-3">
-              5. Contoh Integrasi Laravel/PHP
+              6. Contoh Integrasi Laravel/PHP
             </h3>
             <div class="code-block mb-6">
               <IconBtn
@@ -3043,7 +3122,7 @@ onMounted(async () => {
             </div>
 
             <h3 class="text-h5 mb-3">
-              6. Contoh Integrasi JavaScript
+              7. Contoh Integrasi JavaScript
             </h3>
             <div class="code-block mb-6">
               <IconBtn
