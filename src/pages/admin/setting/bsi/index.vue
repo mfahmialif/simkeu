@@ -2750,6 +2750,20 @@ onMounted(async () => {
                 {{ settingsData?.enabled ? 'Integrasi aktif' : 'Integrasi nonaktif' }}
               </VChip>
               <VChip
+                :color="settingsData?.environment === 'production' ? 'success' : 'warning'"
+                variant="tonal"
+                label
+              >
+                {{ (settingsData?.environment || 'sandbox').toUpperCase() }}
+              </VChip>
+              <VChip
+                :color="settingsData?.test_mode ? 'warning' : 'success'"
+                variant="tonal"
+                label
+              >
+                {{ settingsData?.test_mode ? 'Data test aktif' : 'Data test nonaktif' }}
+              </VChip>
+              <VChip
                 color="primary"
                 variant="tonal"
                 label
@@ -2770,6 +2784,13 @@ onMounted(async () => {
               >
                 Biaya admin {{ settingsData?.admin_fee_bearer === 'payer' ? 'dibayar mahasiswa' : 'ditanggung institusi' }}
                 · {{ rupiah(settingsData?.admin_fee_amount || 0) }}
+              </VChip>
+              <VChip
+                :color="settingsData?.auto_transfer_enabled ? 'success' : 'warning'"
+                variant="tonal"
+                label
+              >
+                Auto transfer {{ settingsData?.auto_transfer_enabled ? 'aktif' : 'nonaktif' }}
               </VChip>
             </div>
 
@@ -2795,13 +2816,93 @@ onMounted(async () => {
             </VAlert>
 
             <h3 class="text-h5 mb-3">
+              Arsitektur Standalone dan Sumber Konfigurasi
+            </h3>
+            <p class="mb-4">
+              Payment order dari SIAKAD memang masuk ke tabel transaksi BSI standalone terlebih dahulu. Status <code>success</code> berarti pembayaran sudah dikonfirmasi BSI, sedangkan <code>transferred: true</code> berarti transaksi tersebut sudah disinkronkan ke ledger pembayaran resmi SIMKEU.
+            </p>
+            <VAlert
+              type="success"
+              variant="tonal"
+              density="compact"
+              class="mb-4"
+            >
+              SIAKAD tidak menentukan konfigurasi transaksi. SIAKAD hanya mengirim identitas request, NIM, dan pilihan tagihan. Seluruh nilai operasional berikut dibaca oleh backend dari Konfig BSI SIMKEU saat order dibuat atau diproses.
+            </VAlert>
+            <VTable
+              density="compact"
+              class="mb-8"
+            >
+              <thead><tr><th>Konfig SIMKEU</th><th>Diterapkan sebagai</th><th>Boleh dikirim SIAKAD?</th></tr></thead>
+              <tbody>
+                <tr><td><code>enabled</code></td><td>Menentukan apakah seluruh API SIAKAD dapat diakses.</td><td>Tidak</td></tr>
+                <tr><td><code>environment</code></td><td>Menentukan nilai <code>production</code> pada order.</td><td>Tidak</td></tr>
+                <tr><td><code>test_mode</code></td><td>Menentukan nilai <code>data_test</code> pada order.</td><td>Tidak</td></tr>
+                <tr><td><code>kode_bpi</code></td><td>Membentuk nomor pembayaran BSI dan VA antarbank.</td><td>Tidak</td></tr>
+                <tr><td><code>payment_expiry_minutes</code></td><td>Menghasilkan <code>expired_at</code>.</td><td>Tidak</td></tr>
+                <tr><td><code>payment_mode</code></td><td>Menentukan perilaku Open/Close Payment saat pembayaran diterima BSI.</td><td>Tidak</td></tr>
+                <tr><td><code>admin_fee_bearer</code> dan nominal biaya</td><td>Menghasilkan <code>admin_fee_amount</code>, <code>payable_total</code>, dan <code>expected_settlement_total</code>.</td><td>Tidak</td></tr>
+                <tr><td><code>auto_transfer_enabled</code></td><td>Menentukan sinkronisasi otomatis transaksi sukses ke ledger resmi.</td><td>Tidak</td></tr>
+              </tbody>
+            </VTable>
+
+            <h3 class="text-h5 mb-3">
+              Header Request
+            </h3>
+            <VTable
+              density="compact"
+              class="mb-4"
+            >
+              <thead><tr><th>Header</th><th>Digunakan pada</th><th>Status</th><th>Nilai</th></tr></thead>
+              <tbody>
+                <tr><td><code>X-SIAKAD-API-KEY</code></td><td>Semua endpoint</td><td>Wajib</td><td>API key yang dibuat dari tab ini.</td></tr>
+                <tr><td><code>Accept</code></td><td>Semua endpoint</td><td>Wajib</td><td><code>application/json</code></td></tr>
+                <tr><td><code>Content-Type</code></td><td>POST create payment order</td><td>Wajib</td><td><code>application/json</code></td></tr>
+                <tr><td><code>User-Agent</code></td><td>Semua endpoint</td><td>Opsional</td><td>Identitas aplikasi/versi SIAKAD untuk membantu penelusuran.</td></tr>
+              </tbody>
+            </VTable>
+            <VAlert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-8"
+            >
+              API ini tidak memakai header <code>Authorization: Bearer</code>, signature BI-SNAP, <code>X-TIMESTAMP</code>, atau <code>X-EXTERNAL-ID</code>. Header tersebut hanya terkait komunikasi Host-to-Host BSI, bukan API SIAKAD.
+            </VAlert>
+
+            <h3 class="text-h5 mb-3">
+              Body POST Payment Order
+            </h3>
+            <VTable
+              density="compact"
+              class="mb-4"
+            >
+              <thead><tr><th>Field</th><th>Tipe</th><th>Status</th><th>Aturan</th></tr></thead>
+              <tbody>
+                <tr><td><code>request_id</code></td><td>string</td><td>Wajib</td><td>Maksimal 255 karakter, unik, dan stabil untuk idempotensi.</td></tr>
+                <tr><td><code>nim</code></td><td>string</td><td>Wajib</td><td>Maksimal 255 karakter; setelah titik dan spasi dihapus harus 5–12 digit.</td></tr>
+                <tr><td><code>items</code></td><td>array</td><td>Wajib</td><td>Berisi 1–100 item tagihan.</td></tr>
+                <tr><td><code>items[].tagihan_id</code></td><td>integer</td><td>Wajib</td><td>Harus unik dan berasal dari respons endpoint bills yang masih tersedia.</td></tr>
+                <tr><td><code>items[].jumlah</code></td><td>number</td><td>Wajib</td><td>Minimal 0,01 dan tidak melebihi nilai <code>tersedia</code> tagihan.</td></tr>
+              </tbody>
+            </VTable>
+            <VAlert
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mb-8"
+            >
+              Tidak ada field body opsional. Field tambahan—termasuk <code>data_test</code>, <code>production</code>, <code>payment_mode</code>, expiry, biaya admin, nomor VA, status, atau <code>cara_bayar</code>—akan ditolak dengan HTTP 422 karena seluruhnya dikelola SIMKEU.
+            </VAlert>
+
+            <h3 class="text-h5 mb-3">
               1. Ambil Tagihan Mahasiswa
             </h3>
             <p class="mb-3">
               <code>GET {{ billsEndpoint }}</code>
             </p>
             <p class="mb-3">
-              Gunakan NIM mahasiswa sebagai parameter path. Respons berisi profil ringkas, daftar tagihan yang masih mempunyai nominal <code>tersedia</code>, aturan dapat dibayar, dan total seluruh tagihan tersedia.
+              <strong>Path wajib:</strong> <code>nim</code>. <strong>Body:</strong> tidak ada. Gunakan NIM mahasiswa sebagai parameter path. Respons berisi profil ringkas, daftar tagihan yang masih mempunyai nominal <code>tersedia</code>, aturan dapat dibayar, dan total seluruh tagihan tersedia.
             </p>
             <div class="code-block mb-6">
               <IconBtn
@@ -2838,6 +2939,9 @@ onMounted(async () => {
             </h3>
             <p class="mb-3">
               <code>POST {{ ordersEndpoint }}</code>
+            </p>
+            <p class="mb-3">
+              <strong>Body:</strong> JSON dengan tiga field utama wajib; setiap item berisi dua field wajib. Tidak ada field opsional.
             </p>
             <ul class="mb-4 ps-5">
               <li><code>request_id</code> wajib unik dan stabil untuk satu transaksi SIAKAD.</li>
@@ -2900,7 +3004,7 @@ onMounted(async () => {
               <code>GET {{ ordersEndpoint }}/{request_id}</code>
             </p>
             <p class="mb-3">
-              Poll endpoint ini menggunakan <code>request_id</code> milik SIAKAD. Respons memakai struktur <code>data</code> yang sama seperti respons pembuatan order dan selalu menjalankan pengecekan kedaluwarsa order <code>pending</code> terlebih dahulu.
+              <strong>Path wajib:</strong> <code>request_id</code>. <strong>Body:</strong> tidak ada. Poll endpoint ini menggunakan <code>request_id</code> milik SIAKAD. Respons memakai struktur <code>data</code> yang sama seperti respons pembuatan order dan selalu menjalankan pengecekan kedaluwarsa order <code>pending</code> terlebih dahulu.
             </p>
             <div class="code-block mb-6">
               <IconBtn
@@ -2915,7 +3019,7 @@ onMounted(async () => {
               4. Batalkan Payment Order
             </h3>
             <p class="mb-3">
-              Hanya payment order berstatus <code>pending</code> yang dapat dibatalkan. Pengulangan pembatalan order yang sudah <code>cancelled</code> tetap mengembalikan sukses; status lainnya ditolak dengan HTTP 422.
+              <strong>Path wajib:</strong> <code>request_id</code>. <strong>Body:</strong> tidak ada. Hanya payment order berstatus <code>pending</code> yang dapat dibatalkan. Pengulangan pembatalan order yang sudah <code>cancelled</code> tetap mengembalikan sukses; status lainnya ditolak dengan HTTP 422.
             </p>
             <div class="code-block mb-6">
               <IconBtn
