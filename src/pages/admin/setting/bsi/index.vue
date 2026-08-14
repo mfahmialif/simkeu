@@ -761,10 +761,18 @@ const deleteTestPayment = async () => {
 
 const billsEndpoint = computed(() => endpoints.value.siakad_bills || '/api/v1/integrations/siakad/bsi/bills/{nim}')
 const paymentHistoryEndpoint = computed(() => endpoints.value.siakad_payment_history || '/api/v1/integrations/siakad/bsi/payment-history/{nim}')
+const paymentMethodsEndpoint = computed(() => endpoints.value.siakad_payment_methods || '/api/v1/integrations/siakad/bsi/payment-methods')
 const ordersEndpoint = computed(() => endpoints.value.siakad_payment_orders || '/api/v1/integrations/siakad/bsi/payment-orders')
+const updatePaymentMethodEndpoint = computed(() => `${ordersEndpoint.value}/{request_id}/payment-method`)
 const requestIdExample = 'SIAKAD-ORDER-000001'
 
 const siakadEndpoints = computed(() => [
+  {
+    key: 'payment-methods',
+    method: 'GET',
+    title: 'Daftar metode pembayaran VA',
+    url: paymentMethodsEndpoint.value,
+  },
   {
     key: 'bills',
     method: 'GET',
@@ -782,6 +790,12 @@ const siakadEndpoints = computed(() => [
     method: 'POST',
     title: 'Buat payment order',
     url: ordersEndpoint.value,
+  },
+  {
+    key: 'update-payment-method',
+    method: 'PUT',
+    title: 'Edit metode pembayaran payment order',
+    url: updatePaymentMethodEndpoint.value,
   },
   {
     key: 'status',
@@ -804,10 +818,39 @@ const paymentModeDescription = computed(() => settingsData.value?.payment_mode =
 const createOrderBody = `{
   "request_id": "${requestIdExample}",
   "nim": "20240001",
+  "metode_va_id": 1,
   "items": [
     { "tagihan_id": 10, "jumlah": 250000 },
     { "tagihan_id": 12, "jumlah": 100000 }
   ]
+}`
+
+const paymentMethodsResponseExample = `{
+  "status": true,
+  "data": [
+    {
+      "id": 1,
+      "kode": "byond_bsi",
+      "nama": "Byond BSI",
+      "keterangan": "Pembayaran melalui aplikasi BYOND by BSI."
+    },
+    {
+      "id": 2,
+      "kode": "atm_bsi",
+      "nama": "ATM BSI",
+      "keterangan": "Pembayaran melalui ATM Bank Syariah Indonesia."
+    },
+    {
+      "id": 3,
+      "kode": "atm_lain",
+      "nama": "ATM LAIN",
+      "keterangan": "Pembayaran dari bank lain menggunakan nomor VA antarbank."
+    }
+  ]
+}`
+
+const updatePaymentMethodBody = `{
+  "metode_va_id": 2
 }`
 
 const billsResponseExample = `{
@@ -879,6 +922,9 @@ const orderResponseExample = `{
     "customer_no": "20240001",
     "bsi_payment_number": "509020240001",
     "interbank_va_number": "900509020240001",
+    "metode_va_id": 1,
+    "metode_pembayaran": "Byond BSI",
+    "va_number": "509020240001",
     "total": "350000.00",
     "admin_fee_bearer": "institution",
     "admin_fee_amount": 2500,
@@ -908,6 +954,11 @@ const curlBills = computed(() => `curl --request GET \\
   --header 'Accept: application/json' \\
   --header 'X-SIAKAD-API-KEY: GANTI_DENGAN_API_KEY'`)
 
+const curlPaymentMethods = computed(() => `curl --request GET \\
+  --url '${paymentMethodsEndpoint.value}' \\
+  --header 'Accept: application/json' \\
+  --header 'X-SIAKAD-API-KEY: GANTI_DENGAN_API_KEY'`)
+
 const curlPaymentHistory = computed(() => `curl --request GET \\
   --url '${paymentHistoryEndpoint.value.replace('{nim}', '20240001')}' \\
   --header 'Accept: application/json' \\
@@ -919,6 +970,13 @@ const curlCreate = computed(() => `curl --request POST \\
   --header 'Content-Type: application/json' \\
   --header 'X-SIAKAD-API-KEY: GANTI_DENGAN_API_KEY' \\
   --data '${createOrderBody.replaceAll("'", "'\\''")}'`)
+
+const curlUpdatePaymentMethod = computed(() => `curl --request PUT \\
+  --url '${updatePaymentMethodEndpoint.value.replace('{request_id}', requestIdExample)}' \\
+  --header 'Accept: application/json' \\
+  --header 'Content-Type: application/json' \\
+  --header 'X-SIAKAD-API-KEY: GANTI_DENGAN_API_KEY' \\
+  --data '${updatePaymentMethodBody.replaceAll("'", "'\\''")}'`)
 
 const curlStatus = computed(() => `curl --request GET \\
   --url '${ordersEndpoint.value}/${requestIdExample}' \\
@@ -938,6 +996,7 @@ $response = Http::withHeaders([
 ])->post('${ordersEndpoint.value}', [
     'request_id' => '${requestIdExample}',
     'nim' => '20240001',
+    'metode_va_id' => 1,
     'items' => [
         ['tagihan_id' => 10, 'jumlah' => 250000],
     ],
@@ -956,6 +1015,7 @@ const javascriptExample = computed(() => `const response = await fetch('${orders
   body: JSON.stringify({
     request_id: '${requestIdExample}',
     nim: '20240001',
+    metode_va_id: 1,
     items: [{ tagihan_id: 10, jumlah: 250000 }],
   }),
 })
@@ -3066,7 +3126,7 @@ onMounted(async () => {
               density="compact"
               class="mb-4"
             >
-              SIAKAD tidak menentukan konfigurasi transaksi. SIAKAD hanya mengirim identitas request, NIM, dan pilihan tagihan. Seluruh nilai operasional berikut dibaca oleh backend dari Konfig BSI SIMKEU saat order dibuat atau diproses.
+              SIAKAD tidak menentukan konfigurasi transaksi. SIAKAD mengirim identitas request, NIM, pilihan metode VA, dan pilihan tagihan. Seluruh nilai operasional berikut dibaca oleh backend dari Konfig BSI SIMKEU saat order dibuat atau diproses.
             </VAlert>
             <VTable
               density="compact"
@@ -3110,6 +3170,32 @@ onMounted(async () => {
             </VAlert>
 
             <h3 class="text-h5 mb-3">
+              Metode Pembayaran VA
+            </h3>
+            <p class="mb-3">
+              <code>GET {{ paymentMethodsEndpoint }}</code>
+            </p>
+            <p class="mb-3">
+              Endpoint ini mengembalikan metode pembayaran VA yang berstatus aktif. SIAKAD menampilkan <code>nama</code> kepada mahasiswa, lalu mengirim nilai <code>id</code> yang dipilih sebagai <code>metode_va_id</code> saat membuat payment order.
+            </p>
+            <div class="code-block mb-4">
+              <IconBtn
+                class="copy-btn"
+                @click="copyText(curlPaymentMethods, 'Contoh metode pembayaran')"
+              >
+                <VIcon icon="ri-file-copy-line" />
+              </IconBtn><pre>{{ curlPaymentMethods }}</pre>
+            </div>
+            <div class="code-block mb-8">
+              <IconBtn
+                class="copy-btn"
+                @click="copyText(paymentMethodsResponseExample, 'Respons metode pembayaran')"
+              >
+                <VIcon icon="ri-file-copy-line" />
+              </IconBtn><pre>{{ paymentMethodsResponseExample }}</pre>
+            </div>
+
+            <h3 class="text-h5 mb-3">
               Body POST Payment Order
             </h3>
             <VTable
@@ -3120,6 +3206,7 @@ onMounted(async () => {
               <tbody>
                 <tr><td><code>request_id</code></td><td>string</td><td>Wajib</td><td>Maksimal 255 karakter, unik, dan stabil untuk idempotensi.</td></tr>
                 <tr><td><code>nim</code></td><td>string</td><td>Wajib</td><td>Maksimal 255 karakter; setelah titik dan spasi dihapus harus 5–12 digit.</td></tr>
+                <tr><td><code>metode_va_id</code></td><td>integer|null</td><td>Opsional*</td><td>ID metode aktif dari endpoint <code>payment-methods</code>. Nilai ini disimpan SIMKEU pada transaksi BSI.</td></tr>
                 <tr><td><code>items</code></td><td>array</td><td>Wajib</td><td>Berisi 1–100 item tagihan.</td></tr>
                 <tr><td><code>items[].tagihan_id</code></td><td>integer</td><td>Wajib</td><td>Harus unik dan berasal dari respons endpoint bills yang masih tersedia.</td></tr>
                 <tr><td><code>items[].jumlah</code></td><td>number</td><td>Wajib</td><td>Minimal 0,01 dan tidak melebihi nilai <code>tersedia</code> tagihan.</td></tr>
@@ -3131,7 +3218,7 @@ onMounted(async () => {
               density="compact"
               class="mb-8"
             >
-              Tidak ada field body opsional. Field tambahan—termasuk <code>data_test</code>, <code>production</code>, <code>payment_mode</code>, expiry, biaya admin, nomor VA, status, atau <code>cara_bayar</code>—akan ditolak dengan HTTP 422 karena seluruhnya dikelola SIMKEU.
+              Field body opsional yang didukung hanya <code>metode_va_id</code>. Jika dikirim, nilainya harus berasal dari daftar metode aktif. Field tambahan—termasuk <code>data_test</code>, <code>production</code>, <code>payment_mode</code>, expiry, biaya admin, nomor VA, status, atau <code>cara_bayar</code>—akan ditolak dengan HTTP 422 karena seluruhnya dikelola SIMKEU.
             </VAlert>
 
             <h3 class="text-h5 mb-3">
@@ -3218,7 +3305,7 @@ onMounted(async () => {
               <code>POST {{ ordersEndpoint }}</code>
             </p>
             <p class="mb-3">
-              <strong>Body:</strong> JSON dengan tiga field utama wajib; setiap item berisi dua field wajib. Tidak ada field opsional.
+              <strong>Body:</strong> JSON dengan tiga field utama wajib, satu field <code>metode_va_id</code> opsional, dan setiap item berisi dua field wajib.
             </p>
             <ul class="mb-4 ps-5">
               <li><code>request_id</code> wajib unik dan stabil untuk satu transaksi SIAKAD.</li>
@@ -3226,6 +3313,7 @@ onMounted(async () => {
               <li>Pengiriman ulang <code>request_id</code> dengan payload yang sama bersifat idempoten dan mengembalikan HTTP 200 dengan <code>created: false</code>.</li>
               <li><code>request_id</code> yang sama dengan payload berbeda ditolak dengan HTTP 422.</li>
               <li><code>items</code> berisi 1–100 tagihan unik. Nominal setiap item tidak boleh melebihi <code>tersedia</code>.</li>
+              <li>Untuk alur baru, kirim <code>metode_va_id</code> hasil pilihan mahasiswa. Jika tidak dikirim, order lama tetap diterima dan metode dapat diisi dari callback BSI.</li>
               <li>Satu mahasiswa hanya dapat memiliki satu payment order aktif pada saat yang sama.</li>
             </ul>
             <div class="code-block mb-4">
@@ -3265,6 +3353,9 @@ onMounted(async () => {
               <tbody>
                 <tr><td><code>bsi_payment_number</code></td><td>Nomor pembayaran untuk kanal BSI.</td></tr>
                 <tr><td><code>interbank_va_number</code></td><td>Nomor VA untuk pembayaran dari bank lain.</td></tr>
+                <tr><td><code>metode_va_id</code></td><td>ID metode yang dipilih SIAKAD dan disimpan SIMKEU, atau metode yang terdeteksi dari callback untuk order lama.</td></tr>
+                <tr><td><code>metode_pembayaran</code></td><td>Nama metode: Byond BSI, ATM BSI, atau ATM LAIN; dapat <code>null</code> jika order belum memilih atau menerima pembayaran.</td></tr>
+                <tr><td><code>va_number</code></td><td>Nomor VA yang perlu ditampilkan sesuai metode: <code>bsi_payment_number</code> untuk Byond BSI/ATM BSI, atau <code>interbank_va_number</code> untuk ATM LAIN.</td></tr>
                 <tr><td><code>total</code></td><td>Total pokok item yang dipilih; pada Open Payment dapat berubah mengikuti nominal pokok yang benar-benar dibayar.</td></tr>
                 <tr><td><code>payable_total</code></td><td>Pokok ditambah biaya admin apabila biaya dibebankan kepada mahasiswa.</td></tr>
                 <tr><td><code>expected_settlement_total</code></td><td>Perkiraan dana bersih setelah biaya yang ditanggung institusi.</td></tr>
@@ -3273,6 +3364,41 @@ onMounted(async () => {
                 <tr><td><code>details</code></td><td>Snapshot tagihan, nominal, dan cara bayar yang diproses.</td></tr>
               </tbody>
             </VTable>
+
+            <VAlert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-8"
+            >
+              <strong>Metode pembayaran:</strong> SIAKAD mengambil daftar metode aktif, meminta mahasiswa memilih salah satu, lalu mengirim <code>metode_va_id</code>. SIMKEU menyimpan pilihan tersebut pada transaksi BSI dan mengembalikan <code>metode_pembayaran</code> serta <code>va_number</code> yang sesuai. Untuk kompatibilitas order lama, SIMKEU tetap dapat mendeteksi metode dari callback BSI.
+            </VAlert>
+
+            <h3 class="text-h5 mb-3">
+              Edit Metode Pembayaran Payment Order
+            </h3>
+            <p class="mb-3">
+              <code>PUT {{ updatePaymentMethodEndpoint }}</code>
+            </p>
+            <p class="mb-3">
+              Endpoint ini mengganti <code>metode_va_id</code> pada payment order yang masih <code>pending</code>. Metode tujuan harus aktif dan berasal dari endpoint daftar metode. Order yang sudah dibayar, kedaluwarsa, dibatalkan, atau diproses staf tidak dapat diubah.
+            </p>
+            <div class="code-block mb-4">
+              <IconBtn
+                class="copy-btn"
+                @click="copyText(curlUpdatePaymentMethod, 'Contoh edit metode pembayaran')"
+              >
+                <VIcon icon="ri-file-copy-line" />
+              </IconBtn><pre>{{ curlUpdatePaymentMethod }}</pre>
+            </div>
+            <div class="code-block mb-8">
+              <IconBtn
+                class="copy-btn"
+                @click="copyText(updatePaymentMethodBody, 'Payload edit metode pembayaran')"
+              >
+                <VIcon icon="ri-file-copy-line" />
+              </IconBtn><pre>{{ updatePaymentMethodBody }}</pre>
+            </div>
 
             <h3 class="text-h5 mb-3">
               4. Cek Status Payment Order
