@@ -49,6 +49,17 @@ const reconciliationDateStart = ref('')
 const reconciliationDateEnd = ref('')
 const reconciliationStatsLoading = ref(false)
 const reconciliationStats = ref(null)
+const paymentMethodsLoading = ref(false)
+const paymentMethods = ref([])
+const paymentMethodDialog = ref(false)
+const paymentMethodSaving = ref(false)
+const paymentMethodTogglingId = ref(null)
+const paymentMethodForm = reactive({
+  id: null,
+  nama: '',
+  keterangan: '',
+  aktif: true,
+})
 
 const form = reactive({
   enabled: false,
@@ -173,6 +184,83 @@ const fetchSettings = async () => {
     showSnackbar({ text: errorMessage(error), color: 'error' })
   } finally {
     loading.value = false
+  }
+}
+
+const loadPaymentMethods = async () => {
+  paymentMethodsLoading.value = true
+  try {
+    const response = await $api('/admin/setting/bsi/payment-methods')
+
+    paymentMethods.value = response.data || []
+  } catch (error) {
+    showSnackbar({ text: errorMessage(error), color: 'error' })
+  } finally {
+    paymentMethodsLoading.value = false
+  }
+}
+
+const editPaymentMethod = item => {
+  Object.assign(paymentMethodForm, {
+    id: item.id,
+    nama: item.nama || '',
+    keterangan: item.keterangan || '',
+    aktif: Boolean(item.aktif),
+  })
+  paymentMethodDialog.value = true
+}
+
+const updatePaymentMethod = async (item, values) => {
+  const response = await $api(`/admin/setting/bsi/payment-methods/${item.id}`, {
+    method: 'PUT',
+    body: {
+      nama: values.nama,
+      keterangan: values.keterangan || null,
+      aktif: Boolean(values.aktif),
+    },
+  })
+
+  const index = paymentMethods.value.findIndex(method => method.id === item.id)
+  if (index !== -1)
+    paymentMethods.value[index] = response.data
+
+  return response
+}
+
+const savePaymentMethod = async () => {
+  if (!paymentMethodForm.nama.trim()) {
+    showSnackbar({ text: 'Nama metode pembayaran wajib diisi.', color: 'warning' })
+
+    return
+  }
+
+  paymentMethodSaving.value = true
+  try {
+    const response = await updatePaymentMethod(paymentMethodForm, {
+      ...paymentMethodForm,
+      nama: paymentMethodForm.nama.trim(),
+      keterangan: paymentMethodForm.keterangan.trim(),
+    })
+
+    paymentMethodDialog.value = false
+    showSnackbar({ text: response.message, color: 'success' })
+  } catch (error) {
+    showSnackbar({ text: errorMessage(error), color: 'error' })
+  } finally {
+    paymentMethodSaving.value = false
+  }
+}
+
+const togglePaymentMethod = async (item, aktif) => {
+  paymentMethodTogglingId.value = item.id
+  try {
+    const response = await updatePaymentMethod(item, { ...item, aktif })
+
+    showSnackbar({ text: response.message, color: 'success' })
+  } catch (error) {
+    showSnackbar({ text: errorMessage(error), color: 'error' })
+  } finally {
+    paymentMethodTogglingId.value = null
   }
 }
 
@@ -887,6 +975,9 @@ watch(activeTab, tab => {
 
   if (tab === 'reconciliation')
     loadReconciliationData()
+
+  if (tab === 'payment-methods')
+    loadPaymentMethods()
 })
 
 onMounted(async () => {
@@ -951,6 +1042,12 @@ onMounted(async () => {
           prepend-icon="ri-file-list-3-line"
         >
           Rekonsiliasi
+        </VTab>
+        <VTab
+          value="payment-methods"
+          prepend-icon="ri-secure-payment-line"
+        >
+          Metode Pembayaran
         </VTab>
         <VTab
           value="docs"
@@ -2699,6 +2796,107 @@ onMounted(async () => {
         </VCard>
       </VWindowItem>
 
+      <VWindowItem value="payment-methods">
+        <VCard>
+          <VCardItem>
+            <div class="d-flex flex-wrap align-center gap-3">
+              <div>
+                <VCardTitle>Metode Pembayaran VA</VCardTitle>
+                <VCardSubtitle>
+                  Master metode yang dicatat otomatis ketika notifikasi pembayaran BSI diterima.
+                </VCardSubtitle>
+              </div>
+              <VSpacer />
+              <VBtn
+                variant="tonal"
+                prepend-icon="ri-refresh-line"
+                :loading="paymentMethodsLoading"
+                @click="loadPaymentMethods"
+              >
+                Muat Ulang
+              </VBtn>
+            </div>
+          </VCardItem>
+
+          <VDivider />
+
+          <VAlert
+            type="info"
+            variant="tonal"
+            class="ma-5"
+          >
+            BYOND BSI dikenali dari channel Mobile Banking, ATM BSI dari channel ATM,
+            dan ATM LAIN dari nomor VA antarbank berawalan <code>900</code>.
+          </VAlert>
+
+          <VProgressLinear
+            v-if="paymentMethodsLoading"
+            indeterminate
+            color="primary"
+          />
+
+          <VTable>
+            <thead>
+              <tr>
+                <th style="width: 70px">
+                  No
+                </th>
+                <th>Nama</th>
+                <th>Keterangan</th>
+                <th style="width: 130px">
+                  Aktif
+                </th>
+                <th
+                  class="text-center"
+                  style="width: 100px"
+                >
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(method, index) in paymentMethods"
+                :key="method.id"
+              >
+                <td>{{ index + 1 }}</td>
+                <td class="font-weight-medium">
+                  {{ method.nama }}
+                </td>
+                <td>{{ method.keterangan || '-' }}</td>
+                <td>
+                  <VSwitch
+                    :model-value="method.aktif"
+                    color="success"
+                    hide-details
+                    density="compact"
+                    :loading="paymentMethodTogglingId === method.id"
+                    :disabled="paymentMethodTogglingId !== null"
+                    @update:model-value="aktif => togglePaymentMethod(method, aktif)"
+                  />
+                </td>
+                <td class="text-center">
+                  <IconBtn
+                    title="Edit metode pembayaran"
+                    @click="editPaymentMethod(method)"
+                  >
+                    <VIcon icon="ri-pencil-line" />
+                  </IconBtn>
+                </td>
+              </tr>
+              <tr v-if="!paymentMethodsLoading && paymentMethods.length === 0">
+                <td
+                  colspan="5"
+                  class="text-center text-medium-emphasis py-8"
+                >
+                  Belum ada metode pembayaran.
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+        </VCard>
+      </VWindowItem>
+
       <VWindowItem value="docs">
         <VRow class="mb-6">
           <VCol
@@ -3201,6 +3399,57 @@ onMounted(async () => {
         </VCard>
       </VWindowItem>
     </VWindow>
+
+    <VDialog
+      v-model="paymentMethodDialog"
+      max-width="620"
+      :persistent="paymentMethodSaving"
+    >
+      <VCard title="Edit Metode Pembayaran">
+        <DialogCloseBtn
+          :disabled="paymentMethodSaving"
+          @click="paymentMethodDialog = false"
+        />
+        <VCardText>
+          <VTextField
+            v-model="paymentMethodForm.nama"
+            label="Nama"
+            maxlength="255"
+            counter
+          />
+          <VTextarea
+            v-model="paymentMethodForm.keterangan"
+            label="Keterangan"
+            rows="3"
+            maxlength="1000"
+            counter
+          />
+          <VSwitch
+            v-model="paymentMethodForm.aktif"
+            color="success"
+            label="Metode aktif"
+            hide-details
+          />
+        </VCardText>
+        <VCardActions class="justify-end">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="paymentMethodSaving"
+            @click="paymentMethodDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="paymentMethodSaving"
+            @click="savePaymentMethod"
+          >
+            Simpan
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <VDialog
       v-model="deleteTestPaymentDialog"

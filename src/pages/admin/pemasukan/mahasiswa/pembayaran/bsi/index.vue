@@ -45,6 +45,7 @@ const headers = [
   { title: 'Transaksi', key: 'transaction', sortable: false },
   { title: 'Mahasiswa', key: 'student', sortable: false },
   { title: 'Virtual Account', key: 'va_number', sortable: false },
+  { title: 'Metode', key: 'payment_method', sortable: false },
   { title: 'Total', key: 'total', sortable: false, align: 'end' },
   { title: 'Status', key: 'status', sortable: false },
   { title: 'Sinkronisasi', key: 'transferred', sortable: false },
@@ -448,6 +449,21 @@ onMounted(() => {
         <span class="font-weight-medium">{{ item.va_number }}</span>
       </template>
 
+      <template #item.payment_method="{ item }">
+        <VChip
+          v-if="item.metode_va"
+          color="info"
+          size="small"
+          label
+        >
+          {{ item.metode_va.nama }}
+        </VChip>
+        <span
+          v-else
+          class="text-medium-emphasis"
+        >-</span>
+      </template>
+
       <template #item.total="{ item }">
         <span class="font-weight-bold">{{ formatCurrency(item.total) }}</span>
       </template>
@@ -589,6 +605,20 @@ onMounted(() => {
             >
               {{ selectedPayment.production ? 'PRODUCTION' : 'SANDBOX' }}
             </VChip>
+          </VCol>
+          <VCol
+            cols="12"
+            md="6"
+          >
+            <div class="text-caption text-medium-emphasis">
+              Metode Pembayaran
+            </div>
+            <div class="font-weight-medium">
+              {{ selectedPayment.metode_va?.nama || '-' }}
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              Channel {{ selectedPayment.channel_id || '-' }}
+            </div>
           </VCol>
         </VRow>
 
