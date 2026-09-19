@@ -13,7 +13,10 @@ onMounted(() => {
 <template>
   <VRow>
     <!-- Header & Navigation -->
-    <VCol cols="12" class="pb-1">
+    <VCol
+      cols="12"
+      class="pb-1"
+    >
       <VBtn
         variant="outlined"
         color="secondary"
@@ -34,18 +37,21 @@ onMounted(() => {
       </div>
     </VCol>
 
-    <!-- ==========================================
-         SECTION 1: DETAIL LOG WEB ABSENSI
-         ========================================== -->
+    <!--
+      ==========================================
+      SECTION 1: DETAIL LOG WEB ABSENSI
+      ========================================== 
+    -->
     <VCol cols="12">
       <WebAbsensiData />
     </VCol>
 
-    <!-- ==========================================
-         SECTION 2: (Tempat untuk section baru)
-         Silakan tambahkan komponen / section baru di bawah ini
-         ========================================== -->
+    <!--
+      ==========================================
+      SECTION 2: (Tempat untuk section baru)
+      Silakan tambahkan komponen / section baru di bawah ini
+      ========================================== 
+    -->
     <!-- <VCol cols="12"> ... </VCol> -->
-
   </VRow>
 </template>

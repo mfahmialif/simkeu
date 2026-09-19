@@ -10,7 +10,7 @@ if (!content.includes('import PengeluaranLampiranInput')) {
     'import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue"',
     `import PengeluaranLampiranInput from "@/components/admin/pengeluaran/PengeluaranLampiranInput.vue"
 import { appendLampiranFormData } from "@/utils/lampiran"
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue"`
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue"`,
   )
 }
 
@@ -19,7 +19,7 @@ content = content.replace(
   'lampiran: [],',
   `lampiran: [],
     existing_lampiran: [],
-    removed_lampiran: [],`
+    removed_lampiran: [],`,
 )
 
 // 3. ADD LAMPIRAN TO duplicateRow
@@ -28,7 +28,7 @@ content = content.replace(
   `rab_detail_id: null,
     lampiran: [],
     existing_lampiran: [],
-    removed_lampiran: [],`
+    removed_lampiran: [],`,
 )
 
 // 4. ADD LAMPIRAN TO detailToRow
@@ -36,7 +36,7 @@ content = content.replace(
   'lampiran: selectedFileSafeArray(item.lampiran),',
   `lampiran: [],
   existing_lampiran: selectedFileSafeArray(item.lampiran),
-  removed_lampiran: [],`
+  removed_lampiran: [],`,
 )
 
 // 5. UPDATE submit payload to FormData

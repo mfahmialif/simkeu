@@ -468,5 +468,4 @@ defineExpose({
   </VCard>
 </template>
 
-<style scoped>
-</style>
+

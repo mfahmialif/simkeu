@@ -17,6 +17,7 @@ const webAbsensiRekapLimit = ref(15)
 const webAbsensiRekapPage = ref(1)
 
 const webAbsensiDept = ref(null)
+
 const webAbsensiDeptOptions = [
   { title: "Semua Departemen", value: null },
   { title: "Dosen", value: "Dosen" },
@@ -25,10 +26,12 @@ const webAbsensiDeptOptions = [
 ]
 
 const webAbsensiMode = ref("bulan_tahun")
+
 const webAbsensiModeOptions = [
   { title: "Mode Bulan", value: "bulan_tahun" },
   { title: "Mode Rentang Tanggal", value: "range" },
 ]
+
 const webAbsensiMonthOptions = [
   { title: "Januari", value: 1 },
   { title: "Februari", value: 2 },
@@ -43,6 +46,7 @@ const webAbsensiMonthOptions = [
   { title: "November", value: 11 },
   { title: "Desember", value: 12 },
 ]
+
 const webAbsensiBulan = ref(new Date().getMonth() + 1)
 const webAbsensiTahun = ref(new Date().getFullYear())
 const webAbsensiStartDate = ref(fDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
@@ -78,6 +82,7 @@ const webAbsensiRekapHeaders = [
 const formatKodeOnly = item => {
   const raw = item?.user?.kode || item?.kode_user || item?.user?.username || ''
   const digits = String(raw).replace(/^KD-/i, '').replace(/[^0-9]/g, '')
+  
   return digits || String(raw) || '-'
 }
 
@@ -85,11 +90,13 @@ const formatIndoDay = dateStr => {
   if (!dateStr) return '-'
   const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
   const d = new Date(dateStr)
+  
   return !Number.isNaN(d.getTime()) ? days[d.getDay()] : '-'
 }
 
 const getHariTotal = item => {
   if (!item?.rekap_per_kategori || !Array.isArray(item.rekap_per_kategori)) return 0
+  
   return item.rekap_per_kategori.reduce((acc, kat) => acc + (Number(kat?.jumlah) || 0), 0)
 }
 
@@ -133,6 +140,7 @@ const fetchWebAbsensiData = async () => {
       if (response.periode) {
         if (response.periode.mode === "bulan_tahun" || webAbsensiMode.value === "bulan_tahun") {
           const mName = webAbsensiMonthOptions.find(m => m.value === Number(response.periode.bulan || webAbsensiBulan.value))?.title || response.periode.bulan
+
           webAbsensiPeriodeInfo.value = `Bulan ${mName} ${response.periode.tahun || webAbsensiTahun.value}`
         } else {
           webAbsensiPeriodeInfo.value = `Rentang ${response.periode.start_date || webAbsensiStartDate.value} s/d ${response.periode.end_date || webAbsensiEndDate.value}`
@@ -185,6 +193,7 @@ const fetchWebAbsensiRekapData = async () => {
       if (response.periode) {
         if (response.periode.mode === "bulan_tahun" || webAbsensiMode.value === "bulan_tahun") {
           const mName = webAbsensiMonthOptions.find(m => m.value === Number(response.periode.bulan || webAbsensiBulan.value))?.title || response.periode.bulan
+
           webAbsensiPeriodeInfo.value = `Bulan ${mName} ${response.periode.tahun || webAbsensiTahun.value}`
         } else {
           webAbsensiPeriodeInfo.value = `Rentang ${response.periode.start_date || webAbsensiStartDate.value} s/d ${response.periode.end_date || webAbsensiEndDate.value}`
@@ -211,9 +220,10 @@ const webAbsensiSlipPegawaiOptions = computed(() => {
     const name = item.user?.name || item.user?.nama || '-'
     const kode = item.user?.kode || item.kode_user || '-'
     const dept = item.user?.departemen || '-'
+    
     return {
       title: `${kode} - ${name} (${dept})`,
-      value: kode
+      value: kode,
     }
   })
 })
@@ -224,8 +234,9 @@ const fetchWebAbsensiSlipList = async () => {
   try {
     const params = {
       mode: webAbsensiMode.value,
-      kode_user: webAbsensiSlipPegawai.value
+      kode_user: webAbsensiSlipPegawai.value,
     }
+
     if (webAbsensiMode.value === "bulan_tahun") {
       params.bulan = webAbsensiBulan.value
       params.tahun = webAbsensiTahun.value
@@ -241,6 +252,7 @@ const fetchWebAbsensiSlipList = async () => {
       method: "GET",
       params,
     })
+
     if (response && response.status) {
       webAbsensiSlipDataList.value = response.data || []
       webAbsensiSlipRekapItem.value = response.rekap_item || null
@@ -285,10 +297,14 @@ const loadWebAbsensiItems = ({ page: newPage, itemsPerPage: newLimit }) => {
 const resetWebAbsensiFilter = () => {
   webAbsensiMode.value = "bulan_tahun"
   webAbsensiDept.value = null
+
   const d = new Date()
+
   webAbsensiBulan.value = d.getMonth() + 1
   webAbsensiTahun.value = d.getFullYear()
+
   const firstDay = new Date(d.getFullYear(), d.getMonth(), 1)
+
   webAbsensiStartDate.value = fDate(firstDay)
   webAbsensiEndDate.value = fDate(d)
   webAbsensiSearch.value = ""
@@ -304,6 +320,7 @@ const getExportParams = () => {
   const params = {
     mode: webAbsensiMode.value,
   }
+
   if (webAbsensiMode.value === "bulan_tahun") {
     params.bulan = webAbsensiBulan.value
     params.tahun = webAbsensiTahun.value
@@ -317,6 +334,7 @@ const getExportParams = () => {
   if (webAbsensiSearch.value && String(webAbsensiSearch.value).trim()) {
     params.search = String(webAbsensiSearch.value).trim()
   }
+  
   return params
 }
 
@@ -324,6 +342,7 @@ const exportWebAbsensiExcel = async () => {
   loadingExportExcel.value = true
   try {
     const params = getExportParams()
+
     const endpoint = webAbsensiTab.value === "harian"
       ? "/admin/pengeluaran/absensi/web-absensi/data/export-excel"
       : "/admin/pengeluaran/absensi/web-absensi/rekap/export-excel"
@@ -355,6 +374,7 @@ const exportWebAbsensiPdf = async () => {
   loadingExportPdf.value = true
   try {
     const params = getExportParams()
+
     const endpoint = webAbsensiTab.value === "harian"
       ? "/admin/pengeluaran/absensi/web-absensi/data/export-pdf"
       : "/admin/pengeluaran/absensi/web-absensi/rekap/export-pdf"
@@ -391,8 +411,9 @@ const downloadWebAbsensiSlipExcel = async () => {
   try {
     const params = {
       mode: webAbsensiMode.value,
-      kode_user: webAbsensiSlipPegawai.value
+      kode_user: webAbsensiSlipPegawai.value,
     }
+
     if (webAbsensiMode.value === "bulan_tahun") {
       params.bulan = webAbsensiBulan.value
       params.tahun = webAbsensiTahun.value
@@ -409,7 +430,9 @@ const downloadWebAbsensiSlipExcel = async () => {
       params,
       headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
     })
+
     const name = webAbsensiSlipRekapItem.value?.user?.name || webAbsensiSlipRekapItem.value?.user?.nama || "Pegawai"
+
     downloadFileExport(response, `Slip_Rekap_Kehadiran_${name.replace(/[^A-Za-z0-9]/g, '_')}.xlsx`)
   } catch (err) {
     console.error("Gagal download Excel Slip:", err)
@@ -424,8 +447,9 @@ const downloadWebAbsensiSlipPdf = async () => {
   try {
     const params = {
       mode: webAbsensiMode.value,
-      kode_user: webAbsensiSlipPegawai.value
+      kode_user: webAbsensiSlipPegawai.value,
     }
+
     if (webAbsensiMode.value === "bulan_tahun") {
       params.bulan = webAbsensiBulan.value
       params.tahun = webAbsensiTahun.value
@@ -442,7 +466,9 @@ const downloadWebAbsensiSlipPdf = async () => {
       params,
       headers: { Accept: "application/pdf" },
     })
+
     const name = webAbsensiSlipRekapItem.value?.user?.name || webAbsensiSlipRekapItem.value?.user?.nama || "Pegawai"
+
     downloadFileExport(response, `Slip_Rekap_Kehadiran_${name.replace(/[^A-Za-z0-9]/g, '_')}.pdf`)
   } catch (err) {
     console.error("Gagal download PDF Slip:", err)
@@ -451,34 +477,38 @@ const downloadWebAbsensiSlipPdf = async () => {
   }
 }
 
-const formatSlipTotalHari = (item) => {
+const formatSlipTotalHari = item => {
   if (!item) return 0
   if (item._total_hari_calculated) return item._total_hari_calculated
   if (Array.isArray(item.rekap_per_kategori)) {
     return item.rekap_per_kategori.reduce((acc, kat) => acc + (Number(kat.jumlah) || 0), 0)
   }
+  
   return webAbsensiSlipDataList.value.length || 0
 }
 
-const formatSlipPeriode = (p) => {
+const formatSlipPeriode = p => {
   if (!p) return '-'
   if (p.mode === 'bulan_tahun') {
     const months = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER']
     const b = Number(p.bulan || new Date().getMonth() + 1)
+    
     return `${months[b - 1] || b} ${p.tahun || new Date().getFullYear()}`
   }
   if (p.start_date && p.end_date) {
     return `${p.start_date} s/d ${p.end_date}`.toUpperCase()
   }
+  
   return '-'
 }
 
-const formatSlipTanggal = (tgl) => {
+const formatSlipTanggal = tgl => {
   if (!tgl || tgl === '-') return '-'
   const parts = tgl.split('-')
   if (parts.length === 3 && parts[0].length === 4) {
     return `${parts[2]}-${parts[1]}-${parts[0].slice(-2)}`
   }
+  
   return tgl
 }
 
@@ -498,7 +528,10 @@ onMounted(() => {
     <VCardItem class="pb-3 bg-light-primary">
       <template #title>
         <div class="d-flex align-center gap-2">
-          <VIcon icon="ri-global-line" color="primary" />
+          <VIcon
+            icon="ri-global-line"
+            color="primary"
+          />
           <span class="font-weight-bold text-primary">Data dari Web Absensi</span>
         </div>
       </template>
@@ -509,13 +542,22 @@ onMounted(() => {
       class="px-4 border-b"
       color="primary"
     >
-      <VTab value="harian" prepend-icon="ri-calendar-todo-line">
+      <VTab
+        value="harian"
+        prepend-icon="ri-calendar-todo-line"
+      >
         Rekap Harian (Detail Log)
       </VTab>
-      <VTab value="rekap" prepend-icon="ri-bar-chart-grouped-line">
+      <VTab
+        value="rekap"
+        prepend-icon="ri-bar-chart-grouped-line"
+      >
         Rekap Total
       </VTab>
-      <VTab value="slip" prepend-icon="ri-file-paper-2-line">
+      <VTab
+        value="slip"
+        prepend-icon="ri-file-paper-2-line"
+      >
         Slip Rekap Kehadiran
       </VTab>
     </VTabs>
@@ -523,7 +565,11 @@ onMounted(() => {
     <VCardText class="pt-4">
       <!-- Filter Bar -->
       <VRow class="mb-4">
-        <VCol cols="12" sm="6" md="3">
+        <VCol
+          cols="12"
+          sm="6"
+          md="3"
+        >
           <VSelect
             v-model="webAbsensiMode"
             :items="webAbsensiModeOptions"
@@ -534,7 +580,11 @@ onMounted(() => {
         </VCol>
 
         <template v-if="webAbsensiMode === 'bulan_tahun'">
-          <VCol cols="12" sm="6" md="3">
+          <VCol
+            cols="12"
+            sm="6"
+            md="3"
+          >
             <VSelect
               v-model="webAbsensiBulan"
               :items="webAbsensiMonthOptions"
@@ -543,7 +593,11 @@ onMounted(() => {
               density="compact"
             />
           </VCol>
-          <VCol cols="12" sm="6" md="3">
+          <VCol
+            cols="12"
+            sm="6"
+            md="3"
+          >
             <VTextField
               v-model.number="webAbsensiTahun"
               type="number"
@@ -555,7 +609,11 @@ onMounted(() => {
         </template>
 
         <template v-else>
-          <VCol cols="12" sm="6" md="3">
+          <VCol
+            cols="12"
+            sm="6"
+            md="3"
+          >
             <AppDateTimePicker
               v-model="webAbsensiStartDate"
               label="Dari Tanggal"
@@ -565,7 +623,11 @@ onMounted(() => {
               :config="{ altInput: true, altFormat: 'F j, Y', dateFormat: 'Y-m-d' }"
             />
           </VCol>
-          <VCol cols="12" sm="6" md="3">
+          <VCol
+            cols="12"
+            sm="6"
+            md="3"
+          >
             <AppDateTimePicker
               v-model="webAbsensiEndDate"
               label="Sampai Tanggal"
@@ -577,7 +639,11 @@ onMounted(() => {
           </VCol>
         </template>
 
-        <VCol cols="12" sm="6" md="3">
+        <VCol
+          cols="12"
+          sm="6"
+          md="3"
+        >
           <VSelect
             v-model="webAbsensiDept"
             :items="webAbsensiDeptOptions"
@@ -588,7 +654,11 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" sm="7" md="8">
+        <VCol
+          cols="12"
+          sm="7"
+          md="8"
+        >
           <VTextField
             v-model="webAbsensiSearch"
             label="Cari Nama / Kode / Departemen"
@@ -601,23 +671,48 @@ onMounted(() => {
           />
         </VCol>
 
-        <VCol cols="12" sm="5" md="4" class="d-flex gap-2 align-center">
-          <VBtn color="primary" prepend-icon="ri-search-line" :loading="loadingWebAbsensi" @click="fetchActiveTabData">
+        <VCol
+          cols="12"
+          sm="5"
+          md="4"
+          class="d-flex gap-2 align-center"
+        >
+          <VBtn
+            color="primary"
+            prepend-icon="ri-search-line"
+            :loading="loadingWebAbsensi"
+            @click="fetchActiveTabData"
+          >
             Cari
           </VBtn>
-          <VBtn variant="outlined" color="secondary" prepend-icon="ri-refresh-line" :loading="loadingWebAbsensi" @click="resetWebAbsensiFilter">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            prepend-icon="ri-refresh-line"
+            :loading="loadingWebAbsensi"
+            @click="resetWebAbsensiFilter"
+          >
             Reset
           </VBtn>
         </VCol>
       </VRow>
 
       <!-- Periode & Info & Export Actions -->
-      <div v-if="webAbsensiTab !== 'slip'" class="d-flex flex-wrap justify-space-between align-center gap-3 mb-3">
-        <div v-if="webAbsensiPeriodeInfo" class="text-caption text-medium-emphasis">
+      <div
+        v-if="webAbsensiTab !== 'slip'"
+        class="d-flex flex-wrap justify-space-between align-center gap-3 mb-3"
+      >
+        <div
+          v-if="webAbsensiPeriodeInfo"
+          class="text-caption text-medium-emphasis"
+        >
           Menampilkan data <span class="font-weight-bold text-high-emphasis">{{ webAbsensiPeriodeInfo }}</span>
           (Total: {{ webAbsensiTab === 'harian' ? webAbsensiTotal + ' baris log' : webAbsensiRekapList.length + ' pegawai' }})
         </div>
-        <div v-else class="text-caption text-medium-emphasis">
+        <div
+          v-else
+          class="text-caption text-medium-emphasis"
+        >
           Total: {{ webAbsensiTab === 'harian' ? webAbsensiTotal + ' baris log' : webAbsensiRekapList.length + ' pegawai' }}
         </div>
 
@@ -699,10 +794,16 @@ onMounted(() => {
         </template>
 
         <template #item.barokah="{ item }">
-          <span v-if="Number(item.perolehan_dana) > 0" class="font-weight-medium">
+          <span
+            v-if="Number(item.perolehan_dana) > 0"
+            class="font-weight-medium"
+          >
             {{ formatRupiah(item.perolehan_dana) }}
           </span>
-          <span v-else class="text-disabled">
+          <span
+            v-else
+            class="text-disabled"
+          >
             TIDAK DAPAT
           </span>
         </template>
@@ -733,7 +834,11 @@ onMounted(() => {
         </template>
 
         <template #item.departemen="{ item }">
-          <VChip size="small" color="secondary" variant="flat">
+          <VChip
+            size="small"
+            color="secondary"
+            variant="flat"
+          >
             {{ item.user?.departemen || '-' }}
           </VChip>
         </template>
@@ -757,20 +862,40 @@ onMounted(() => {
         </template>
 
         <template #item.total_barokah="{ item }">
-          <span v-if="Number(item.total_perolehan_dana) > 0" class="font-weight-bold text-success">
+          <span
+            v-if="Number(item.total_perolehan_dana) > 0"
+            class="font-weight-bold text-success"
+          >
             {{ formatRupiah(item.total_perolehan_dana) }}
           </span>
-          <span v-else class="text-disabled">
+          <span
+            v-else
+            class="text-disabled"
+          >
             Rp 0
           </span>
         </template>
 
         <template #body.append>
-          <tr v-if="webAbsensiRekapList.length > 0" class="bg-light-primary font-weight-bold">
-            <td colspan="5" class="text-center">TOTAL KESELURUHAN</td>
-            <td class="text-center">{{ totalSemuaHari }}</td>
-            <td class="text-center">{{ Number(totalSemuaJam).toFixed(2) }}</td>
-            <td class="text-end text-success">{{ formatRupiah(totalSemuaBarokah) }}</td>
+          <tr
+            v-if="webAbsensiRekapList.length > 0"
+            class="bg-light-primary font-weight-bold"
+          >
+            <td
+              colspan="5"
+              class="text-center"
+            >
+              TOTAL KESELURUHAN
+            </td>
+            <td class="text-center">
+              {{ totalSemuaHari }}
+            </td>
+            <td class="text-center">
+              {{ Number(totalSemuaJam).toFixed(2) }}
+            </td>
+            <td class="text-end text-success">
+              {{ formatRupiah(totalSemuaBarokah) }}
+            </td>
           </tr>
         </template>
 
@@ -786,7 +911,11 @@ onMounted(() => {
         <!-- Employee selector and actions -->
         <VCard class="mb-6 border bg-light-primary pa-4 elevation-0">
           <VRow class="align-center">
-            <VCol cols="12" sm="6" md="6">
+            <VCol
+              cols="12"
+              sm="6"
+              md="6"
+            >
               <VAutocomplete
                 v-model="webAbsensiSlipPegawai"
                 :items="webAbsensiSlipPegawaiOptions"
@@ -799,7 +928,12 @@ onMounted(() => {
                 @update:model-value="fetchWebAbsensiSlipList"
               />
             </VCol>
-            <VCol cols="12" sm="6" md="6" class="d-flex justify-end gap-2 flex-wrap">
+            <VCol
+              cols="12"
+              sm="6"
+              md="6"
+              class="d-flex justify-end gap-2 flex-wrap"
+            >
               <VBtn
                 color="success"
                 variant="flat"
@@ -826,90 +960,282 @@ onMounted(() => {
           </VRow>
         </VCard>
 
-        <div v-if="webAbsensiSlipLoading" class="d-flex flex-column align-center justify-center py-12">
-          <VProgressCircular indeterminate color="primary" size="48" class="mb-3" />
+        <div
+          v-if="webAbsensiSlipLoading"
+          class="d-flex flex-column align-center justify-center py-12"
+        >
+          <VProgressCircular
+            indeterminate
+            color="primary"
+            size="48"
+            class="mb-3"
+          />
           <span class="text-medium-emphasis">Memuat preview slip rekap kehadiran...</span>
         </div>
 
-        <div v-else-if="!webAbsensiSlipPegawai" class="text-center pa-12 border rounded bg-light-primary">
-          <VIcon icon="ri-file-paper-2-line" size="48" color="primary" class="mb-3" />
-          <div class="text-h6 font-weight-bold text-primary mb-1">Pilih Pegawai Terlebih Dahulu</div>
-          <div class="text-caption text-medium-emphasis">Silakan pilih nama atau kode pegawai pada kotak pencarian di atas untuk melihat preview Slip Rekap Kehadiran.</div>
+        <div
+          v-else-if="!webAbsensiSlipPegawai"
+          class="text-center pa-12 border rounded bg-light-primary"
+        >
+          <VIcon
+            icon="ri-file-paper-2-line"
+            size="48"
+            color="primary"
+            class="mb-3"
+          />
+          <div class="text-h6 font-weight-bold text-primary mb-1">
+            Pilih Pegawai Terlebih Dahulu
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            Silakan pilih nama atau kode pegawai pada kotak pencarian di atas untuk melihat preview Slip Rekap Kehadiran.
+          </div>
         </div>
 
         <!-- Authentic Slip Document Preview Box -->
-        <div v-else-if="webAbsensiSlipRekapItem" class="pa-2 pa-sm-6 border mx-auto rounded elevation-3" style="max-width: 960px; background-color: #ffffff; color: #000000; font-family: 'Arial', sans-serif;">
+        <div
+          v-else-if="webAbsensiSlipRekapItem"
+          class="pa-2 pa-sm-6 border mx-auto rounded elevation-3"
+          style="max-width: 960px; background-color: #ffffff; color: #000000; font-family: 'Arial', sans-serif;"
+        >
           <!-- Kop Surat Banner -->
-          <div class="text-center mb-4 pb-3" style="border-bottom: 2px solid #000000;">
+          <div
+            class="text-center mb-4 pb-3"
+            style="border-bottom: 2px solid #000000;"
+          >
             <img
               src="/img/kop uiidalwa mantap.png"
               alt="Kop UIIDalwa"
               style="max-width: 100%; height: auto; max-height: 140px; object-fit: contain;"
               @error="$event.target.style.display='none'"
-            />
+            >
           </div>
 
           <!-- Title -->
-          <div class="text-center font-weight-bold mb-6 text-uppercase" style="font-size: 1.2rem; text-decoration: underline; letter-spacing: 0.5px; color: #000000;">
+          <div
+            class="text-center font-weight-bold mb-6 text-uppercase"
+            style="font-size: 1.2rem; text-decoration: underline; letter-spacing: 0.5px; color: #000000;"
+          >
             REKAP KEHADIRAN
           </div>
 
           <!-- Employee Summary Profile -->
-          <div class="mb-6 px-2" style="font-size: 0.95rem; line-height: 1.8; color: #000000;">
+          <div
+            class="mb-6 px-2"
+            style="font-size: 0.95rem; line-height: 1.8; color: #000000;"
+          >
             <VRow no-gutters>
-              <VCol cols="4" sm="3" class="font-weight-bold">NAMA</VCol>
-              <VCol cols="8" sm="9" class="font-weight-bold">: {{ webAbsensiSlipRekapItem.user?.name || webAbsensiSlipRekapItem.user?.nama || '-' }}</VCol>
+              <VCol
+                cols="4"
+                sm="3"
+                class="font-weight-bold"
+              >
+                NAMA
+              </VCol>
+              <VCol
+                cols="8"
+                sm="9"
+                class="font-weight-bold"
+              >
+                : {{ webAbsensiSlipRekapItem.user?.name || webAbsensiSlipRekapItem.user?.nama || '-' }}
+              </VCol>
             </VRow>
             <VRow no-gutters>
-              <VCol cols="4" sm="3" class="font-weight-bold">DEPARTEMEN</VCol>
-              <VCol cols="8" sm="9">: {{ webAbsensiSlipRekapItem.user?.departemen || '-' }}</VCol>
+              <VCol
+                cols="4"
+                sm="3"
+                class="font-weight-bold"
+              >
+                DEPARTEMEN
+              </VCol>
+              <VCol
+                cols="8"
+                sm="9"
+              >
+                : {{ webAbsensiSlipRekapItem.user?.departemen || '-' }}
+              </VCol>
             </VRow>
             <VRow no-gutters>
-              <VCol cols="4" sm="3" class="font-weight-bold">TOTAL JAM</VCol>
-              <VCol cols="8" sm="9">: {{ String(webAbsensiSlipRekapItem.total_jam_keseluruhan?.total_jam || 0).replace('.', ',') }}</VCol>
+              <VCol
+                cols="4"
+                sm="3"
+                class="font-weight-bold"
+              >
+                TOTAL JAM
+              </VCol>
+              <VCol
+                cols="8"
+                sm="9"
+              >
+                : {{ String(webAbsensiSlipRekapItem.total_jam_keseluruhan?.total_jam || 0).replace('.', ',') }}
+              </VCol>
             </VRow>
             <VRow no-gutters>
-              <VCol cols="4" sm="3" class="font-weight-bold">TOTAL HARI</VCol>
-              <VCol cols="8" sm="9">: {{ formatSlipTotalHari(webAbsensiSlipRekapItem) }}</VCol>
+              <VCol
+                cols="4"
+                sm="3"
+                class="font-weight-bold"
+              >
+                TOTAL HARI
+              </VCol>
+              <VCol
+                cols="8"
+                sm="9"
+              >
+                : {{ formatSlipTotalHari(webAbsensiSlipRekapItem) }}
+              </VCol>
             </VRow>
             <VRow no-gutters>
-              <VCol cols="4" sm="3" class="font-weight-bold">TOTAL BAROKAH</VCol>
-              <VCol cols="8" sm="9" class="font-weight-bold">: {{ webAbsensiSlipRekapItem.total_perolehan_dana > 0 ? formatRupiah(webAbsensiSlipRekapItem.total_perolehan_dana) : '-' }}</VCol>
+              <VCol
+                cols="4"
+                sm="3"
+                class="font-weight-bold"
+              >
+                TOTAL BAROKAH
+              </VCol>
+              <VCol
+                cols="8"
+                sm="9"
+                class="font-weight-bold"
+              >
+                : {{ webAbsensiSlipRekapItem.total_perolehan_dana > 0 ? formatRupiah(webAbsensiSlipRekapItem.total_perolehan_dana) : '-' }}
+              </VCol>
             </VRow>
             <VRow no-gutters>
-              <VCol cols="4" sm="3" class="font-weight-bold">PERIODE</VCol>
-              <VCol cols="8" sm="9">: {{ formatSlipPeriode(webAbsensiSlipPeriode) }}</VCol>
+              <VCol
+                cols="4"
+                sm="3"
+                class="font-weight-bold"
+              >
+                PERIODE
+              </VCol>
+              <VCol
+                cols="8"
+                sm="9"
+              >
+                : {{ formatSlipPeriode(webAbsensiSlipPeriode) }}
+              </VCol>
             </VRow>
           </div>
 
           <!-- Daily Logs Table -->
           <div class="table-responsive">
-            <table class="w-100" style="border-collapse: collapse; font-size: 0.85rem; color: #000000; border: 1px solid #000000;">
+            <table
+              class="w-100"
+              style="border-collapse: collapse; font-size: 0.85rem; color: #000000; border: 1px solid #000000;"
+            >
               <thead>
                 <tr style="background-color: #f1f5f9; border-bottom: 2px solid #000000;">
-                  <th class="pa-2 text-center" style="border: 1px solid #000000; width: 45px;">NO</th>
-                  <th class="pa-2 text-center" style="border: 1px solid #000000; width: 100px;">TANGGAL</th>
-                  <th class="pa-2 text-center" style="border: 1px solid #000000; width: 100px;">JAM DATANG</th>
-                  <th class="pa-2 text-center" style="border: 1px solid #000000; width: 100px;">JAM PULANG</th>
-                  <th class="pa-2 text-center" style="border: 1px solid #000000; width: 90px;">TOTAL JAM</th>
-                  <th class="pa-2 text-center" style="border: 1px solid #000000;">PERINCIAN JAM</th>
-                  <th class="pa-2 text-center" style="border: 1px solid #000000; width: 120px;">BAROKAH</th>
-                  <th class="pa-2 text-left" style="border: 1px solid #000000; width: 110px;">KET.</th>
+                  <th
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000; width: 45px;"
+                  >
+                    NO
+                  </th>
+                  <th
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000; width: 100px;"
+                  >
+                    TANGGAL
+                  </th>
+                  <th
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000; width: 100px;"
+                  >
+                    JAM DATANG
+                  </th>
+                  <th
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000; width: 100px;"
+                  >
+                    JAM PULANG
+                  </th>
+                  <th
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000; width: 90px;"
+                  >
+                    TOTAL JAM
+                  </th>
+                  <th
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000;"
+                  >
+                    PERINCIAN JAM
+                  </th>
+                  <th
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000; width: 120px;"
+                  >
+                    BAROKAH
+                  </th>
+                  <th
+                    class="pa-2 text-left"
+                    style="border: 1px solid #000000; width: 110px;"
+                  >
+                    KET.
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(row, idx) in webAbsensiSlipDataList" :key="idx" style="border-bottom: 1px solid #000000;">
-                  <td class="pa-2 text-center" style="border: 1px solid #000000;">{{ idx + 1 }}</td>
-                  <td class="pa-2 text-center" style="border: 1px solid #000000;">{{ formatSlipTanggal(row.tgl_absen) }}</td>
-                  <td class="pa-2 text-center" style="border: 1px solid #000000;">{{ row.pagi || '-' }}</td>
-                  <td class="pa-2 text-center" style="border: 1px solid #000000;">{{ row.sore || '-' }}</td>
-                  <td class="pa-2 text-center" style="border: 1px solid #000000;">{{ row.durasi_jam !== undefined && row.durasi_jam !== null ? String(row.durasi_jam).replace('.', ',') : '-' }}</td>
-                  <td class="pa-2 text-center" style="border: 1px solid #000000;">{{ row.durasi_teks || (row.kategori?.nama || '-') }}</td>
-                  <td class="pa-2 text-right font-weight-medium" style="border: 1px solid #000000;">{{ row.perolehan_dana > 0 ? formatRupiah(row.perolehan_dana) : '-' }}</td>
-                  <td class="pa-2 text-left" style="border: 1px solid #000000;">{{ row.keterangan || '-' }}</td>
+                <tr
+                  v-for="(row, idx) in webAbsensiSlipDataList"
+                  :key="idx"
+                  style="border-bottom: 1px solid #000000;"
+                >
+                  <td
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000;"
+                  >
+                    {{ idx + 1 }}
+                  </td>
+                  <td
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000;"
+                  >
+                    {{ formatSlipTanggal(row.tgl_absen) }}
+                  </td>
+                  <td
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000;"
+                  >
+                    {{ row.pagi || '-' }}
+                  </td>
+                  <td
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000;"
+                  >
+                    {{ row.sore || '-' }}
+                  </td>
+                  <td
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000;"
+                  >
+                    {{ row.durasi_jam !== undefined && row.durasi_jam !== null ? String(row.durasi_jam).replace('.', ',') : '-' }}
+                  </td>
+                  <td
+                    class="pa-2 text-center"
+                    style="border: 1px solid #000000;"
+                  >
+                    {{ row.durasi_teks || (row.kategori?.nama || '-') }}
+                  </td>
+                  <td
+                    class="pa-2 text-right font-weight-medium"
+                    style="border: 1px solid #000000;"
+                  >
+                    {{ row.perolehan_dana > 0 ? formatRupiah(row.perolehan_dana) : '-' }}
+                  </td>
+                  <td
+                    class="pa-2 text-left"
+                    style="border: 1px solid #000000;"
+                  >
+                    {{ row.keterangan || '-' }}
+                  </td>
                 </tr>
                 <tr v-if="!webAbsensiSlipDataList.length">
-                  <td colspan="8" class="pa-6 text-center text-medium-emphasis" style="border: 1px solid #000000;">
+                  <td
+                    colspan="8"
+                    class="pa-6 text-center text-medium-emphasis"
+                    style="border: 1px solid #000000;"
+                  >
                     Tidak ada data kehadiran untuk pegawai ini pada periode yang dipilih.
                   </td>
                 </tr>

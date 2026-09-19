@@ -1499,6 +1499,7 @@ const fetchRekapPetugas = async moduleKey => {
 
 const openRekapForm = async () => {
   rekapEditingItem.value = null
+
   const inputPiutang = selectedModule.value === PIUTANG_MODULE_KEY
   const moduleKey = inputPiutang ? PIUTANG_MODULE_KEY : defaultRegularModuleKey()
 
@@ -1646,6 +1647,7 @@ const saveRekap = async () => {
     rekapSaving.value = true
 
     const isEditing = isEditingRekap.value
+
     const response = await $api(
       isEditing
         ? `/admin/laporan/rab/${rekapEditingItem.value.module_key}/${rekapEditingItem.value.id}`

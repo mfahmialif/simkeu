@@ -122,6 +122,7 @@ const normalizePiutang = value => {
 
   const sisa = Math.max(0, Number(value.sisa || 0))
   const defaultCicilan = Math.max(0, Number(value.default_cicilan || 0))
+
   const nominalPotongan = Math.min(
     sisa,
     Math.max(0, Number(value.nominal_potongan ?? defaultCicilan)),

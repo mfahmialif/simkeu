@@ -8,6 +8,7 @@ export const settingMenu = {
     { title: "Pimpinan", icon: { icon: "ri-user-star-line" }, to: "admin-setting-pimpinan" },
     { title: "Form Schedule", icon: { icon: "ri-time-line" }, to: "admin-setting-form-schadule" },
     { title: "Konfig BSI", icon: { icon: "ri-bank-line" }, to: "admin-setting-bsi" },
+    { title: "API", icon: { icon: "ri-code-s-slash-line" }, to: "admin-setting-api" },
     {
       title: "Aktifkan Mahasiswa",
       icon: { icon: "ri-user-follow-line" },

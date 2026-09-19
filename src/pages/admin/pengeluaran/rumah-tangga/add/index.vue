@@ -651,7 +651,9 @@ onMounted(() => {
                           min="0"
                           label="Harga Satuan *"
                           density="compact"
-                          hide-details="auto" :hint="formatRupiah(row.nominal || 0)" persistent-hint
+                          hide-details="auto"
+                          :hint="formatRupiah(row.nominal || 0)"
+                          persistent-hint
                           :rules="[requiredValidator]"
                           style="flex: 1.5; min-width: 0;"
                         />

@@ -488,17 +488,21 @@ const webAbsensiLoading = ref(false)
 const webAbsensiRows = ref([])
 const webAbsensiPeriode = ref(null)
 const importMode = ref("bulan_tahun")
+
 const importModeOptions = [
   { title: "Bulan & Tahun", value: "bulan_tahun" },
   { title: "Rentang Tanggal", value: "range" },
 ]
+
 const importDept = ref(null)
+
 const importDeptOptions = [
   { title: "Semua Departemen", value: null },
   { title: "Dosen", value: "Dosen" },
   { title: "Staff", value: "Staff" },
   { title: "Admin", value: "Admin" },
 ]
+
 const importBulan = ref(new Date().getMonth() + 1)
 const importTahun = ref(new Date().getFullYear())
 const importStartDate = ref(fDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
@@ -588,6 +592,7 @@ const findSimkeuMatch = webItem => {
 
       return itemKode === kode
     })
+
     if (matchByKode) return matchByKode
   }
 
@@ -598,6 +603,7 @@ const findSimkeuMatch = webItem => {
 
       return itemKode === username
     })
+
     if (matchByUsername) return matchByUsername
   }
 
@@ -608,6 +614,7 @@ const findSimkeuMatch = webItem => {
 
       return itemNama === name
     })
+
     if (matchByName) return matchByName
   }
 
@@ -668,6 +675,7 @@ const applyWebAbsensiToTable = () => {
         const totalHari = Array.isArray(webItem?.rekap_per_kategori)
           ? webItem.rekap_per_kategori.reduce((acc, kat) => acc + Number(kat?.jumlah || 0), 0)
           : 0
+
         const totalJam = Number(webItem?.total_jam_keseluruhan?.total_jam || 0)
 
         simkeuItem.total_hari = totalHari
@@ -676,6 +684,7 @@ const applyWebAbsensiToTable = () => {
 
       if (importOptionBarokah.value) {
         const totalDana = Number(webItem?.total_perolehan_dana || 0)
+
         simkeuItem.total_barokah = totalDana
       }
 
@@ -726,7 +735,9 @@ const fetchData = async () => {
       if (!Number.isNaN(d.getTime())) {
         importBulan.value = d.getMonth() + 1
         importTahun.value = d.getFullYear()
+
         const firstDay = new Date(d.getFullYear(), d.getMonth(), 1)
+
         importStartDate.value = fDate(firstDay)
         importEndDate.value = fDate(d)
       }
@@ -1303,12 +1314,24 @@ onMounted(() => {
               <table class="text-sm w-100 import-table">
                 <thead class="bg-var-theme-background sticky-top">
                   <tr>
-                    <th class="text-left py-2 px-3">Pegawai (Web)</th>
-                    <th class="text-left py-2 px-3">Pegawai (SIMKEU)</th>
-                    <th class="text-right py-2 px-3">Total Hari</th>
-                    <th class="text-right py-2 px-3">Total Jam</th>
-                    <th class="text-right py-2 px-3">Barokah (Rp)</th>
-                    <th class="text-center py-2 px-3">Status</th>
+                    <th class="text-left py-2 px-3">
+                      Pegawai (Web)
+                    </th>
+                    <th class="text-left py-2 px-3">
+                      Pegawai (SIMKEU)
+                    </th>
+                    <th class="text-right py-2 px-3">
+                      Total Hari
+                    </th>
+                    <th class="text-right py-2 px-3">
+                      Total Jam
+                    </th>
+                    <th class="text-right py-2 px-3">
+                      Barokah (Rp)
+                    </th>
+                    <th class="text-center py-2 px-3">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

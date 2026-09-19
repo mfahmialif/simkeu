@@ -4,6 +4,7 @@ import DepositPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/p
 import JenisPembayaranMahasiswaPembayaran from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/JenisPembayaranMahasiswaPembayaran.vue"
 import MahasiswaPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/MahasiswaPembayaranMahasiswa.vue"
 import TagihanPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/TagihanPembayaranMahasiswa.vue"
+import UasSusulanPembayaranMahasiswa from "@/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/UasSusulanPembayaranMahasiswa.vue"
 
 const router = useRouter()
 
@@ -63,11 +64,13 @@ const submitData = async () => {
 
         tagihanRef.value.clearTagihan()
         depositRef.value.clearDeposit()
+        uasSusulanRef.value?.resetUasSusulan()
         mahasiswaRef.value.searching()
         mahasiswaRef.value.nimFocus()
       } else if (redirectKwitansi.value) {
         tagihanRef.value.clearTagihan()
         depositRef.value.clearDeposit()
+        uasSusulanRef.value?.resetUasSusulan()
         mahasiswaRef.value.searching()
         mahasiswaRef.value.nimFocus()
       } else {
@@ -93,6 +96,7 @@ function buildPembayaranFormData() {
 
   const jenisPembayaran =
         jenisPembayaranRef.value?.selectedJenisPembayaran ?? null
+
   const jenisPembayaranValue = resolveJenisPembayaranValue(jenisPembayaran)
 
   if (thAkademik === null || tanggal === null || !jenisPembayaranValue) {
@@ -156,6 +160,76 @@ function buildPembayaranFormData() {
     fd.append("list_keringanan_batas[]", keringananBatas)
   }
 
+  // UAS Susulan extra data if active
+  if (uasSusulanData.value?.active) {
+    if (uasSusulanData.value?.isAlreadyRegistered) {
+      showSnackbar({
+        text: "Mahasiswa sudah terdaftar UAS Susulan pada tahun akademik ini",
+        color: "error",
+      })
+
+      return false
+    }
+
+    if (!uasSusulanData.value?.selectedMk?.length) {
+      showSnackbar({
+        text: "Harap centang mata kuliah untuk UAS Susulan terlebih dahulu",
+        color: "warning",
+      })
+      
+      return false
+    }
+
+    if (uasSusulanData.value?.tambahTagihan) {
+      const uasRow = rows.find(r => r.id === "uas_susulan")
+      const keringananJenis = normalizeKeringananJenis(uasRow?.keringanan_jenis)
+      const uasTotal = (Number(uasRow?.dibayar) || 0) + (Number(uasRow?.deposit) || 0)
+      if (!keringananJenis && uasTotal <= 0) {
+        showSnackbar({
+          text: "Harap isi nominal tagihan UAS Susulan yang harus dibayar",
+          color: "error",
+        })
+        
+        return false
+      }
+    } else {
+      // Tambah Tagihan = OFF: Cek apakah UAS reguler belum lunas
+      if (!uasSusulanData.value?.isUasRegulerLunas) {
+        const regUasId = uasSusulanData.value?.uasRegulerTagihan?.id
+        const regRow = rows.find(r => String(r.id) === String(regUasId))
+        if (!regRow) {
+          showSnackbar({
+            text: "Tagihan UAS semester susulan belum lunas dan wajib dipilih untuk pembayaran",
+            color: "error",
+          })
+          
+          return false
+        }
+
+        const regKeringanan = normalizeKeringananJenis(regRow?.keringanan_jenis)
+        const regPaid = (Number(regRow?.dibayar) || 0) + (Number(regRow?.deposit) || 0)
+        if (!regKeringanan && regPaid < 1) {
+          showSnackbar({
+            text: "Nominal pembayaran tagihan UAS semester susulan minimal Rp 1 (atau pilih keringanan Samahah/Dhomin)",
+            color: "error",
+          })
+          
+          return false
+        }
+      }
+    }
+
+    fd.append("is_uas_susulan", "1")
+    fd.append("uas_susulan_th_akademik_id", uasSusulanData.value.thAkademikSusulanId ?? "")
+    fd.append("uas_susulan_semester_mhs", uasSusulanData.value.semesterMhs ?? "")
+    uasSusulanData.value.selectedMk.forEach(id => {
+      fd.append("uas_susulan_jadwal_kuliah_id[]", id)
+    })
+    if (uasSusulanData.value.keterangan) {
+      fd.append("uas_susulan_keterangan", uasSusulanData.value.keterangan)
+    }
+  }
+
   return fd
 }
 
@@ -166,8 +240,95 @@ function normalizeKeringananJenis(value) {
 }
 
 const tagihanRef = ref(null)
+const tagihanList = ref([])
+const paymentRows = ref([])
+
+function onUpdateTagihanList(list) {
+  tagihanList.value = list || []
+}
+
+function onUpdateRows(list) {
+  paymentRows.value = list || []
+}
+
+const submitDisabledReason = computed(() => {
+  if (disabled.value) return "Sedang memproses..."
+
+  const m = mahasiswaRef.value?.mahasiswa
+  if (!m?.nim) return "Pilih mahasiswa terlebih dahulu"
+
+  const thAkademik = akademikRef.value?.selectedThAkademik
+  const tanggal = akademikRef.value?.tanggal
+  const jenisPembayaran = jenisPembayaranRef.value?.selectedJenisPembayaran
+  const jenisPembayaranValue = resolveJenisPembayaranValue(jenisPembayaran)
+
+  if (!thAkademik) return "Pilih tahun akademik"
+  if (!tanggal) return "Pilih tanggal transaksi"
+  if (!jenisPembayaranValue) return "Pilih jenis pembayaran"
+
+  const rows = paymentRows.value?.length ? paymentRows.value : (unref(m.tagihan) || [])
+  if (!rows.length) return "List tagihan pembayaran masih kosong"
+
+  // Validasi Samahah
+  for (const r of rows) {
+    const kJenis = normalizeKeringananJenis(r.keringanan_jenis)
+    if (kJenis === "samahah") {
+      const kJumlah = Number(r.keringanan_jumlah) || 0
+      if (kJumlah <= 0) {
+        return `Harap isi jumlah keringanan Samahah untuk ${r.display || r.nama || 'tagihan'}`
+      }
+    }
+  }
+
+  // Validasi khusus UAS Susulan jika aktif
+  if (uasSusulanData.value?.active) {
+    if (uasSusulanData.value?.isAlreadyRegistered) {
+      return "Mahasiswa sudah terdaftar UAS Susulan pada tahun akademik ini"
+    }
+
+    if (!uasSusulanData.value?.selectedMk?.length) {
+      return "Pilih minimal 1 mata kuliah untuk UAS Susulan"
+    }
+
+    if (uasSusulanData.value?.tambahTagihan) {
+      const uasRow = rows.find(r => r.id === "uas_susulan")
+      if (!uasRow) {
+        return "Tagihan UAS Susulan belum ada di daftar tagihan"
+      }
+      const keringanan = normalizeKeringananJenis(uasRow.keringanan_jenis)
+      const paid = (Number(uasRow.dibayar) || 0) + (Number(uasRow.deposit) || 0)
+      if (!keringanan && paid < 1) {
+        return "Nominal tagihan UAS Susulan minimal Rp 1 (atau pilih keringanan)"
+      }
+    } else {
+      if (!uasSusulanData.value?.isUasRegulerLunas) {
+        const regUasId = uasSusulanData.value?.uasRegulerTagihan?.id
+        if (!regUasId) {
+          return "Tagihan UAS reguler belum ditemukan"
+        }
+        const regRow = rows.find(r => String(r.id) === String(regUasId))
+        if (!regRow) {
+          return "Tagihan UAS reguler semester ini wajib ada di daftar pembayaran"
+        }
+        const keringanan = normalizeKeringananJenis(regRow.keringanan_jenis)
+        const paid = (Number(regRow.dibayar) || 0) + (Number(regRow.deposit) || 0)
+        if (!keringanan && paid < 1) {
+          return "Tagihan UAS reguler semester ini wajib dibayar minimal Rp 1 (atau pilih Samahah/Dhomin)"
+        }
+      }
+    }
+  }
+
+  return ""
+})
+
+const isSubmitPembayaranDisabled = computed(() => {
+  return Boolean(submitDisabledReason.value)
+})
+
 function onRefreshTagihan(nim) {
   tagihanRef.value?.fetchTagihan(nim)
+  uasSusulanRef.value?.onMahasiswaChanged?.(nim)
 }
 
 const mahasiswaRef = ref(null)
@@ -175,6 +336,107 @@ const mahasiswaRef = ref(null)
 const depositRef = ref(null)
 function onRefreshDeposit() {
   depositRef.value?.fetchDeposit()
+}
+
+const uasSusulanRef = ref(null)
+const uasSusulanData = ref({ active: false, selectedMk: [] })
+
+function onUpdateUasSusulan(data) {
+  uasSusulanData.value = data
+}
+
+function onRemoveUasSusulan() {
+  uasSusulanRef.value?.resetUasSusulan()
+}
+
+const submitHanyaUasSusulan = async () => {
+  const m = mahasiswaRef.value?.mahasiswa
+  const nim = m?.nim
+  const thAkademik = akademikRef.value?.selectedThAkademik
+  const thAkademikSectionId = typeof thAkademik === "object" ? thAkademik?.value : thAkademik
+  const tanggal = akademikRef.value?.tanggal || new Date().toISOString().slice(0, 10)
+  const selectedMk = uasSusulanData.value?.selectedMk || []
+  const keterangan = uasSusulanData.value?.keterangan || ""
+
+  if (!nim) {
+    showSnackbar({
+      text: "Silakan pilih mahasiswa terlebih dahulu",
+      color: "error",
+    })
+    
+    return
+  }
+
+  if (!thAkademikSectionId) {
+    showSnackbar({
+      text: "Tahun akademik pada section akademik belum dipilih",
+      color: "error",
+    })
+    
+    return
+  }
+
+  if (uasSusulanData.value?.isAlreadyRegistered) {
+    showSnackbar({
+      text: "Mahasiswa sudah terdaftar UAS Susulan pada tahun akademik ini",
+      color: "error",
+    })
+    
+    return
+  }
+
+  if (!selectedMk.length) {
+    showSnackbar({
+      text: "Harap centang mata kuliah untuk UAS Susulan terlebih dahulu",
+      color: "warning",
+    })
+    
+    return
+  }
+
+  try {
+    disabled.value = true
+
+    const response = await $api("/admin/pemasukan/mahasiswa/uas-susulan/full", {
+      method: "POST",
+      body: {
+        tanggal,
+        nim,
+        "th_akademik_id": Number(thAkademikSectionId),
+        keterangan,
+        "jadwal_kuliah_id": selectedMk,
+      },
+      onResponseError({ response }) {
+        console.error(response)
+      },
+    })
+
+    if (response.status === true) {
+      showSnackbar({
+        text: response.message || "Data UAS Susulan berhasil disimpan",
+        color: "success",
+      })
+
+      uasSusulanRef.value?.resetUasSusulan()
+      tagihanRef.value?.clearTagihan()
+      depositRef.value?.clearDeposit()
+      mahasiswaRef.value?.searching()
+      mahasiswaRef.value?.nimFocus()
+    } else {
+      showSnackbar({
+        text: response.message || "Gagal menyimpan UAS Susulan",
+        color: "error",
+      })
+    }
+  } catch (err) {
+    console.error("Gagal simpan UAS Susulan:", err)
+    showSnackbar({
+      text: err?.data?.message || err?.message || "Terjadi kesalahan saat menyimpan UAS Susulan",
+      color: "error",
+    })
+  } finally {
+    disabled.value = false
+  }
 }
 
 const akademikRef = ref(null)
@@ -266,44 +528,112 @@ onMounted(() => {
           :is-admin="isAdmin"
           class="mt-4"
         />
+
+        <UasSusulanPembayaranMahasiswa
+          ref="uasSusulanRef"
+          :mahasiswa="mahasiswaRef?.mahasiswa"
+          :selected-th-akademik="akademikRef?.selectedThAkademik"
+          :tagihan-list="tagihanList"
+          class="mt-4"
+          @update:uas-susulan="onUpdateUasSusulan"
+        />
       </div>
 
       <!-- Pembayaran -->
-      <div class="grid-pembayaran">
+      <div
+        v-show="!uasSusulanData?.hanyaUasSusulan"
+        class="grid-pembayaran"
+      >
         <TagihanPembayaranMahasiswa
           ref="tagihanRef"
           :mahasiswa="mahasiswaRef?.mahasiswa"
+          :uas-susulan="uasSusulanData"
+          @remove-uas-susulan="onRemoveUasSusulan"
+          @update:tagihan-list="onUpdateTagihanList"
+          @update:rows="onUpdateRows"
         />
       </div>
 
       <!-- Metode + Print + Simpan (mobile: paling bawah, desktop: sidebar bawah) -->
       <div class="grid-actions">
-        <JenisPembayaranMahasiswaPembayaran ref="jenisPembayaranRef" />
+        <template v-if="uasSusulanData?.hanyaUasSusulan">
+          <VCard
+            variant="tonal"
+            color="primary"
+            class="mb-4"
+          >
+            <VCardText class="d-flex align-center gap-3">
+              <VIcon
+                icon="ri-information-line"
+                size="28"
+                color="primary"
+              />
+              <div>
+                <div class="text-subtitle-1 font-weight-bold">
+                  Mode Hanya Simpan UAS Susulan
+                </div>
+                <div class="text-body-2">
+                  Form tagihan & pembayaran di-hide. Tombol di bawah akan langsung menyimpan pendaftaran mata kuliah UAS Susulan mahasiswa tanpa transaksi pembayaran kas/bank.
+                </div>
+              </div>
+            </VCardText>
+          </VCard>
 
-        <VCard class="mt-4">
-          <VCardText>
-            <VSwitch
-              v-model="redirectKwitansi"
-              label="Otomatis Print Kwitansi ?"
-              hide-details
-              color="primary"
+          <VBtn
+            color="primary"
+            :disabled="disabled || !uasSusulanData?.selectedMk?.length"
+            class="w-100"
+            size="large"
+            @click="submitHanyaUasSusulan"
+          >
+            <VIcon
+              icon="ri-save-line"
+              class="me-2"
             />
-          </VCardText>
-        </VCard>
+            Simpan UAS Susulan Saja
+          </VBtn>
+        </template>
 
-        <VBtn
-          color="primary"
-          :disabled
-          class="w-100 mt-4"
-          size="large"
-          @click="submitData"
-        >
-          <VIcon
-            icon="ri-save-line"
-            class="me-2"
-          />
-          Simpan Pembayaran
-        </VBtn>
+        <template v-else>
+          <JenisPembayaranMahasiswaPembayaran ref="jenisPembayaranRef" />
+
+          <VCard class="mt-4">
+            <VCardText>
+              <VSwitch
+                v-model="redirectKwitansi"
+                label="Otomatis Print Kwitansi ?"
+                hide-details
+                color="primary"
+              />
+            </VCardText>
+          </VCard>
+
+          <VBtn
+            color="primary"
+            :disabled="isSubmitPembayaranDisabled"
+            class="w-100 mt-4"
+            size="large"
+            @click="submitData"
+          >
+            <VIcon
+              icon="ri-save-line"
+              class="me-2"
+            />
+            Simpan Pembayaran
+          </VBtn>
+
+          <div
+            v-if="isSubmitPembayaranDisabled && submitDisabledReason && !disabled"
+            class="text-caption text-error text-center mt-2 d-flex align-center justify-center gap-1"
+          >
+            <VIcon
+              icon="ri-alert-line"
+              size="16"
+              color="error"
+            />
+            <span>{{ submitDisabledReason }}</span>
+          </div>
+        </template>
       </div>
     </div>
   </div>

@@ -3,7 +3,10 @@ import { formatMoney, formatRupiah } from "@/composables/formatRupiah"
 
 const props = defineProps({
   mahasiswa: { type: Object, required: true, default: () => ({}) },
+  uasSusulan: { type: Object, default: () => ({ active: false, selectedMk: [] }) },
 })
+
+const emit = defineEmits(["remove-uas-susulan", "update:tagihan-list", "update:rows"])
 
 const ukuranBajuWisuda = ["S", "M", "L", "XL", "XXL", "XXXL"]
 const jenisKelaminWisuda = ["Laki-Laki", "Perempuan"]
@@ -497,6 +500,10 @@ const clearTagihan = () => {
   props.mahasiswa.dipakai = 0
   props.mahasiswa.autoSimpanDeposit = 0
   props.mahasiswa.wisuda = null
+
+  if (props.uasSusulan?.active) {
+    syncUasSusulanRow()
+  }
 }
 
 const selectAllTagihan = () => {
@@ -615,10 +622,10 @@ const canBayarLunasSemua = computed(() =>
   totalSisaTagihan.value > 0,
 )
 
-defineExpose({ fetchTagihan, clearTagihan, paymentMode })
-
 /** Daftar baris yang dipilih */
 const rows = ref([])
+
+defineExpose({ fetchTagihan, clearTagihan, paymentMode, rows })
 
 const keringananOptions = [
   { title: "Tanpa Keringanan", value: "" },
@@ -699,6 +706,156 @@ function syncPaymentTotalsState() {
     props.mahasiswa.autoSimpanDeposit = 0
   }
 }
+
+const uasSusulanNominal = ref(0)
+
+function onUasSusulanNominalChange(idx) {
+  const r = rows.value[idx]
+  if (!r) return
+  const val = Math.max(0, Number(r.nominal || 0))
+
+  r.nominal = val
+  r.dibayar = val
+  r.deposit = 0
+  uasSusulanNominal.value = val
+  syncPaymentTotalsState()
+}
+
+const ensureUasSusulanAtFirst = () => {
+  const uasIdx = rows.value.findIndex(r => r.id === "uas_susulan")
+  if (uasIdx > 0) {
+    const [uasRow] = rows.value.splice(uasIdx, 1)
+
+    rows.value.unshift(uasRow)
+  }
+}
+
+const syncUasSusulanRow = () => {
+  const uasData = props.uasSusulan
+  const existingIndex = rows.value.findIndex(r => r.id === "uas_susulan")
+
+  if (uasData?.active) {
+    if (uasData.tambahTagihan) {
+      // ═══ TAMBAH TAGIHAN = ON ═══
+      const smt = uasData.semesterMhs || props.mahasiswa?.semester || ""
+      const kodeTh = uasData.akademikKode || ""
+      const smtPart = smt ? `SEMESTER ${smt} ` : ""
+      const namaTagihan = (`UAS SUSULAN ${smtPart}${kodeTh}`).trim() || "UAS SUSULAN"
+
+      if (existingIndex >= 0) {
+        rows.value[existingIndex].nama = namaTagihan
+        rows.value[existingIndex].display = namaTagihan
+        if (existingIndex > 0) {
+          const [row] = rows.value.splice(existingIndex, 1)
+
+          rows.value.unshift(row)
+        }
+      } else {
+        const newRow = {
+          id: "uas_susulan",
+          nama: namaTagihan,
+          display: namaTagihan,
+          nominal: uasSusulanNominal.value,
+          dibayar: uasSusulanNominal.value,
+          deposit: 0,
+          mata_uang: { id: 1, kode: "IDR", nama: "Rupiah", simbol: "Rp" },
+          mata_uang_id: 1,
+          mata_uang_kode: "IDR",
+          mata_uang_nama: "Rupiah",
+          mata_uang_simbol: "Rp",
+          currency_key: idrCurrencyKey.value || "idr_1",
+          is_uas_susulan: true,
+          keringanan_jenis: "",
+          keringanan_jumlah: 0,
+          keringanan_batas: null,
+        }
+
+        rows.value.unshift(newRow)
+        syncPaymentTotalsState()
+      }
+    } else {
+      // ═══ TAMBAH TAGIHAN = OFF ═══
+      // Hapus baris perorangan uas_susulan jika ada
+      if (existingIndex >= 0) {
+        rows.value.splice(existingIndex, 1)
+        syncPaymentTotalsState()
+      }
+
+      // Auto-select tagihan UAS reguler jika belum lunas
+      if (!uasData.isUasRegulerLunas && uasData.uasRegulerTagihan) {
+        const regId = uasData.uasRegulerTagihan.id
+        const fullItem = tagihan.value.find(t => String(t.id) === String(regId)) || uasData.uasRegulerTagihan
+        const alreadySelected = selectedTagihan.value.some(t => String(t.id) === String(regId))
+        if (!alreadySelected) {
+          selectedTagihan.value = [fullItem, ...selectedTagihan.value]
+        }
+        if (!rows.value.some(r => String(r.id) === String(regId))) {
+          rows.value.push(createPaymentRow(fullItem, fullItem.sisa ?? 0))
+          syncPaymentTotalsState()
+        }
+      }
+    }
+  } else {
+    // UAS Susulan OFF: Hapus baris uas_susulan
+    if (existingIndex >= 0) {
+      rows.value.splice(existingIndex, 1)
+      syncPaymentTotalsState()
+    }
+  }
+}
+
+watch(
+  () => props.uasSusulan,
+  () => {
+    syncUasSusulanRow()
+  },
+  { deep: true, immediate: true },
+)
+
+const isLockedUasRegulerActive = computed(() => {
+  const uas = props.uasSusulan
+  
+  return Boolean(uas?.active && !uas?.tambahTagihan && !uas?.isUasRegulerLunas && uas?.uasRegulerTagihan)
+})
+
+const lockedUasRegulerItem = computed(() => {
+  if (!isLockedUasRegulerActive.value) return null
+  const regId = props.uasSusulan?.uasRegulerTagihan?.id
+  
+  return tagihan.value.find(t => String(t.id) === String(regId)) || props.uasSusulan?.uasRegulerTagihan
+})
+
+const isLockedUasPaymentRow = id => {
+  const uas = props.uasSusulan
+  if (!uas?.active) return false
+
+  if (uas.tambahTagihan && String(id) === "uas_susulan") {
+    return true
+  }
+
+  if (isLockedUasRegulerActive.value && lockedUasRegulerItem.value) {
+    return String(id) === String(lockedUasRegulerItem.value.id)
+  }
+
+  return false
+}
+
+const getLockedRowTooltipText = id => {
+  if (String(id) === "uas_susulan") {
+    return "Tagihan UAS Susulan aktif dan tidak dapat dihapus dari tabel (Ubah di card UAS Susulan)"
+  }
+  
+  return "Tagihan UAS reguler wajib dibayar untuk UAS Susulan (Terkunci)"
+}
+
+
+watch(
+  tagihan,
+  list => {
+    emit("update:tagihan-list", list)
+  },
+  { deep: true, immediate: true },
+)
 
 const semesterPendekKrsDetails = ref({})
 const semesterPendekKrsLoading = ref({})
@@ -1088,6 +1245,9 @@ watch(paymentMode, () => {
   selectedTagihan.value = []
   nominalInput.value = {}
   sisaNominal.value = {}
+  if (props.uasSusulan?.active) {
+    syncUasSusulanRow()
+  }
   syncPaymentTotalsState()
 })
 
@@ -1097,7 +1257,8 @@ watch(scopedTagihan, newArr => {
   selectedTagihan.value = selectedTagihan.value.filter(item =>
     allowedIds.has(item.id),
   )
-  rows.value = rows.value.filter(row => allowedIds.has(row.id))
+  rows.value = rows.value.filter(row => allowedIds.has(row.id) || row.is_uas_susulan)
+  ensureUasSusulanAtFirst()
   syncPaymentTotalsState()
 })
 
@@ -1123,8 +1284,18 @@ watch(
   (newArr, oldArr) => {
     if (paymentMode.value !== "tagihan") return
 
-    const nextSelected = newArr.filter(item => isPayableTagihan(item))
+    let nextSelected = newArr.filter(item => isPayableTagihan(item))
     const previousSelected = (oldArr || []).filter(item => isPayableTagihan(item))
+
+    // Guard: UAS reguler row cannot be removed from selectedTagihan while locked
+    if (isLockedUasRegulerActive.value && lockedUasRegulerItem.value) {
+      const lockedId = String(lockedUasRegulerItem.value.id)
+      const hasLocked = nextSelected.some(item => String(item.id) === lockedId)
+      if (!hasLocked) {
+        nextSelected = [lockedUasRegulerItem.value, ...nextSelected]
+      }
+    }
+
     if (nextSelected.length !== newArr.length) {
       selectedTagihan.value = nextSelected
       showSnackbar({
@@ -1152,12 +1323,30 @@ watch(
       )
       syncPaymentTotalsState()
     }
+
+    ensureUasSusulanAtFirst()
   },
   { deep: true },
 )
 
 /** Hapus baris (sekalian sync ke combobox) */
 function removeRow(id) {
+  if (isLockedUasPaymentRow(id)) {
+    const msg = String(id) === "uas_susulan"
+      ? "Tagihan UAS Susulan tidak dapat dihapus langsung dari tabel. Silakan nonaktifkan melalui card UAS Susulan di atas."
+      : "Tagihan UAS reguler semester ini wajib dibayar untuk UAS Susulan dan tidak bisa dihapus."
+
+    showSnackbar({
+      text: msg,
+      color: "warning",
+    })
+    
+    return
+  }
+
+  if (id === "uas_susulan") {
+    emit("remove-uas-susulan")
+  }
   rows.value = rows.value.filter(r => r.id !== id)
   selectedTagihan.value = selectedTagihan.value.filter(s => s.id !== id)
   syncPaymentTotalsState()
@@ -1167,6 +1356,13 @@ function removeRow(id) {
 /** Recalc saat admin ubah field DIBAYAR */
 function recalcDibayar(idx) {
   const r = rows.value[idx]
+  if (r?.is_uas_susulan) {
+    r.dibayar = Math.max(0, Number(r.dibayar || 0))
+    syncPaymentTotalsState()
+    
+    return
+  }
+
   if (isDhominRow(r)) {
     syncDhominKeringanan(r)
     syncPaymentTotalsState()
@@ -1196,6 +1392,15 @@ function recalcDeposit(idx) {
       text: "Deposit hanya bisa dipakai untuk tagihan mata uang IDR.",
       color: "warning",
     })
+    syncPaymentTotalsState()
+    
+    return
+  }
+
+  if (r?.is_uas_susulan) {
+    r.deposit = Math.max(0, Number(r.deposit || 0))
+    r.deposit = Math.min(r.deposit, Number(r.nominal || 0))
+    r.dibayar = Math.max(0, Number(r.nominal || 0) - r.deposit)
     syncPaymentTotalsState()
     
     return
@@ -1315,11 +1520,12 @@ const totalRowsByCurrency = computed(() => {
 /** Propagate ke parent */
 watch(
   rows,
-  () => {
+  newRows => {
     props.mahasiswa.tagihan = rows
     syncWisudaToMahasiswa()
+    emit("update:rows", newRows)
   },
-  { deep: true },
+  { deep: true, immediate: true },
 )
 
 // formatRupiah asumsi sudah ada di scope-mu
@@ -1677,12 +1883,18 @@ watch(
             label="Tagihan"
             multiple
             chips
-            closable-chips
             return-object
             clearable
             :loading="loadingTagihan"
             autocomplete="off"
-          />
+          >
+            <template #chip="{ item, props: chipProps }">
+              <VChip
+                v-bind="chipProps"
+                :closable="!isLockedUasPaymentRow(item?.raw?.id || item?.value || item?.id)"
+              />
+            </template>
+          </VCombobox>
         </VCol>
       </VRow>
     </VCardText>
@@ -1702,8 +1914,36 @@ watch(
         :key="row.id"
         class="py-3"
       >
-        <div class="text-body-1 font-weight-medium mb-3">
+        <div
+          v-if="!row.is_uas_susulan"
+          class="text-body-1 font-weight-medium mb-3"
+        >
           {{ idx + 1 }}. {{ row.display }}
+        </div>
+        <div
+          v-else
+          class="d-flex align-center flex-wrap gap-2 mb-3"
+        >
+          <span class="text-body-1 font-weight-bold text-primary">
+            {{ idx + 1 }}. {{ row.nama }} -
+          </span>
+          <div style="inline-size: 220px;">
+            <VTextField
+              v-model.number="row.nominal"
+              label="Jumlah Tagihan"
+              placeholder="0"
+              type="number"
+              min="0"
+              density="compact"
+              variant="outlined"
+              prefix="Rp"
+              hide-details
+              @update:model-value="onUasSusulanNominalChange(idx)"
+            />
+          </div>
+          <span class="text-caption text-medium-emphasis ms-2">
+            (Atur nominal tagihan UAS Susulan di sini)
+          </span>
         </div>
 
         <VRow class="align-center">
@@ -1808,11 +2048,28 @@ watch(
             md="1"
             class="d-flex mb-5"
           >
+            <VTooltip
+              v-if="isLockedUasPaymentRow(row.id)"
+              :text="getLockedRowTooltipText(row.id)"
+              location="top"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <VBtn
+                  v-bind="tooltipProps"
+                  color="secondary"
+                  icon="ri-lock-2-line"
+                  variant="tonal"
+                  class="ms-auto"
+                  disabled
+                />
+              </template>
+            </VTooltip>
             <VBtn
+              v-else
               color="error"
               icon="ri-delete-bin-line"
               variant="elevated"
-              class="ml-auto"
+              class="ms-auto"
               :aria-label="`Hapus ${row.display}`"
               hint="delete"
               persistent-hint

@@ -173,17 +173,21 @@ const webAbsensiLoading = ref(false)
 const webAbsensiRows = ref([])
 const webAbsensiPeriode = ref(null)
 const importMode = ref("bulan_tahun")
+
 const importModeOptions = [
   { title: "Bulan & Tahun", value: "bulan_tahun" },
   { title: "Rentang Tanggal", value: "range" },
 ]
+
 const importDept = ref(null)
+
 const importDeptOptions = [
   { title: "Semua Departemen", value: null },
   { title: "Dosen", value: "Dosen" },
   { title: "Staff", value: "Staff" },
   { title: "Admin", value: "Admin" },
 ]
+
 const importBulan = ref(new Date().getMonth() + 1)
 const importTahun = ref(new Date().getFullYear())
 const importStartDate = ref(fDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
@@ -270,6 +274,7 @@ const findSimkeuMatch = webItem => {
     const matchByKode = rows.value.find(item =>
       String(item.kode || "").trim().toLowerCase() === kode,
     )
+
     if (matchByKode) return matchByKode
   }
 
@@ -277,6 +282,7 @@ const findSimkeuMatch = webItem => {
     const matchByUsername = rows.value.find(item =>
       String(item.kode || "").trim().toLowerCase() === username,
     )
+
     if (matchByUsername) return matchByUsername
   }
 
@@ -284,6 +290,7 @@ const findSimkeuMatch = webItem => {
     const matchByName = rows.value.find(item =>
       String(item.nama || "").trim().toLowerCase() === name,
     )
+
     if (matchByName) return matchByName
   }
 
@@ -315,6 +322,7 @@ const applyWebAbsensiToTable = () => {
         const totalHari = Array.isArray(webItem?.rekap_per_kategori)
           ? webItem.rekap_per_kategori.reduce((acc, kat) => acc + Number(kat?.jumlah || 0), 0)
           : 0
+
         const totalJam = Number(webItem?.total_jam_keseluruhan?.total_jam || 0)
 
         simkeuItem.total_hari = totalHari
@@ -323,6 +331,7 @@ const applyWebAbsensiToTable = () => {
 
       if (importOptionBarokah.value) {
         const totalDana = Number(webItem?.total_perolehan_dana || 0)
+
         simkeuItem.total_barokah = totalDana
       }
 
@@ -503,7 +512,9 @@ watch(tanggal, value => {
     if (!Number.isNaN(d.getTime())) {
       importBulan.value = d.getMonth() + 1
       importTahun.value = d.getFullYear()
+
       const firstDay = new Date(d.getFullYear(), d.getMonth(), 1)
+
       importStartDate.value = fDate(firstDay)
       importEndDate.value = fDate(d)
     }
@@ -545,7 +556,9 @@ onMounted(() => {
     if (!Number.isNaN(d.getTime())) {
       importBulan.value = d.getMonth() + 1
       importTahun.value = d.getFullYear()
+
       const firstDay = new Date(d.getFullYear(), d.getMonth(), 1)
+
       importStartDate.value = fDate(firstDay)
       importEndDate.value = fDate(d)
     }
@@ -842,9 +855,15 @@ onMounted(() => {
                     <th>NO</th>
                     <th>PEGAWAI WEB ABSENSI</th>
                     <th>KATEGORI / RINCIAN</th>
-                    <th class="text-center">TOTAL HARI</th>
-                    <th class="text-center">TOTAL JAM</th>
-                    <th class="text-end">NOMINAL DANA</th>
+                    <th class="text-center">
+                      TOTAL HARI
+                    </th>
+                    <th class="text-center">
+                      TOTAL JAM
+                    </th>
+                    <th class="text-end">
+                      NOMINAL DANA
+                    </th>
                     <th>STATUS DI SIMKEU</th>
                   </tr>
                 </thead>
@@ -855,7 +874,9 @@ onMounted(() => {
                   >
                     <td>{{ index + 1 }}</td>
                     <td>
-                      <div class="font-weight-medium">{{ webItem.user?.name || '-' }}</div>
+                      <div class="font-weight-medium">
+                        {{ webItem.user?.name || '-' }}
+                      </div>
                       <div class="text-caption text-medium-emphasis">
                         <strong
                           v-if="webItem.user?.kode || webItem.kode"
@@ -1118,7 +1139,6 @@ onMounted(() => {
               />
             </div>
           </div>
-
         </div>
 
         <div

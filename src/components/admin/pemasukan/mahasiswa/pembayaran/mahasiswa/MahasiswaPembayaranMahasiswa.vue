@@ -1,7 +1,5 @@
 <script setup>
-import { consoleError } from "vuetify/lib/util/console.mjs"
-
-const emit = defineEmits(["refreshTagihan"])
+const emit = defineEmits(["refreshTagihan", "refreshDeposit"])
 
 const mahasiswaList = ref([])
 
@@ -10,6 +8,7 @@ const searchNim = ref("")
 const selectedMahasiswa = ref("")
 const loadingDataMahasiswa = ref(false)
 const loadingSearch = ref(false)
+const isMenuOpen = ref(false)
 
 const emptyMahasiswa = {
   nim: "",
@@ -28,16 +27,38 @@ const emptyMahasiswa = {
   wisuda: null,
 }
 
-const mahasiswa = ref(emptyMahasiswa)
+const mahasiswa = ref({ ...emptyMahasiswa })
 
 let typingTimeout = null
+let justSelected = false
 
 watch(search, newVal => {
   clearTimeout(typingTimeout)
 
-  if (!newVal.trim()) {
+  // Jika baru saja memilih mahasiswa dari dropdown, jangan cari lagi dan pastikan menu tertutup
+  if (justSelected) {
+    isMenuOpen.value = false
+    
+    return
+  }
+
+  const query = String(newVal || "").trim()
+
+  if (!query) {
     mahasiswaList.value = []
     loadingSearch.value = false
+    isMenuOpen.value = false
+    
+    return
+  }
+
+  // Jika teks search sama persis dengan yang sedang dipilih (display), jangan cari lagi
+  if (
+    selectedMahasiswa.value &&
+    typeof selectedMahasiswa.value === "object" &&
+    query === selectedMahasiswa.value.display
+  ) {
+    isMenuOpen.value = false
     
     return
   }
@@ -46,22 +67,36 @@ watch(search, newVal => {
     try {
       loadingSearch.value = true
 
-      const res = await $api(`/admin/mahasiswa/search/${newVal}`, {
+      const res = await $api(`/admin/mahasiswa/search/${encodeURIComponent(query)}`, {
         method: "GET",
       })
 
+      // Jika user sudah memilih saat API baru selesai, batalkan buka menu
+      if (justSelected) {
+        isMenuOpen.value = false
+        
+        return
+      }
 
       // ubah hasil API jadi format { nim, nama, display: "nama - nim" }
-      mahasiswaList.value = res.map(m => ({
+      mahasiswaList.value = (res || []).map(m => ({
         ...m,
         display: `${m.nim} - ${m.nama}`,
       }))
+
+      await nextTick()
+      if (mahasiswaList.value.length > 0 && !justSelected) {
+        isMenuOpen.value = true
+      } else {
+        isMenuOpen.value = false
+      }
     } catch (err) {
       showSnackbar({
         text: "Gagal mendapatkan list mahasiswa",
         color: "error",
       })
       mahasiswaList.value = []
+      isMenuOpen.value = false
     } finally {
       loadingSearch.value = false
     }
@@ -70,16 +105,56 @@ watch(search, newVal => {
 
 watch(selectedMahasiswa, newVal => {
   if (newVal && typeof newVal === "object" && !Array.isArray(newVal)) {
+    // User memilih item dari dropdown list
+    justSelected = true
+    clearTimeout(typingTimeout)
+    isMenuOpen.value = false
+    mahasiswaList.value = []
+
     searchNim.value = newVal.nim
     searching()
+
+    setTimeout(() => {
+      justSelected = false
+    }, 500)
   } else if (typeof newVal === "string") {
+    // User sedang mengetik di field input
     searchNim.value = newVal
   } else if (!newVal) {
     searchNim.value = ""
+    mahasiswaList.value = []
+    isMenuOpen.value = false
   }
 })
 
+const onEnterKey = () => {
+  clearTimeout(typingTimeout)
+  isMenuOpen.value = false
+
+  nextTick(() => {
+    isMenuOpen.value = false
+    if (!searchNim.value && search.value) {
+      const parts = String(search.value).split("-")
+
+      searchNim.value = parts[0].trim()
+    }
+    if (searchNim.value && searchNim.value !== mahasiswa.value.nim) {
+      searching()
+    }
+  })
+}
+
 const searching = async () => {
+  isMenuOpen.value = false
+  clearTimeout(typingTimeout)
+  mahasiswaList.value = []
+
+  if (!searchNim.value && search.value) {
+    const parts = String(search.value).split("-")
+
+    searchNim.value = parts[0].trim()
+  }
+
   if (!searchNim.value) {
     showSnackbar({
       text: "NIM harus diisi",
@@ -99,7 +174,7 @@ const searching = async () => {
       },
     })
 
-    if (res.length < 1) {
+    if (!res || res.length < 1) {
       showSnackbar({
         text: "Data mahasiswa tidak ditemukan",
         color: "error",
@@ -128,6 +203,7 @@ const searching = async () => {
     })
   } finally {
     loadingDataMahasiswa.value = false
+    isMenuOpen.value = false
   }
 }
 
@@ -135,7 +211,7 @@ const refSearch = ref(null)
 
 const nimFocus = async () => {
   await nextTick()
-  refSearch.value.focus()
+  refSearch.value?.focus?.()
 }
 
 const selectAll = async () => {
@@ -173,15 +249,20 @@ defineExpose({
             ref="refSearch"
             v-model="selectedMahasiswa"
             v-model:search="search"
+            v-model:menu="isMenuOpen"
             :items="mahasiswaList"
             item-title="display"
             item-value="nim"
+            :no-filter="true"
+            :menu-props="{ closeOnContentClick: true }"
+            return-object
             label="NIM"
             clearable
             :loading="loadingSearch"
             autocomplete="off"
             @focus="selectAll"
             @click="selectAll"
+            @keydown.enter="onEnterKey"
           >
             <template #append-inner>
               <VProgressCircular

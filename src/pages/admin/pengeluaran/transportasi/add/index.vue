@@ -582,7 +582,8 @@ onMounted(() => {
                       :rules="[requiredValidator]"
                       :hint="formatRupiah(row.nominal)"
                       persistent-hint
-                     hide-details="auto"/>
+                      hide-details="auto"
+                    />
                   </VCol>
 
                   <VCol

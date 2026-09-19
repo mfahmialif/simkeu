@@ -25,6 +25,7 @@ const submitData = async () => {
 
   const jenisPembayaran =
     jenisPembayaranRef.value?.selectedJenisPembayaran ?? null
+
   const jenisPembayaranValue = resolveJenisPembayaranValue(jenisPembayaran)
 
   if (thAkademik === null || tanggal === null || !jenisPembayaranValue) {
