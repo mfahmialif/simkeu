@@ -6,6 +6,8 @@ import 'flatpickr/dist/plugins/monthSelect/style.css'
 import { downloadFileExport } from "@/composables/exportFile"
 import { useCookie } from '@/@core/composable/useCookie'
 import { formatCurrencyTotals } from "@/composables/formatRupiah"
+import ModalDetailPemasukanUmum from "@/components/admin/pemasukan/mahasiswa/laporan/ModalDetailPemasukanUmum.vue"
+import ModalDetailPengembalianDana from "@/components/admin/pemasukan/mahasiswa/laporan/ModalDetailPengembalianDana.vue"
 
 const theme = useTheme()
 
@@ -82,6 +84,119 @@ const allData = ref([])
 const totals = ref({})
 const hasData = ref(false)
 const jkInfo = ref("")
+
+// Detail Modal Pemasukan Umum State
+const isDetailModalOpen = ref(false)
+const detailModalTitle = ref("Detail Pemasukan Umum")
+const detailModalSubtitle = ref("")
+const detailModalFilter = ref({})
+
+const isPemasukanUmumRow = row =>
+  row?.key === "pemasukan_umum" ||
+  String(row?.kategori || "").toUpperCase().includes("PEMASUKAN UMUM")
+
+const formatMethodName = type => {
+  if (!type) return "Semua Metode"
+  if (type === "tunai") return "Tunai"
+  if (type === "transfer") return "Transfer"
+  if (type === "yayasan") return "Yayasan"
+
+  return type.toUpperCase()
+}
+
+const openDetailPemasukanUmum = (paymentType = null, monthInfo = null) => {
+  let startDate = ""
+  let endDate = ""
+  let subtitle = ""
+
+  if (monthInfo) {
+    const year = selectedTahun.value
+    const m = String(monthInfo.month || 1).padStart(2, "0")
+    const days = new Date(year, parseInt(m), 0).getDate()
+
+    startDate = `${year}-${m}-01`
+    endDate = `${year}-${m}-${days}`
+    subtitle = `${monthInfo.title || `Bulan ${m}/${year}`} | Metode: ${formatMethodName(paymentType)}`
+  } else if (selectedMode.value === "bulanan" && selectedBulan.value) {
+    const [y, m] = selectedBulan.value.split("-")
+    const days = new Date(y, parseInt(m), 0).getDate()
+
+    startDate = `${y}-${m}-01`
+    endDate = `${y}-${m}-${days}`
+    subtitle = `Bulan: ${selectedBulan.value} | Metode: ${formatMethodName(paymentType)}`
+  } else if (selectedMode.value === "tahunan" && selectedTahun.value) {
+    startDate = `${selectedTahun.value}-01-01`
+    endDate = `${selectedTahun.value}-12-31`
+    subtitle = `Tahun: ${selectedTahun.value} | Metode: ${formatMethodName(paymentType)}`
+  }
+
+  detailModalTitle.value = "Detail Pemasukan Umum"
+  detailModalSubtitle.value = subtitle
+
+  /* eslint-disable camelcase */
+  detailModalFilter.value = {
+    start_date: startDate,
+    end_date: endDate,
+    ...(paymentType && { payment_type: paymentType }),
+    ...(selectedUser.value && { user_id: selectedUser.value }),
+    ...(selectedJenisKelamin.value !== "%" && { jenis_kelamin: selectedJenisKelamin.value }),
+  }
+  /* eslint-enable camelcase */
+
+  isDetailModalOpen.value = true
+}
+
+// Detail Modal Pengembalian Dana State
+const isDetailPengembalianOpen = ref(false)
+const detailPengembalianTitle = ref("Detail Pengembalian Dana")
+const detailPengembalianSubtitle = ref("")
+const detailPengembalianFilter = ref({})
+
+const isPengembalianDanaRow = row =>
+  row?.key === "pengembalian_dana" ||
+  String(row?.kategori || "").toUpperCase().includes("PENGEMBALIAN")
+
+const openDetailPengembalianDana = (paymentType = null, monthInfo = null) => {
+  let startDate = ""
+  let endDate = ""
+  let subtitle = ""
+
+  if (monthInfo) {
+    const year = selectedTahun.value
+    const m = String(monthInfo.month || 1).padStart(2, "0")
+    const days = new Date(year, parseInt(m), 0).getDate()
+
+    startDate = `${year}-${m}-01`
+    endDate = `${year}-${m}-${days}`
+    subtitle = `${monthInfo.title || `Bulan ${m}/${year}`} (Pengembalian Dana) | Metode: ${formatMethodName(paymentType)}`
+  } else if (selectedMode.value === "bulanan" && selectedBulan.value) {
+    const [y, m] = selectedBulan.value.split("-")
+    const days = new Date(y, parseInt(m), 0).getDate()
+
+    startDate = `${y}-${m}-01`
+    endDate = `${y}-${m}-${days}`
+    subtitle = `Bulan: ${selectedBulan.value} (Pengembalian Dana) | Metode: ${formatMethodName(paymentType)}`
+  } else if (selectedMode.value === "tahunan" && selectedTahun.value) {
+    startDate = `${selectedTahun.value}-01-01`
+    endDate = `${selectedTahun.value}-12-31`
+    subtitle = `Tahun: ${selectedTahun.value} (Pengembalian Dana) | Metode: ${formatMethodName(paymentType)}`
+  }
+
+  detailPengembalianTitle.value = "Detail Pengembalian Dana"
+  detailPengembalianSubtitle.value = subtitle
+
+  /* eslint-disable camelcase */
+  detailPengembalianFilter.value = {
+    start_date: startDate,
+    end_date: endDate,
+    ...(paymentType && { payment_type: paymentType }),
+    ...(selectedUser.value && { user_id: selectedUser.value }),
+    ...(selectedJenisKelamin.value !== "%" && { jenis_kelamin: selectedJenisKelamin.value }),
+  }
+  /* eslint-enable camelcase */
+
+  isDetailPengembalianOpen.value = true
+}
 
 const normalizeKategoriText = value => String(value || "")
   .toUpperCase()
@@ -618,17 +733,121 @@ onMounted(() => {
                 <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">
                   {{ row.kategori }}
                 </td>
-                <td class="col-amount text-right border-cell">
-                  {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                <td
+                  class="col-amount text-right border-cell"
+                  :class="{ 
+                    'cell-clickable': (isPemasukanUmumRow(row) && row.tunai > 0) || (isPengembalianDanaRow(row) && row.tunai !== 0) 
+                  }"
+                  @click="
+                    isPemasukanUmumRow(row) && row.tunai > 0
+                      ? openDetailPemasukanUmum('tunai')
+                      : (isPengembalianDanaRow(row) && row.tunai !== 0 ? openDetailPengembalianDana('tunai') : null)
+                  "
+                >
+                  <span
+                    v-if="isPemasukanUmumRow(row) && row.tunai > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail pemasukan umum (Tunai)"
+                  >
+                    {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                  </span>
+                  <span
+                    v-else-if="isPengembalianDanaRow(row) && row.tunai !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                  </template>
                 </td>
-                <td class="col-amount text-right border-cell">
-                  {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                <td
+                  class="col-amount text-right border-cell"
+                  :class="{ 
+                    'cell-clickable': (isPemasukanUmumRow(row) && row.transfer > 0) || (isPengembalianDanaRow(row) && row.transfer !== 0) 
+                  }"
+                  @click="
+                    isPemasukanUmumRow(row) && row.transfer > 0
+                      ? openDetailPemasukanUmum('transfer')
+                      : (isPengembalianDanaRow(row) && row.transfer !== 0 ? openDetailPengembalianDana('transfer') : null)
+                  "
+                >
+                  <span
+                    v-if="isPemasukanUmumRow(row) && row.transfer > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail pemasukan umum (Transfer)"
+                  >
+                    {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                  </span>
+                  <span
+                    v-else-if="isPengembalianDanaRow(row) && row.transfer !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                  </template>
                 </td>
-                <td class="col-amount text-right border-cell">
-                  {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                <td
+                  class="col-amount text-right border-cell"
+                  :class="{ 
+                    'cell-clickable': (isPemasukanUmumRow(row) && row.yayasan > 0) || (isPengembalianDanaRow(row) && row.yayasan !== 0) 
+                  }"
+                  @click="
+                    isPemasukanUmumRow(row) && row.yayasan > 0
+                      ? openDetailPemasukanUmum('yayasan')
+                      : (isPengembalianDanaRow(row) && row.yayasan !== 0 ? openDetailPengembalianDana('yayasan') : null)
+                  "
+                >
+                  <span
+                    v-if="isPemasukanUmumRow(row) && row.yayasan > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail pemasukan umum (Yayasan)"
+                  >
+                    {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                  </span>
+                  <span
+                    v-else-if="isPengembalianDanaRow(row) && row.yayasan !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                  </template>
                 </td>
-                <td class="col-amount text-right border-cell font-weight-bold">
-                  {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                <td
+                  class="col-amount text-right border-cell font-weight-bold"
+                  :class="{ 
+                    'cell-clickable': (isPemasukanUmumRow(row) && row.total > 0) || (isPengembalianDanaRow(row) && row.total !== 0) 
+                  }"
+                  @click="
+                    isPemasukanUmumRow(row) && row.total > 0
+                      ? openDetailPemasukanUmum(null)
+                      : (isPengembalianDanaRow(row) && row.total !== 0 ? openDetailPengembalianDana(null) : null)
+                  "
+                >
+                  <span
+                    v-if="isPemasukanUmumRow(row) && row.total > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian semua detail transaksi pemasukan umum"
+                  >
+                    {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                  </span>
+                  <span
+                    v-else-if="isPengembalianDanaRow(row) && row.total !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                  </template>
                 </td>
               </tr>
             </tbody>
@@ -710,17 +929,121 @@ onMounted(() => {
                   <td class="col-kategori text-left border-cell font-weight-medium text-uppercase">
                     {{ row.kategori }}
                   </td>
-                  <td class="col-amount text-right border-cell">
-                    {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                  <td
+                    class="col-amount text-right border-cell"
+                    :class="{ 
+                      'cell-clickable': (isPemasukanUmumRow(row) && row.tunai > 0) || (isPengembalianDanaRow(row) && row.tunai !== 0) 
+                    }"
+                    @click="
+                      isPemasukanUmumRow(row) && row.tunai > 0
+                        ? openDetailPemasukanUmum('tunai', monthInfo)
+                        : (isPengembalianDanaRow(row) && row.tunai !== 0 ? openDetailPengembalianDana('tunai', monthInfo) : null)
+                    "
+                  >
+                    <span
+                      v-if="isPemasukanUmumRow(row) && row.tunai > 0"
+                      class="clickable-nominal"
+                      title="Klik untuk melihat rincian detail pemasukan umum (Tunai)"
+                    >
+                      {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                    </span>
+                    <span
+                      v-else-if="isPengembalianDanaRow(row) && row.tunai !== 0"
+                      class="clickable-nominal text-error"
+                      title="Klik untuk melihat rincian detail pengembalian dana"
+                    >
+                      {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                    </span>
+                    <template v-else>
+                      {{ formatCurrencyTotals(row.tunai_by_currency, row.tunai) }}
+                    </template>
                   </td>
-                  <td class="col-amount text-right border-cell">
-                    {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                  <td
+                    class="col-amount text-right border-cell"
+                    :class="{ 
+                      'cell-clickable': (isPemasukanUmumRow(row) && row.transfer > 0) || (isPengembalianDanaRow(row) && row.transfer !== 0) 
+                    }"
+                    @click="
+                      isPemasukanUmumRow(row) && row.transfer > 0
+                        ? openDetailPemasukanUmum('transfer', monthInfo)
+                        : (isPengembalianDanaRow(row) && row.transfer !== 0 ? openDetailPengembalianDana('transfer', monthInfo) : null)
+                    "
+                  >
+                    <span
+                      v-if="isPemasukanUmumRow(row) && row.transfer > 0"
+                      class="clickable-nominal"
+                      title="Klik untuk melihat rincian detail pemasukan umum (Transfer)"
+                    >
+                      {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                    </span>
+                    <span
+                      v-else-if="isPengembalianDanaRow(row) && row.transfer !== 0"
+                      class="clickable-nominal text-error"
+                      title="Klik untuk melihat rincian detail pengembalian dana"
+                    >
+                      {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                    </span>
+                    <template v-else>
+                      {{ formatCurrencyTotals(row.transfer_by_currency, row.transfer) }}
+                    </template>
                   </td>
-                  <td class="col-amount text-right border-cell">
-                    {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                  <td
+                    class="col-amount text-right border-cell"
+                    :class="{ 
+                      'cell-clickable': (isPemasukanUmumRow(row) && row.yayasan > 0) || (isPengembalianDanaRow(row) && row.yayasan !== 0) 
+                    }"
+                    @click="
+                      isPemasukanUmumRow(row) && row.yayasan > 0
+                        ? openDetailPemasukanUmum('yayasan', monthInfo)
+                        : (isPengembalianDanaRow(row) && row.yayasan !== 0 ? openDetailPengembalianDana('yayasan', monthInfo) : null)
+                    "
+                  >
+                    <span
+                      v-if="isPemasukanUmumRow(row) && row.yayasan > 0"
+                      class="clickable-nominal"
+                      title="Klik untuk melihat rincian detail pemasukan umum (Yayasan)"
+                    >
+                      {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                    </span>
+                    <span
+                      v-else-if="isPengembalianDanaRow(row) && row.yayasan !== 0"
+                      class="clickable-nominal text-error"
+                      title="Klik untuk melihat rincian detail pengembalian dana"
+                    >
+                      {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                    </span>
+                    <template v-else>
+                      {{ formatCurrencyTotals(row.yayasan_by_currency, row.yayasan) }}
+                    </template>
                   </td>
-                  <td class="col-amount text-right border-cell font-weight-bold">
-                    {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                  <td
+                    class="col-amount text-right border-cell font-weight-bold"
+                    :class="{ 
+                      'cell-clickable': (isPemasukanUmumRow(row) && row.total > 0) || (isPengembalianDanaRow(row) && row.total !== 0) 
+                    }"
+                    @click="
+                      isPemasukanUmumRow(row) && row.total > 0
+                        ? openDetailPemasukanUmum(null, monthInfo)
+                        : (isPengembalianDanaRow(row) && row.total !== 0 ? openDetailPengembalianDana(null, monthInfo) : null)
+                    "
+                  >
+                    <span
+                      v-if="isPemasukanUmumRow(row) && row.total > 0"
+                      class="clickable-nominal"
+                      title="Klik untuk melihat rincian semua detail transaksi pemasukan umum"
+                    >
+                      {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                    </span>
+                    <span
+                      v-else-if="isPengembalianDanaRow(row) && row.total !== 0"
+                      class="clickable-nominal text-error"
+                      title="Klik untuk melihat rincian detail pengembalian dana"
+                    >
+                      {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                    </span>
+                    <template v-else>
+                      {{ formatCurrencyTotals(row.total_by_currency, row.total) }}
+                    </template>
                   </td>
                 </tr>
               </tbody>
@@ -751,10 +1074,51 @@ onMounted(() => {
         </VCard>
       </template>
     </template>
+
+    <!-- Modal Detail Pemasukan Umum -->
+    <ModalDetailPemasukanUmum
+      v-model="isDetailModalOpen"
+      :title="detailModalTitle"
+      :subtitle="detailModalSubtitle"
+      :filter-params="detailModalFilter"
+    />
+
+    <!-- Modal Detail Pengembalian Dana -->
+    <ModalDetailPengembalianDana
+      v-model="isDetailPengembalianOpen"
+      :title="detailPengembalianTitle"
+      :subtitle="detailPengembalianSubtitle"
+      :filter-params="detailPengembalianFilter"
+    />
   </div>
 </template>
 
 <style scoped>
+/* CLICKABLE NOMINAL PEMASUKAN */
+.clickable-nominal {
+  color: #1976d2 !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: all 0.15s ease-in-out;
+  display: inline-block;
+}
+
+.clickable-nominal:hover {
+  color: #0d47a1 !important;
+  text-decoration: underline;
+  transform: scale(1.04);
+}
+
+.cell-clickable {
+  cursor: pointer;
+  background-color: rgba(25, 118, 210, 0.05);
+}
+
+.cell-clickable:hover {
+  background-color: rgba(25, 118, 210, 0.12) !important;
+}
+
 /* HEADER CARD */
 .report-header-card {
   overflow: hidden;

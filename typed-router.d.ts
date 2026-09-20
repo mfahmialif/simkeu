@@ -86,6 +86,7 @@ declare module 'vue-router/auto-routes' {
     'admin-pemasukan-mahasiswa-uas-susulan-add': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan-add', '/admin/pemasukan/mahasiswa/uas-susulan/add', Record<never, never>, Record<never, never>>,
     'admin-pemasukan-mahasiswa-uas-susulan-detail-id': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan-detail-id', '/admin/pemasukan/mahasiswa/uas-susulan/detail/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'admin-pemasukan-mahasiswa-uas-susulan-edit-id': RouteRecordInfo<'admin-pemasukan-mahasiswa-uas-susulan-edit-id', '/admin/pemasukan/mahasiswa/uas-susulan/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    'admin-pemasukan-mahasiswa-umum': RouteRecordInfo<'admin-pemasukan-mahasiswa-umum', '/admin/pemasukan/mahasiswa/umum', Record<never, never>, Record<never, never>>,
     'admin-pengeluaran-absensi': RouteRecordInfo<'admin-pengeluaran-absensi', '/admin/pengeluaran/absensi', Record<never, never>, Record<never, never>>,
     'admin-pengeluaran-absensi-add': RouteRecordInfo<'admin-pengeluaran-absensi-add', '/admin/pengeluaran/absensi/add', Record<never, never>, Record<never, never>>,
     'admin-pengeluaran-absensi-edit-id': RouteRecordInfo<'admin-pengeluaran-absensi-edit-id', '/admin/pengeluaran/absensi/edit/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,

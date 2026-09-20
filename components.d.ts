@@ -415,6 +415,8 @@ declare module 'vue' {
     LazyTextField: typeof import('./src/components/LazyTextField.vue')['default']
     MahasiswaPembayaranMahasiswa: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/mahasiswa/MahasiswaPembayaranMahasiswa.vue')['default']
     MahasiswaPembayaranMahasiswaTambahan: typeof import('./src/components/admin/pemasukan/mahasiswa/pembayaran/tambahan/MahasiswaPembayaranMahasiswaTambahan.vue')['default']
+    ModalDetailPemasukanUmum: typeof import('./src/components/admin/pemasukan/mahasiswa/laporan/ModalDetailPemasukanUmum.vue')['default']
+    ModalDetailPengembalianDana: typeof import('./src/components/admin/pemasukan/mahasiswa/laporan/ModalDetailPengembalianDana.vue')['default']
     MoreBtn: typeof import('./src/@core/components/MoreBtn.vue')['default']
     MoreBtnAction: typeof import('./src/@core/components/MoreBtnAction.vue')['default']
     Notifications: typeof import('./src/@core/components/Notifications.vue')['default']

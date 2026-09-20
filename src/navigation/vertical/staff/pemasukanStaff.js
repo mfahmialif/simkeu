@@ -1,4 +1,12 @@
-export default [
+const PENGEMBALIAN_ACCESS_ROLES = new Set([
+  "admin",
+  "kabag",
+  "kabag_pemasukan",
+  "staff",
+  "keuangan",
+])
+
+export const pemasukanStaffItems = [
   {
     title: "Data Mahasiswa",
     icon: { icon: "ri-group-line" },
@@ -56,6 +64,11 @@ export default [
     to: "admin-pemasukan-mahasiswa-pengembalian",
   },
   {
+    title: "Umum",
+    icon: { icon: "ri-funds-box-line" },
+    to: "admin-pemasukan-mahasiswa-umum",
+  },
+  {
     title: "Pemasukan Pengeluaran",
     icon: { icon: "ri-exchange-funds-line" },
     to: "admin-pemasukan-mahasiswa-pemasukan-pengeluaran",
@@ -66,3 +79,18 @@ export default [
     to: "admin-pemasukan-mahasiswa-laporan",
   },
 ]
+
+export const pemasukanStaffItemsForRole = roleName => {
+  const role = String(roleName || "").toLowerCase()
+  const canAccessPengembalian = PENGEMBALIAN_ACCESS_ROLES.has(role)
+
+  return pemasukanStaffItems.filter(item => {
+    if (item.to === "admin-pemasukan-mahasiswa-pengembalian") {
+      return canAccessPengembalian
+    }
+    
+    return true
+  })
+}
+
+export default pemasukanStaffItems

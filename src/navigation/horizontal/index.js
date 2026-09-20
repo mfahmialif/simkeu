@@ -1,12 +1,12 @@
 /* eslint-disable camelcase */
 import { computed } from "vue"
 import dashboard from "./dashboard"
-import pemasukan from "./pemasukan"
+import pemasukan, { pemasukanItemsForRole } from "./pemasukan"
 import pengeluaran from "./pengeluaran"
 import pegawai from "./pegawai"
 import { settingItemsForRole } from "./setting"
 import dashboardStaff from "./staff/dashboardStaff"
-import pemasukanStaff from "./staff/pemasukanStaff"
+import pemasukanStaff, { pemasukanStaffItemsForRole } from "./staff/pemasukanStaff"
 import user from "./user"
 import { hutangItemsForRole } from "./hutang"
 import {
@@ -23,18 +23,32 @@ import umum from "./umum"
 
 const userData = useCookie("userData")
 
-const currentRole = computed(() =>
-  String(userData.value?.role?.name || "").toLowerCase(),
-)
+const roleMap = {
+  1: "admin",
+  2: "pimpinan",
+  3: "keuangan",
+  4: "kabag",
+  5: "staff",
+  13: "kabag_pemasukan",
+  14: "kabag_pengeluaran",
+}
+
+const currentRole = computed(() => {
+  const roleName = String(userData.value?.role?.name || "").toLowerCase().trim()
+  if (roleName) return roleName
+  return roleMap[userData.value?.role_id] || ""
+})
 
 const routesByRole = roleName => {
   const setting = settingItemsForRole(roleName)
   const hutang = hutangItemsForRole(roleName)
+  const pemasukanRole = pemasukanItemsForRole(roleName)
+  const pemasukanStaffRole = pemasukanStaffItemsForRole(roleName)
 
   return {
     admin: [
       ...dashboard,
-      ...pemasukan,
+      ...pemasukanRole,
       ...pengeluaran,
       ...rumahTangga,
       ...saranaPrasarana,
@@ -50,7 +64,7 @@ const routesByRole = roleName => {
 
     pimpinan: [
       ...dashboard,
-      ...pemasukan,
+      ...pemasukanRole,
       ...pengeluaran,
       ...rumahTangga,
       ...saranaPrasarana,
@@ -66,7 +80,7 @@ const routesByRole = roleName => {
 
     keuangan: [
       ...dashboard,
-      ...pemasukan,
+      ...pemasukanRole,
       ...pengeluaran,
       ...hutang,
       ...rab,
@@ -75,9 +89,9 @@ const routesByRole = roleName => {
       ...setting,
     ],
 
-    staff: [...dashboardStaff, ...pemasukanStaff, ...hutang, ...setting],
-    kabag: [...dashboardStaff, ...pemasukanStaff, ...hutang, ...rab, ...setting],
-    kabag_pemasukan: [...dashboardStaff, ...pemasukan, ...hutang, ...laporan, ...setting],
+    staff: [...dashboardStaff, ...pemasukanStaffRole, ...hutang, ...setting],
+    kabag: [...dashboardStaff, ...pemasukanStaffRole, ...hutang, ...rab, ...setting],
+    kabag_pemasukan: [...dashboardStaff, ...pemasukanRole, ...hutang, ...laporan, ...setting],
     kabag_pengeluaran: [
       ...dashboard,
       ...pegawai,

@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import { computed } from "vue"
 import dashboard from "./dashboard"
-import pemasukan from "./pemasukan"
+import pemasukan, { pemasukanItemsForRole } from "./pemasukan"
 import pengeluaran from "./pengeluaran"
 import pengeluaranDosen, {
   pengeluaranDosenBulanan,
@@ -11,7 +11,7 @@ import pengeluaranDosen, {
 import pegawai from "./pegawai"
 import { settingItemsForRole } from "./setting"
 import dashboardStaff from "./staff/dashboardStaff"
-import pemasukanStaff from "./staff/pemasukanStaff"
+import pemasukanStaff, { pemasukanStaffItemsForRole } from "./staff/pemasukanStaff"
 import user from "./user"
 import laporan, { laporanPengeluaran } from "./laporan"
 import rab from "./rab"
@@ -28,19 +28,33 @@ const pengeluaranHeading = [{ heading: "Pengeluaran" }]
 
 const userData = useCookie("userData")
 
-const currentRole = computed(() =>
-  String(userData.value?.role?.name || "").toLowerCase(),
-)
+const roleMap = {
+  1: "admin",
+  2: "pimpinan",
+  3: "keuangan",
+  4: "kabag",
+  5: "staff",
+  13: "kabag_pemasukan",
+  14: "kabag_pengeluaran",
+}
+
+const currentRole = computed(() => {
+  const roleName = String(userData.value?.role?.name || "").toLowerCase().trim()
+  if (roleName) return roleName
+  return roleMap[userData.value?.role_id] || ""
+})
 
 const routesByRole = roleName => {
   const setting = settingItemsForRole(roleName)
   const hutang = hutangItemsForRole(roleName)
+  const pemasukanRole = pemasukanItemsForRole(roleName)
+  const pemasukanStaffRole = pemasukanStaffItemsForRole(roleName)
 
   return {
     admin: [
       ...dashboard,
       ...pemasukanHeading,
-      ...pemasukan,
+      ...pemasukanRole,
       ...pengeluaranHeading,
       ...pegawai,
       ...hutang,
@@ -61,7 +75,7 @@ const routesByRole = roleName => {
     pimpinan: [
       ...dashboard,
       ...pemasukanHeading,
-      ...pemasukan,
+      ...pemasukanRole,
       ...pengeluaranHeading,
       ...pegawai,
       ...pengeluaran,
@@ -82,7 +96,7 @@ const routesByRole = roleName => {
     keuangan: [
       ...dashboard,
       ...pemasukanHeading,
-      ...pemasukan,
+      ...pemasukanRole,
       ...pengeluaranHeading,
       ...pengeluaran,
       ...hutang,
@@ -94,9 +108,9 @@ const routesByRole = roleName => {
       ...setting,
     ],
 
-    staff: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaff, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
-    kabag: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaff, ...hutang, ...rab, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
-    kabag_pemasukan: [...dashboardStaff, ...pemasukanHeading, ...pemasukan, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
+    staff: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
+    kabag: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...rab, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
+    kabag_pemasukan: [...dashboardStaff, ...pemasukanHeading, ...pemasukanRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
     kabag_pengeluaran: [
       ...dashboard,
       ...pengeluaranHeading,

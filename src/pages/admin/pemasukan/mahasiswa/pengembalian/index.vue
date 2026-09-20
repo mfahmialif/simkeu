@@ -1,12 +1,34 @@
 <script setup>
+/* eslint-disable camelcase */
 import { computed, onMounted, ref, watch } from "vue"
 import { showSnackbar } from "@/composables/snackbar"
 import { formatRupiah } from "@/composables/formatRupiah"
 
+definePage({
+  meta: {
+    roles: ["admin", "kabag", "kabag_pemasukan", "staff", "keuangan"],
+  },
+})
+
 // Role & User
 const userData = useCookie("userData").value ?? {}
-const userRole = computed(() => String(userData?.role?.name ?? "").toLowerCase())
-const canManage = computed(() => ["admin", "kabag", "kabag_pemasukan"].includes(userRole.value))
+const userRole = computed(() => {
+  const roleName = String(userData?.role?.name ?? "").toLowerCase().trim()
+  if (roleName) return roleName
+  const roleMap = {
+    1: "admin",
+    2: "pimpinan",
+    3: "keuangan",
+    4: "kabag",
+    5: "staff",
+    13: "kabag_pemasukan",
+    14: "kabag_pengeluaran",
+  }
+  
+  return roleMap[userData?.role_id] || ""
+})
+const canAccess = computed(() => ["admin", "kabag", "kabag_pemasukan", "staff", "keuangan"].includes(userRole.value))
+const canManage = computed(() => ["admin", "kabag", "kabag_pemasukan", "staff", "keuangan"].includes(userRole.value))
 const currentUserName = computed(() => userData?.name || userData?.username || "Petugas")
 
 // Datatable state
@@ -24,6 +46,44 @@ const initialLoading = ref(true)
 const filterDateRange = ref("")
 const filterMinNominal = ref("")
 const filterMaxNominal = ref("")
+const filterJenisPembayaran = ref(null)
+
+// Jenis Pembayaran State
+const jenisPembayaranList = ref([])
+const loadingJenisPembayaran = ref(false)
+
+const getMetodeColor = (nama = "") => {
+  const n = String(nama).toLowerCase()
+  if (n.includes("cash") || n.includes("tunai")) return "success"
+  if (n.includes("transfer") || n.includes("tf")) return "primary"
+  if (n.includes("yayasan") || n.includes("yys")) return "warning"
+  
+  return "info"
+}
+
+const fetchJenisPembayaran = async () => {
+  try {
+    loadingJenisPembayaran.value = true
+
+    const res = await $api("/admin/pemasukan/mahasiswa/jenis-pembayaran", {
+      method: "GET",
+      params: { limit: 0, manual_only: 1 },
+    })
+
+    const items = res?.data?.data ?? res?.data ?? []
+
+    jenisPembayaranList.value = items.map(jp => ({
+      title: `${jp.nama} (${jp.kategori})`,
+      value: jp.id,
+      nama: jp.nama,
+      kategori: jp.kategori,
+    }))
+  } catch (err) {
+    console.error("Gagal mengambil jenis pembayaran:", err)
+  } finally {
+    loadingJenisPembayaran.value = false
+  }
+}
 
 // Stats state
 const stats = ref({
@@ -32,7 +92,12 @@ const stats = ref({
   nominal_bulan_ini: 0,
   transaksi_bulan_ini: 0,
 })
+
 const loadingStats = ref(false)
+
+// Download PDF states
+const downloadingPdfId = ref(null)
+const downloadingBundlingPdf = ref(false)
 
 // Format date time helper
 const formatDateTime = value => {
@@ -59,6 +124,10 @@ const fetchStats = async () => {
       const dates = filterDateRange.value.split(" to ")
       if (dates[0]) params.start_date = dates[0]
       if (dates[1] || dates[0]) params.end_date = dates[1] || dates[0]
+    }
+
+    if (filterJenisPembayaran.value) {
+      params.jenis_pembayaran_id = filterJenisPembayaran.value
     }
 
     const response = await $api("/admin/pemasukan/mahasiswa/pengembalian/stats", {
@@ -96,6 +165,10 @@ const fetchData = async () => {
       const dates = filterDateRange.value.split(" to ")
       if (dates[0]) params.start_date = dates[0]
       if (dates[1] || dates[0]) params.end_date = dates[1] || dates[0]
+    }
+
+    if (filterJenisPembayaran.value) {
+      params.jenis_pembayaran_id = filterJenisPembayaran.value
     }
 
     if (filterMinNominal.value !== "" && filterMinNominal.value !== null && filterMinNominal.value !== undefined) {
@@ -146,10 +219,133 @@ const resetFilter = () => {
   filterDateRange.value = ""
   filterMinNominal.value = ""
   filterMaxNominal.value = ""
+  filterJenisPembayaran.value = null
   page.value = 1
   fetchData()
   fetchStats()
 }
+
+// Download Single PDF
+const handleDownloadPdf = async item => {
+  try {
+    downloadingPdfId.value = item.id
+    showSnackbar({
+      text: `Menyiapkan PDF Bukti ${item.no_transaksi || item.id}...`,
+      color: "info",
+    })
+
+    const res = await $api(`/admin/pemasukan/mahasiswa/pengembalian/${item.id}/pdf`, {
+      method: "GET",
+      responseType: "blob",
+      headers: { Accept: "application/pdf" },
+    })
+
+    const blob = new Blob([res], { type: "application/pdf" })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+
+    link.href = url
+
+    const filename = `Bukti_Pengembalian_${String(item.no_transaksi || item.id).replace(/\//g, "-")}.pdf`
+
+    link.setAttribute("download", filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    showSnackbar({
+      text: "PDF Bukti pengembalian dana berhasil diunduh.",
+      color: "success",
+    })
+  } catch (err) {
+    console.error("Gagal mendownload PDF pengembalian:", err)
+    showSnackbar({
+      text: "Gagal mendownload PDF bukti pengembalian dana.",
+      color: "error",
+    })
+  } finally {
+    downloadingPdfId.value = null
+  }
+}
+
+// Download Bundling PDF
+const handleDownloadBundlingPdf = async () => {
+  try {
+    downloadingBundlingPdf.value = true
+    showSnackbar({
+      text: "Menyiapkan PDF Rekap & Bundling pengembalian dana...",
+      color: "info",
+    })
+
+    const params = {}
+    if (search.value && search.value.trim() !== "") {
+      params.search = search.value.trim()
+    }
+    if (filterDateRange.value) {
+      const dates = filterDateRange.value.split(" to ")
+      if (dates[0]) params.start_date = dates[0]
+      if (dates[1] || dates[0]) params.end_date = dates[1] || dates[0]
+    }
+    if (filterJenisPembayaran.value) {
+      params.jenis_pembayaran_id = filterJenisPembayaran.value
+    }
+    if (filterMinNominal.value !== "" && filterMinNominal.value !== null && filterMinNominal.value !== undefined) {
+      params.min_nominal = filterMinNominal.value
+    }
+    if (filterMaxNominal.value !== "" && filterMaxNominal.value !== null && filterMaxNominal.value !== undefined) {
+      params.max_nominal = filterMaxNominal.value
+    }
+
+    const res = await $api("/admin/pemasukan/mahasiswa/pengembalian/pdf-bundling", {
+      method: "GET",
+      params,
+      responseType: "blob",
+      headers: { Accept: "application/pdf" },
+    })
+
+    const blob = new Blob([res], { type: "application/pdf" })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+
+    link.href = url
+
+    const nowStr = new Date().toISOString().slice(0, 10)
+
+    link.setAttribute("download", `Rekap_Pengembalian_Dana_${nowStr}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    showSnackbar({
+      text: "PDF Rekap bundling pengembalian dana berhasil diunduh.",
+      color: "success",
+    })
+  } catch (err) {
+    console.error("Gagal mendownload PDF bundling pengembalian:", err)
+    showSnackbar({
+      text: "Gagal mendownload PDF rekap bundling pengembalian dana.",
+      color: "error",
+    })
+  } finally {
+    downloadingBundlingPdf.value = false
+  }
+}
+
+// Headers Table
+const headers = [
+  { title: "NO", key: "no", sortable: false, width: "60px", align: "center" },
+  { title: "NO. TRANSAKSI", key: "no_transaksi", sortable: true, width: "165px" },
+  { title: "TANGGAL & WAKTU", key: "tanggal", sortable: true, width: "170px" },
+  { title: "METODE", key: "jenis_pembayaran_id", sortable: false, width: "120px", align: "center" },
+  { title: "NOMINAL", key: "nominal", sortable: true, width: "150px" },
+  { title: "PETUGAS", key: "petugas_id", sortable: false, width: "140px" },
+  { title: "BUKTI MASUK", key: "file_bukti_masuk", sortable: false, align: "center", width: "130px" },
+  { title: "BUKTI KELUAR", key: "file_bukti_keluar", sortable: false, align: "center", width: "130px" },
+  { title: "KETERANGAN", key: "keterangan", sortable: false },
+  { title: "AKSI", key: "actions", sortable: false, width: "130px", align: "center" },
+]
 
 // Dialog Form (Add / Edit) State
 const isDialogFormVisible = ref(false)
@@ -161,6 +357,7 @@ const formData = ref({
   id: null,
   nominal: "",
   tanggal: "",
+  jenis_pembayaran_id: null,
   keterangan: "",
   file_bukti_masuk: null,
   file_bukti_keluar: null,
@@ -203,10 +400,12 @@ const fileMasukRules = computed(() => {
     rules.push(v => {
       const f = Array.isArray(v) ? v[0] : v
       if (!f) return "File bukti dana masuk wajib diunggah."
+      
       return true
     })
   }
   rules.push(validateFile)
+  
   return rules
 })
 
@@ -221,10 +420,20 @@ const openAddDialog = () => {
   const pad = n => String(n).padStart(2, "0")
   const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
 
+  let defaultJpId = null
+  if (jenisPembayaranList.value.length > 0) {
+    const cashItem = jenisPembayaranList.value.find(j =>
+      j.nama?.toLowerCase().includes("cash") || j.nama?.toLowerCase().includes("tunai"),
+    )
+
+    defaultJpId = cashItem ? cashItem.value : jenisPembayaranList.value[0].value
+  }
+
   formData.value = {
     id: null,
     nominal: "",
     tanggal: defaultDate,
+    jenis_pembayaran_id: defaultJpId,
     keterangan: "",
     file_bukti_masuk: null,
     file_bukti_keluar: null,
@@ -243,6 +452,7 @@ const openEditDialog = item => {
     const d = new Date(item.tanggal)
     if (!isNaN(d.getTime())) {
       const pad = n => String(n).padStart(2, "0")
+
       formattedDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     } else {
       formattedDate = String(item.tanggal).slice(0, 16)
@@ -253,6 +463,7 @@ const openEditDialog = item => {
     id: item.id,
     nominal: item.nominal,
     tanggal: formattedDate,
+    jenis_pembayaran_id: item.jenis_pembayaran_id || item.jenis_pembayaran?.id || null,
     keterangan: item.keterangan || "",
     file_bukti_masuk: null,
     file_bukti_keluar: null,
@@ -290,6 +501,7 @@ const submitForm = async () => {
     const checkMasuk = validateFile(fileMasuk)
     if (checkMasuk !== true) {
       showSnackbar({ text: checkMasuk, color: "warning" })
+      
       return
     }
   }
@@ -298,6 +510,7 @@ const submitForm = async () => {
     const checkKeluar = validateFile(fileKeluar)
     if (checkKeluar !== true) {
       showSnackbar({ text: checkKeluar, color: "warning" })
+      
       return
     }
   }
@@ -306,8 +519,10 @@ const submitForm = async () => {
     submitting.value = true
 
     const fd = new FormData()
+
     fd.append("nominal", formData.value.nominal)
     fd.append("tanggal", formData.value.tanggal)
+    fd.append("jenis_pembayaran_id", formData.value.jenis_pembayaran_id)
     fd.append("keterangan", formData.value.keterangan || "")
 
     if (fileMasuk) {
@@ -319,6 +534,7 @@ const submitForm = async () => {
 
     if (isEditMode.value) {
       fd.append("_method", "PUT")
+
       const res = await $api(`/admin/pemasukan/mahasiswa/pengembalian/${formData.value.id}`, {
         method: "POST",
         body: fd,
@@ -366,6 +582,7 @@ const openDetailDialog = item => {
 // Resolve File URL Helper (selalu menggunakan VITE_API_BASE_URL yang valid)
 const resolveFileUrl = (item, type) => {
   if (!item) return ""
+
   const path = type === "masuk"
     ? (item.file_bukti_masuk || item.file_bukti_masuk_existing)
     : (item.file_bukti_keluar || item.file_bukti_keluar_existing)
@@ -373,6 +590,7 @@ const resolveFileUrl = (item, type) => {
   if (!path) return ""
 
   const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "")
+  
   return `${apiBase}/admin/pemasukan/mahasiswa/pengembalian/file/${item.id}/${type}`
 }
 
@@ -390,6 +608,7 @@ const openPreviewFile = (url, title, rawFilePath = "") => {
   imageLoadError.value = false
 
   const target = (rawFilePath || url).toLowerCase()
+
   isPreviewImage.value = !target.includes(".pdf")
   isDialogFileVisible.value = true
 }
@@ -440,6 +659,7 @@ const confirmDelete = async () => {
 
 onMounted(() => {
   document.title = "Pengembalian Dana - SIMKEU"
+  fetchJenisPembayaran()
   fetchStats()
   fetchData()
 })
@@ -469,6 +689,16 @@ onMounted(() => {
         </VBtn>
       </div>
     </div>
+
+    <!-- Alert Hak Akses jika bukan role yang diizinkan -->
+    <VAlert
+      v-if="!canAccess"
+      type="error"
+      variant="tonal"
+      class="mb-6"
+    >
+      Anda tidak memiliki izin untuk mengakses halaman Pengembalian Dana.
+    </VAlert>
 
     <!-- Stat Cards Row -->
     <VRow class="mb-6">
@@ -642,6 +872,23 @@ onMounted(() => {
             />
           </VCol>
 
+          <!-- Metode Pengembalian -->
+          <VCol
+            cols="12"
+            sm="6"
+            md="2"
+          >
+            <VSelect
+              v-model="filterJenisPembayaran"
+              :items="jenisPembayaranList"
+              label="Metode Pengembalian"
+              placeholder="Semua Metode"
+              density="compact"
+              clearable
+              :loading="loadingJenisPembayaran"
+            />
+          </VCol>
+
           <!-- Min Nominal -->
           <VCol
             cols="12"
@@ -674,30 +921,54 @@ onMounted(() => {
             />
           </VCol>
 
-          <!-- Tombol Filter -->
+          <!-- Action Buttons -->
           <VCol
             cols="12"
-            md="2"
-            class="d-flex align-center gap-2"
+            class="d-flex align-center justify-end gap-2 flex-wrap pt-0"
           >
             <VBtn
               color="primary"
               density="compact"
-              class="flex-grow-1"
+              variant="elevated"
+              prepend-icon="ri-search-line"
               @click="applyFilter"
             >
               Filter
             </VBtn>
+
             <VBtn
               variant="outlined"
               color="secondary"
               density="compact"
-              icon="ri-refresh-line"
-              title="Reset Filter"
+              prepend-icon="ri-refresh-line"
               @click="resetFilter"
-            />
+            >
+              Reset
+            </VBtn>
           </VCol>
         </VRow>
+
+        <VDivider class="my-3" />
+
+        <!-- Tombol Download PDF Bundling di samping Filter -->
+        <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+          <div class="text-caption text-medium-emphasis">
+            Ditemukan <strong>{{ totalItems }}</strong> data transaksi pengembalian dana.
+          </div>
+
+          <div class="d-flex align-center gap-2 flex-wrap">
+            <VBtn
+              color="error"
+              variant="tonal"
+              density="compact"
+              prepend-icon="ri-file-pdf-2-line"
+              :loading="downloadingBundlingPdf"
+              @click="handleDownloadBundlingPdf"
+            >
+              Download PDF (Bundling)
+            </VBtn>
+          </div>
+        </div>
       </VCardText>
     </VCard>
 
@@ -718,7 +989,7 @@ onMounted(() => {
               color="secondary"
               label
             >
-              Mode Read-Only (Hanya Admin & Kabag yang dapat menginput)
+              Mode Read-Only (Hanya Admin, Kabag, Staff, dan Keuangan yang dapat menginput)
             </VChip>
           </div>
         </div>
@@ -730,16 +1001,7 @@ onMounted(() => {
         v-model:model-value="selectedRows"
         v-model:items-per-page="itemsPerPage"
         v-model:page="page"
-        :headers="[
-          { title: 'No', key: 'id', width: '60px', align: 'center' },
-          { title: 'Tanggal & Waktu', key: 'tanggal' },
-          { title: 'Nominal', key: 'nominal' },
-          { title: 'Petugas', key: 'petugas_id' },
-          { title: 'Bukti Dana Masuk', key: 'file_bukti_masuk', align: 'center' },
-          { title: 'Bukti Dana Keluar', key: 'file_bukti_keluar', align: 'center' },
-          { title: 'Keterangan', key: 'keterangan' },
-          { title: 'Aksi', key: 'actions', sortable: false, align: 'center', width: '100px' },
-        ]"
+        :headers="headers"
         :items="dataTable"
         :items-length="totalItems"
         :loading="loading"
@@ -776,8 +1038,20 @@ onMounted(() => {
         </template>
 
         <!-- No Column -->
-        <template #item.id="{ index }">
-          {{ itemsPerPage * (page - 1) + index + 1 }}
+        <template #item.no="{ index }">
+          <span class="text-medium-emphasis">{{ itemsPerPage * (page - 1) + index + 1 }}</span>
+        </template>
+
+        <!-- No Transaksi -->
+        <template #item.no_transaksi="{ item }">
+          <VChip
+            size="small"
+            color="primary"
+            variant="tonal"
+            class="font-weight-medium"
+          >
+            {{ item.no_transaksi || ('PD-' + item.id) }}
+          </VChip>
         </template>
 
         <!-- Tanggal & Waktu -->
@@ -785,6 +1059,18 @@ onMounted(() => {
           <div class="font-weight-medium">
             {{ formatDateTime(item.tanggal) }}
           </div>
+        </template>
+
+        <!-- Metode Pengembalian -->
+        <template #item.jenis_pembayaran_id="{ item }">
+          <VChip
+            size="x-small"
+            :color="getMetodeColor(item.jenis_pembayaran?.nama)"
+            variant="tonal"
+            class="font-weight-medium"
+          >
+            {{ item.jenis_pembayaran?.nama || 'Tunai' }}
+          </VChip>
         </template>
 
         <!-- Nominal -->
@@ -861,50 +1147,87 @@ onMounted(() => {
 
         <!-- Keterangan -->
         <template #item.keterangan="{ item }">
-          <span class="text-caption text-truncate d-inline-block" style="max-width: 220px;" :title="item.keterangan || '-'">
+          <span
+            class="text-caption text-truncate d-inline-block"
+            style="max-width: 220px;"
+            :title="item.keterangan || '-'"
+          >
             {{ item.keterangan || '-' }}
           </span>
         </template>
 
         <!-- Actions -->
         <template #item.actions="{ item }">
-          <IconBtn size="small">
-            <VIcon icon="ri-more-2-fill" />
-
-            <VMenu activator="parent">
-              <VList>
-                <!-- Detail -->
-                <VListItem
-                  value="detail"
-                  prepend-icon="ri-eye-line"
-                  @click="openDetailDialog(item)"
-                >
-                  Detail
-                </VListItem>
-
-                <!-- Edit (Admin & Kabag only) -->
-                <VListItem
-                  v-if="canManage"
-                  value="edit"
-                  prepend-icon="ri-edit-box-line"
-                  @click="openEditDialog(item)"
-                >
-                  Edit
-                </VListItem>
-
-                <!-- Delete (Admin & Kabag only) -->
-                <VListItem
-                  v-if="canManage"
-                  value="delete"
+          <div class="d-flex align-center justify-center gap-1">
+            <!-- Tombol Cetak PDF Satuan Langsung -->
+            <VTooltip
+              text="Cetak Bukti PDF"
+              location="top"
+            >
+              <template #activator="{ props }">
+                <IconBtn
+                  v-bind="props"
+                  size="small"
                   color="error"
-                  prepend-icon="ri-delete-bin-line"
-                  @click="openDeleteDialog(item)"
+                  variant="text"
+                  :loading="downloadingPdfId === item.id"
+                  @click="handleDownloadPdf(item)"
                 >
-                  Hapus
-                </VListItem>
-              </VList>
-            </VMenu>
-          </IconBtn>
+                  <VIcon
+                    icon="ri-file-pdf-2-line"
+                    size="18"
+                  />
+                </IconBtn>
+              </template>
+            </VTooltip>
+
+            <IconBtn size="small">
+              <VIcon icon="ri-more-2-fill" />
+
+              <VMenu activator="parent">
+                <VList density="compact">
+                  <!-- Cetak PDF -->
+                  <VListItem
+                    value="pdf"
+                    prepend-icon="ri-file-pdf-2-line"
+                    @click="handleDownloadPdf(item)"
+                  >
+                    Cetak PDF
+                  </VListItem>
+
+                  <!-- Detail -->
+                  <VListItem
+                    value="detail"
+                    prepend-icon="ri-eye-line"
+                    @click="openDetailDialog(item)"
+                  >
+                    Detail
+                  </VListItem>
+
+                  <!-- Edit (Admin & Kabag only) -->
+                  <VListItem
+                    v-if="canManage"
+                    value="edit"
+                    prepend-icon="ri-edit-box-line"
+                    @click="openEditDialog(item)"
+                  >
+                    Edit
+                  </VListItem>
+
+                  <!-- Delete (Admin & Kabag only) -->
+                  <VListItem
+                    v-if="canManage"
+                    value="delete"
+                    color="error"
+                    prepend-icon="ri-delete-bin-line"
+                    @click="openDeleteDialog(item)"
+                  >
+                    Hapus
+                  </VListItem>
+                </VList>
+              </VMenu>
+            </IconBtn>
+          </div>
         </template>
       </VDataTableServer>
     </VCard>
@@ -945,10 +1268,17 @@ onMounted(() => {
           >
             <div class="d-flex align-center justify-space-between">
               <div class="d-flex align-center gap-2">
-                <VIcon icon="ri-user-smile-line" size="18" />
+                <VIcon
+                  icon="ri-user-smile-line"
+                  size="18"
+                />
                 <span>Petugas: <strong>{{ formData.petugas_name }}</strong></span>
               </div>
-              <VChip size="x-small" color="info" label>
+              <VChip
+                size="x-small"
+                color="info"
+                label
+              >
                 Otomatis Tercatat
               </VChip>
             </div>
@@ -962,7 +1292,7 @@ onMounted(() => {
               <!-- Tanggal & Waktu -->
               <VCol
                 cols="12"
-                md="6"
+                md="4"
               >
                 <AppDateTimePicker
                   v-model="formData.tanggal"
@@ -978,10 +1308,27 @@ onMounted(() => {
                 />
               </VCol>
 
+              <!-- Metode Pengembalian -->
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VSelect
+                  v-model="formData.jenis_pembayaran_id"
+                  :items="jenisPembayaranList"
+                  item-title="title"
+                  item-value="value"
+                  label="Metode Pengembalian *"
+                  placeholder="Pilih metode"
+                  :loading="loadingJenisPembayaran"
+                  :rules="[v => !!v || 'Metode pengembalian wajib dipilih']"
+                />
+              </VCol>
+
               <!-- Nominal -->
               <VCol
                 cols="12"
-                md="6"
+                md="4"
               >
                 <VTextField
                   v-model="formData.nominal"
@@ -1149,10 +1496,43 @@ onMounted(() => {
                   class="font-weight-medium text-medium-emphasis"
                   style="inline-size: 180px;"
                 >
+                  No. Transaksi
+                </td>
+                <td>
+                  <VChip
+                    size="small"
+                    color="primary"
+                    variant="tonal"
+                    class="font-weight-medium"
+                  >
+                    {{ detailItem.no_transaksi || ('PD-' + detailItem.id) }}
+                  </VChip>
+                </td>
+              </tr>
+              <tr>
+                <td
+                  class="font-weight-medium text-medium-emphasis"
+                  style="inline-size: 180px;"
+                >
                   Tanggal & Waktu
                 </td>
                 <td class="font-weight-bold">
                   {{ formatDateTime(detailItem.tanggal) }}
+                </td>
+              </tr>
+              <tr>
+                <td class="font-weight-medium text-medium-emphasis">
+                  Metode Pengembalian
+                </td>
+                <td>
+                  <VChip
+                    size="small"
+                    :color="getMetodeColor(detailItem.jenis_pembayaran?.nama)"
+                    variant="tonal"
+                    class="font-weight-medium"
+                  >
+                    {{ detailItem.jenis_pembayaran?.nama || 'Tunai' }}
+                  </VChip>
                 </td>
               </tr>
               <tr>
@@ -1305,6 +1685,15 @@ onMounted(() => {
         <VDivider />
 
         <VCardActions class="pa-4">
+          <VBtn
+            color="error"
+            variant="tonal"
+            prepend-icon="ri-file-pdf-2-line"
+            :loading="downloadingPdfId === detailItem?.id"
+            @click="handleDownloadPdf(detailItem)"
+          >
+            Cetak Bukti PDF
+          </VBtn>
           <VSpacer />
           <VBtn
             v-if="canManage"

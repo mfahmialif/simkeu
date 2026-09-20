@@ -5,6 +5,8 @@ import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js'
 import 'flatpickr/dist/plugins/monthSelect/style.css'
 import { downloadFileExport } from "@/composables/exportFile"
 import { formatCurrencyTotals } from "@/composables/formatRupiah"
+import ModalDetailPemasukanUmum from "@/components/admin/pemasukan/mahasiswa/laporan/ModalDetailPemasukanUmum.vue"
+import ModalDetailPengembalianDana from "@/components/admin/pemasukan/mahasiswa/laporan/ModalDetailPengembalianDana.vue"
 
 const theme = useTheme()
 
@@ -62,6 +64,109 @@ const totals = ref({})
 const hasData = ref(false)
 const jkInfo = ref("")
 
+// Detail Modal Pemasukan Umum State
+const isDetailModalOpen = ref(false)
+const detailModalTitle = ref("Detail Pemasukan Umum")
+const detailModalSubtitle = ref("")
+const detailModalFilter = ref({})
+
+const openDetailPemasukanUmum = (row, colKey = "pemasukan_umum", monthContext = null) => {
+  let startDate = ""
+  let endDate = ""
+  let subtitle = ""
+
+  if (row?.tanggal) {
+    startDate = row.tanggal
+    endDate = row.tanggal
+    subtitle = `Tanggal: ${formatTanggal(row.tanggal)} (Tunai)`
+  } else if (monthContext) {
+    const year = selectedTahun.value
+    const m = String(monthContext.month || 1).padStart(2, "0")
+    const days = new Date(year, parseInt(m), 0).getDate()
+
+    startDate = `${year}-${m}-01`
+    endDate = `${year}-${m}-${days}`
+    subtitle = `${monthContext.title || `Bulan ${m}/${year}`} (Tunai)`
+  } else if (selectedMode.value === "bulanan" && selectedBulan.value) {
+    const [y, m] = selectedBulan.value.split("-")
+    const days = new Date(y, parseInt(m), 0).getDate()
+
+    startDate = `${y}-${m}-01`
+    endDate = `${y}-${m}-${days}`
+    subtitle = `Rekap Total Bulan: ${selectedBulan.value} (Tunai)`
+  } else if (selectedMode.value === "tahunan" && selectedTahun.value) {
+    startDate = `${selectedTahun.value}-01-01`
+    endDate = `${selectedTahun.value}-12-31`
+    subtitle = `Rekap Total Tahun: ${selectedTahun.value} (Tunai)`
+  }
+
+  detailModalTitle.value = "Detail Pemasukan Umum"
+  detailModalSubtitle.value = subtitle
+
+  /* eslint-disable camelcase */
+  detailModalFilter.value = {
+    start_date: startDate,
+    end_date: endDate,
+    payment_type: "tunai",
+    ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
+    ...(selectedUser.value && { user_id: selectedUser.value }),
+  }
+  /* eslint-enable camelcase */
+
+  isDetailModalOpen.value = true
+}
+
+// Detail Modal Pengembalian Dana State
+const isDetailPengembalianOpen = ref(false)
+const detailPengembalianTitle = ref("Detail Pengembalian Dana")
+const detailPengembalianSubtitle = ref("")
+const detailPengembalianFilter = ref({})
+
+const openDetailPengembalianDana = (row = null, monthContext = null) => {
+  let startDate = ""
+  let endDate = ""
+  let subtitle = ""
+
+  if (row?.tanggal) {
+    startDate = row.tanggal
+    endDate = row.tanggal
+    subtitle = `Tanggal: ${formatTanggal(row.tanggal)} (Pengembalian Dana)`
+  } else if (monthContext) {
+    const year = selectedTahun.value
+    const m = String(monthContext.month || 1).padStart(2, "0")
+    const days = new Date(year, parseInt(m), 0).getDate()
+
+    startDate = `${year}-${m}-01`
+    endDate = `${year}-${m}-${days}`
+    subtitle = `${monthContext.title || `Bulan ${m}/${year}`} (Pengembalian Dana)`
+  } else if (selectedMode.value === "bulanan" && selectedBulan.value) {
+    const [y, m] = selectedBulan.value.split("-")
+    const days = new Date(y, parseInt(m), 0).getDate()
+
+    startDate = `${y}-${m}-01`
+    endDate = `${y}-${m}-${days}`
+    subtitle = `Rekap Total Bulan: ${selectedBulan.value} (Pengembalian Dana)`
+  } else if (selectedMode.value === "tahunan" && selectedTahun.value) {
+    startDate = `${selectedTahun.value}-01-01`
+    endDate = `${selectedTahun.value}-12-31`
+    subtitle = `Rekap Total Tahun: ${selectedTahun.value} (Pengembalian Dana)`
+  }
+
+  detailPengembalianTitle.value = "Detail Pengembalian Dana"
+  detailPengembalianSubtitle.value = subtitle
+
+  /* eslint-disable camelcase */
+  detailPengembalianFilter.value = {
+    start_date: startDate,
+    end_date: endDate,
+    payment_type: "tunai",
+    ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
+    ...(selectedUser.value && { user_id: selectedUser.value }),
+  }
+  /* eslint-enable camelcase */
+
+  isDetailPengembalianOpen.value = true
+}
 
 const formatTanggal = dateStr => {
   const d = new Date(dateStr)
@@ -721,9 +826,33 @@ onMounted(() => {
                   v-for="col in columns"
                   :key="col.key"
                   class="col-amount text-right"
-                  :class="{ 'has-value': row[col.key] > 0 }"
+                  :class="{
+                    'has-value': row[col.key] !== 0,
+                    'cell-clickable': (col.key === 'pemasukan_umum' && row[col.key] > 0) || (col.key === 'pengembalian_dana' && row[col.key] !== 0),
+                  }"
+                  @click="
+                    col.key === 'pemasukan_umum' && row[col.key] > 0
+                      ? openDetailPemasukanUmum(row, col.key)
+                      : (col.key === 'pengembalian_dana' && row[col.key] !== 0 ? openDetailPengembalianDana(row) : null)
+                  "
                 >
-                  {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
+                  <span
+                    v-if="col.key === 'pemasukan_umum' && row[col.key] > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail transaksi pemasukan umum"
+                  >
+                    {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
+                  </span>
+                  <span
+                    v-else-if="col.key === 'pengembalian_dana' && row[col.key] !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail transaksi pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
+                  </template>
                 </td>
                 <td
                   class="col-total text-right"
@@ -745,8 +874,32 @@ onMounted(() => {
                   v-for="col in columns"
                   :key="col.key"
                   class="col-amount text-right"
+                  :class="{
+                    'cell-clickable': (col.key === 'pemasukan_umum' && totals[col.key] > 0) || (col.key === 'pengembalian_dana' && totals[col.key] !== 0),
+                  }"
+                  @click="
+                    col.key === 'pemasukan_umum' && totals[col.key] > 0
+                      ? openDetailPemasukanUmum(null, col.key)
+                      : (col.key === 'pengembalian_dana' && totals[col.key] !== 0 ? openDetailPengembalianDana(null) : null)
+                  "
                 >
-                  {{ formatCurrencyTotals(totals[`${col.key}_by_currency`], totals[col.key]) }}
+                  <span
+                    v-if="col.key === 'pemasukan_umum' && totals[col.key] > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail transaksi pemasukan umum"
+                  >
+                    {{ formatCurrencyTotals(totals[`${col.key}_by_currency`], totals[col.key]) }}
+                  </span>
+                  <span
+                    v-else-if="col.key === 'pengembalian_dana' && totals[col.key] !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail transaksi pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(totals[`${col.key}_by_currency`], totals[col.key]) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(totals[`${col.key}_by_currency`], totals[col.key]) }}
+                  </template>
                 </td>
                 <td class="col-total text-right">
                   {{ formatCurrencyTotals(totals.jumlah_by_currency, totals.jumlah) }}
@@ -878,9 +1031,33 @@ onMounted(() => {
                   v-for="col in columns"
                   :key="col.key"
                   class="col-amount text-right"
-                  :class="{ 'has-value': row[col.key] > 0 }"
+                  :class="{
+                    'has-value': row[col.key] !== 0,
+                    'cell-clickable': (col.key === 'pemasukan_umum' && row[col.key] > 0) || (col.key === 'pengembalian_dana' && row[col.key] !== 0),
+                  }"
+                  @click="
+                    col.key === 'pemasukan_umum' && row[col.key] > 0
+                      ? openDetailPemasukanUmum(row, col.key)
+                      : (col.key === 'pengembalian_dana' && row[col.key] !== 0 ? openDetailPengembalianDana(row) : null)
+                  "
                 >
-                  {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
+                  <span
+                    v-if="col.key === 'pemasukan_umum' && row[col.key] > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail transaksi pemasukan umum"
+                  >
+                    {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
+                  </span>
+                  <span
+                    v-else-if="col.key === 'pengembalian_dana' && row[col.key] !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail transaksi pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(row[`${col.key}_by_currency`], row[col.key]) }}
+                  </template>
                 </td>
                 <td
                   class="col-total text-right"
@@ -902,8 +1079,32 @@ onMounted(() => {
                   v-for="col in columns"
                   :key="col.key"
                   class="col-amount text-right"
+                  :class="{
+                    'cell-clickable': (col.key === 'pemasukan_umum' && monthInfo.totals[col.key] > 0) || (col.key === 'pengembalian_dana' && monthInfo.totals[col.key] !== 0),
+                  }"
+                  @click="
+                    col.key === 'pemasukan_umum' && monthInfo.totals[col.key] > 0
+                      ? openDetailPemasukanUmum(null, col.key, { month: mIdx, title: monthInfo.title })
+                      : (col.key === 'pengembalian_dana' && monthInfo.totals[col.key] !== 0 ? openDetailPengembalianDana(null, { month: mIdx, title: monthInfo.title }) : null)
+                  "
                 >
-                  {{ formatCurrencyTotals(monthInfo.totals[`${col.key}_by_currency`], monthInfo.totals[col.key]) }}
+                  <span
+                    v-if="col.key === 'pemasukan_umum' && monthInfo.totals[col.key] > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail transaksi pemasukan umum"
+                  >
+                    {{ formatCurrencyTotals(monthInfo.totals[`${col.key}_by_currency`], monthInfo.totals[col.key]) }}
+                  </span>
+                  <span
+                    v-else-if="col.key === 'pengembalian_dana' && monthInfo.totals[col.key] !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail transaksi pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(monthInfo.totals[`${col.key}_by_currency`], monthInfo.totals[col.key]) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(monthInfo.totals[`${col.key}_by_currency`], monthInfo.totals[col.key]) }}
+                  </template>
                 </td>
                 <td class="col-total text-right">
                   {{ formatCurrencyTotals(monthInfo.totals.jumlah_by_currency, monthInfo.totals.jumlah) }}
@@ -914,10 +1115,51 @@ onMounted(() => {
         </div>
       </VCard>
     </template>
+
+    <!-- Modal Detail Pemasukan Umum -->
+    <ModalDetailPemasukanUmum
+      v-model="isDetailModalOpen"
+      :title="detailModalTitle"
+      :subtitle="detailModalSubtitle"
+      :filter-params="detailModalFilter"
+    />
+
+    <!-- Modal Detail Pengembalian Dana -->
+    <ModalDetailPengembalianDana
+      v-model="isDetailPengembalianOpen"
+      :title="detailPengembalianTitle"
+      :subtitle="detailPengembalianSubtitle"
+      :filter-params="detailPengembalianFilter"
+    />
   </div>
 </template>
 
 <style scoped>
+/* CLICKABLE NOMINAL PEMASUKAN */
+.clickable-nominal {
+  color: #1976d2 !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: all 0.15s ease-in-out;
+  display: inline-block;
+}
+
+.clickable-nominal:hover {
+  color: #0d47a1 !important;
+  text-decoration: underline;
+  transform: scale(1.04);
+}
+
+.cell-clickable {
+  cursor: pointer;
+  background-color: rgba(25, 118, 210, 0.05);
+}
+
+.cell-clickable:hover {
+  background-color: rgba(25, 118, 210, 0.12) !important;
+}
+
 /* ══════════════════════════════════════════════════════
    HEADER CARD
    ══════════════════════════════════════════════════════ */
