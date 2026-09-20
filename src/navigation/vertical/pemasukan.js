@@ -52,6 +52,11 @@ export default [
     to: "admin-pemasukan-mahasiswa-catatan-deposit",
   },
   {
+    title: "Pengembalian",
+    icon: { icon: "ri-arrow-go-back-line" },
+    to: "admin-pemasukan-mahasiswa-pengembalian",
+  },
+  {
     title: "Pemasukan Pengeluaran",
     icon: { icon: "ri-exchange-funds-line" },
     to: "admin-pemasukan-mahasiswa-pemasukan-pengeluaran",

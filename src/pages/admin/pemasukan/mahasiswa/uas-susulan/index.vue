@@ -9,6 +9,10 @@ const totalItems = ref(0)
 const loading = ref(true)
 const initialLoading = ref(true)
 
+const userData = useCookie("userData").value ?? {}
+const userRole = computed(() => String(userData?.role?.name ?? "").toLowerCase())
+const canDelete = computed(() => ["admin", "kabag", "kabag_pemasukan"].includes(userRole.value))
+
 const fetchData = async () => {
   try {
     const { data } = await $api("/admin/pemasukan/mahasiswa/uas-susulan", {
@@ -37,6 +41,8 @@ const fetchData = async () => {
 const fetchDetailData = async () => {
   const nimList = dataTable.value.map(item => item.nim)
 
+  if (!nimList.length) return
+
   const res = await $api("/admin/mahasiswa/nim", {
     method: "GET",
     body: {
@@ -46,14 +52,13 @@ const fetchDetailData = async () => {
   })
 
   dataTable.value = dataTable.value.map(item => {
-    const mhs = res.find(m => m.nim === item.nim)
-    
+    const mhs = Array.isArray(res) ? res.find(m => m.nim === item.nim) : false
+
     return {
       ...item,
-      mahasiswa: mhs ? mhs : false, // tambahkan objek mahasiswa (atau null kalau tidak ditemukan)
+      mahasiswa: mhs ? mhs : false,
     }
   })
-
 }
 
 const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
@@ -64,13 +69,69 @@ const loadItems = ({ page: p, itemsPerPage: ipp, sortBy: sb, search: s }) => {
   fetchData()
 }
 
+// Detail Dialog State
+const isDialogDetailVisible = ref(false)
+const detailLoading = ref(false)
+const selectedDetail = ref(null)
+
+const showDetail = async item => {
+  isDialogDetailVisible.value = true
+  detailLoading.value = true
+  selectedDetail.value = { ...item }
+
+  try {
+    const res = await $api(`/admin/pemasukan/mahasiswa/uas-susulan/${item.id}`, {
+      method: "GET",
+    })
+    selectedDetail.value = {
+      ...item,
+      ...res,
+      mahasiswa: res.mahasiswa || item.mahasiswa || null,
+      th_akademik: res.th_akademik || {
+        nama: item.th_akademik_nama,
+        kode: item.th_akademik_kode,
+        semester: item.th_akademik_semester,
+      },
+    }
+  } catch (err) {
+    console.error("Gagal mengambil detail UAS Susulan:", err)
+    showSnackbar({
+      text: "Gagal memuat detail data UAS Susulan",
+      color: "error",
+    })
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+const detailMkList = computed(() => {
+  return selectedDetail.value?.uas_susulan_mk || selectedDetail.value?.uasSusulanMk || []
+})
+
+const detailTotalSks = computed(() => {
+  return detailMkList.value.reduce((acc, curr) => {
+    const sks = Number(curr.mk_detail?.sks_mk || curr.sks_mk || 0)
+    return isNaN(sks) ? acc : acc + sks
+  }, 0)
+})
+
+const getNilaiColor = item => {
+  const huruf = String(item?.nilai_huruf || "").trim().toUpperCase()
+  if (huruf === "A" || huruf === "A-") return "success"
+  if (huruf === "B" || huruf === "B+") return "info"
+  if (huruf === "C" || huruf === "C+") return "warning"
+  if (huruf === "D" || huruf === "E" || huruf === "F") return "error"
+  return "secondary"
+}
+
+// Delete Dialog State
 const isDialogDeleteVisible = ref(false)
 const deleteData = ref({})
 
-const showDialogDelete = (id, name) => {
+const showDialogDelete = (id, nim, nama) => {
   deleteData.value = {
     id: id,
-    name: name,
+    name: nama ? `${nim} - ${nama}` : nim,
   }
   isDialogDeleteVisible.value = true
 }
@@ -86,21 +147,21 @@ const deleteDataSubmit = async id => {
 
     if (response.status === true) {
       showSnackbar({
-        text: response.message,
+        text: response.message || "Data UAS Susulan dan mata kuliah terkait berhasil dihapus.",
         color: "success",
       })
 
       fetchData()
     } else {
       showSnackbar({
-        text: response.message,
+        text: response.message || "Gagal menghapus data UAS Susulan.",
         color: "error",
       })
     }
   } catch (err) {
     const message = Array.isArray(err.data?.message)
       ? err.data.message.join("; ")
-      : err.data?.message || "Terjadi kesalahan."
+      : err.data?.message || err.message || "Terjadi kesalahan saat menghapus data."
 
     showSnackbar({
       text: message,
@@ -113,7 +174,7 @@ const deleteDataSubmit = async id => {
 
 const tanggal = ref("")
 const prodi = ref([])
-const selectedProdi = ref('*')
+const selectedProdi = ref("*")
 const isLoadingProdi = ref(false)
 
 const fetchProdi = async () => {
@@ -196,26 +257,17 @@ onMounted(() => {
   fetchData()
   fetchProdi()
 })
-
-watch(
-  selectedRows,
-  newValue => {
-    newValue.forEach((row, index) => {
-      console.log(`${index + 1}.`, row)
-    })
-  },
-  { deep: true },
-)
 </script>
 
 <template>
   <div>
+    <!-- Section Cetak -->
     <VCard class="mb-4">
       <VCardItem class="pb-4">
         <VCardTitle>Print</VCardTitle>
       </VCardItem>
       <VDivider />
-      <VCardText class="">
+      <VCardText>
         <VForm
           ref="refForm"
           @submit.prevent="downloadExcel"
@@ -269,6 +321,7 @@ watch(
       </VCardText>
     </VCard>
 
+    <!-- Section Data UAS Susulan -->
     <VCard>
       <VCardItem class="pb-4">
         <VCardTitle>UAS Susulan</VCardTitle>
@@ -297,14 +350,6 @@ watch(
           >
             Export
           </VBtn>
-
-          <VBtn
-            color="primary"
-            prepend-icon="ri-add-line"
-            @click="$router.push('/admin/pemasukan/mahasiswa/uas-susulan/add')"
-          >
-            Add Data
-          </VBtn>
         </div>
       </VCardText>
 
@@ -318,7 +363,7 @@ watch(
           { title: 'Tahun Akademik', key: 'th_akademik_kode' },
           { title: 'Tanggal', key: 'tanggal' },
           { title: 'Nim', key: 'nim' },
-          { title: 'keterangan', key: 'keterangan' },
+          { title: 'Keterangan', key: 'keterangan' },
           { title: 'Actions', key: 'actions', sortable: false },
         ]"
         show-select
@@ -326,7 +371,7 @@ watch(
         :items-length="totalItems"
         :loading="loading"
         :search="search"
-        item-value="name"
+        item-value="id"
         @update:options="loadItems"
       >
         <template
@@ -356,6 +401,10 @@ watch(
           {{ itemsPerPage * (page - 1) + index + 1 }}
         </template>
 
+        <template #item.th_akademik_kode="{ item }">
+          {{ item.th_akademik_nama ? `${item.th_akademik_nama} - ${item.th_akademik_semester}` : (item.th_akademik_kode || '-') }}
+        </template>
+
         <template #item.nim="{ item }">
           <div style="margin: 15px 0">
             <VChip
@@ -365,14 +414,13 @@ watch(
             >
               {{ item.nim }}
             </VChip>
-            <div>
+            <div class="mt-1">
               <template v-if="item.mahasiswa">
                 {{ item.mahasiswa.nama }} - {{ item.mahasiswa.prodi?.alias }} -
                 {{ item.mahasiswa.jk?.kode }}
               </template>
               <template v-else-if="item.mahasiswa === false">
-                Data tidak ditemukan di SIAKAD.<br>Silakan hapus atau periksa
-                kembali di SIAKAD.
+                Data tidak ditemukan di SIAKAD.<br>Silakan periksa kembali di SIAKAD.
               </template>
               <template v-else>
                 <VProgressCircular
@@ -394,8 +442,18 @@ watch(
 
             <VMenu activator="parent">
               <VList>
+                <!-- Detail -->
                 <VListItem
-                  value="download"
+                  value="detail"
+                  prepend-icon="ri-eye-line"
+                  @click="showDetail(item)"
+                >
+                  Detail
+                </VListItem>
+
+                <!-- Edit -->
+                <VListItem
+                  value="edit"
                   prepend-icon="ri-edit-box-line"
                   @click="
                     $router.push(
@@ -405,10 +463,13 @@ watch(
                 >
                   Edit
                 </VListItem>
+
+                <!-- Delete (Khusus Admin dan Kabag) -->
                 <VListItem
+                  v-if="canDelete"
                   value="delete"
                   prepend-icon="ri-delete-bin-line"
-                  @click="showDialogDelete(item.id, item.nim)"
+                  @click="showDialogDelete(item.id, item.nim, item.mahasiswa?.nama)"
                 >
                   Delete
                 </VListItem>
@@ -419,11 +480,314 @@ watch(
       </VDataTableServer>
     </VCard>
 
+    <!-- 👉 Modal Detail UAS Susulan -->
+    <VDialog
+      v-model="isDialogDetailVisible"
+      width="850"
+    >
+      <VCard>
+        <VCardItem class="pb-2">
+          <div class="d-flex align-center justify-space-between">
+            <div class="d-flex align-center gap-2">
+              <VIcon
+                icon="ri-file-list-3-line"
+                color="primary"
+                size="24"
+              />
+              <VCardTitle class="text-h6 font-weight-bold">
+                Detail UAS Susulan: {{ selectedDetail?.nim }}
+              </VCardTitle>
+            </div>
+            <DialogCloseBtn
+              variant="text"
+              size="default"
+              @click="isDialogDetailVisible = false"
+            />
+          </div>
+        </VCardItem>
+        <VDivider />
+
+        <VCardText>
+          <!-- Loading state -->
+          <div
+            v-if="detailLoading"
+            class="text-center pa-8"
+          >
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              class="mb-3"
+            />
+            <div class="text-body-2 text-medium-emphasis">
+              Memuat data detail UAS Susulan...
+            </div>
+          </div>
+
+          <template v-else-if="selectedDetail">
+            <!-- Informasi Mahasiswa & UAS Susulan -->
+            <VRow class="mb-4">
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <div class="text-subtitle-2 font-weight-bold mb-2">
+                  Informasi Mahasiswa
+                </div>
+                <VTable density="compact" class="border rounded text-no-wrap">
+                  <tbody>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis" style="inline-size: 130px;">
+                        NIM
+                      </td>
+                      <td>
+                        <VChip
+                          color="primary"
+                          size="small"
+                          label
+                        >
+                          {{ selectedDetail.nim }}
+                        </VChip>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis">
+                        Nama
+                      </td>
+                      <td class="font-weight-bold">
+                        {{ selectedDetail.mahasiswa?.nama || "-" }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis">
+                        Program Studi
+                      </td>
+                      <td>
+                        {{ selectedDetail.mahasiswa?.prodi?.nama || selectedDetail.mahasiswa?.prodi?.alias || "-" }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis">
+                        Jenis Kelamin
+                      </td>
+                      <td>
+                        {{ selectedDetail.mahasiswa?.jk?.nama || "-" }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis">
+                        Kelas / Smt
+                      </td>
+                      <td>
+                        {{ selectedDetail.mahasiswa?.kelas?.nama || "-" }} / Smt {{ selectedDetail.mahasiswa?.semester || "-" }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </VTable>
+              </VCol>
+
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <div class="text-subtitle-2 font-weight-bold mb-2">
+                  Informasi UAS Susulan
+                </div>
+                <VTable density="compact" class="border rounded text-no-wrap">
+                  <tbody>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis" style="inline-size: 130px;">
+                        Tahun Akademik
+                      </td>
+                      <td class="font-weight-bold">
+                        {{ selectedDetail.th_akademik?.nama }} - {{ selectedDetail.th_akademik?.semester }} ({{ selectedDetail.th_akademik?.kode }})
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis">
+                        Tanggal Daftar
+                      </td>
+                      <td>
+                        <VChip
+                          color="info"
+                          size="small"
+                          label
+                        >
+                          {{ selectedDetail.tanggal }}
+                        </VChip>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis">
+                        Jumlah MK
+                      </td>
+                      <td>
+                        <VChip
+                          color="primary"
+                          size="small"
+                          label
+                        >
+                          {{ selectedDetail.uasSusulanMk?.length || 0 }} MK ({{ detailTotalSks }} SKS)
+                        </VChip>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis">
+                        Keterangan
+                      </td>
+                      <td>
+                        {{ selectedDetail.keterangan || "-" }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-weight-medium text-medium-emphasis">
+                        Waktu Input
+                      </td>
+                      <td class="text-caption">
+                        {{ selectedDetail.created_at || "-" }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </VTable>
+              </VCol>
+            </VRow>
+
+            <!-- Daftar Mata Kuliah UAS Susulan -->
+            <div class="d-flex align-center justify-space-between mb-2">
+              <div class="text-subtitle-2 font-weight-bold">
+                Daftar Mata Kuliah yang Diikuti:
+              </div>
+              <VChip
+                color="primary"
+                size="small"
+                label
+              >
+                Total: {{ detailMkList.length }} MK | {{ detailTotalSks }} SKS
+              </VChip>
+            </div>
+
+            <div
+              v-if="!detailMkList.length"
+              class="text-center pa-4 border rounded text-medium-emphasis"
+            >
+              Tidak ada mata kuliah terdaftar pada UAS Susulan ini.
+            </div>
+
+            <VTable
+              v-else
+              density="compact"
+              class="border rounded text-no-wrap"
+            >
+              <thead>
+                <tr>
+                  <th style="inline-size: 50px;">
+                    No
+                  </th>
+                  <th>Kode MK</th>
+                  <th>Nama Mata Kuliah</th>
+                  <th class="text-center">
+                    SKS
+                  </th>
+                  <th class="text-center">
+                    Smt
+                  </th>
+                  <th>Dosen Pengampu</th>
+                  <th class="text-center">
+                    Nilai
+                  </th>
+                  <th>Kelompok</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(item, idx) in detailMkList"
+                  :key="item.id || item.jadwal_kuliah_id"
+                >
+                  <td>{{ idx + 1 }}</td>
+                  <td class="font-weight-medium">
+                    {{ item.mk_detail?.kode_mk || item.kode_mk || "-" }}
+                  </td>
+                  <td>
+                    <span class="font-weight-bold">
+                      {{ item.mk_detail?.nama_mk || item.nama_mk || `Mata Kuliah #${item.jadwal_kuliah_id}` }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    {{ item.mk_detail?.sks_mk || item.sks_mk || "-" }}
+                  </td>
+                  <td class="text-center">
+                    {{ item.mk_detail?.smt_mk || item.smt_mk || "-" }}
+                  </td>
+                  <td>
+                    <span class="text-body-2">
+                      {{ item.mk_detail?.dosen_nama || item.dosen_nama || "-" }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <VChip
+                      v-if="(item.mk_detail?.nilai_akhir != null || item.mk_detail?.nilai_huruf)"
+                      size="x-small"
+                      :color="getNilaiColor(item.mk_detail)"
+                      label
+                    >
+                      {{ item.mk_detail?.nilai_akhir != null ? item.mk_detail.nilai_akhir : '-' }}
+                      <span v-if="item.mk_detail?.nilai_huruf"> ({{ item.mk_detail.nilai_huruf }})</span>
+                    </VChip>
+                    <span
+                      v-else
+                      class="text-medium-emphasis"
+                    >-</span>
+                  </td>
+                  <td>
+                    <span class="text-caption">
+                      {{ item.mk_detail?.kelompok || item.kelompok || "-" }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </VTable>
+          </template>
+        </VCardText>
+
+        <VCardText class="d-flex justify-end gap-3 pt-0">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            @click="isDialogDetailVisible = false"
+          >
+            Tutup
+          </VBtn>
+          <VBtn
+            v-if="selectedDetail"
+            variant="tonal"
+            color="info"
+            prepend-icon="ri-external-link-line"
+            @click="
+              isDialogDetailVisible = false;
+              $router.push(`/admin/pemasukan/mahasiswa/uas-susulan/detail/${selectedDetail.id}`);
+            "
+          >
+            Halaman Penuh
+          </VBtn>
+          <VBtn
+            v-if="selectedDetail"
+            color="primary"
+            prepend-icon="ri-edit-box-line"
+            @click="
+              isDialogDetailVisible = false;
+              $router.push(`/admin/pemasukan/mahasiswa/uas-susulan/edit/${selectedDetail.id}`);
+            "
+          >
+            Edit
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <!-- 👉 Modal Delete UAS Susulan -->
     <VDialog
       v-model="isDialogDeleteVisible"
       width="500"
     >
-      <!-- Dialog Content -->
       <VCard :title="'Hapus Data: ' + deleteData.name">
         <DialogCloseBtn
           variant="text"
@@ -435,11 +799,10 @@ watch(
           <VIcon
             icon="ri-alert-line"
             size="32"
-            class="me-2"
+            class="me-2 text-warning"
           />
           <span>
-            Anda yakin ingin menghapus data pengguna ini? Penghapusan data
-            pengguna tidak dapat dibatalkan.
+            Anda yakin ingin menghapus data UAS Susulan ini? Data mata kuliah UAS Susulan terkait juga akan ikut terhapus dan tidak dapat dibatalkan.
           </span>
         </VCardText>
 

@@ -354,6 +354,7 @@ const submitHanyaUasSusulan = async () => {
   const nim = m?.nim
   const thAkademik = akademikRef.value?.selectedThAkademik
   const thAkademikSectionId = typeof thAkademik === "object" ? thAkademik?.value : thAkademik
+  const thAkademikSusulanId = uasSusulanData.value?.thAkademikSusulanId || thAkademikSectionId
   const tanggal = akademikRef.value?.tanggal || new Date().toISOString().slice(0, 10)
   const selectedMk = uasSusulanData.value?.selectedMk || []
   const keterangan = uasSusulanData.value?.keterangan || ""
@@ -367,9 +368,9 @@ const submitHanyaUasSusulan = async () => {
     return
   }
 
-  if (!thAkademikSectionId) {
+  if (!thAkademikSusulanId) {
     showSnackbar({
-      text: "Tahun akademik pada section akademik belum dipilih",
+      text: "Tahun akademik UAS Susulan belum dipilih",
       color: "error",
     })
     
@@ -402,7 +403,7 @@ const submitHanyaUasSusulan = async () => {
       body: {
         tanggal,
         nim,
-        "th_akademik_id": Number(thAkademikSectionId),
+        "th_akademik_id": Number(thAkademikSusulanId),
         keterangan,
         "jadwal_kuliah_id": selectedMk,
       },

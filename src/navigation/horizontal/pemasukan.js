@@ -28,6 +28,7 @@ export default [
   { title: "UAS Susulan", to: "admin-pemasukan-mahasiswa-uas-susulan" },
   { title: "Setoran", to: "admin-pemasukan-mahasiswa-setoran" },
   { title: "Catatan Deposit", to: "admin-pemasukan-mahasiswa-catatan-deposit" },
+  { title: "Pengembalian", to: "admin-pemasukan-mahasiswa-pengembalian" },
   { title: "Pemasukan Pengeluaran", to: "admin-pemasukan-mahasiswa-pemasukan-pengeluaran" },
   { title: "Laporan", to: "admin-pemasukan-mahasiswa-laporan" },
 ]

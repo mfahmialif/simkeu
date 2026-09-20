@@ -52,9 +52,17 @@ export const $api = async (url, options = {}) => {
     const queryObject = options.params || options.body
 
     if (queryObject && typeof queryObject === "object") {
-      const query = new URLSearchParams(queryObject).toString()
+      const cleanParams = Object.entries(queryObject).reduce((acc, [key, val]) => {
+        if (val !== undefined && val !== null && val !== "" && val !== "undefined" && val !== "null") {
+          acc[key] = val
+        }
+        return acc
+      }, {})
+      const query = new URLSearchParams(cleanParams).toString()
 
-      finalUrl += `?${query}`
+      if (query) {
+        finalUrl += `?${query}`
+      }
     }
   } else if (options.body) {
     // Untuk POST, PUT, PATCH, DELETE, dll

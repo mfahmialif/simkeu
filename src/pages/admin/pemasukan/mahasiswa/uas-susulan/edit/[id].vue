@@ -9,7 +9,7 @@ const route = useRoute()
 const id = route.params.id
 
 const data = ref({})
-const isLoading = ref(false)
+const isLoading = ref(true)
 
 const fetchData = async () => {
   try {
@@ -23,9 +23,8 @@ const fetchData = async () => {
     )
 
     data.value = response
-    console.log(response)
   } catch (err) {
-    console.log(err)
+    console.error(err)
     if (err.status === 404) {
       router.replace("/not-found")
     }
@@ -41,10 +40,12 @@ const menuList = [
     icon: "ri-arrow-left-line",
     clickHandler: () => router.back(),
   },
-
-  // {
-  //   value: 'hr', // untuk divider
-  // },
+  {
+    title: "Lihat Detail",
+    value: "detail",
+    icon: "ri-file-list-3-line",
+    clickHandler: () => router.push(`/admin/pemasukan/mahasiswa/uas-susulan/detail/${id}`),
+  },
   {
     title: "Lihat Data",
     value: "lihat-data",
@@ -54,8 +55,7 @@ const menuList = [
 ]
 
 onMounted(() => {
-  document.title = "Cat Edit - SIMKEU"
-  console.log("edit UAS Susulan id", id)
+  document.title = "Edit Data UAS Susulan - SIMKEU"
   fetchData()
 })
 </script>
@@ -71,7 +71,7 @@ onMounted(() => {
         <VCardText>
           <div
             v-if="isLoading"
-            class="text-center"
+            class="text-center pa-4"
           >
             <VProgressLinear indeterminate />
           </div>

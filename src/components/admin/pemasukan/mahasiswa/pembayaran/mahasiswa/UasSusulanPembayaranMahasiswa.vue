@@ -258,7 +258,7 @@ const currentSectionThAkademikId = computed(() => {
 
 const checkRegisteredStatus = async (nimParam = null) => {
   const nim = nimParam || props.mahasiswa?.nim
-  const thId = currentSectionThAkademikId.value
+  const thId = selectedThAkademikSusulan.value || currentSectionThAkademikId.value
 
   if (!nim || !thId) {
     isAlreadyRegistered.value = false
@@ -394,6 +394,7 @@ watch(
 )
 
 watch(selectedThAkademikSusulan, () => {
+  checkRegisteredStatus()
   if (isUasSusulanActive.value) {
     emitUpdate()
     if (props.mahasiswa?.nim) {
@@ -495,6 +496,22 @@ onMounted(() => {
         Mahasiswa (NIM: <strong>{{ props.mahasiswa?.nim }}</strong>) sudah tercatat di sistem memiliki pendaftaran UAS Susulan pada tahun akademik <strong>{{ registeredData?.th_akademik?.nama }} {{ registeredData?.th_akademik?.semester }}</strong> (Tanggal: {{ registeredData?.tanggal || '-' }}).
         <br>
         Sesuai ketentuan, UAS Susulan hanya diperbolehkan 1 kali per mahasiswa dalam 1 tahun akademik.
+      </div>
+      <div
+        class="mt-3"
+        style="max-width: 320px;"
+      >
+        <VSelect
+          v-model="selectedThAkademikSusulan"
+          label="Pilih Tahun Akademik UAS Susulan Lain"
+          :items="thAkademikList"
+          item-title="title"
+          item-value="value"
+          density="compact"
+          variant="outlined"
+          bg-color="surface"
+          hide-details
+        />
       </div>
     </VAlert>
 
