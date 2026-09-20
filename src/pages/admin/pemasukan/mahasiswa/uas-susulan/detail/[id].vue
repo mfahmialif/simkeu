@@ -62,12 +62,23 @@ const totalSks = computed(() => {
 })
 
 const getNilaiColor = item => {
-  const huruf = String(item.nilai_huruf || "").trim().toUpperCase()
+  if (!item) return "secondary"
+
+  const huruf = String(item?.nilai_huruf || "").trim().toUpperCase()
+  const hasNilaiAkhir = item?.nilai_akhir !== null && item?.nilai_akhir !== undefined && String(item?.nilai_akhir).trim() !== ""
+  const nilaiAkhirNum = hasNilaiAkhir ? Number(item?.nilai_akhir) : null
+
+  // Khusus untuk yang nilainya 0 saja yang berwarna merah (error)
+  const isZero = hasNilaiAkhir 
+    ? (!isNaN(nilaiAkhirNum) && nilaiAkhirNum === 0)
+    : (huruf === "E" || huruf === "0")
+
+  if (isZero) return "error"
   if (huruf === "A" || huruf === "A-") return "success"
-  if (huruf === "B" || huruf === "B+") return "info"
-  if (huruf === "C" || huruf === "C+") return "warning"
-  if (huruf === "D" || huruf === "E" || huruf === "F") return "error"
-  return "secondary"
+  if (huruf === "B" || huruf === "B+" || huruf === "B-") return "info"
+
+  // Yang bukan 0 yang tadinya merah (seperti D, D+, C-, dsb) serta C/C+ diberi warna kuning (warning)
+  return "warning"
 }
 
 onMounted(() => {
