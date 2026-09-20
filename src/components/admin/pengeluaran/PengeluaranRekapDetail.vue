@@ -61,13 +61,9 @@ const isBarokahRole = [
   "barokahdosen_bulanan",
 ].includes(userRole)
 
-const canModify = computed(() => {
-  if (!isBarokahRole) return true
+const canModify = computed(() => true)
 
-  return rekap.value?.jumlah_sementara !== null && rekap.value?.jumlah_sementara !== undefined
-})
-
-const canEditDeleteRekap = computed(() => {
+const canDeleteRekap = computed(() => {
   if (!isBarokahRole) return true
 
   return Number(rekap.value?.jumlah_data || 0) === 0 && Number(rekap.value?.jumlah_lpj || 0) === 0
@@ -906,10 +902,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div
-              v-if="canEditDeleteRekap"
-              class="detail-actions"
-            >
+            <div class="detail-actions">
               <VBtn
                 variant="outlined"
                 color="primary"
@@ -919,6 +912,7 @@ onBeforeUnmount(() => {
                 Edit
               </VBtn>
               <VBtn
+                v-if="canDeleteRekap"
                 variant="outlined"
                 color="error"
                 prepend-icon="ri-delete-bin-line"
@@ -985,7 +979,7 @@ onBeforeUnmount(() => {
             >
               Hapus ({{ selectedIds.length }})
             </VBtn>
-            <template v-if="canModify && activeDataTab === 'rab' && allowCreate && !isBarokahRole">
+            <template v-if="canModify && activeDataTab === 'rab' && allowCreate">
               <VBtn
                 color="primary"
                 prepend-icon="ri-add-line"
@@ -995,7 +989,7 @@ onBeforeUnmount(() => {
               </VBtn>
             </template>
             <VBtn
-              v-else-if="canModify && activeDataTab === 'lpj' && !isBarokahRole"
+              v-else-if="canModify && activeDataTab === 'lpj'"
               color="success"
               prepend-icon="ri-file-edit-line"
               @click="openLpjDetailEditor"
@@ -1230,7 +1224,7 @@ onBeforeUnmount(() => {
                   Belum ada data LPJ.
                 </div>
                 <VBtn
-                  v-if="canModify && !isBarokahRole"
+                  v-if="canModify"
                   color="success"
                   prepend-icon="ri-file-check-line"
                   @click="openLpjDialog"
