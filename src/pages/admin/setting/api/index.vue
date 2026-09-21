@@ -8,6 +8,7 @@ const generatedApiKey = ref("")
 const apiData = ref(null)
 
 // Live tester state
+const testEndpoint = ref("peserta")
 const testNim = ref("")
 const testThAkademikKode = ref("")
 const testJadwalKuliahId = ref("")
@@ -15,9 +16,11 @@ const testLimit = ref(10)
 const testLoading = ref(false)
 const testResult = ref(null)
 
-// Code snippet active tabs
-const activeSnippetTab = ref("curl")
-const activeEndpointTab = ref("uas-susulan")
+// Tabs state
+const activeEndpointTab = ref("peserta")
+const activeSnippetTabPeserta = ref("curl")
+const activeSnippetTabDetail = ref("curl")
+const activeSnippetTabUas = ref("curl")
 
 const fetchApiSettings = async () => {
   try {
@@ -102,15 +105,29 @@ const runLiveTest = async () => {
     testLoading.value = true
     testResult.value = null
 
-    const params = {
-      limit: testLimit.value,
+    let url = "/admin/setting/api/peserta-preview"
+    const params = {}
+
+    if (testEndpoint.value === "peserta-detail") {
+      const targetNim = testNim.value?.trim() || "202585010009"
+      url = `/admin/setting/api/peserta-detail-preview/${targetNim}`
+      if (testThAkademikKode.value) params.th_akademik_kode = testThAkademikKode.value.trim()
+    } else if (testEndpoint.value === "uas-susulan") {
+      url = "/admin/setting/api/uas-susulan-preview"
+      params.limit = testLimit.value
+      if (testNim.value) params.nim = testNim.value.trim()
+      if (testThAkademikKode.value) params.th_akademik_kode = testThAkademikKode.value.trim()
+      if (testJadwalKuliahId.value) params.jadwal_kuliah_id = Number(testJadwalKuliahId.value)
+    } else {
+      // peserta
+      url = "/admin/setting/api/peserta-preview"
+      params.limit = testLimit.value
+      if (testNim.value) params.nim = testNim.value.trim()
+      if (testThAkademikKode.value) params.th_akademik_kode = testThAkademikKode.value.trim()
+      if (testJadwalKuliahId.value) params.jadwal_kuliah_id = Number(testJadwalKuliahId.value)
     }
 
-    if (testNim.value) params.nim = testNim.value.trim()
-    if (testThAkademikKode.value) params["th_akademik_kode"] = testThAkademikKode.value.trim()
-    if (testJadwalKuliahId.value) params["jadwal_kuliah_id"] = Number(testJadwalKuliahId.value)
-
-    const res = await $api("/admin/setting/api/uas-susulan-preview", {
+    const res = await $api(url, {
       method: "GET",
       params,
     })
@@ -136,12 +153,257 @@ const baseUrl = computed(() => {
   return apiData.value?.base_url || `${window.location.origin}/api/v1/integrations/siakad`
 })
 
-const curlExample = computed(() => {
-  const url = `${baseUrl.value}/uas-susulan?th_akademik_kode=20252&nim=210101001`
-  
+// === Snippets GET /peserta ===
+const pesertaCurlExample = computed(() => {
+  const url = `${baseUrl.value}/peserta?th_akademik_kode=20251&limit=20`
+
   return `curl --location '${url}' \\
   --header 'X-SIAKAD-API-KEY: ${apiData.value?.siakad_api_key_configured ? 'YOUR_API_KEY_HERE' : 'GENERATE_KEY_FIRST'}' \\
   --header 'Accept: application/json'`
+})
+
+const pesertaPhpLaravelExample = computed(() => {
+  return `<?php
+use Illuminate\\Support\\Facades\\Http;
+
+$response = Http::withHeaders([
+    'X-SIAKAD-API-KEY' => config('services.simkeu.api_key'),
+    'Accept'           => 'application/json',
+])->get('${baseUrl.value}/peserta', [
+    'th_akademik_kode' => '20251',
+    'limit'            => 20,
+]);
+
+if ($response->successful()) {
+    $pesertaList = $response->json('data');
+    foreach ($pesertaList as $mhs) {
+        // Mendapatkan NIM, Nama, dan Jumlah MK yang disusulkan:
+        echo "{$mhs['nim']} - {$mhs['nama']} : {$mhs['jumlah_mk']} MK disusulkan\\n";
+    }
+}`
+})
+
+const pesertaPhpGuzzleExample = computed(() => {
+  return `<?php
+use GuzzleHttp\\Client;
+
+$client = new Client();
+$response = $client->request('GET', '${baseUrl.value}/peserta', [
+    'headers' => [
+        'X-SIAKAD-API-KEY' => 'YOUR_API_KEY_HERE',
+        'Accept'           => 'application/json',
+    ],
+    'query' => [
+        'th_akademik_kode' => '20251',
+        'limit'            => 20,
+    ],
+]);
+
+$result = json_decode($response->getBody()->getContents(), true);
+$data = $result['data'] ?? [];`
+})
+
+const pesertaJsExample = computed(() => {
+  return `const response = await fetch('${baseUrl.value}/peserta?th_akademik_kode=20251&limit=20', {
+  method: 'GET',
+  headers: {
+    'X-SIAKAD-API-KEY': 'YOUR_API_KEY_HERE',
+    'Accept': 'application/json',
+  },
+});
+
+const result = await response.json();
+console.log(result.data);`
+})
+
+const sampleResponsePesertaJson = `{
+  "status": true,
+  "message": "Data peserta ujian susulan berhasil diambil.",
+  "data": [
+    {
+      "id": 103,
+      "nim": "202585010009",
+      "nama": "AGUS SAPUTRA",
+      "prodi": {
+        "id": 8,
+        "kode": "86208",
+        "alias": "PAI",
+        "nama": "Pendidikan Agama Islam",
+        "jenjang": "S1"
+      },
+      "kelas": "Reguler",
+      "th_akademik_id": 24,
+      "th_akademik_kode": "20251",
+      "th_akademik_nama": "2025/2026",
+      "th_akademik_semester": "Ganjil",
+      "tanggal": "2026-09-20",
+      "keterangan": "Pendaftaran UAS Susulan",
+      "jumlah_mk": 7,
+      "total_mk": 7,
+      "jadwal_kuliah_ids": [6920, 6921, 6922, 6923, 6925, 6926, 6927],
+      "created_at": "2026-09-20T14:15:00.000000Z",
+      "updated_at": "2026-09-20T14:15:00.000000Z"
+    }
+  ],
+  "pagination": {
+    "total": 1,
+    "per_page": 20,
+    "current_page": 1,
+    "last_page": 1,
+    "from": 1,
+    "to": 1
+  }
+}`
+
+// === Snippets GET /peserta/{nim}/detail ===
+const detailCurlExample = computed(() => {
+  const url = `${baseUrl.value}/peserta/202585010009/detail`
+
+  return `curl --location '${url}' \\
+  --header 'X-SIAKAD-API-KEY: ${apiData.value?.siakad_api_key_configured ? 'YOUR_API_KEY_HERE' : 'GENERATE_KEY_FIRST'}' \\
+  --header 'Accept: application/json'`
+})
+
+const detailPhpLaravelExample = computed(() => {
+  return `<?php
+use Illuminate\\Support\\Facades\\Http;
+
+$nim = '202585010009';
+$response = Http::withHeaders([
+    'X-SIAKAD-API-KEY' => config('services.simkeu.api_key'),
+    'Accept'           => 'application/json',
+])->get("${baseUrl.value}/peserta/{$nim}/detail");
+
+if ($response->successful()) {
+    $detail = $response->json('data');
+    echo "Peserta: {$detail['nama']} ({$detail['nim']})\\n";
+    echo "Jumlah MK: {$detail['jumlah_mk']}\\n";
+    foreach ($detail['mata_kuliah'] as $mk) {
+        echo "- [{$mk['kode_mk']}] {$mk['nama_mk']} ({$mk['sks']} SKS) | Dosen: {$mk['dosen_nama']} | Ruang: {$mk['ruang']}\\n";
+    }
+}`
+})
+
+const detailPhpGuzzleExample = computed(() => {
+  return `<?php
+use GuzzleHttp\\Client;
+
+$nim = '202585010009';
+$client = new Client();
+$response = $client->request('GET', "${baseUrl.value}/peserta/{$nim}/detail", [
+    'headers' => [
+        'X-SIAKAD-API-KEY' => 'YOUR_API_KEY_HERE',
+        'Accept'           => 'application/json',
+    ],
+]);
+
+$result = json_decode($response->getBody()->getContents(), true);
+$detail = $result['data'] ?? [];`
+})
+
+const detailJsExample = computed(() => {
+  return `const nim = '202585010009';
+const response = await fetch(\`${baseUrl.value}/peserta/\${nim}/detail\`, {
+  method: 'GET',
+  headers: {
+    'X-SIAKAD-API-KEY': 'YOUR_API_KEY_HERE',
+    'Accept': 'application/json',
+  },
+});
+
+const result = await response.json();
+console.log(result.data);`
+})
+
+const sampleResponseDetailJson = `{
+  "status": true,
+  "message": "Detail mata kuliah ujian susulan berhasil diambil.",
+  "data": {
+    "nim": "202585010009",
+    "nama": "AGUS SAPUTRA",
+    "prodi": {
+      "id": 8,
+      "kode": "86208",
+      "alias": "PAI",
+      "nama": "Pendidikan Agama Islam",
+      "jenjang": "S1"
+    },
+    "kelas": "Reguler",
+    "semester_mahasiswa": 3,
+    "id": 103,
+    "th_akademik_id": 24,
+    "th_akademik_kode": "20251",
+    "th_akademik_nama": "2025/2026",
+    "th_akademik_semester": "Ganjil",
+    "tanggal": "2026-09-20",
+    "keterangan": "Pendaftaran UAS Susulan",
+    "jumlah_mk": 7,
+    "total_mk": 7,
+    "mata_kuliah": [
+      {
+        "id": 1,
+        "uas_susulan_id": 103,
+        "jadwal_kuliah_id": 6920,
+        "kode_mk": "DL 852402",
+        "nama_mk": "FIQH (IBADAH)",
+        "sks": 2,
+        "sks_mk": 2,
+        "smt": 1,
+        "smt_mk": 1,
+        "dosen_nama": "SAPARWADI, M.Pd",
+        "kelompok": "PAI ANGKATAN 2025 PUTRA A",
+        "ruang": "RUANG PAI 1A PUTRA",
+        "hari": "Ahad",
+        "jam": "14.00-15.30",
+        "nilai_akhir": null,
+        "nilai_huruf": "",
+        "created_at": "2026-09-20T14:15:00.000000Z"
+      }
+    ],
+    "riwayat_pendaftaran": [
+      {
+        "id": 103,
+        "nim": "202585010009",
+        "tanggal": "2026-09-20",
+        "keterangan": "Pendaftaran UAS Susulan",
+        "th_akademik_id": 24,
+        "th_akademik_kode": "20251",
+        "th_akademik_nama": "2025/2026",
+        "th_akademik_semester": "Ganjil",
+        "jumlah_mk": 7,
+        "total_mk": 7,
+        "mata_kuliah": []
+      }
+    ]
+  }
+}`
+
+// === Snippets GET /uas-susulan (Legacy) ===
+const curlExample = computed(() => {
+  const url = `${baseUrl.value}/uas-susulan?th_akademik_kode=20252&nim=210101001`
+
+  return `curl --location '${url}' \\
+  --header 'X-SIAKAD-API-KEY: ${apiData.value?.siakad_api_key_configured ? 'YOUR_API_KEY_HERE' : 'GENERATE_KEY_FIRST'}' \\
+  --header 'Accept: application/json'`
+})
+
+const phpLaravelExample = computed(() => {
+  return `<?php
+use Illuminate\\Support\\Facades\\Http;
+
+$response = Http::withHeaders([
+    'X-SIAKAD-API-KEY' => config('services.simkeu.api_key'),
+    'Accept'           => 'application/json',
+])->get('${baseUrl.value}/uas-susulan', [
+    'th_akademik_kode' => '20252',
+    'nim'              => $nim,
+]);
+
+if ($response->successful()) {
+    $data = $response->json('data');
+    // Contoh cek apakah mahasiswa berhak ikut jadwal_kuliah_id tertentu:
+    // $berhak = in_array($jadwalKuliahId, $data[0]['jadwal_kuliah_ids'] ?? []);
+}`
 })
 
 const phpGuzzleExample = computed(() => {
@@ -160,28 +422,7 @@ $response = $client->request('GET', '${baseUrl.value}/uas-susulan', [
     ],
 ]);
 
-$result = json_decode($response->getBody()->getContents(), true);
-// Ambil array ID mata kuliah yang disusulkan:
-// $jadwalKuliahIds = $result['data'][0]['jadwal_kuliah_ids'] ?? [];`
-})
-
-const phpLaravelExample = computed(() => {
-  return `<?php
-use Illuminate\\Support\\Facades\\HTTP;
-
-$response = HTTP::withHeaders([
-    'X-SIAKAD-API-KEY' => config('services.simkeu.api_key'),
-    'Accept'           => 'application/json',
-])->get('${baseUrl.value}/uas-susulan', [
-    'th_akademik_kode' => '20252',
-    'nim'              => $nim,
-]);
-
-if ($response->successful()) {
-    $data = $response->json('data');
-    // Contoh cek apakah mahasiswa berhak ikut jadwal_kuliah_id tertentu:
-    // $berhak = in_array($jadwalKuliahId, $data[0]['jadwal_kuliah_ids'] ?? []);
-}`
+$result = json_decode($response->getBody()->getContents(), true);`
 })
 
 const jsExample = computed(() => {
@@ -217,18 +458,6 @@ const sampleResponseJson = `{
           "id": 24,
           "uas_susulan_id": 12,
           "jadwal_kuliah_id": 1042,
-          "created_at": "2026-09-19T10:30:00.000000Z"
-        },
-        {
-          "id": 25,
-          "uas_susulan_id": 12,
-          "jadwal_kuliah_id": 1045,
-          "created_at": "2026-09-19T10:30:00.000000Z"
-        },
-        {
-          "id": 26,
-          "uas_susulan_id": 12,
-          "jadwal_kuliah_id": 1088,
           "created_at": "2026-09-19T10:30:00.000000Z"
         }
       ],
@@ -296,7 +525,7 @@ onMounted(() => {
           </div>
           <div class="text-body-2 mt-1">
             API key yang digunakan pada endpoint ini tersinkronisasi langsung dengan konfigurasi integrasi BSI SIMKEU (sehingga tidak ada duplikasi API key).
-            SIAKAD cukup menggunakan satu key ini pada header <code>X-SIAKAD-API-KEY</code> atau <code>apikey</code> untuk mengakses data UAS Susulan maupun integrasi transaksi perbankan.
+            SIAKAD cukup menggunakan satu key ini pada header <code>X-SIAKAD-API-KEY</code> atau <code>apikey</code> untuk mengakses data Ujian Susulan (Peserta &amp; Detail MK) maupun integrasi transaksi perbankan.
           </div>
         </div>
       </div>
@@ -464,12 +693,26 @@ onMounted(() => {
         v-model="activeEndpointTab"
         class="border-b"
       >
+        <VTab value="peserta">
+          <VIcon
+            icon="ri-user-star-line"
+            class="me-2"
+          />
+          GET /peserta (Peserta &amp; Jumlah MK)
+        </VTab>
+        <VTab value="peserta-detail">
+          <VIcon
+            icon="ri-book-read-line"
+            class="me-2"
+          />
+          GET /peserta/{nim}/detail (Detail MK)
+        </VTab>
         <VTab value="uas-susulan">
           <VIcon
             icon="ri-file-list-3-line"
             class="me-2"
           />
-          GET /uas-susulan (Data & MK)
+          GET /uas-susulan (ID MK Legacy)
         </VTab>
         <VTab value="live-test">
           <VIcon
@@ -488,8 +731,487 @@ onMounted(() => {
       </VTabs>
 
       <VCardText>
-        <!-- Tab 1: Dokumentasi Lengkap UAS Susulan -->
-        <div v-if="activeEndpointTab === 'uas-susulan'">
+        <!-- Tab 1: GET /peserta -->
+        <div v-if="activeEndpointTab === 'peserta'">
+          <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-4">
+            <div class="d-flex align-center gap-2">
+              <VChip
+                color="success"
+                label
+                class="font-weight-bold"
+              >
+                GET
+              </VChip>
+              <code class="text-h6 font-weight-bold">/api/v1/integrations/siakad/peserta</code>
+              <VChip
+                size="x-small"
+                color="primary"
+                variant="outlined"
+              >
+                Alias: /api/siakad/peserta
+              </VChip>
+            </div>
+
+            <VBtn
+              size="small"
+              variant="outlined"
+              color="primary"
+              prepend-icon="ri-file-copy-line"
+              @click="copyToClipboard(`${baseUrl}/peserta`, 'URL Endpoint Peserta')"
+            >
+              Salin URL
+            </VBtn>
+          </div>
+
+          <p class="text-body-1 mb-4">
+            Endpoint ini digunakan oleh SIAKAD untuk mengambil <strong>daftar seluruh mahasiswa peserta ujian susulan</strong> lengkap dengan profil nama, program studi, tanggal pendaftaran, serta <strong>jumlah total mata kuliah (<code>jumlah_mk</code>)</strong> yang disusulkan.
+          </p>
+
+          <!-- Parameter Query Table -->
+          <h4 class="text-h6 font-weight-bold mb-3">
+            Parameter Query (GET Request)
+          </h4>
+          <VTable
+            density="comfortable"
+            class="border rounded-lg mb-6"
+          >
+            <thead>
+              <tr>
+                <th style="width: 180px;">
+                  Parameter
+                </th>
+                <th style="width: 100px;">
+                  Tipe
+                </th>
+                <th style="width: 100px;">
+                  Wajib
+                </th>
+                <th>Deskripsi &amp; Contoh</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>nim</code></td>
+                <td>String</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Filter spesifik satu NIM (<code>202585010009</code>) atau beberapa NIM dipisah koma (<code>202585010009,210101002</code>).
+                </td>
+              </tr>
+              <tr>
+                <td><code>th_akademik_kode</code></td>
+                <td>String</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Filter kode tahun akademik SIMKEU (contoh: <code>20251</code> untuk ganjil 2025/2026).
+                </td>
+              </tr>
+              <tr>
+                <td><code>th_akademik_id</code></td>
+                <td>Integer</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Filter ID database tahun akademik SIMKEU (contoh: <code>24</code>).
+                </td>
+              </tr>
+              <tr>
+                <td><code>jadwal_kuliah_id</code></td>
+                <td>Integer</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Filter peserta yang mengambil ID jadwal kuliah tertentu.
+                </td>
+              </tr>
+              <tr>
+                <td><code>tanggal</code></td>
+                <td>Date (YYYY-MM-DD)</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Filter tanggal pendaftaran ujian susulan (contoh: <code>2026-09-20</code>).
+                </td>
+              </tr>
+              <tr>
+                <td><code>search</code></td>
+                <td>String</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Pencarian umum kata kunci pada NIM, keterangan, atau tahun akademik.
+                </td>
+              </tr>
+              <tr>
+                <td><code>limit</code></td>
+                <td>Integer</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Jumlah data per halaman (default <code>20</code>, kirim <code>0</code> atau <code>all</code> untuk seluruh data).
+                </td>
+              </tr>
+              <tr>
+                <td><code>page</code></td>
+                <td>Integer</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Nomor halaman data pagination (default <code>1</code>).
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+
+          <!-- Code Snippets Tab -->
+          <h4 class="text-h6 font-weight-bold mb-3">
+            Contoh Implementasi Kode
+          </h4>
+          <VCard
+            variant="outlined"
+            class="mb-6"
+          >
+            <VTabs
+              v-model="activeSnippetTabPeserta"
+              density="compact"
+              class="border-b"
+            >
+              <VTab value="curl">
+                cURL
+              </VTab>
+              <VTab value="php-laravel">
+                PHP (Laravel HTTP)
+              </VTab>
+              <VTab value="php-guzzle">
+                PHP (Guzzle)
+              </VTab>
+              <VTab value="js">
+                JavaScript / Node.js
+              </VTab>
+            </VTabs>
+
+            <VCardText class="bg-var-theme-background pa-4">
+              <div class="d-flex justify-end mb-2">
+                <VBtn
+                  size="x-small"
+                  variant="text"
+                  prepend-icon="ri-file-copy-line"
+                  @click="copyToClipboard(
+                    activeSnippetTabPeserta === 'curl' ? pesertaCurlExample :
+                    activeSnippetTabPeserta === 'php-laravel' ? pesertaPhpLaravelExample :
+                    activeSnippetTabPeserta === 'php-guzzle' ? pesertaPhpGuzzleExample : pesertaJsExample,
+                    'Contoh Kode'
+                  )"
+                >
+                  Salin Kode
+                </VBtn>
+              </div>
+              <pre
+                class="text-body-2 font-monospace mb-0"
+                style="overflow-x: auto; white-space: pre-wrap;"
+              ><code>{{
+                activeSnippetTabPeserta === 'curl' ? pesertaCurlExample :
+                activeSnippetTabPeserta === 'php-laravel' ? pesertaPhpLaravelExample :
+                activeSnippetTabPeserta === 'php-guzzle' ? pesertaPhpGuzzleExample : pesertaJsExample
+              }}</code></pre>
+            </VCardText>
+          </VCard>
+
+          <!-- Response Example -->
+          <h4 class="text-h6 font-weight-bold mb-3">
+            Struktur Respon JSON (HTTP 200 OK)
+          </h4>
+          <VCard
+            variant="outlined"
+            class="mb-4"
+          >
+            <VCardText class="bg-var-theme-background pa-4">
+              <div class="d-flex justify-end mb-2">
+                <VBtn
+                  size="x-small"
+                  variant="text"
+                  prepend-icon="ri-file-copy-line"
+                  @click="copyToClipboard(sampleResponsePesertaJson, 'Respon JSON')"
+                >
+                  Salin JSON
+                </VBtn>
+              </div>
+              <pre
+                class="text-body-2 font-monospace mb-0"
+                style="max-height: 400px; overflow-y: auto; overflow-x: auto; white-space: pre-wrap;"
+              ><code>{{ sampleResponsePesertaJson }}</code></pre>
+            </VCardText>
+          </VCard>
+
+          <VAlert
+            type="success"
+            variant="tonal"
+            density="compact"
+          >
+            <strong>Highlight Peserta:</strong> Setiap row data telah menyertakan properti <code>jumlah_mk</code> (dan <code>total_mk</code>) serta array <code>jadwal_kuliah_ids</code> untuk efisiensi verifikasi hak ujian mahasiswa.
+          </VAlert>
+        </div>
+
+        <!-- Tab 2: GET /peserta/{nim}/detail -->
+        <div v-else-if="activeEndpointTab === 'peserta-detail'">
+          <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-4">
+            <div class="d-flex align-center gap-2">
+              <VChip
+                color="success"
+                label
+                class="font-weight-bold"
+              >
+                GET
+              </VChip>
+              <code class="text-h6 font-weight-bold">/api/v1/integrations/siakad/peserta/{nim}/detail</code>
+              <VChip
+                size="x-small"
+                color="primary"
+                variant="outlined"
+              >
+                Alias: /api/siakad/peserta/{nim}/detail
+              </VChip>
+            </div>
+
+            <VBtn
+              size="small"
+              variant="outlined"
+              color="primary"
+              prepend-icon="ri-file-copy-line"
+              @click="copyToClipboard(`${baseUrl}/peserta/{nim}/detail`, 'URL Endpoint Detail MK')"
+            >
+              Salin URL
+            </VBtn>
+          </div>
+
+          <p class="text-body-1 mb-4">
+            Endpoint ini mengambil <strong>detail lengkap mata kuliah yang disusulkan oleh mahasiswa</strong> berdasarkan parameter NIM di URL path.
+            Mengembalikan metadata lengkap: <strong>Nama MK, Kode MK, SKS, Semester MK, Nama Dosen Pengampu, Kelompok Kelas, Ruang, Hari, Jam Kuliah</strong>, serta nilai akhir jika tersedia.
+          </p>
+
+          <!-- Parameter URL Table -->
+          <h4 class="text-h6 font-weight-bold mb-3">
+            Parameter Request
+          </h4>
+          <VTable
+            density="comfortable"
+            class="border rounded-lg mb-6"
+          >
+            <thead>
+              <tr>
+                <th style="width: 180px;">
+                  Parameter
+                </th>
+                <th style="width: 140px;">
+                  Lokasi
+                </th>
+                <th style="width: 100px;">
+                  Wajib
+                </th>
+                <th>Deskripsi &amp; Contoh</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>nim</code></td>
+                <td>URL Path</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="error"
+                    label
+                  >
+                    Wajib
+                  </VChip>
+                </td>
+                <td>
+                  NIM mahasiswa yang ingin dicek detail mata kuliahnya (contoh: <code>202585010009</code>).
+                </td>
+              </tr>
+              <tr>
+                <td><code>th_akademik_kode</code></td>
+                <td>Query String</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Filter kode tahun akademik tertentu jika mahasiswa memiliki pendaftaran di beberapa semester (contoh: <code>20251</code>).
+                </td>
+              </tr>
+              <tr>
+                <td><code>th_akademik_id</code></td>
+                <td>Query String</td>
+                <td>
+                  <VChip
+                    size="x-small"
+                    color="secondary"
+                    label
+                  >
+                    Opsional
+                  </VChip>
+                </td>
+                <td>
+                  Filter ID tahun akademik database SIMKEU (contoh: <code>24</code>).
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+
+          <!-- Code Snippets Tab -->
+          <h4 class="text-h6 font-weight-bold mb-3">
+            Contoh Implementasi Kode
+          </h4>
+          <VCard
+            variant="outlined"
+            class="mb-6"
+          >
+            <VTabs
+              v-model="activeSnippetTabDetail"
+              density="compact"
+              class="border-b"
+            >
+              <VTab value="curl">
+                cURL
+              </VTab>
+              <VTab value="php-laravel">
+                PHP (Laravel HTTP)
+              </VTab>
+              <VTab value="php-guzzle">
+                PHP (Guzzle)
+              </VTab>
+              <VTab value="js">
+                JavaScript / Node.js
+              </VTab>
+            </VTabs>
+
+            <VCardText class="bg-var-theme-background pa-4">
+              <div class="d-flex justify-end mb-2">
+                <VBtn
+                  size="x-small"
+                  variant="text"
+                  prepend-icon="ri-file-copy-line"
+                  @click="copyToClipboard(
+                    activeSnippetTabDetail === 'curl' ? detailCurlExample :
+                    activeSnippetTabDetail === 'php-laravel' ? detailPhpLaravelExample :
+                    activeSnippetTabDetail === 'php-guzzle' ? detailPhpGuzzleExample : detailJsExample,
+                    'Contoh Kode'
+                  )"
+                >
+                  Salin Kode
+                </VBtn>
+              </div>
+              <pre
+                class="text-body-2 font-monospace mb-0"
+                style="overflow-x: auto; white-space: pre-wrap;"
+              ><code>{{
+                activeSnippetTabDetail === 'curl' ? detailCurlExample :
+                activeSnippetTabDetail === 'php-laravel' ? detailPhpLaravelExample :
+                activeSnippetTabDetail === 'php-guzzle' ? detailPhpGuzzleExample : detailJsExample
+              }}</code></pre>
+            </VCardText>
+          </VCard>
+
+          <!-- Response Example -->
+          <h4 class="text-h6 font-weight-bold mb-3">
+            Struktur Respon JSON (HTTP 200 OK)
+          </h4>
+          <VCard
+            variant="outlined"
+            class="mb-4"
+          >
+            <VCardText class="bg-var-theme-background pa-4">
+              <div class="d-flex justify-end mb-2">
+                <VBtn
+                  size="x-small"
+                  variant="text"
+                  prepend-icon="ri-file-copy-line"
+                  @click="copyToClipboard(sampleResponseDetailJson, 'Respon JSON')"
+                >
+                  Salin JSON
+                </VBtn>
+              </div>
+              <pre
+                class="text-body-2 font-monospace mb-0"
+                style="max-height: 420px; overflow-y: auto; overflow-x: auto; white-space: pre-wrap;"
+              ><code>{{ sampleResponseDetailJson }}</code></pre>
+            </VCardText>
+          </VCard>
+
+          <VAlert
+            type="info"
+            variant="tonal"
+            density="compact"
+          >
+            <strong>Informasi Lengkap MK:</strong> Array <code>data.mata_kuliah</code> menyajikan detail instan tanpa perlu lookup lanjutan: kode MK, nama MK, SKS, semester, nama dosen pengampu bergelar, ruang ujian/kelas, hari, dan jam kuliah.
+          </VAlert>
+        </div>
+
+        <!-- Tab 3: Dokumentasi UAS Susulan (Legacy) -->
+        <div v-else-if="activeEndpointTab === 'uas-susulan'">
           <div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-4">
             <div class="d-flex align-center gap-2">
               <VChip
@@ -537,7 +1259,7 @@ onMounted(() => {
                 <th style="width: 100px;">
                   Wajib
                 </th>
-                <th>Deskripsi & Contoh</th>
+                <th>Deskripsi &amp; Contoh</th>
               </tr>
             </thead>
             <tbody>
@@ -606,22 +1328,6 @@ onMounted(() => {
                 </td>
               </tr>
               <tr>
-                <td><code>tanggal</code></td>
-                <td>Date (YYYY-MM-DD)</td>
-                <td>
-                  <VChip
-                    size="x-small"
-                    color="secondary"
-                    label
-                  >
-                    Opsional
-                  </VChip>
-                </td>
-                <td>
-                  Filter tanggal pendaftaran UAS susulan (contoh: <code>2026-09-19</code>).
-                </td>
-              </tr>
-              <tr>
                 <td><code>limit</code></td>
                 <td>Integer</td>
                 <td>
@@ -634,7 +1340,7 @@ onMounted(() => {
                   </VChip>
                 </td>
                 <td>
-                  Jumlah data per halaman (default <code>20</code>). Kirim <code>0</code> atau <code>all</code> untuk mengambil seluruh data tanpa batas pagination.
+                  Jumlah data per halaman (default <code>20</code>). Kirim <code>0</code> atau <code>all</code> untuk seluruh data tanpa batas pagination.
                 </td>
               </tr>
               <tr>
@@ -665,7 +1371,7 @@ onMounted(() => {
             class="mb-6"
           >
             <VTabs
-              v-model="activeSnippetTab"
+              v-model="activeSnippetTabUas"
               density="compact"
               class="border-b"
             >
@@ -690,9 +1396,9 @@ onMounted(() => {
                   variant="text"
                   prepend-icon="ri-file-copy-line"
                   @click="copyToClipboard(
-                    activeSnippetTab === 'curl' ? curlExample :
-                    activeSnippetTab === 'php-laravel' ? phpLaravelExample :
-                    activeSnippetTab === 'php-guzzle' ? phpGuzzleExample : jsExample,
+                    activeSnippetTabUas === 'curl' ? curlExample :
+                    activeSnippetTabUas === 'php-laravel' ? phpLaravelExample :
+                    activeSnippetTabUas === 'php-guzzle' ? phpGuzzleExample : jsExample,
                     'Contoh Kode'
                   )"
                 >
@@ -703,9 +1409,9 @@ onMounted(() => {
                 class="text-body-2 font-monospace mb-0"
                 style="overflow-x: auto; white-space: pre-wrap;"
               ><code>{{
-                activeSnippetTab === 'curl' ? curlExample :
-                activeSnippetTab === 'php-laravel' ? phpLaravelExample :
-                activeSnippetTab === 'php-guzzle' ? phpGuzzleExample : jsExample
+                activeSnippetTabUas === 'curl' ? curlExample :
+                activeSnippetTabUas === 'php-laravel' ? phpLaravelExample :
+                activeSnippetTabUas === 'php-guzzle' ? phpGuzzleExample : jsExample
               }}</code></pre>
             </VCardText>
           </VCard>
@@ -735,25 +1441,37 @@ onMounted(() => {
               ><code>{{ sampleResponseJson }}</code></pre>
             </VCardText>
           </VCard>
-
-          <VAlert
-            type="success"
-            variant="tonal"
-            density="compact"
-          >
-            <strong>Tips SIAKAD:</strong> Respon telah menyertakan shortcut array <code>jadwal_kuliah_ids</code> berisi daftar integer ID jadwal kuliah.
-            Sistem SIAKAD dapat langsung menggunakan fungsi seperti <code>in_array($jadwalKuliahId, $row['jadwal_kuliah_ids'])</code> untuk memvalidasi akses mahasiswa tanpa perlu looping manual ke objek mata kuliah.
-          </VAlert>
         </div>
 
-        <!-- Tab 2: Live API Tester -->
+        <!-- Tab 4: Live API Tester -->
         <div v-else-if="activeEndpointTab === 'live-test'">
           <h4 class="text-h6 font-weight-bold mb-2">
-            Uji Coba Langsung Endpoint UAS Susulan
+            Uji Coba Langsung Endpoint Integrasi
           </h4>
           <p class="text-body-2 text-medium-emphasis mb-4">
-            Gunakan form di bawah ini untuk menguji respon query data UAS Susulan langsung dari database SIMKEU secara real-time.
+            Pilih endpoint yang ingin diuji coba langsung ke server SIMKEU secara real-time.
           </p>
+
+          <!-- Endpoint selector radio -->
+          <div class="d-flex flex-wrap gap-4 mb-4">
+            <VRadioGroup
+              v-model="testEndpoint"
+              inline
+            >
+              <VRadio
+                label="GET /peserta (Daftar & Jumlah MK)"
+                value="peserta"
+              />
+              <VRadio
+                label="GET /peserta/{nim}/detail (Detail MK)"
+                value="peserta-detail"
+              />
+              <VRadio
+                label="GET /uas-susulan (Legacy)"
+                value="uas-susulan"
+              />
+            </VRadioGroup>
+          </div>
 
           <VRow class="mb-4">
             <VCol
@@ -762,8 +1480,8 @@ onMounted(() => {
             >
               <VTextField
                 v-model="testNim"
-                label="Filter NIM Mahasiswa (Opsional)"
-                placeholder="Misal: 210101001"
+                :label="testEndpoint === 'peserta-detail' ? 'NIM Mahasiswa (Wajib untuk detail)' : 'Filter NIM Mahasiswa (Opsional)'"
+                placeholder="Misal: 202585010009"
                 density="compact"
                 variant="outlined"
                 clearable
@@ -777,7 +1495,7 @@ onMounted(() => {
               <VTextField
                 v-model="testThAkademikKode"
                 label="Filter Kode Th Akademik (Opsional)"
-                placeholder="Misal: 20252"
+                placeholder="Misal: 20251"
                 density="compact"
                 variant="outlined"
                 clearable
@@ -785,13 +1503,14 @@ onMounted(() => {
             </VCol>
 
             <VCol
+              v-if="testEndpoint !== 'peserta-detail'"
               cols="12"
               md="2"
             >
               <VTextField
                 v-model="testJadwalKuliahId"
                 label="ID Jadwal Kuliah"
-                placeholder="Misal: 1042"
+                placeholder="Misal: 6920"
                 density="compact"
                 variant="outlined"
                 type="number"
@@ -800,6 +1519,7 @@ onMounted(() => {
             </VCol>
 
             <VCol
+              v-if="testEndpoint !== 'peserta-detail'"
               cols="12"
               md="2"
             >
@@ -856,7 +1576,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Tab 3: Katalog Endpoint BSI -->
+        <!-- Tab 5: Katalog Endpoint BSI -->
         <div v-else-if="activeEndpointTab === 'bsi-reference'">
           <div class="d-flex align-center justify-space-between mb-4">
             <div>
@@ -990,7 +1710,7 @@ onMounted(() => {
             class="mb-4"
           >
             <strong>Penting:</strong> API key ini hanya ditampilkan <strong>satu kali saja</strong> demi keamanan.
-            Jika Anda merotasi key, seluruh sistem SIAKAD (baik modul UAS Susulan maupun BSI VA) harus diperbarui dengan key yang sama.
+            Jika Anda merotasi key, seluruh sistem SIAKAD (baik modul Ujian Susulan maupun BSI VA) harus diperbarui dengan key yang sama.
           </VAlert>
 
           <div class="bg-var-theme-background pa-4 rounded-lg border mb-3">
