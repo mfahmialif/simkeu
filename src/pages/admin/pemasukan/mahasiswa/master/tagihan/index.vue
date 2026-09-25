@@ -475,6 +475,18 @@ watch([selectedThAkademik, selectedThAngkatan, selectedProdi, selectedDoubleDegr
             Import
           </VBtn>
 
+          <!-- 👉 Pengaturan button -->
+          <VBtn
+            variant="outlined"
+            color="warning"
+            prepend-icon="ri-settings-4-line"
+            @click="
+              $router.push('/admin/pemasukan/mahasiswa/master/tagihan/pengaturan')
+            "
+          >
+            Pengaturan
+          </VBtn>
+
           <VBtn
             color="primary"
             prepend-icon="ri-add-line"
