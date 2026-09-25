@@ -875,7 +875,8 @@ const billsResponseExample = `{
         "tersedia": 500000,
         "mata_uang_kode": "IDR",
         "tidak_bisa_dibayar": false,
-        "keterangan_pembayaran": null
+        "keterangan_pembayaran": null,
+        "prasyarat": null
       }
     ],
     "total_tersedia": 500000
@@ -2580,6 +2581,16 @@ onMounted(async () => {
                         {{ bill.nama }}
                       </div>
                       <div
+                        v-if="bill.prasyarat"
+                        class="text-caption text-primary d-flex align-center gap-1 mt-1"
+                      >
+                        <VIcon
+                          icon="ri-git-commit-line"
+                          size="14"
+                        />
+                        <span>Prasyarat: {{ bill.prasyarat }}</span>
+                      </div>
+                      <div
                         v-if="bill.keterangan_pembayaran"
                         class="text-caption text-warning"
                       >
@@ -3229,7 +3240,7 @@ onMounted(async () => {
               <code>GET {{ billsEndpoint }}</code>
             </p>
             <p class="mb-3">
-              <strong>Path wajib:</strong> <code>nim</code>. <strong>Body:</strong> tidak ada. Gunakan NIM mahasiswa sebagai parameter path. Respons berisi profil ringkas, daftar tagihan yang masih mempunyai nominal <code>tersedia</code>, aturan dapat dibayar, dan total seluruh tagihan tersedia.
+              <strong>Path wajib:</strong> <code>nim</code>. <strong>Body:</strong> tidak ada. Gunakan NIM mahasiswa sebagai parameter path. Respons berisi profil ringkas, daftar tagihan yang masih mempunyai nominal <code>tersedia</code>, informasi tagihan prasyarat (<code>prasyarat</code>), aturan dapat dibayar, dan total seluruh tagihan tersedia.
             </p>
             <div class="code-block mb-6">
               <IconBtn
