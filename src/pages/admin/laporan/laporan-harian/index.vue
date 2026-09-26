@@ -43,14 +43,21 @@ const headers = [
   { title: "Petugas", key: "petugas" },
 ]
 
-const filterBody = computed(() => ({
-  tanggal: selectedTanggal.value,
-  jenjang: selectedJenjang.value,
-  ...(selectedJenisPembayaran.value && {
-    jenis_pembayaran_id: selectedJenisPembayaran.value,
-  }),
-  ...(selectedUser.value && { user_id: selectedUser.value }),
-}))
+const filterBody = computed(() => {
+  const selectedUserObj = userList.value.find(u => u.value === selectedUser.value)
+
+  return {
+    tanggal: selectedTanggal.value,
+    jenjang: selectedJenjang.value,
+    ...(selectedJenisPembayaran.value && {
+      jenis_pembayaran_id: selectedJenisPembayaran.value,
+    }),
+    ...(selectedUser.value && {
+      user_id: selectedUser.value,
+      username: selectedUserObj?.username,
+    }),
+  }
+})
 
 const formatTanggal = value => {
   if (!value) return "-"
@@ -185,6 +192,7 @@ const fetchUser = async () => {
       userList.value = items.map(u => ({
         title: `${u.name} (${u.jenis_kelamin})`,
         value: u.id,
+        username: u.username,
       }))
     }
   } catch (err) {

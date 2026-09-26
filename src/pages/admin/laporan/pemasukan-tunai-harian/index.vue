@@ -358,10 +358,15 @@ const fetchData = async () => {
   try {
     isLoading.value = true
 
+    const selectedUserObj = userList.value.find(u => u.value === selectedUser.value)
+
     const filterData = {
       jenjang: selectedJenjang.value,
       ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
-      ...(selectedUser.value && { user_id: selectedUser.value }),
+      ...(selectedUser.value && {
+        user_id: selectedUser.value,
+        username: selectedUserObj?.username,
+      }),
     }
 
     const bodyData = selectedMode.value === 'tahunan' 
@@ -405,11 +410,16 @@ const downloadExcel = async () => {
     isLoading.value = true
     showSnackbar({ text: "Loading Excel...", color: "info" })
     
+    const selectedUserObj = userList.value.find(u => u.value === selectedUser.value)
+
     const filterData = {
       action: 'excel',
       jenjang: selectedJenjang.value,
       ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
-      ...(selectedUser.value && { user_id: selectedUser.value }),
+      ...(selectedUser.value && {
+        user_id: selectedUser.value,
+        username: selectedUserObj?.username,
+      }),
     }
 
     const bodyData = selectedMode.value === 'tahunan' 
@@ -518,6 +528,7 @@ const fetchUser = async () => {
       userList.value = items.map(u => ({
         title: `${u.name} (${u.jenis_kelamin})`,
         value: u.id,
+        username: u.username,
       }))
     }
   } catch (err) {
