@@ -107,6 +107,7 @@ const headers = [
   { title: "NO. TRANSAKSI", key: "no_transaksi", sortable: true, width: "165px" },
   { title: "TANGGAL & WAKTU", key: "tanggal", sortable: true, width: "160px" },
   { title: "METODE", key: "jenis_pembayaran_id", sortable: false, width: "110px", align: "center" },
+  { title: "REK. TUJUAN", key: "no_rek_tujuan", sortable: false, width: "140px" },
   { title: "NOMINAL", key: "nominal", sortable: true, width: "150px", align: "end" },
   { title: "KETERANGAN", key: "keterangan", sortable: false },
   { title: "PETUGAS", key: "petugas_id", sortable: false, width: "140px" },
@@ -491,6 +492,28 @@ const handleDownloadBundling = async () => {
             >
               {{ item.jenis_pembayaran?.nama || 'Tunai' }}
             </VChip>
+          </template>
+
+          <!-- Column REK TUJUAN -->
+          <template #item.no_rek_tujuan="{ item }">
+            <div v-if="item.nama_bank || item.no_rek_tujuan">
+              <div
+                v-if="item.nama_bank"
+                class="font-weight-medium text-caption"
+              >
+                {{ item.nama_bank }}
+              </div>
+              <div
+                v-if="item.no_rek_tujuan"
+                class="text-caption text-medium-emphasis"
+              >
+                {{ item.no_rek_tujuan }}
+              </div>
+            </div>
+            <span
+              v-else
+              class="text-disabled text-caption"
+            >-</span>
           </template>
 
           <!-- Column NOMINAL -->

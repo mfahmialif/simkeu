@@ -339,6 +339,7 @@ const headers = [
   { title: "NO. TRANSAKSI", key: "no_transaksi", sortable: true, width: "165px" },
   { title: "TANGGAL & WAKTU", key: "tanggal", sortable: true, width: "170px" },
   { title: "METODE", key: "jenis_pembayaran_id", sortable: false, width: "120px", align: "center" },
+  { title: "REK. TUJUAN", key: "no_rek_tujuan", sortable: false, width: "160px" },
   { title: "NOMINAL", key: "nominal", sortable: true, width: "150px" },
   { title: "PETUGAS", key: "petugas_id", sortable: false, width: "140px" },
   { title: "BUKTI MASUK", key: "file_bukti_masuk", sortable: false, align: "center", width: "130px" },
@@ -358,6 +359,8 @@ const formData = ref({
   nominal: "",
   tanggal: "",
   jenis_pembayaran_id: null,
+  nama_bank: "",
+  no_rek_tujuan: "",
   keterangan: "",
   file_bukti_masuk: null,
   file_bukti_keluar: null,
@@ -434,6 +437,8 @@ const openAddDialog = () => {
     nominal: "",
     tanggal: defaultDate,
     jenis_pembayaran_id: defaultJpId,
+    nama_bank: "",
+    no_rek_tujuan: "",
     keterangan: "",
     file_bukti_masuk: null,
     file_bukti_keluar: null,
@@ -464,6 +469,8 @@ const openEditDialog = item => {
     nominal: item.nominal,
     tanggal: formattedDate,
     jenis_pembayaran_id: item.jenis_pembayaran_id || item.jenis_pembayaran?.id || null,
+    nama_bank: item.nama_bank || "",
+    no_rek_tujuan: item.no_rek_tujuan || "",
     keterangan: item.keterangan || "",
     file_bukti_masuk: null,
     file_bukti_keluar: null,
@@ -523,6 +530,8 @@ const submitForm = async () => {
     fd.append("nominal", formData.value.nominal)
     fd.append("tanggal", formData.value.tanggal)
     fd.append("jenis_pembayaran_id", formData.value.jenis_pembayaran_id)
+    fd.append("nama_bank", formData.value.nama_bank || "")
+    fd.append("no_rek_tujuan", formData.value.no_rek_tujuan || "")
     fd.append("keterangan", formData.value.keterangan || "")
 
     if (fileMasuk) {
@@ -1073,6 +1082,28 @@ onMounted(() => {
           </VChip>
         </template>
 
+        <!-- Rekening Tujuan -->
+        <template #item.no_rek_tujuan="{ item }">
+          <div v-if="item.nama_bank || item.no_rek_tujuan">
+            <div
+              v-if="item.nama_bank"
+              class="font-weight-medium text-body-2"
+            >
+              {{ item.nama_bank }}
+            </div>
+            <div
+              v-if="item.no_rek_tujuan"
+              class="text-caption text-medium-emphasis"
+            >
+              {{ item.no_rek_tujuan }}
+            </div>
+          </div>
+          <span
+            v-else
+            class="text-caption text-medium-emphasis"
+          >-</span>
+        </template>
+
         <!-- Nominal -->
         <template #item.nominal="{ item }">
           <VChip
@@ -1344,6 +1375,32 @@ onMounted(() => {
                 />
               </VCol>
 
+              <!-- Nama Bank Tujuan -->
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <VTextField
+                  v-model="formData.nama_bank"
+                  label="Nama Bank Tujuan"
+                  placeholder="Contoh: BCA, BSI, Mandiri, BRI"
+                  clearable
+                />
+              </VCol>
+
+              <!-- No. Rekening Tujuan -->
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <VTextField
+                  v-model="formData.no_rek_tujuan"
+                  label="No. Rekening Tujuan"
+                  placeholder="Contoh: 1234567890"
+                  clearable
+                />
+              </VCol>
+
               <!-- File Bukti Dana Masuk (Required) -->
               <VCol cols="12">
                 <VFileInput
@@ -1533,6 +1590,25 @@ onMounted(() => {
                   >
                     {{ detailItem.jenis_pembayaran?.nama || 'Tunai' }}
                   </VChip>
+                </td>
+              </tr>
+              <tr v-if="detailItem.nama_bank || detailItem.no_rek_tujuan">
+                <td class="font-weight-medium text-medium-emphasis">
+                  Rekening Tujuan
+                </td>
+                <td>
+                  <div
+                    v-if="detailItem.nama_bank"
+                    class="font-weight-medium"
+                  >
+                    {{ detailItem.nama_bank }}
+                  </div>
+                  <div
+                    v-if="detailItem.no_rek_tujuan"
+                    class="text-caption text-medium-emphasis"
+                  >
+                    No. Rek: {{ detailItem.no_rek_tujuan }}
+                  </div>
                 </td>
               </tr>
               <tr>
