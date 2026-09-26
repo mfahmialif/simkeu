@@ -107,7 +107,7 @@ const headers = [
   { title: "NO. TRANSAKSI", key: "no_transaksi", sortable: true, width: "165px" },
   { title: "TANGGAL & WAKTU", key: "tanggal", sortable: true, width: "160px" },
   { title: "METODE", key: "jenis_pembayaran_id", sortable: false, width: "110px", align: "center" },
-  { title: "REK. TUJUAN", key: "no_rek_tujuan", sortable: false, width: "140px" },
+  { title: "BANK & REK. TUJUAN", key: "no_rek_tujuan", sortable: false, width: "160px" },
   { title: "NOMINAL", key: "nominal", sortable: true, width: "150px", align: "end" },
   { title: "KETERANGAN", key: "keterangan", sortable: false },
   { title: "PETUGAS", key: "petugas_id", sortable: false, width: "140px" },
@@ -494,20 +494,28 @@ const handleDownloadBundling = async () => {
             </VChip>
           </template>
 
-          <!-- Column REK TUJUAN -->
+          <!-- Column BANK & REK TUJUAN -->
           <template #item.no_rek_tujuan="{ item }">
-            <div v-if="item.nama_bank || item.no_rek_tujuan">
+            <div v-if="item.nama_tujuan || item.nama_bank || item.no_rek_tujuan">
               <div
-                v-if="item.nama_bank"
-                class="font-weight-medium text-caption"
+                v-if="item.nama_tujuan"
+                class="font-weight-bold text-caption text-truncate"
+                style="max-width: 140px;"
+                :title="item.nama_tujuan"
               >
-                {{ item.nama_bank }}
+                {{ item.nama_tujuan }}
               </div>
-              <div
-                v-if="item.no_rek_tujuan"
-                class="text-caption text-medium-emphasis"
-              >
-                {{ item.no_rek_tujuan }}
+              <div class="text-caption text-medium-emphasis">
+                <span
+                  v-if="item.nama_bank"
+                  class="font-weight-medium text-primary"
+                >
+                  {{ item.nama_bank }}
+                </span>
+                <span v-if="item.nama_bank && item.no_rek_tujuan"> - </span>
+                <span v-if="item.no_rek_tujuan">
+                  {{ item.no_rek_tujuan }}
+                </span>
               </div>
             </div>
             <span

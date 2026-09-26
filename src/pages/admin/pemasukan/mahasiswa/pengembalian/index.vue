@@ -339,13 +339,32 @@ const headers = [
   { title: "NO. TRANSAKSI", key: "no_transaksi", sortable: true, width: "165px" },
   { title: "TANGGAL & WAKTU", key: "tanggal", sortable: true, width: "170px" },
   { title: "METODE", key: "jenis_pembayaran_id", sortable: false, width: "120px", align: "center" },
-  { title: "REK. TUJUAN", key: "no_rek_tujuan", sortable: false, width: "160px" },
+  { title: "BANK & REK. TUJUAN", key: "no_rek_tujuan", sortable: false, width: "175px" },
   { title: "NOMINAL", key: "nominal", sortable: true, width: "150px" },
   { title: "PETUGAS", key: "petugas_id", sortable: false, width: "140px" },
   { title: "BUKTI MASUK", key: "file_bukti_masuk", sortable: false, align: "center", width: "130px" },
   { title: "BUKTI KELUAR", key: "file_bukti_keluar", sortable: false, align: "center", width: "130px" },
   { title: "KETERANGAN", key: "keterangan", sortable: false },
   { title: "AKSI", key: "actions", sortable: false, width: "130px", align: "center" },
+]
+
+// Pilihan Bank Populer
+const bankList = [
+  "BSI (Bank Syariah Indonesia)",
+  "BCA",
+  "Bank Mandiri",
+  "BRI",
+  "BNI",
+  "Bank Jatim",
+  "Bank Jatim Syariah",
+  "Bank Muamalat",
+  "CIMB Niaga",
+  "Bank Permata",
+  "Bank Danamon",
+  "Bank BTN",
+  "BCA Syariah",
+  "Bank Mega",
+  "Bank Sinarmas",
 ]
 
 // Dialog Form (Add / Edit) State
@@ -359,6 +378,7 @@ const formData = ref({
   nominal: "",
   tanggal: "",
   jenis_pembayaran_id: null,
+  nama_tujuan: "",
   nama_bank: "",
   no_rek_tujuan: "",
   keterangan: "",
@@ -437,6 +457,7 @@ const openAddDialog = () => {
     nominal: "",
     tanggal: defaultDate,
     jenis_pembayaran_id: defaultJpId,
+    nama_tujuan: "",
     nama_bank: "",
     no_rek_tujuan: "",
     keterangan: "",
@@ -469,6 +490,7 @@ const openEditDialog = item => {
     nominal: item.nominal,
     tanggal: formattedDate,
     jenis_pembayaran_id: item.jenis_pembayaran_id || item.jenis_pembayaran?.id || null,
+    nama_tujuan: item.nama_tujuan || "",
     nama_bank: item.nama_bank || "",
     no_rek_tujuan: item.no_rek_tujuan || "",
     keterangan: item.keterangan || "",
@@ -530,6 +552,7 @@ const submitForm = async () => {
     fd.append("nominal", formData.value.nominal)
     fd.append("tanggal", formData.value.tanggal)
     fd.append("jenis_pembayaran_id", formData.value.jenis_pembayaran_id)
+    fd.append("nama_tujuan", formData.value.nama_tujuan || "")
     fd.append("nama_bank", formData.value.nama_bank || "")
     fd.append("no_rek_tujuan", formData.value.no_rek_tujuan || "")
     fd.append("keterangan", formData.value.keterangan || "")
@@ -1082,20 +1105,26 @@ onMounted(() => {
           </VChip>
         </template>
 
-        <!-- Rekening Tujuan -->
+        <!-- Bank & Rekening Tujuan -->
         <template #item.no_rek_tujuan="{ item }">
-          <div v-if="item.nama_bank || item.no_rek_tujuan">
+          <div v-if="item.nama_tujuan || item.nama_bank || item.no_rek_tujuan">
             <div
-              v-if="item.nama_bank"
-              class="font-weight-medium text-body-2"
+              v-if="item.nama_tujuan"
+              class="font-weight-bold text-body-2"
             >
-              {{ item.nama_bank }}
+              {{ item.nama_tujuan }}
             </div>
-            <div
-              v-if="item.no_rek_tujuan"
-              class="text-caption text-medium-emphasis"
-            >
-              {{ item.no_rek_tujuan }}
+            <div class="text-caption text-medium-emphasis">
+              <span
+                v-if="item.nama_bank"
+                class="font-weight-medium text-primary"
+              >
+                {{ item.nama_bank }}
+              </span>
+              <span v-if="item.nama_bank && item.no_rek_tujuan"> - </span>
+              <span v-if="item.no_rek_tujuan">
+                No. Rek: {{ item.no_rek_tujuan }}
+              </span>
             </div>
           </div>
           <span
@@ -1375,15 +1404,29 @@ onMounted(() => {
                 />
               </VCol>
 
+              <!-- Nama Tujuan / Penerima -->
+              <VCol
+                cols="12"
+                md="4"
+              >
+                <VTextField
+                  v-model="formData.nama_tujuan"
+                  label="Nama Tujuan (Atas Nama)"
+                  placeholder="Contoh: Muhammad Ali"
+                  clearable
+                />
+              </VCol>
+
               <!-- Nama Bank Tujuan -->
               <VCol
                 cols="12"
-                md="6"
+                md="4"
               >
-                <VTextField
+                <VCombobox
                   v-model="formData.nama_bank"
+                  :items="bankList"
                   label="Nama Bank Tujuan"
-                  placeholder="Contoh: BCA, BSI, Mandiri, BRI"
+                  placeholder="Pilih atau ketik nama bank"
                   clearable
                 />
               </VCol>
@@ -1391,7 +1434,7 @@ onMounted(() => {
               <!-- No. Rekening Tujuan -->
               <VCol
                 cols="12"
-                md="6"
+                md="4"
               >
                 <VTextField
                   v-model="formData.no_rek_tujuan"
@@ -1592,6 +1635,14 @@ onMounted(() => {
                   </VChip>
                 </td>
               </tr>
+              <tr v-if="detailItem.nama_tujuan">
+                <td class="font-weight-medium text-medium-emphasis">
+                  Nama Penerima / Tujuan
+                </td>
+                <td class="font-weight-bold">
+                  {{ detailItem.nama_tujuan }}
+                </td>
+              </tr>
               <tr v-if="detailItem.nama_bank || detailItem.no_rek_tujuan">
                 <td class="font-weight-medium text-medium-emphasis">
                   Rekening Tujuan
@@ -1599,7 +1650,7 @@ onMounted(() => {
                 <td>
                   <div
                     v-if="detailItem.nama_bank"
-                    class="font-weight-medium"
+                    class="font-weight-bold text-primary"
                   >
                     {{ detailItem.nama_bank }}
                   </div>
