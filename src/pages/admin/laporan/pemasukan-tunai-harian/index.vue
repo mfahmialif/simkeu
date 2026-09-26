@@ -508,7 +508,7 @@ const fetchJenisPembayaran = async () => {
         if (jk === 'perempuan') userCategory = 'Putri'
       }
 
-      jenisPembayaranList.value = items.filter(jp => {
+      const mappedList = items.filter(jp => {
         if (userCategory === '%') return true
         if (jp.kategori && jp.kategori.toLowerCase().includes(userCategory.toLowerCase())) return true
         if (jp.kategori === 'Semua' || jp.kategori === '%') return true 
@@ -518,6 +518,22 @@ const fetchJenisPembayaran = async () => {
         title: jp.nama + " (" + jp.kategori + ")",
         value: jp.id,
       }))
+
+      if (userCategory === '%' || userCategory === 'Putra') {
+        mappedList.push({
+          title: 'VA + Transfer (Putra)',
+          value: 'va_transfer_putra',
+        })
+      }
+
+      if (userCategory === '%' || userCategory === 'Putri') {
+        mappedList.push({
+          title: 'VA + Transfer (Putri)',
+          value: 'va_transfer_putri',
+        })
+      }
+
+      jenisPembayaranList.value = mappedList
     }
   } catch (err) {
     console.error('Failed to fetch jenis pembayaran:', err)

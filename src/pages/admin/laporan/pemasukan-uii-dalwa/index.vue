@@ -99,6 +99,8 @@ const formatMethodName = type => {
   if (!type) return "Semua Metode"
   if (type === "tunai") return "Tunai"
   if (type === "transfer") return "Transfer"
+  if (type === "va") return "VA"
+  if (type === "va_transfer") return "VA + Transfer"
   if (type === "yayasan") return "Yayasan"
 
   return type.toUpperCase()
@@ -278,10 +280,14 @@ const groupKategoriRows = (rows = []) => {
         kategori: group.label,
         tunai: 0,
         transfer: 0,
+        va: 0,
+        va_transfer: 0,
         yayasan: 0,
         total: 0,
         tunai_by_currency: [],
         transfer_by_currency: [],
+        va_by_currency: [],
+        va_transfer_by_currency: [],
         yayasan_by_currency: [],
         total_by_currency: [],
       }
@@ -294,6 +300,8 @@ const groupKategoriRows = (rows = []) => {
 
     groupedRow.tunai += toNumber(row.tunai)
     groupedRow.transfer += toNumber(row.transfer)
+    groupedRow.va += toNumber(row.va)
+    groupedRow.va_transfer += toNumber(row.va_transfer)
     groupedRow.yayasan += toNumber(row.yayasan)
     groupedRow.total += toNumber(row.total)
     groupedRow.tunai_by_currency = mergeCurrencyTotals(
@@ -303,6 +311,14 @@ const groupKategoriRows = (rows = []) => {
     groupedRow.transfer_by_currency = mergeCurrencyTotals(
       groupedRow.transfer_by_currency,
       row.transfer_by_currency || [],
+    )
+    groupedRow.va_by_currency = mergeCurrencyTotals(
+      groupedRow.va_by_currency,
+      row.va_by_currency || [],
+    )
+    groupedRow.va_transfer_by_currency = mergeCurrencyTotals(
+      groupedRow.va_transfer_by_currency,
+      row.va_transfer_by_currency || [],
     )
     groupedRow.yayasan_by_currency = mergeCurrencyTotals(
       groupedRow.yayasan_by_currency,
@@ -704,7 +720,7 @@ onMounted(() => {
             <thead>
               <tr class="header-main">
                 <th
-                  colspan="6"
+                  colspan="8"
                   class="text-center font-weight-black text-uppercase"
                 >
                   {{ reportTitle }}
@@ -722,6 +738,12 @@ onMounted(() => {
                 </th>
                 <th class="col-amount">
                   TRANSFER
+                </th>
+                <th class="col-amount">
+                  VA
+                </th>
+                <th class="col-amount">
+                  VA + TRANSFER
                 </th>
                 <th class="col-amount">
                   YAYASAN
@@ -805,6 +827,64 @@ onMounted(() => {
                 <td
                   class="col-amount text-right border-cell"
                   :class="{ 
+                    'cell-clickable': (isPemasukanUmumRow(row) && row.va > 0) || (isPengembalianDanaRow(row) && row.va !== 0) 
+                  }"
+                  @click="
+                    isPemasukanUmumRow(row) && row.va > 0
+                      ? openDetailPemasukanUmum('va')
+                      : (isPengembalianDanaRow(row) && row.va !== 0 ? openDetailPengembalianDana('va') : null)
+                  "
+                >
+                  <span
+                    v-if="isPemasukanUmumRow(row) && row.va > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail pemasukan umum (VA)"
+                  >
+                    {{ formatCurrencyTotals(row.va_by_currency, row.va) }}
+                  </span>
+                  <span
+                    v-else-if="isPengembalianDanaRow(row) && row.va !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(row.va_by_currency, row.va) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(row.va_by_currency, row.va) }}
+                  </template>
+                </td>
+                <td
+                  class="col-amount text-right border-cell"
+                  :class="{ 
+                    'cell-clickable': (isPemasukanUmumRow(row) && row.va_transfer > 0) || (isPengembalianDanaRow(row) && row.va_transfer !== 0) 
+                  }"
+                  @click="
+                    isPemasukanUmumRow(row) && row.va_transfer > 0
+                      ? openDetailPemasukanUmum('va_transfer')
+                      : (isPengembalianDanaRow(row) && row.va_transfer !== 0 ? openDetailPengembalianDana('va_transfer') : null)
+                  "
+                >
+                  <span
+                    v-if="isPemasukanUmumRow(row) && row.va_transfer > 0"
+                    class="clickable-nominal"
+                    title="Klik untuk melihat rincian detail pemasukan umum (VA + Transfer)"
+                  >
+                    {{ formatCurrencyTotals(row.va_transfer_by_currency, row.va_transfer) }}
+                  </span>
+                  <span
+                    v-else-if="isPengembalianDanaRow(row) && row.va_transfer !== 0"
+                    class="clickable-nominal text-error"
+                    title="Klik untuk melihat rincian detail pengembalian dana"
+                  >
+                    {{ formatCurrencyTotals(row.va_transfer_by_currency, row.va_transfer) }}
+                  </span>
+                  <template v-else>
+                    {{ formatCurrencyTotals(row.va_transfer_by_currency, row.va_transfer) }}
+                  </template>
+                </td>
+                <td
+                  class="col-amount text-right border-cell"
+                  :class="{ 
                     'cell-clickable': (isPemasukanUmumRow(row) && row.yayasan > 0) || (isPengembalianDanaRow(row) && row.yayasan !== 0) 
                   }"
                   @click="
@@ -877,6 +957,12 @@ onMounted(() => {
                   {{ formatCurrencyTotals(totals.transfer_by_currency, totals.transfer) }}
                 </td>
                 <td class="text-right font-weight-black border-cell">
+                  {{ formatCurrencyTotals(totals.va_by_currency, totals.va) }}
+                </td>
+                <td class="text-right font-weight-black border-cell">
+                  {{ formatCurrencyTotals(totals.va_transfer_by_currency, totals.va_transfer) }}
+                </td>
+                <td class="text-right font-weight-black border-cell">
                   {{ formatCurrencyTotals(totals.yayasan_by_currency, totals.yayasan) }}
                 </td>
                 <td class="text-right font-weight-black border-cell">
@@ -900,7 +986,7 @@ onMounted(() => {
               <thead>
                 <tr class="header-main">
                   <th
-                    colspan="6"
+                    colspan="8"
                     class="text-center font-weight-black text-uppercase month-header"
                   >
                     {{ monthInfo.title }}
@@ -918,6 +1004,12 @@ onMounted(() => {
                   </th>
                   <th class="col-amount">
                     TRANSFER
+                  </th>
+                  <th class="col-amount">
+                    VA
+                  </th>
+                  <th class="col-amount">
+                    VA + TRANSFER
                   </th>
                   <th class="col-amount">
                     YAYASAN
@@ -1001,6 +1093,64 @@ onMounted(() => {
                   <td
                     class="col-amount text-right border-cell"
                     :class="{ 
+                      'cell-clickable': (isPemasukanUmumRow(row) && row.va > 0) || (isPengembalianDanaRow(row) && row.va !== 0) 
+                    }"
+                    @click="
+                      isPemasukanUmumRow(row) && row.va > 0
+                        ? openDetailPemasukanUmum('va', monthInfo)
+                        : (isPengembalianDanaRow(row) && row.va !== 0 ? openDetailPengembalianDana('va', monthInfo) : null)
+                    "
+                  >
+                    <span
+                      v-if="isPemasukanUmumRow(row) && row.va > 0"
+                      class="clickable-nominal"
+                      title="Klik untuk melihat rincian detail pemasukan umum (VA)"
+                    >
+                      {{ formatCurrencyTotals(row.va_by_currency, row.va) }}
+                    </span>
+                    <span
+                      v-else-if="isPengembalianDanaRow(row) && row.va !== 0"
+                      class="clickable-nominal text-error"
+                      title="Klik untuk melihat rincian detail pengembalian dana"
+                    >
+                      {{ formatCurrencyTotals(row.va_by_currency, row.va) }}
+                    </span>
+                    <template v-else>
+                      {{ formatCurrencyTotals(row.va_by_currency, row.va) }}
+                    </template>
+                  </td>
+                  <td
+                    class="col-amount text-right border-cell"
+                    :class="{ 
+                      'cell-clickable': (isPemasukanUmumRow(row) && row.va_transfer > 0) || (isPengembalianDanaRow(row) && row.va_transfer !== 0) 
+                    }"
+                    @click="
+                      isPemasukanUmumRow(row) && row.va_transfer > 0
+                        ? openDetailPemasukanUmum('va_transfer', monthInfo)
+                        : (isPengembalianDanaRow(row) && row.va_transfer !== 0 ? openDetailPengembalianDana('va_transfer', monthInfo) : null)
+                    "
+                  >
+                    <span
+                      v-if="isPemasukanUmumRow(row) && row.va_transfer > 0"
+                      class="clickable-nominal"
+                      title="Klik untuk melihat rincian detail pemasukan umum (VA + Transfer)"
+                    >
+                      {{ formatCurrencyTotals(row.va_transfer_by_currency, row.va_transfer) }}
+                    </span>
+                    <span
+                      v-else-if="isPengembalianDanaRow(row) && row.va_transfer !== 0"
+                      class="clickable-nominal text-error"
+                      title="Klik untuk melihat rincian detail pengembalian dana"
+                    >
+                      {{ formatCurrencyTotals(row.va_transfer_by_currency, row.va_transfer) }}
+                    </span>
+                    <template v-else>
+                      {{ formatCurrencyTotals(row.va_transfer_by_currency, row.va_transfer) }}
+                    </template>
+                  </td>
+                  <td
+                    class="col-amount text-right border-cell"
+                    :class="{ 
                       'cell-clickable': (isPemasukanUmumRow(row) && row.yayasan > 0) || (isPengembalianDanaRow(row) && row.yayasan !== 0) 
                     }"
                     @click="
@@ -1071,6 +1221,12 @@ onMounted(() => {
                   </td>
                   <td class="text-right font-weight-black border-cell">
                     {{ formatCurrencyTotals(monthInfo.totals.transfer_by_currency, monthInfo.totals.transfer) }}
+                  </td>
+                  <td class="text-right font-weight-black border-cell">
+                    {{ formatCurrencyTotals(monthInfo.totals.va_by_currency, monthInfo.totals.va) }}
+                  </td>
+                  <td class="text-right font-weight-black border-cell">
+                    {{ formatCurrencyTotals(monthInfo.totals.va_transfer_by_currency, monthInfo.totals.va_transfer) }}
                   </td>
                   <td class="text-right font-weight-black border-cell">
                     {{ formatCurrencyTotals(monthInfo.totals.yayasan_by_currency, monthInfo.totals.yayasan) }}
