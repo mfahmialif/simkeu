@@ -78,7 +78,7 @@ const openDetailPemasukanUmum = (row, colKey = "pemasukan_umum", monthContext = 
   if (row?.tanggal) {
     startDate = row.tanggal
     endDate = row.tanggal
-    subtitle = `Tanggal: ${formatTanggal(row.tanggal)} (Tunai)`
+    subtitle = `Tanggal: ${formatTanggal(row.tanggal)}`
   } else if (monthContext) {
     const year = selectedTahun.value
     const m = String(monthContext.month || 1).padStart(2, "0")
@@ -86,30 +86,34 @@ const openDetailPemasukanUmum = (row, colKey = "pemasukan_umum", monthContext = 
 
     startDate = `${year}-${m}-01`
     endDate = `${year}-${m}-${days}`
-    subtitle = `${monthContext.title || `Bulan ${m}/${year}`} (Tunai)`
+    subtitle = `${monthContext.title || `Bulan ${m}/${year}`}`
   } else if (selectedMode.value === "bulanan" && selectedBulan.value) {
     const [y, m] = selectedBulan.value.split("-")
     const days = new Date(y, parseInt(m), 0).getDate()
 
     startDate = `${y}-${m}-01`
     endDate = `${y}-${m}-${days}`
-    subtitle = `Rekap Total Bulan: ${selectedBulan.value} (Tunai)`
+    subtitle = `Rekap Total Bulan: ${selectedBulan.value}`
   } else if (selectedMode.value === "tahunan" && selectedTahun.value) {
     startDate = `${selectedTahun.value}-01-01`
     endDate = `${selectedTahun.value}-12-31`
-    subtitle = `Rekap Total Tahun: ${selectedTahun.value} (Tunai)`
+    subtitle = `Rekap Total Tahun: ${selectedTahun.value}`
   }
 
   detailModalTitle.value = "Detail Pemasukan Umum"
   detailModalSubtitle.value = subtitle
 
+  const selectedUserObj = userList.value.find(u => u.value === selectedUser.value)
+
   /* eslint-disable camelcase */
   detailModalFilter.value = {
     start_date: startDate,
     end_date: endDate,
-    payment_type: "tunai",
     ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
-    ...(selectedUser.value && { user_id: selectedUser.value }),
+    ...(selectedUser.value && {
+      user_id: selectedUser.value,
+      username: selectedUserObj?.username,
+    }),
   }
   /* eslint-enable camelcase */
 
@@ -155,13 +159,17 @@ const openDetailPengembalianDana = (row = null, monthContext = null) => {
   detailPengembalianTitle.value = "Detail Pengembalian Dana"
   detailPengembalianSubtitle.value = subtitle
 
+  const selectedUserObj = userList.value.find(u => u.value === selectedUser.value)
+
   /* eslint-disable camelcase */
   detailPengembalianFilter.value = {
     start_date: startDate,
     end_date: endDate,
-    payment_type: "tunai",
     ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
-    ...(selectedUser.value && { user_id: selectedUser.value }),
+    ...(selectedUser.value && {
+      user_id: selectedUser.value,
+      username: selectedUserObj?.username,
+    }),
   }
   /* eslint-enable camelcase */
 
