@@ -24,8 +24,22 @@ const rejectTarget = ref(null)
 const rejectionReason = ref('')
 
 const userData = useCookie('userData').value ?? {}
-const currentRole = computed(() => String(userData?.role?.name ?? '').toLowerCase())
-const canProcess = computed(() => ['admin', 'keuangan'].includes(currentRole.value))
+const roleMap = {
+  1: 'admin',
+  2: 'pimpinan',
+  3: 'keuangan',
+  4: 'kabag',
+  5: 'staff',
+  13: 'kabag_pemasukan',
+  14: 'kabag_pengeluaran',
+}
+const currentRole = computed(() => {
+  const roleName = String(userData?.role?.name ?? '').toLowerCase().trim()
+  if (roleName) return roleName
+
+  return roleMap[userData?.role_id] || ''
+})
+const canProcess = computed(() => ['admin', 'keuangan', 'kabag', 'kabag_pemasukan', 'staff'].includes(currentRole.value))
 
 const statusOptions = [
   { title: 'Semua Status', value: 'all' },

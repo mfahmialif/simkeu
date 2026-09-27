@@ -229,7 +229,9 @@ const openEditDialog = item => {
   formData.value = {
     id: item.id,
     tagihan_nama: item.tagihan_nama,
-    syarat_nama: item.syarat_nama,
+    syarat_nama: Array.isArray(item.syarat_nama)
+      ? [...item.syarat_nama]
+      : (item.syarat_nama ? [item.syarat_nama] : []),
     is_active: Boolean(item.is_active),
     keterangan: item.keterangan || "",
   }
@@ -245,9 +247,9 @@ const submitForm = async () => {
   try {
     formSubmitting.value = true
 
-    const payloadSyarat = formData.value.syarat_nama && formData.value.syarat_nama.length > 0
-      ? formData.value.syarat_nama
-      : null
+    const payloadSyarat = Array.isArray(formData.value.syarat_nama)
+      ? formData.value.syarat_nama.filter(s => Boolean(s))
+      : (formData.value.syarat_nama ? [formData.value.syarat_nama] : [])
 
     if (isEditMode.value) {
       const res = await $api(`/admin/pemasukan/mahasiswa/syarat-tagihan/${formData.value.id}`, {
@@ -311,6 +313,7 @@ const toggleStatus = async item => {
       method: "PUT",
       body: {
         is_active: newStatus,
+        tagihan_nama: item.tagihan_nama,
       },
     })
 
@@ -876,17 +879,33 @@ onMounted(() => {
         <!-- Tagihan Prasyarat -->
         <template #item.syarat_nama="{ item }">
           <div
-            v-if="item.syarat_nama"
-            class="d-flex align-center gap-2"
+            v-if="Array.isArray(item.syarat_nama) ? item.syarat_nama.length > 0 : Boolean(item.syarat_nama)"
+            class="d-flex flex-wrap align-center gap-1 py-1"
           >
-            <VIcon
-              icon="ri-lock-line"
-              size="16"
+            <VChip
+              v-for="syarat in (Array.isArray(item.syarat_nama) ? item.syarat_nama : [item.syarat_nama])"
+              :key="syarat"
               color="warning"
-            />
-            <span class="font-weight-semibold text-high-emphasis">
-              {{ item.syarat_nama }}
-            </span>
+              variant="tonal"
+              size="small"
+              class="font-weight-medium"
+            >
+              <VIcon
+                icon="ri-lock-line"
+                size="14"
+                class="me-1"
+              />
+              {{ syarat }}
+            </VChip>
+            <VChip
+              v-if="Array.isArray(item.syarat_nama) && item.syarat_nama.length > 1"
+              color="primary"
+              variant="flat"
+              size="x-small"
+              class="font-weight-bold ms-1"
+            >
+              {{ item.syarat_nama.length }} Syarat
+            </VChip>
           </div>
           <div
             v-else
@@ -984,11 +1003,12 @@ onMounted(() => {
                   v-model="formData.tagihan_nama"
                   :items="availableTargetTagihan"
                   :loading="loadingNames || loadingUnregistered"
+                  :disabled="isEditMode"
                   label="Tagihan Target (Yang Ditahan) *"
                   placeholder="Pilih atau cari nama tagihan target"
-                  :hint="onlyUnregisteredInModal && !isEditMode ? 'Hanya menampilkan tagihan yang belum memiliki aturan prasyarat' : 'Tagihan ini tidak akan bisa dibayar di SIAKAD jika prasyarat di bawah belum lunas'"
+                  :hint="isEditMode ? 'Nama tagihan target tidak dapat diubah saat mode edit' : (onlyUnregisteredInModal ? 'Hanya menampilkan tagihan yang belum memiliki aturan prasyarat' : 'Tagihan ini tidak akan bisa dibayar di SIAKAD jika prasyarat di bawah belum lunas')"
                   persistent-hint
-                  clearable
+                  :clearable="!isEditMode"
                   autocomplete="off"
                   role="presentation"
                   name="tagihan_target_select"
@@ -1017,9 +1037,7 @@ onMounted(() => {
 
               <!-- Tagihan Prasyarat -->
               <VCol cols="12">
-                <!-- When Adding: Multi-select with chips -->
                 <VAutocomplete
-                  v-if="!isEditMode"
                   v-model="formData.syarat_nama"
                   :items="availableSyaratTagihan"
                   :loading="loadingNames"
@@ -1034,22 +1052,6 @@ onMounted(() => {
                   autocomplete="off"
                   role="presentation"
                   name="syarat_nama_multi_select"
-                />
-
-                <!-- When Editing: Single select -->
-                <VAutocomplete
-                  v-else
-                  v-model="formData.syarat_nama"
-                  :items="availableSyaratTagihan"
-                  :loading="loadingNames"
-                  label="Tagihan Prasyarat (Wajib Lunas - Opsional)"
-                  placeholder="Pilih nama tagihan prasyarat (atau kosongkan jika bebas)"
-                  hint="Kosongkan jika tagihan ini bebas tanpa prasyarat"
-                  persistent-hint
-                  clearable
-                  autocomplete="off"
-                  role="presentation"
-                  name="syarat_nama_single_select"
                 />
               </VCol>
 
@@ -1125,7 +1127,10 @@ onMounted(() => {
             class="pa-3 mt-3 bg-var-theme-background rounded border text-body-2"
           >
             <div><strong>Tagihan Target:</strong> {{ itemToDelete.tagihan_nama }}</div>
-            <div><strong>Prasyarat:</strong> {{ itemToDelete.syarat_nama }}</div>
+            <div>
+              <strong>Prasyarat:</strong> 
+              {{ itemToDelete.syarat_string || (Array.isArray(itemToDelete.syarat_nama) ? (itemToDelete.syarat_nama.length ? itemToDelete.syarat_nama.join(', ') : 'Tanpa Syarat (Bebas)') : (itemToDelete.syarat_nama || 'Tanpa Syarat (Bebas)')) }}
+            </div>
           </div>
         </VCardText>
         <VCardActions class="pa-4 pt-0">
@@ -1240,7 +1245,7 @@ onMounted(() => {
             <div class="text-body-2">
               Template ini memindai seluruh master tagihan (mengecualikan tagihan perorangan) dan secara otomatis membentuk aturan:
               <ul class="ps-4 mt-1 mb-1">
-                <li><strong>Dalam Semester:</strong> Registrasi / Daftar Ulang &rarr; SPP &rarr; UTS &rarr; UAS.</li>
+                <li><strong>Dalam Semester:</strong> Herregistrasi &rarr; UTS, serta Herregistrasi &amp; Seluruh SPP &rarr; UAS.</li>
                 <li><strong>Antar Semester:</strong> Semester berikutnya ($S+1$) wajib menyelesaikan semester sebelumnya ($S$).</li>
                 <li><strong>SPP Bulanan:</strong> Bulan ke-$N$ wajib menyelesaikan bulan sebelumnya ($N-1$).</li>
                 <li><strong>Tagihan Akhir / Wisuda:</strong> Sumbangan Pendidikan, Sumbangan Perpus, dan Skripsi ditahan di akhir masa studi, serta Wisuda wajib menyelesaikan seluruhnya.</li>
@@ -1261,7 +1266,7 @@ onMounted(() => {
             >
               <VCheckbox
                 v-model="templateOptions.alur_siklus"
-                label="Alur Siklus Semester (Registrasi → SPP → UTS → UAS)"
+                label="Alur Siklus Semester (Herregistrasi → UTS; Herregistrasi & SPP → UAS)"
                 density="compact"
                 hide-details
               />

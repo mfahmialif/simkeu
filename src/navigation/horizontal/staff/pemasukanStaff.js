@@ -21,6 +21,7 @@ export const pemasukanStaffItems = [
     title: "Pembayaran",
     children: [
       { title: "Mahasiswa", to: "admin-pemasukan-mahasiswa-pembayaran-mahasiswa" },
+      { title: "VA BSI", to: "admin-pemasukan-mahasiswa-pembayaran-bsi" },
       { title: "IDN", to: "admin-pemasukan-mahasiswa-pembayaran-idn" },
       { title: "Tambahan", to: "admin-pemasukan-mahasiswa-pembayaran-tambahan" },
     ],
