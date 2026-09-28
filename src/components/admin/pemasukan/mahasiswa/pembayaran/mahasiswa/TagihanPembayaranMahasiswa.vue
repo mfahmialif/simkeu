@@ -278,10 +278,10 @@ const getTagihanSemester = item => {
 
 const isTagihanBlocked = item =>
   Boolean(item?.tidak_bisa_dibayar)
-  && !String(item?.nama || "").toLowerCase().includes("skripsi")
+  || (!cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi"))
 
 const isPayableTagihan = item =>
-  !isGroupTagihanItem(item) && !isTagihanBlocked(item)
+  !isGroupTagihanItem(item)
 
 const hasDispensasiTagihan = item =>
   Boolean(item?.status_dispensasi) && Number(item?.jumlah_dispensasi || 0) > 0
@@ -450,9 +450,13 @@ const fetchCekPelanggaran = async nim => {
 }
 
 const cekNilai = ref(true)
+const cekNilaiError = ref(false)
+const cekNilaiErrorMessage = ref("")
 
 const fetchTagihan = async nim => {
   clearTagihan()
+  cekNilaiError.value = false
+  cekNilaiErrorMessage.value = ""
   try {
     await fetchCekPelanggaran(nim)
 
@@ -478,6 +482,12 @@ const fetchTagihan = async nim => {
 
     cekNilai.value = res.cekNilai
 
+    if (res.cekNilai_error) {
+      cekNilaiError.value = true
+      cekNilaiErrorMessage.value = res.cekNilai_message || "cek nilai skripsi error, silahkan klik search lagi"
+      showSnackbar({ text: cekNilaiErrorMessage.value, color: "error" })
+    }
+
     tagihan.value = (res.data?.list_tagihan || []).map(item => ({
       ...item,
       display: getTagihanDisplay(item),
@@ -500,6 +510,8 @@ const clearTagihan = () => {
   props.mahasiswa.dipakai = 0
   props.mahasiswa.autoSimpanDeposit = 0
   props.mahasiswa.wisuda = null
+  cekNilaiError.value = false
+  cekNilaiErrorMessage.value = ""
 
   if (props.uasSusulan?.active) {
     syncUasSusulanRow()
@@ -1676,6 +1688,17 @@ watch(
         </VExpandTransition>
       </div>
 
+      <!-- Notif cek nilai error -->
+      <VAlert
+        v-if="hasScopedTagihan && cekNilaiError"
+        type="error"
+        variant="tonal"
+        density="compact"
+        class="mb-4"
+      >
+        {{ cekNilaiErrorMessage || "cek nilai skripsi error, silahkan klik search lagi" }}
+      </VAlert>
+
       <!-- Warning tagihan tidak eligible -->
       <VAlert
         v-if="hasScopedTagihan && !cekNilai"
@@ -1684,7 +1707,7 @@ watch(
         density="compact"
         class="mb-4"
       >
-        *Tagihan Skripsi belum memenuhi syarat dan tidak bisa dipilih atau dibayarkan.
+        *Tagihan Skripsi belum memenuhi syarat, tetapi tetap bisa dipilih oleh petugas.
       </VAlert>
     </VCardText>
 
