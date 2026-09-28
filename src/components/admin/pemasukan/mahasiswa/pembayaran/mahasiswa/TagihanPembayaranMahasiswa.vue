@@ -478,7 +478,7 @@ const fetchTagihan = async nim => {
 
     cekNilai.value = res.cekNilai
 
-    tagihan.value = res.data.list_tagihan.map(item => ({
+    tagihan.value = (res.data?.list_tagihan || []).map(item => ({
       ...item,
       display: getTagihanDisplay(item),
       itemProps: {},
