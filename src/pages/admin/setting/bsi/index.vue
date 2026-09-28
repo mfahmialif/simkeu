@@ -633,6 +633,15 @@ const loadSimulationBills = async () => {
   }
 }
 
+const billPrasyaratList = bill => {
+  if (Array.isArray(bill?.prasyarat))
+    return bill.prasyarat.filter(Boolean)
+  if (typeof bill?.prasyarat === 'string' && bill.prasyarat.trim())
+    return bill.prasyarat.split(',').map(s => s.trim()).filter(Boolean)
+
+  return []
+}
+
 const toggleSimulationBill = (bill, selected) => {
   if (selected) {
     if (!selectedSimulationBills.value.includes(bill.id))
@@ -876,10 +885,30 @@ const billsResponseExample = `{
         "mata_uang_kode": "IDR",
         "tidak_bisa_dibayar": false,
         "keterangan_pembayaran": null,
-        "prasyarat": null
+        "prasyarat": [],
+        "prasyarat_string": null
+      },
+      {
+        "id": 12,
+        "nama": "UAS Semester 5",
+        "th_akademik_id": 25,
+        "th_akademik_kode": "20261",
+        "tahun_akademik": "2026/2027 Ganjil",
+        "jumlah_tagihan": 1200000,
+        "sisa_resmi": 1200000,
+        "reservasi_bsi": 0,
+        "tersedia": 1200000,
+        "mata_uang_kode": "IDR",
+        "tidak_bisa_dibayar": true,
+        "keterangan_pembayaran": "Belum melunasi prasyarat: Herregistrasi Semester 5, SPP Semester 5",
+        "prasyarat": [
+          "Herregistrasi Semester 5",
+          "SPP Semester 5"
+        ],
+        "prasyarat_string": "Herregistrasi Semester 5, SPP Semester 5"
       }
     ],
-    "total_tersedia": 500000
+    "total_tersedia": 1700000
   }
 }`
 
@@ -2581,14 +2610,23 @@ onMounted(async () => {
                         {{ bill.nama }}
                       </div>
                       <div
-                        v-if="bill.prasyarat"
-                        class="text-caption text-primary d-flex align-center gap-1 mt-1"
+                        v-if="billPrasyaratList(bill).length"
+                        class="text-caption text-primary d-flex flex-wrap align-center gap-1 mt-1"
                       >
                         <VIcon
                           icon="ri-git-commit-line"
                           size="14"
                         />
-                        <span>Prasyarat: {{ bill.prasyarat }}</span>
+                        <span class="font-weight-medium">Prasyarat:</span>
+                        <VChip
+                          v-for="syarat in billPrasyaratList(bill)"
+                          :key="syarat"
+                          size="x-small"
+                          color="primary"
+                          variant="tonal"
+                        >
+                          {{ syarat }}
+                        </VChip>
                       </div>
                       <div
                         v-if="bill.keterangan_pembayaran"
@@ -3240,7 +3278,7 @@ onMounted(async () => {
               <code>GET {{ billsEndpoint }}</code>
             </p>
             <p class="mb-3">
-              <strong>Path wajib:</strong> <code>nim</code>. <strong>Body:</strong> tidak ada. Gunakan NIM mahasiswa sebagai parameter path. Respons berisi profil ringkas, daftar tagihan yang masih mempunyai nominal <code>tersedia</code>, informasi tagihan prasyarat (<code>prasyarat</code>), aturan dapat dibayar, dan total seluruh tagihan tersedia.
+              <strong>Path wajib:</strong> <code>nim</code>. <strong>Body:</strong> tidak ada. Gunakan NIM mahasiswa sebagai parameter path. Respons berisi profil ringkas, daftar tagihan yang masih mempunyai nominal <code>tersedia</code>, daftar tagihan prasyarat (<code>prasyarat</code> berupa array string multi-prasyarat), aturan dapat dibayar (<code>tidak_bisa_dibayar</code> &amp; <code>keterangan_pembayaran</code>), dan total seluruh tagihan tersedia.
             </p>
             <div class="code-block mb-6">
               <IconBtn
