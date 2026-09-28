@@ -197,8 +197,9 @@ const searching = async () => {
     emit("refreshTagihan", mahasiswa.value.nim)
     emit("refreshDeposit")
   } catch (error) {
+    const errorMsg = error?.data?.message || error?.message || error || "Gagal mendapatkan data mahasiswa"
     showSnackbar({
-      text: error,
+      text: errorMsg,
       color: "error",
     })
   } finally {

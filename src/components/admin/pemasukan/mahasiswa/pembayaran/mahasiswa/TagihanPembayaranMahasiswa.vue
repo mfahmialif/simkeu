@@ -436,14 +436,16 @@ const fetchCekPelanggaran = async nim => {
       method: "GET",
     })
 
-    if (!res.status) {
-      showSnackbar({ text: res.message, color: "error" })
+    if (res && res.status === false) {
+      const msg = res.message || "Mahasiswa memiliki pelanggaran yang belum diselesaikan"
+      showSnackbar({ text: msg, color: "error" })
       cekPelanggaran.value = true
       
       return
     }
   } catch (error) {
-    showSnackbar({ text: error, color: "error" })
+    const msg = error?.data?.message || error?.message || error
+    console.warn("Cek pelanggaran error:", msg)
   } finally {
     loadingTagihan.value = false
   }
@@ -474,13 +476,22 @@ const fetchTagihan = async nim => {
       },
     })
 
-    if (!res.status) {
-      showSnackbar({ text: res.message, color: "error" })
+    if (!res || res.status === false) {
+      const errorMsg = res?.message || "Gagal mengambil daftar tagihan mahasiswa"
+      showSnackbar({ text: errorMsg, color: "error" })
       
+      // Jika respons membawa list_tagihan meskipun status false, tetap tampilkan
+      if (res?.data?.list_tagihan) {
+        tagihan.value = (res.data.list_tagihan || []).map(item => ({
+          ...item,
+          display: getTagihanDisplay(item),
+          itemProps: {},
+        }))
+      }
       return
     }
 
-    cekNilai.value = res.cekNilai
+    cekNilai.value = res.cekNilai ?? true
 
     if (res.cekNilai_error) {
       cekNilaiError.value = true
@@ -494,7 +505,8 @@ const fetchTagihan = async nim => {
       itemProps: {},
     }))
   } catch (error) {
-    showSnackbar({ text: error, color: "error" })
+    const errorMsg = error?.data?.message || error?.message || "Terjadi kesalahan saat memuat tagihan"
+    showSnackbar({ text: errorMsg, color: "error" })
   } finally {
     loadingTagihan.value = false
   }
@@ -1690,7 +1702,7 @@ watch(
 
       <!-- Notif cek nilai error -->
       <VAlert
-        v-if="hasScopedTagihan && cekNilaiError"
+        v-if="cekNilaiError"
         type="error"
         variant="tonal"
         density="compact"
