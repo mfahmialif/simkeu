@@ -418,6 +418,7 @@ const printSlip = async id => {
       base-path="/admin/pengeluaran/dosen-tatapmuka"
       enable-excel-export
       enable-detail-excel-export
+      enable-bsi-export
       :filters="rekapFilterPayload"
       @updated="clearBatchSelection"
     />

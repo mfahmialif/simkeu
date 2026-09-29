@@ -9,5 +9,6 @@ import PengeluaranRekapDetail from "@/components/admin/pengeluaran/PengeluaranRe
     base-path="/admin/pengeluaran/dosen-tatapmuka"
     module-type="tatapmuka"
     enable-excel-export
+    enable-bsi-export
   />
 </template>

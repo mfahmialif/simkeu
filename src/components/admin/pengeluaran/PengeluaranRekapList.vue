@@ -53,6 +53,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  enableBsiExport: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(["updated"])
@@ -119,6 +123,8 @@ const lpjItem = ref(null)
 const lpjLoading = ref(false)
 const exportingExcel = ref(false)
 const exportingDetailId = ref(null)
+const exportingBsiExcelId = ref(null)
+const exportingBsiTxtId = ref(null)
 const detailPreviewDialog = ref(false)
 const detailPreviewLoading = ref(false)
 const detailPreviewLoadingId = ref(null)
@@ -353,6 +359,7 @@ const previewPegawaiMeta = item => previewIsNonPegawai(item)
     item.kode_pegawai || item.kode_dosen,
     item.tipe_pegawai === "staff" ? "Staff" : item.tipe_pegawai === "dosen" ? "Dosen" : null,
     item.jabatan_staff || item.nama_prodi_dosen,
+    item.nomer_rekening ? `Rek: ${item.nomer_rekening}` : null,
   ].filter(Boolean).join(" - ")
 
 const previewSubtotalTransport = item => {
@@ -611,6 +618,79 @@ const downloadDetailPreviewExcel = async () => {
     })
   } finally {
     exportingDetailId.value = null
+  }
+}
+
+const downloadDetailBsiExcel = async item => {
+  const targetItem = item || detailPreviewItem.value
+  if (!targetItem || exportingBsiExcelId.value) return
+
+  try {
+    exportingBsiExcelId.value = targetItem.id
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api(`${props.endpoint}/rekap/${targetItem.id}/export-bsi`, {
+      method: "GET",
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      body: {
+        rekap_id: targetItem.id,
+      },
+    })
+
+    downloadFileExport(response, `CUZ BSI ${targetItem.nama || props.title}.xlsx`)
+    showSnackbar({
+      text: "CUZ BSI Excel berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    exportingBsiExcelId.value = null
+  }
+}
+
+const downloadDetailBsiTxt = async item => {
+  const targetItem = item || detailPreviewItem.value
+  if (!targetItem || exportingBsiTxtId.value) return
+
+  try {
+    exportingBsiTxtId.value = targetItem.id
+    showSnackbar({
+      text: "Loading...",
+      color: "info",
+    })
+
+    const response = await $api(`${props.endpoint}/rekap/${targetItem.id}/export-bsi-txt`, {
+      method: "GET",
+      headers: {
+        Accept: "text/plain",
+      },
+      body: {
+        rekap_id: targetItem.id,
+      },
+    })
+
+    downloadFileExport(response, "Template Batch Payment.txt")
+    showSnackbar({
+      text: "CUZ BSI TXT berhasil di download.",
+      color: "success",
+    })
+  } catch (err) {
+    showSnackbar({
+      text: errorMessage(err),
+      color: "error",
+    })
+  } finally {
+    exportingBsiTxtId.value = null
   }
 }
 
@@ -1226,6 +1306,49 @@ onBeforeUnmount(() => {
                   </template>
                 </VTooltip>
 
+                <VMenu v-if="enableBsiExport">
+                  <template #activator="{ props: menuProps }">
+                    <VTooltip
+                      text="Download CUS"
+                      location="top"
+                    >
+                      <template #activator="{ props: tooltipProps }">
+                        <VBtn
+                          v-bind="{ ...menuProps, ...tooltipProps }"
+                          icon="ri-bank-card-line"
+                          size="small"
+                          variant="text"
+                          color="secondary"
+                          :loading="exportingBsiExcelId === item.id || exportingBsiTxtId === item.id"
+                          :disabled="Boolean(exportingBsiExcelId || exportingBsiTxtId)"
+                        />
+                      </template>
+                    </VTooltip>
+                  </template>
+                  <VList>
+                    <VListItem @click="downloadDetailBsiTxt(item)">
+                      <template #prepend>
+                        <VIcon
+                          icon="ri-file-text-line"
+                          class="me-2"
+                          color="success"
+                        />
+                      </template>
+                      <VListItemTitle>TXT CUZ BSI</VListItemTitle>
+                    </VListItem>
+                    <VListItem @click="downloadDetailBsiExcel(item)">
+                      <template #prepend>
+                        <VIcon
+                          icon="ri-file-excel-line"
+                          class="me-2"
+                          color="success"
+                        />
+                      </template>
+                      <VListItemTitle>Excel CUZ BSI</VListItemTitle>
+                    </VListItem>
+                  </VList>
+                </VMenu>
+
                 <VTooltip
                   text="Input/Lihat LPJ"
                   location="top"
@@ -1693,6 +1816,44 @@ onBeforeUnmount(() => {
           >
             Download Excel
           </VBtn>
+
+          <VMenu v-if="enableBsiExport">
+            <template #activator="{ props: menuProps }">
+              <VBtn
+                v-bind="menuProps"
+                color="secondary"
+                variant="outlined"
+                prepend-icon="ri-bank-card-line"
+                append-icon="ri-arrow-down-s-line"
+                :loading="exportingBsiExcelId === detailPreviewItem?.id || exportingBsiTxtId === detailPreviewItem?.id"
+                :disabled="detailPreviewLoading || !detailPreviewItem"
+              >
+                Download CUS
+              </VBtn>
+            </template>
+            <VList>
+              <VListItem @click="downloadDetailBsiTxt(detailPreviewItem)">
+                <template #prepend>
+                  <VIcon
+                    icon="ri-file-text-line"
+                    class="me-2"
+                    color="success"
+                  />
+                </template>
+                <VListItemTitle>TXT CUZ BSI</VListItemTitle>
+              </VListItem>
+              <VListItem @click="downloadDetailBsiExcel(detailPreviewItem)">
+                <template #prepend>
+                  <VIcon
+                    icon="ri-file-excel-line"
+                    class="me-2"
+                    color="success"
+                  />
+                </template>
+                <VListItemTitle>Excel CUZ BSI</VListItemTitle>
+              </VListItem>
+            </VList>
+          </VMenu>
         </VCardText>
       </VCard>
     </VDialog>
