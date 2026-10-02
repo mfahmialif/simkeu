@@ -278,7 +278,6 @@ const getTagihanSemester = item => {
 
 const isTagihanBlocked = item =>
   Boolean(item?.tidak_bisa_dibayar)
-  || (!cekNilai.value && String(item?.nama || "").toLowerCase().includes("skripsi"))
 
 const isPayableTagihan = item =>
   !isGroupTagihanItem(item)
@@ -429,8 +428,6 @@ const cekPelanggaran = ref(false)
 const fetchCekPelanggaran = async nim => {
   try {
     cekPelanggaran.value = false
-    loadingTagihan.value = true
-    tagihan.value = []
 
     const res = await $api(`/admin/mahasiswa/cek-pelanggaran/${nim}`, {
       method: "GET",
@@ -446,8 +443,6 @@ const fetchCekPelanggaran = async nim => {
   } catch (error) {
     const msg = error?.data?.message || error?.message || error
     console.warn("Cek pelanggaran error:", msg)
-  } finally {
-    loadingTagihan.value = false
   }
 }
 
@@ -457,24 +452,28 @@ const cekNilaiErrorMessage = ref("")
 
 const fetchTagihan = async nim => {
   clearTagihan()
+  cekNilai.value = true
   cekNilaiError.value = false
   cekNilaiErrorMessage.value = ""
   try {
-    await fetchCekPelanggaran(nim)
-
-    if (cekPelanggaran.value) {
-      return
-    }
     loadingTagihan.value = true
     tagihan.value = []
 
-    const res = await $api(`/admin/pemasukan/mahasiswa/cek-tagihan`, {
-      method: "GET",
-      body: {
-        nim: nim,
-        cekNilai: 1,
-      },
-    })
+    const [, res] = await Promise.all([
+      fetchCekPelanggaran(nim),
+      $api(`/admin/pemasukan/mahasiswa/cek-tagihan`, {
+        method: "GET",
+        body: {
+          nim: nim,
+          cekNilai: 0,
+        },
+      }),
+    ])
+
+    if (cekPelanggaran.value) {
+      tagihan.value = []
+      return
+    }
 
     if (!res || res.status === false) {
       const errorMsg = res?.message || "Gagal mengambil daftar tagihan mahasiswa"
@@ -491,13 +490,8 @@ const fetchTagihan = async nim => {
       return
     }
 
-    cekNilai.value = res.cekNilai ?? true
-
-    if (res.cekNilai_error) {
-      cekNilaiError.value = true
-      cekNilaiErrorMessage.value = res.cekNilai_message || "cek nilai skripsi error, silahkan klik search lagi"
-      showSnackbar({ text: cekNilaiErrorMessage.value, color: "error" })
-    }
+    cekNilai.value = true
+    cekNilaiError.value = false
 
     tagihan.value = (res.data?.list_tagihan || []).map(item => ({
       ...item,
