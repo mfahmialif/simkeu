@@ -14,6 +14,7 @@ const detailLoading = ref(false)
 
 const actionLoading = ref(false)
 const reconciliationStatsLoading = ref(false)
+const recheckLoading = ref(false)
 const reconciliationStats = ref(null)
 const reconciliationDateStart = ref('')
 const reconciliationDateEnd = ref('')
@@ -150,6 +151,28 @@ const fetchReconciliationStats = async () => {
     showSnackbar({ text: errorMessage(error), color: 'error' })
   } finally {
     reconciliationStatsLoading.value = false
+  }
+}
+
+const handleRecheckReconciliations = async () => {
+  recheckLoading.value = true
+  try {
+    const response = await $api('/admin/pemasukan/mahasiswa/pembayaran-bsi/recheck-reconciliations', {
+      method: 'POST',
+    })
+
+    showSnackbar({
+      text: response.message || 'Pemeriksaan ulang rekonsiliasi selesai.',
+      color: 'success',
+    })
+    await refreshAll()
+  } catch (error) {
+    showSnackbar({
+      text: errorMessage(error),
+      color: 'error',
+    })
+  } finally {
+    recheckLoading.value = false
   }
 }
 
@@ -343,6 +366,17 @@ onMounted(() => {
         </div>
 
         <VSpacer />
+
+        <VBtn
+          v-if="canProcess"
+          variant="outlined"
+          color="secondary"
+          prepend-icon="ri-check-double-line"
+          :loading="recheckLoading"
+          @click="handleRecheckReconciliations"
+        >
+          Cek Ulang Rekonsiliasi
+        </VBtn>
 
         <VBtn
           v-if="canProcess"

@@ -1,43 +1,28 @@
 <script setup>
 const shortcuts = [
   {
-    icon: 'ri-calendar-line',
-    title: 'Calendar',
-    subtitle: 'Appointments',
-    to: { name: 'apps-calendar' },
+    icon: 'ri-home-smile-line',
+    title: 'Dashboard',
+    subtitle: 'Ringkasan Keuangan',
+    to: { name: 'admin-dashboard' },
   },
   {
-    icon: 'ri-file-list-3-line',
-    title: 'Invoice App',
-    subtitle: 'Manage Accounts',
-    to: { name: 'apps-invoice-list' },
+    icon: 'ri-money-dollar-circle-fill',
+    title: 'Pembayaran',
+    subtitle: 'Pembayaran Mahasiswa',
+    to: { name: 'admin-pemasukan-mahasiswa-pembayaran-mahasiswa' },
+  },
+  {
+    icon: 'ri-user-settings-line',
+    title: 'User',
+    subtitle: 'Kelola Pengguna',
+    to: { name: 'admin-user' },
   },
   {
     icon: 'ri-user-line',
-    title: 'Users',
-    subtitle: 'Manage Users',
-    to: { name: 'apps-user-list' },
-  },
-  {
-    icon: 'ri-computer-line',
-    title: 'Role Management',
-    subtitle: 'Permissions',
-    to: { name: 'apps-roles' },
-  },
-  {
-    icon: 'ri-pie-chart-2-line',
-    title: 'Dashboard',
-    subtitle: 'User Dashboard',
-    to: { name: 'dashboards-analytics' },
-  },
-  {
-    icon: 'ri-settings-4-line',
-    title: 'Settings',
-    subtitle: 'Account Settings',
-    to: {
-      name: 'pages-account-settings-tab',
-      params: { tab: 'account' },
-    },
+    title: 'Profile',
+    subtitle: 'Pengaturan Profil',
+    to: { name: 'admin-profile' },
   },
 ]
 </script>

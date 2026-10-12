@@ -13,6 +13,7 @@ import { settingItemsForRole } from "./setting"
 import dashboardStaff from "./staff/dashboardStaff"
 import pemasukanStaff, { pemasukanStaffItemsForRole } from "./staff/pemasukanStaff"
 import user from "./user"
+import wisuda from "./wisuda"
 import laporan, { laporanPengeluaran } from "./laporan"
 import rab from "./rab"
 import { hutangItemsForRole } from "./hutang"
@@ -69,6 +70,7 @@ const routesByRole = roleName => {
       ...laporan,
       ...kelolaHeading,
       ...user,
+      ...wisuda,
       ...setting,
     ],
 
@@ -90,6 +92,7 @@ const routesByRole = roleName => {
       ...laporan,
       ...kelolaHeading,
       ...user,
+      ...wisuda,
       ...setting,
     ],
 
@@ -105,12 +108,13 @@ const routesByRole = roleName => {
       ...laporan,
       ...kelolaHeading,
       ...user,
+      ...wisuda,
       ...setting,
     ],
 
-    staff: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
-    kabag: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...rab, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
-    kabag_pemasukan: [...dashboardStaff, ...pemasukanHeading, ...pemasukanRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...setting],
+    staff: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...wisuda, ...setting],
+    kabag: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...rab, ...laporanHeading, ...laporan, ...kelolaHeading, ...wisuda, ...setting],
+    kabag_pemasukan: [...dashboardStaff, ...pemasukanHeading, ...pemasukanRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...wisuda, ...setting],
     kabag_pengeluaran: [
       ...dashboard,
       ...pengeluaranHeading,

@@ -10,7 +10,6 @@ import {
 } from "unplugin-vue-router"
 import VueRouter from "unplugin-vue-router/vite"
 import { defineConfig } from "vite"
-import VueDevTools from "vite-plugin-vue-devtools"
 import MetaLayouts from "vite-plugin-vue-meta-layouts"
 import vuetify from "vite-plugin-vuetify"
 import svgLoader from "vite-svg-loader"
@@ -27,10 +26,6 @@ export default defineConfig({
           .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
           .toLowerCase()
       },
-      beforeWriteFiles: root => {
-        root.insert("/apps/email/:filter", "/src/pages/apps/email/index.vue")
-        root.insert("/apps/email/:label", "/src/pages/apps/email/index.vue")
-      },
     }),
     vue({
       template: {
@@ -40,7 +35,6 @@ export default defineConfig({
         },
       },
     }),
-    VueDevTools(),
     vueJsx(),
 
     // Docs: https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin
@@ -58,7 +52,7 @@ export default defineConfig({
 
     // Docs: https://github.com/antfu/unplugin-vue-components#unplugin-vue-components
     Components({
-      dirs: ["src/@core/components", "src/views/demos", "src/components"],
+      dirs: ["src/@core/components", "src/components"],
       dts: true,
       resolvers: [
         componentName => {
@@ -141,11 +135,35 @@ export default defineConfig({
       ),
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: "modern-compiler",
+        quietDeps: true,
+        silenceDeprecations: [
+          "legacy-js-api",
+          "if-function",
+          "global-builtin",
+          "import",
+        ],
+      },
+      sass: {
+        api: "modern-compiler",
+        quietDeps: true,
+        silenceDeprecations: [
+          "legacy-js-api",
+          "if-function",
+          "global-builtin",
+          "import",
+        ],
+      },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 5000,
   },
   optimizeDeps: {
-    exclude: ["vuetify"],
+    include: ["vuetify", "vue", "vue-router", "pinia", "@vueuse/core"],
     entries: ["./src/**/*.vue"],
   },
 })

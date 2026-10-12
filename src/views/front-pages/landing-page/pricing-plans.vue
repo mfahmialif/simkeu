@@ -190,7 +190,7 @@ const pricingPlans = [
                 <VBtn
                   block
                   :variant="plan.current ? 'elevated' : 'outlined'"
-                  :to="{ name: 'front-pages-payment' }"
+                  :to="{ name: 'login' }"
                 >
                   Get Started
                 </VBtn>

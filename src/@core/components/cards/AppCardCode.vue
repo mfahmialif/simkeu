@@ -1,5 +1,4 @@
 <script setup>
-import { getSingletonHighlighter } from 'shiki'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const props = defineProps({
@@ -31,18 +30,10 @@ const preferredCodeLanguage = useCookie('preferredCodeLanguage', {
 const isCodeShown = ref(false)
 const { copy, copied } = useClipboard({ source: computed(() => props.code[preferredCodeLanguage.value]) })
 
-const highlighter = await getSingletonHighlighter({
-  themes: [
-    'dracula',
-    'dracula-soft',
-  ],
-  langs: ['vue'],
+const codeSnippet = computed(() => {
+  const content = props.code[preferredCodeLanguage.value] || ''
+  return `<pre><code>${content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`
 })
-
-const codeSnippet = computed(() => highlighter.codeToHtml(props.code[preferredCodeLanguage.value], {
-  lang: 'vue',
-  theme: 'dracula',
-}))
 </script>
 
 <template>

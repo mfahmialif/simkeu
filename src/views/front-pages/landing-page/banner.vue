@@ -13,7 +13,7 @@ import ctaDashboard from '@images/front-pages/landing-page/cta-dashboard.png'
           <div class="text-body-1 font-weight-medium mb-8">
             Start your project with a 14-day free trial
           </div>
-          <VBtn :to="{ name: 'front-pages-payment' }">
+          <VBtn :to="{ name: 'login' }">
             Get Started
             <VIcon
               end
