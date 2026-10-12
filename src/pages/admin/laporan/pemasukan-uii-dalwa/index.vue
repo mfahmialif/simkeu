@@ -28,24 +28,37 @@ const jenjangOptions = [
 const userData = useCookie("userData").value ?? {}
 
 const isAdmin = computed(() => {
-  const role = (userData?.role?.name || '').toLowerCase()
+  const roleName = String(userData?.role?.name || "").toLowerCase()
   
-  return ['admin', 'kabag', 'kabag_pemasukan'].includes(role)
+  return roleName === "admin" || Number(userData?.role_id) === 1
+})
+
+const userJkValue = computed(() => {
+  const userJk = String(userData?.jenis_kelamin || "").toLowerCase()
+
+  return userJk.includes("perempuan") ? "putri" : "putra"
 })
 
 const selectedJenisKelamin = ref("%")
 
-const jenisKelaminOptions = computed(() => {
-  const options = [
-    { title: "Putra", value: "putra" },
-    { title: "Putri", value: "putri" },
-  ]
-
-  if (isAdmin.value) {
-    options.unshift({ title: "Semua", value: "%" })
+watchEffect(() => {
+  if (!isAdmin.value) {
+    selectedJenisKelamin.value = userJkValue.value
   }
-  
-  return options
+})
+
+const jenisKelaminOptions = computed(() => {
+  if (isAdmin.value) {
+    return [
+      { title: "Semua", value: "%" },
+      { title: "Putra", value: "putra" },
+      { title: "Putri", value: "putri" },
+    ]
+  }
+
+  return userJkValue.value === "putri"
+    ? [{ title: "Putri", value: "putri" }]
+    : [{ title: "Putra", value: "putra" }]
 })
 
 const selectedUser = ref(null)
@@ -486,12 +499,15 @@ const fetchUser = async () => {
 }
 
 onMounted(() => {
+  const jkScopeCookie = useCookie("simkeuJkScope").value
   if (isAdmin.value) {
-    selectedJenisKelamin.value = "%"
+    if (jkScopeCookie === "putra" || jkScopeCookie === "putri") {
+      selectedJenisKelamin.value = jkScopeCookie
+    } else {
+      selectedJenisKelamin.value = "%"
+    }
   } else {
-    const userJk = (userData?.jenis_kelamin || '').toLowerCase()
-    if (userJk === 'perempuan') selectedJenisKelamin.value = 'putri'
-    else selectedJenisKelamin.value = 'putra'
+    selectedJenisKelamin.value = userJkValue.value
   }
 
   document.title = "Pemasukan UII Dalwa"
@@ -601,6 +617,7 @@ onMounted(() => {
             <VSelect
               v-model="selectedJenisKelamin"
               :items="jenisKelaminOptions"
+              :disabled="!isAdmin"
               label="Jenis Kelamin"
               variant="outlined"
               density="comfortable"

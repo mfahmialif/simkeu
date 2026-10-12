@@ -45,10 +45,12 @@ const headers = [
 
 const filterBody = computed(() => {
   const selectedUserObj = userList.value.find(u => u.value === selectedUser.value)
+  const activeScope = useCookie("simkeuJkScope").value
 
   return {
     tanggal: selectedTanggal.value,
     jenjang: selectedJenjang.value,
+    ...(activeScope && { jenis_kelamin: activeScope }),
     ...(selectedJenisPembayaran.value && {
       jenis_pembayaran_id: selectedJenisPembayaran.value,
     }),
@@ -154,12 +156,14 @@ const fetchJenisPembayaran = async () => {
     if (response && response.data) {
       const items = response.data.data || response.data
       const role = (userData?.role?.name || "").toLowerCase()
+      const roleId = Number(userData?.role_id || 0)
       const jk = (userData?.jenis_kelamin || "").toLowerCase()
       let userCategory = "%"
 
-      if (!["admin", "kabag", "kabag_pemasukan"].includes(role)) {
-        if (jk === "laki-laki") userCategory = "Putra"
-        if (jk === "perempuan") userCategory = "Putri"
+      const hasFullCategoryAccess = ["admin", "kabag", "kabag_pemasukan", "kabag_pengeluaran", "pimpinan", "keuangan"].includes(role) || roleId === 1
+      if (!hasFullCategoryAccess) {
+        if (jk.includes("laki")) userCategory = "Putra"
+        if (jk.includes("perempuan")) userCategory = "Putri"
       }
 
       const mappedList = items
