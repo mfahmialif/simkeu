@@ -179,7 +179,26 @@ const fetchJenisPembayaran = async () => {
           value: jp.id,
         }))
 
+      const topItems = []
       if (userCategory === "%" || userCategory === "Putra") {
+        topItems.push({
+          title: "Cash + Transfer (Putra)",
+          value: "cash_transfer_putra",
+        })
+      }
+      if (userCategory === "%" || userCategory === "Putri") {
+        topItems.push({
+          title: "Cash + Transfer (Putri)",
+          value: "cash_transfer_putri",
+        })
+      }
+      mappedList.unshift(...topItems)
+
+      if (userCategory === "%" || userCategory === "Putra") {
+        mappedList.push({
+          title: "VA Pondok (Putra)",
+          value: "va_pondok_putra",
+        })
         mappedList.push({
           title: "VA + Transfer (Putra)",
           value: "va_transfer_putra",
@@ -187,6 +206,10 @@ const fetchJenisPembayaran = async () => {
       }
 
       if (userCategory === "%" || userCategory === "Putri") {
+        mappedList.push({
+          title: "VA Pondok (Putri)",
+          value: "va_pondok_putri",
+        })
         mappedList.push({
           title: "VA + Transfer (Putri)",
           value: "va_transfer_putri",
