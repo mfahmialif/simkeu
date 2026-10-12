@@ -89,11 +89,14 @@ const selectedUnsyncedCount = computed(() => {
 const fetchSemesterPendek = async () => {
   loading.value = true
   try {
+    const sortKey = Array.isArray(sortBy.value) ? (sortBy.value[0]?.key || 'id') : (sortBy.value?.key || 'id')
+    const sortOrder = Array.isArray(sortBy.value) ? (sortBy.value[0]?.order || 'desc') : (sortBy.value?.order || 'desc')
+
     const params = {
       page: page.value,
       limit: itemsPerPage.value,
-      sort_key: sortBy.value.key || 'id',
-      sort_order: sortBy.value.order || 'desc',
+      sort_key: sortKey,
+      sort_order: sortOrder,
       search: search.value ? search.value.trim() : undefined,
       status_sinkron: selectedStatusSinkron.value !== 'all' ? selectedStatusSinkron.value : undefined,
       ...(selectedTanggal.value && { tanggal: selectedTanggal.value }),
@@ -109,9 +112,21 @@ const fetchSemesterPendek = async () => {
       params,
     })
 
-    if (response && response.status && response.data) {
-      dataTable.value = response.data.data || []
-      totalItems.value = response.data.total || 0
+    if (response) {
+      const payload = response.data
+      if (payload && Array.isArray(payload.data)) {
+        dataTable.value = payload.data
+        totalItems.value = Number(payload.total ?? response.total ?? payload.data.length)
+      } else if (Array.isArray(payload)) {
+        dataTable.value = payload
+        totalItems.value = Number(response.total ?? payload.length)
+      } else if (Array.isArray(response)) {
+        dataTable.value = response
+        totalItems.value = response.length
+      } else {
+        dataTable.value = []
+        totalItems.value = 0
+      }
     }
   } catch (err) {
     console.error('Failed to fetch semester pendek data:', err)
@@ -143,12 +158,10 @@ const fetchStatistics = async () => {
       params,
     })
 
-    if (response && response.status && response.data) {
-      statistics.value = response.data.data || {
-        total: { count: 0, amount: 0 },
-        synced: { count: 0, amount: 0 },
-        not_synced: { count: 0, amount: 0 },
-        no_tagihan: { count: 0, amount: 0 },
+    if (response && response.status) {
+      const stats = response.data?.total ? response.data : (response.data?.data?.total ? response.data.data : response.data)
+      if (stats && stats.total) {
+        statistics.value = stats
       }
     }
   } catch (err) {
