@@ -13,6 +13,7 @@ import { settingItemsForRole } from "./setting"
 import dashboardStaff from "./staff/dashboardStaff"
 import pemasukanStaff, { pemasukanStaffItemsForRole } from "./staff/pemasukanStaff"
 import user from "./user"
+import semesterPendek from "./semester-pendek"
 import wisuda from "./wisuda"
 import laporan, { laporanPengeluaran } from "./laporan"
 import rab from "./rab"
@@ -70,6 +71,7 @@ const routesByRole = roleName => {
       ...laporan,
       ...kelolaHeading,
       ...user,
+      ...semesterPendek,
       ...wisuda,
       ...setting,
     ],
@@ -92,6 +94,7 @@ const routesByRole = roleName => {
       ...laporan,
       ...kelolaHeading,
       ...user,
+      ...semesterPendek,
       ...wisuda,
       ...setting,
     ],
@@ -108,13 +111,14 @@ const routesByRole = roleName => {
       ...laporan,
       ...kelolaHeading,
       ...user,
+      ...semesterPendek,
       ...wisuda,
       ...setting,
     ],
 
-    staff: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...wisuda, ...setting],
-    kabag: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...rab, ...laporanHeading, ...laporan, ...kelolaHeading, ...wisuda, ...setting],
-    kabag_pemasukan: [...dashboardStaff, ...pemasukanHeading, ...pemasukanRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...wisuda, ...setting],
+    staff: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...semesterPendek, ...wisuda, ...setting],
+    kabag: [...dashboardStaff, ...pemasukanHeading, ...pemasukanStaffRole, ...hutang, ...rab, ...laporanHeading, ...laporan, ...kelolaHeading, ...semesterPendek, ...wisuda, ...setting],
+    kabag_pemasukan: [...dashboardStaff, ...pemasukanHeading, ...pemasukanRole, ...hutang, ...laporanHeading, ...laporan, ...kelolaHeading, ...semesterPendek, ...wisuda, ...setting],
     kabag_pengeluaran: [
       ...dashboard,
       ...pengeluaranHeading,

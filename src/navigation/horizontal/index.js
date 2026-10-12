@@ -8,6 +8,7 @@ import { settingItemsForRole } from "./setting"
 import dashboardStaff from "./staff/dashboardStaff"
 import pemasukanStaff, { pemasukanStaffItemsForRole } from "./staff/pemasukanStaff"
 import user from "./user"
+import semesterPendek from "./semester-pendek"
 import wisuda from "./wisuda"
 import { hutangItemsForRole } from "./hutang"
 import {
@@ -60,6 +61,7 @@ const routesByRole = roleName => {
       ...rab,
       ...laporan,
       ...user,
+      ...semesterPendek,
       ...wisuda,
       ...setting,
     ],
@@ -77,6 +79,7 @@ const routesByRole = roleName => {
       ...rab,
       ...laporan,
       ...user,
+      ...semesterPendek,
       ...wisuda,
       ...setting,
     ],
@@ -89,13 +92,14 @@ const routesByRole = roleName => {
       ...rab,
       ...laporan,
       ...user,
+      ...semesterPendek,
       ...wisuda,
       ...setting,
     ],
 
-    staff: [...dashboardStaff, ...pemasukanStaffRole, ...hutang, ...wisuda, ...setting],
-    kabag: [...dashboardStaff, ...pemasukanStaffRole, ...hutang, ...rab, ...wisuda, ...setting],
-    kabag_pemasukan: [...dashboardStaff, ...pemasukanRole, ...hutang, ...laporan, ...wisuda, ...setting],
+    staff: [...dashboardStaff, ...pemasukanStaffRole, ...hutang, ...semesterPendek, ...wisuda, ...setting],
+    kabag: [...dashboardStaff, ...pemasukanStaffRole, ...hutang, ...rab, ...semesterPendek, ...wisuda, ...setting],
+    kabag_pemasukan: [...dashboardStaff, ...pemasukanRole, ...hutang, ...laporan, ...semesterPendek, ...wisuda, ...setting],
     kabag_pengeluaran: [
       ...dashboard,
       ...pegawai,
