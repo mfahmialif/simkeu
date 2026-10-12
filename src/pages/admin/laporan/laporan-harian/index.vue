@@ -158,10 +158,20 @@ const fetchJenisPembayaran = async () => {
       const role = (userData?.role?.name || "").toLowerCase()
       const roleId = Number(userData?.role_id || 0)
       const jk = (userData?.jenis_kelamin || "").toLowerCase()
-      let userCategory = "%"
+      const activeScope = String(useCookie("simkeuJkScope").value || "").toLowerCase()
 
+      let userCategory = "%"
       const hasFullCategoryAccess = ["admin", "kabag", "kabag_pemasukan", "kabag_pengeluaran", "pimpinan", "keuangan"].includes(role) || roleId === 1
-      if (!hasFullCategoryAccess) {
+
+      if (activeScope === "putra" || activeScope.includes("laki") || activeScope === "8") {
+        userCategory = "Putra"
+      } else if (activeScope === "putri" || activeScope.includes("perempuan") || activeScope === "9") {
+        userCategory = "Putri"
+      } else if (items.length > 0 && items.every(jp => String(jp.kategori || "").toLowerCase().includes("putra"))) {
+        userCategory = "Putra"
+      } else if (items.length > 0 && items.every(jp => String(jp.kategori || "").toLowerCase().includes("putri"))) {
+        userCategory = "Putri"
+      } else if (!hasFullCategoryAccess) {
         if (jk.includes("laki")) userCategory = "Putra"
         if (jk.includes("perempuan")) userCategory = "Putri"
       }
@@ -174,27 +184,44 @@ const fetchJenisPembayaran = async () => {
           
           return false
         })
-        .map(jp => ({
-          title: `${jp.nama} (${jp.kategori})`,
-          value: jp.id,
-        }))
+        .map(jp => {
+          const hasCategoryInName = String(jp.nama || "").toLowerCase().includes("putra") || String(jp.nama || "").toLowerCase().includes("putri")
+          const categorySuffix = userCategory === "%" && !hasCategoryInName && jp.kategori ? ` (${jp.kategori})` : ""
+
+          return {
+            title: `${jp.nama}${categorySuffix}`,
+            value: jp.id,
+          }
+        })
 
       const topItems = []
-      if (userCategory === "%" || userCategory === "Putra") {
+      if (userCategory === "%") {
+        topItems.push({
+          title: "Cash + Transfer (Semua)",
+          value: "cash_transfer",
+        })
         topItems.push({
           title: "Cash + Transfer (Putra)",
           value: "cash_transfer_putra",
         })
-      }
-      if (userCategory === "%" || userCategory === "Putri") {
         topItems.push({
           title: "Cash + Transfer (Putri)",
+          value: "cash_transfer_putri",
+        })
+      } else if (userCategory === "Putra") {
+        topItems.push({
+          title: "Cash + Transfer",
+          value: "cash_transfer_putra",
+        })
+      } else if (userCategory === "Putri") {
+        topItems.push({
+          title: "Cash + Transfer",
           value: "cash_transfer_putri",
         })
       }
       mappedList.unshift(...topItems)
 
-      if (userCategory === "%" || userCategory === "Putra") {
+      if (userCategory === "%") {
         mappedList.push({
           title: "VA Pondok (Putra)",
           value: "va_pondok_putra",
@@ -203,15 +230,30 @@ const fetchJenisPembayaran = async () => {
           title: "VA + Transfer (Putra)",
           value: "va_transfer_putra",
         })
-      }
-
-      if (userCategory === "%" || userCategory === "Putri") {
         mappedList.push({
           title: "VA Pondok (Putri)",
           value: "va_pondok_putri",
         })
         mappedList.push({
           title: "VA + Transfer (Putri)",
+          value: "va_transfer_putri",
+        })
+      } else if (userCategory === "Putra") {
+        mappedList.push({
+          title: "VA Pondok",
+          value: "va_pondok_putra",
+        })
+        mappedList.push({
+          title: "VA + Transfer",
+          value: "va_transfer_putra",
+        })
+      } else if (userCategory === "Putri") {
+        mappedList.push({
+          title: "VA Pondok",
+          value: "va_pondok_putri",
+        })
+        mappedList.push({
+          title: "VA + Transfer",
           value: "va_transfer_putri",
         })
       }
