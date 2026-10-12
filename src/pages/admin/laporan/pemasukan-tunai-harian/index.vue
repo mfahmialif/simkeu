@@ -63,6 +63,30 @@ const allData = ref({})
 const totals = ref({})
 const hasData = ref(false)
 const jkInfo = ref("")
+const rincianJenisPembayaran = ref([])
+
+const getPaymentItemIcon = item => {
+  const key = String(item.key || "").toLowerCase()
+  const nama = String(item.nama || "").toLowerCase()
+
+  if (item.is_total || key === "total" || nama.includes("total")) return "ri-calculator-line"
+  if (key === "cash" || key === "tunai" || nama.includes("cash") || nama.includes("tunai")) return "ri-cash-line"
+  if (key === "transfer" || nama.includes("transfer")) return "ri-bank-line"
+  if (key === "va_pondok" || key === "va" || nama.includes("pondok") || nama.includes("va")) return "ri-qr-code-line"
+  if (key === "yayasan" || nama.includes("yayasan")) return "ri-community-line"
+  if (key === "deposit" || nama.includes("deposit")) return "ri-safe-2-line"
+  if (key === "va_bsi" || nama.includes("bsi")) return "ri-bank-card-2-line"
+
+  return "ri-money-cny-circle-line"
+}
+
+const rincianColWidth = computed(() => {
+  const len = rincianJenisPembayaran.value.length
+  if (len === 1 || len === 2) return 6
+  if (len === 3) return 4
+
+  return 3
+})
 
 // Detail Modal Pemasukan Umum State
 const isDetailModalOpen = ref(false)
@@ -391,6 +415,8 @@ const fetchData = async () => {
     if (response.status) {
       const normalizedResponse = normalizeReportData(response)
 
+      rincianJenisPembayaran.value = Object.freeze(normalizedResponse.rincian_jenis_pembayaran || [])
+
       if (selectedMode.value === 'tahunan') {
         reportTitle.value = "PEMASUKAN TUNAI TAHUN " + selectedTahun.value
         columns.value = Object.freeze(normalizedResponse.columns)
@@ -459,6 +485,7 @@ const downloadExcel = async () => {
 
 const printTable = () => {
   const printContent = document.getElementById("report-table-container")
+  const rincianContent = document.getElementById("rincian-pembayaran-print")
   const win = window.open("", "_blank")
 
   win.document.write(`
@@ -478,12 +505,17 @@ const printTable = () => {
         }
         .total-row { background: #1a237e !important; color: white; font-weight: bold; }
         .total-row td { border-color: #283593; }
+        .rincian-print-table { margin-top: 24px; width: 100%; border-collapse: collapse; }
+        .rincian-print-table th { background: #102a43; color: white; padding: 6px 10px; font-size: 11px; text-align: left; }
+        .rincian-print-table td { padding: 6px 10px; font-size: 11px; border: 1px solid #ccc; }
+        .rincian-print-table .total-item { font-weight: bold; background: #e8eaf6; }
         @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
       </style>
     </head>
     <body>
       <h2>${reportTitle.value}</h2>
-      ${printContent.innerHTML}
+      ${printContent ? printContent.innerHTML : ''}
+      ${rincianContent ? rincianContent.innerHTML : ''}
     </body>
     </html>
   `)
@@ -1013,6 +1045,34 @@ onMounted(() => {
               </tr>
             </tfoot>
           </table>
+
+          <!-- Print-only Rincian Section -->
+          <div
+            id="rincian-pembayaran-print"
+            class="d-none"
+          >
+            <h3 style="margin-top: 24px; margin-bottom: 8px; font-size: 13px; color: #1a237e;">
+              Rincian Jenis Pembayaran <span v-if="jkInfo">({{ jkInfo }})</span>
+            </h3>
+            <table class="rincian-print-table">
+              <thead>
+                <tr>
+                  <th style="text-align: left;">Metode Pembayaran</th>
+                  <th style="text-align: right;">Nominal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(item, idx) in rincianJenisPembayaran"
+                  :key="idx"
+                  :class="{ 'total-item': item.is_total }"
+                >
+                  <td style="text-align: left;">{{ item.nama }}</td>
+                  <td style="text-align: right;">{{ formatCurrencyTotals(item.total_by_currency, item.total) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- Summary Cards -->
@@ -1221,6 +1281,83 @@ onMounted(() => {
         </div>
       </VCard>
     </template>
+
+    <!-- Rincian Jenis Pembayaran -->
+    <VCard
+      v-if="hasData && rincianJenisPembayaran && rincianJenisPembayaran.length > 0"
+      class="mt-6 rincian-card"
+    >
+      <VCardItem class="pb-2">
+        <div class="d-flex align-center justify-space-between flex-wrap ga-2">
+          <div class="d-flex align-center ga-3">
+            <div class="rincian-header-icon">
+              <VIcon
+                icon="ri-wallet-3-line"
+                size="24"
+                color="primary"
+              />
+            </div>
+            <div>
+              <VCardTitle class="text-h6 font-weight-bold mb-0">
+                Rincian Jenis Pembayaran
+              </VCardTitle>
+              <VCardSubtitle class="text-caption mb-0">
+                Rekapitulasi nominal per metode pembayaran
+              </VCardSubtitle>
+            </div>
+          </div>
+          <VChip
+            v-if="jkInfo"
+            color="primary"
+            variant="tonal"
+            size="small"
+            class="font-weight-medium"
+          >
+            <VIcon
+              start
+              icon="ri-user-line"
+              size="14"
+            />
+            Kategori: {{ jkInfo }}
+          </VChip>
+        </div>
+      </VCardItem>
+
+      <VDivider />
+
+      <VCardText class="pa-4">
+        <VRow>
+          <VCol
+            v-for="(item, idx) in rincianJenisPembayaran"
+            :key="idx"
+            cols="12"
+            sm="6"
+            :md="rincianColWidth"
+          >
+            <div
+              class="rincian-item"
+              :class="{ 'rincian-item-total': item.is_total }"
+            >
+              <div class="d-flex align-center justify-space-between mb-2">
+                <span class="rincian-label">{{ item.nama }}</span>
+                <div
+                  class="rincian-icon-badge"
+                  :class="{ 'is-total': item.is_total }"
+                >
+                  <VIcon
+                    :icon="getPaymentItemIcon(item)"
+                    size="18"
+                  />
+                </div>
+              </div>
+              <div class="rincian-amount">
+                {{ formatCurrencyTotals(item.total_by_currency, item.total) }}
+              </div>
+            </div>
+          </VCol>
+        </VRow>
+      </VCardText>
+    </VCard>
 
     <!-- Modal Detail Pemasukan Umum -->
     <ModalDetailPemasukanUmum
@@ -1619,5 +1756,78 @@ onMounted(() => {
   40% { content: '.'; }
   60% { content: '..'; }
   80%, 100% { content: '...'; }
+}
+
+.rincian-card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.rincian-header-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(var(--v-theme-primary), 0.12);
+}
+
+.rincian-item {
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: rgba(var(--v-theme-surface), 1);
+  transition: all 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.rincian-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.rincian-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(var(--v-theme-on-surface), 0.78);
+}
+
+.rincian-amount {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: rgba(var(--v-theme-on-surface), 0.95);
+  word-break: break-word;
+}
+
+.rincian-icon-badge {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
+}
+
+.rincian-item-total {
+  background: linear-gradient(135deg, #102a43 0%, #1a237e 100%) !important;
+  border-color: #1a237e !important;
+  color: white !important;
+}
+
+.rincian-item-total .rincian-label {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.rincian-item-total .rincian-amount {
+  color: #ffffff !important;
+}
+
+.rincian-icon-badge.is-total {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
 }
 </style>
