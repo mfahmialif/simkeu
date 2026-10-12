@@ -27,11 +27,36 @@ const userScopeLabel = computed(() => {
   return "Putra"
 })
 
+const userScopeValue = computed(() => {
+  const jenisKelamin = String(userData.value?.jenis_kelamin || "").toLowerCase()
+
+  if (jenisKelamin.includes("perempuan")) {
+    return "putri"
+  }
+
+  return "putra"
+})
+
+watchEffect(() => {
+  if (!isAdmin.value && userData.value) {
+    const targetScope = userScopeValue.value
+    if (jkScope.value !== targetScope) {
+      jkScope.value = targetScope
+    }
+  }
+})
+
 const selectedScopeLabel = computed(() => {
+  if (!isAdmin.value) {
+    return userScopeLabel.value
+  }
+
   return scopeItems.find(item => item.value === (jkScope.value || "semua"))?.title || "Semua"
 })
 
 const setScope = value => {
+  if (!isAdmin.value) return
+
   const nextScope = value || "semua"
 
   if (jkScope.value !== nextScope) {

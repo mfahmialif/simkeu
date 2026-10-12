@@ -367,9 +367,11 @@ const fetchData = async () => {
     isLoading.value = true
 
     const selectedUserObj = userList.value.find(u => u.value === selectedUser.value)
+    const activeScope = useCookie('simkeuJkScope').value
 
     const filterData = {
       jenjang: selectedJenjang.value,
+      ...(activeScope && { jenis_kelamin: activeScope }),
       ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
       ...(selectedUser.value && {
         user_id: selectedUser.value,
@@ -419,10 +421,12 @@ const downloadExcel = async () => {
     showSnackbar({ text: "Loading Excel...", color: "info" })
     
     const selectedUserObj = userList.value.find(u => u.value === selectedUser.value)
+    const activeScope = useCookie('simkeuJkScope').value
 
     const filterData = {
       action: 'excel',
       jenjang: selectedJenjang.value,
+      ...(activeScope && { jenis_kelamin: activeScope }),
       ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
       ...(selectedUser.value && {
         user_id: selectedUser.value,
@@ -500,12 +504,14 @@ const fetchJenisPembayaran = async () => {
       const items = response.data.data || response.data
       
       const role = (userData?.role?.name || '').toLowerCase()
+      const roleId = Number(userData?.role_id || 0)
       const jk = (userData?.jenis_kelamin || '').toLowerCase()
       
       let userCategory = '%'
-      if (!['admin', 'kabag', 'kabag_pemasukan'].includes(role)) {
-        if (jk === 'laki-laki') userCategory = 'Putra'
-        if (jk === 'perempuan') userCategory = 'Putri'
+      const hasFullCategoryAccess = ['admin', 'kabag', 'kabag_pemasukan', 'kabag_pengeluaran', 'pimpinan', 'keuangan'].includes(role) || roleId === 1
+      if (!hasFullCategoryAccess) {
+        if (jk.includes('laki')) userCategory = 'Putra'
+        if (jk.includes('perempuan')) userCategory = 'Putri'
       }
 
       const mappedList = items.filter(jp => {
