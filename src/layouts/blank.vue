@@ -28,21 +28,16 @@ watch([
     data-allow-mismatch
   >
     <RouterView #="{ Component, route }">
-      <Transition
-        name="fade-page"
-        mode="out-in"
+      <Suspense
+        :timeout="0"
+        @fallback="isFallbackStateActive = true"
+        @resolve="isFallbackStateActive = false"
       >
-        <Suspense
-          :timeout="0"
-          @fallback="isFallbackStateActive = true"
-          @resolve="isFallbackStateActive = false"
-        >
-          <Component
-            :is="Component"
-            :key="route.path"
-          />
-        </Suspense>
-      </Transition>
+        <Component
+          :is="Component"
+          :key="route.path"
+        />
+      </Suspense>
     </RouterView>
   </div>
 </template>

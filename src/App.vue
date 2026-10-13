@@ -38,23 +38,6 @@ const configStore = useConfigStore()
 </template>
 
 <style>
-/* Animasi Transisi Halaman (Zoom In/Out Elegan) */
-.fade-page-enter-active,
-.fade-page-leave-active {
-  transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
-              transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.fade-page-enter-from {
-  opacity: 0;
-  transform: scale(0.97);
-}
-
-.fade-page-leave-to {
-  opacity: 0;
-  transform: scale(1.02);
-}
-
 /* NProgress YouTube Style Override */
 #nprogress .bar {
   background: rgb(var(--v-theme-primary)) !important;
