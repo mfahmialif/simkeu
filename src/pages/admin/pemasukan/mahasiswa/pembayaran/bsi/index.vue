@@ -540,6 +540,273 @@ const submitReject = async () => {
 
 const canReject = item => canProcess.value && !['success', 'posted', 'rejected'].includes(item.status)
 
+// --- Manual Payment Dialog State & Handlers ---
+const addDialog = ref(false)
+const manualStudentLoading = ref(false)
+const manualSubmitting = ref(false)
+const manualAvailableBills = ref([])
+const reconcilePickerOpen = ref(false)
+const unreconciledList = ref([])
+const loadingUnreconciled = ref(false)
+
+const defaultManualForm = () => {
+  const now = new Date()
+  const localDatetime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16)
+
+  return {
+    nim: '',
+    nama_mahasiswa: '',
+    jk_id: 8,
+    kategori: 'Putra',
+    prodi: '',
+    kelas: '',
+    semester: '',
+    paid_at: localDatetime,
+    status: 'success',
+    va_number: '',
+    customer_no: '',
+    bsi_payment_number: '',
+    bank_reference: '',
+    recon_id: '',
+    metode_va_id: null,
+    sync_now: true,
+    reconcile_now: true,
+    production: true,
+  }
+}
+
+const manualForm = ref(defaultManualForm())
+
+const openAddDialog = () => {
+  manualForm.value = defaultManualForm()
+  manualAvailableBills.value = []
+  addDialog.value = true
+}
+
+const searchManualStudent = async () => {
+  const nim = String(manualForm.value.nim || '').trim()
+  if (!nim) {
+    showSnackbar({
+      text: 'NIM mahasiswa wajib diisi.',
+      color: 'warning',
+    })
+    return
+  }
+
+  manualStudentLoading.value = true
+  try {
+    const res = await $api('/admin/pemasukan/mahasiswa/pembayaran-bsi/student-bills', {
+      method: 'GET',
+      params: { nim },
+    })
+
+    if (res?.status && res?.data) {
+      const data = res.data
+      manualForm.value.nama_mahasiswa = data.nama || ''
+      manualForm.value.jk_id = data.jk_id || 8
+      manualForm.value.kategori = data.kategori || 'Putra'
+      manualForm.value.prodi = data.prodi || ''
+      manualForm.value.kelas = data.kelas || ''
+      manualForm.value.semester = data.semester || ''
+
+      if (!manualForm.value.va_number) {
+        manualForm.value.va_number = `2700${nim}`
+      }
+      if (!manualForm.value.customer_no) {
+        manualForm.value.customer_no = nim
+      }
+      if (!manualForm.value.bsi_payment_number) {
+        manualForm.value.bsi_payment_number = `2700${nim}`
+      }
+
+      manualAvailableBills.value = (data.bills || []).map(bill => ({
+        ...bill,
+        tagihan_id: bill.id,
+        tagihan_nama: bill.nama,
+        bayar: bill.sisa > 0 ? bill.sisa : bill.jumlah_tagihan,
+        selected: false,
+      }))
+
+      if (manualAvailableBills.value.length === 0) {
+        showSnackbar({
+          text: `Mahasiswa ${data.nama} tidak memiliki tagihan aktif dengan sisa belum lunas.`,
+          color: 'info',
+        })
+      } else {
+        showSnackbar({
+          text: `Data mahasiswa ${data.nama} dan ${manualAvailableBills.value.length} tagihan berhasil dimuat.`,
+          color: 'success',
+        })
+      }
+    }
+  } catch (error) {
+    showSnackbar({
+      text: errorMessage(error),
+      color: 'error',
+    })
+  } finally {
+    manualStudentLoading.value = false
+  }
+}
+
+const manualTotalAmount = computed(() => {
+  return manualAvailableBills.value
+    .filter(b => b.selected)
+    .reduce((sum, b) => sum + (Number(b.bayar) || 0), 0)
+})
+
+const selectAllBills = () => {
+  manualAvailableBills.value.forEach(b => {
+    b.selected = true
+    if (!b.bayar || Number(b.bayar) <= 0) {
+      b.bayar = b.sisa > 0 ? b.sisa : b.jumlah_tagihan
+    }
+  })
+}
+
+const deselectAllBills = () => {
+  manualAvailableBills.value.forEach(b => {
+    b.selected = false
+  })
+}
+
+const toggleBillSelect = bill => {
+  bill.selected = !bill.selected
+  if (bill.selected && (!bill.bayar || Number(bill.bayar) <= 0)) {
+    bill.bayar = bill.sisa > 0 ? bill.sisa : bill.jumlah_tagihan
+  }
+}
+
+const fetchUnreconciledReconciliations = async () => {
+  loadingUnreconciled.value = true
+  try {
+    const res = await $api('/admin/pemasukan/mahasiswa/pembayaran-bsi/unreconciled-reconciliations', {
+      method: 'GET',
+    })
+    unreconciledList.value = res?.data || []
+    reconcilePickerOpen.value = true
+  } catch (error) {
+    showSnackbar({
+      text: errorMessage(error),
+      color: 'error',
+    })
+  } finally {
+    loadingUnreconciled.value = false
+  }
+}
+
+const applyReconciledItem = async item => {
+  reconcilePickerOpen.value = false
+  manualForm.value.recon_id = item.recon_id || ''
+  manualForm.value.bsi_payment_number = item.payment_number || ''
+  manualForm.value.reconcile_now = true
+
+  if (item.transaction_at) {
+    manualForm.value.paid_at = new Date(new Date(item.transaction_at).getTime() - new Date().getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16)
+  }
+
+  const rawNumber = String(item.payment_number || '').trim()
+  const candidateNim = rawNumber.replace(/\D/g, '')
+
+  if (candidateNim.length >= 8 && candidateNim.length <= 15) {
+    manualForm.value.nim = candidateNim
+    await searchManualStudent()
+  } else if (candidateNim.startsWith('2700') && candidateNim.length > 8) {
+    manualForm.value.nim = candidateNim.slice(4)
+    await searchManualStudent()
+  }
+
+  showSnackbar({
+    text: `Data rekonsiliasi ID ${item.recon_id} (${formatCurrency(item.payment_amount)}) dimuat ke form.`,
+    color: 'success',
+  })
+}
+
+const submitManualPayment = async () => {
+  const selected = manualAvailableBills.value.filter(b => b.selected)
+  if (!manualForm.value.nim) {
+    showSnackbar({
+      text: 'NIM mahasiswa wajib diisi.',
+      color: 'warning',
+    })
+    return
+  }
+  if (selected.length === 0) {
+    showSnackbar({
+      text: 'Pilih minimal satu tagihan untuk dibayarkan.',
+      color: 'warning',
+    })
+    return
+  }
+  for (const b of selected) {
+    if (!b.bayar || Number(b.bayar) <= 0) {
+      showSnackbar({
+        text: `Nominal untuk tagihan "${b.tagihan_nama}" harus lebih dari 0.`,
+        color: 'warning',
+      })
+      return
+    }
+  }
+
+  manualSubmitting.value = true
+  try {
+    const payload = {
+      nim: manualForm.value.nim,
+      nama_mahasiswa: manualForm.value.nama_mahasiswa,
+      jk_id: manualForm.value.jk_id,
+      status: manualForm.value.status,
+      paid_at: manualForm.value.paid_at,
+      va_number: manualForm.value.va_number,
+      customer_no: manualForm.value.customer_no,
+      bsi_payment_number: manualForm.value.bsi_payment_number,
+      bank_reference: manualForm.value.bank_reference,
+      recon_id: manualForm.value.recon_id,
+      metode_va_id: manualForm.value.metode_va_id,
+      sync_now: manualForm.value.sync_now,
+      reconcile_now: manualForm.value.reconcile_now,
+      production: manualForm.value.production,
+      items: selected.map(b => ({
+        tagihan_id: b.tagihan_id,
+        jumlah: Number(b.bayar),
+        tagihan_nama: b.tagihan_nama,
+        th_akademik_id: b.th_akademik_id,
+        jumlah_tagihan: Number(b.jumlah_tagihan || b.bayar),
+        sisa_awal: Number(b.sisa || b.bayar),
+      })),
+    }
+
+    const res = await $api('/admin/pemasukan/mahasiswa/pembayaran-bsi', {
+      method: 'POST',
+      body: payload,
+    })
+
+    if (res?.status) {
+      showSnackbar({
+        text: res.message || 'Pembayaran BSI manual berhasil disimpan.',
+        color: 'success',
+      })
+      addDialog.value = false
+      await refreshAll()
+    } else {
+      showSnackbar({
+        text: res?.message || 'Gagal menyimpan pembayaran manual.',
+        color: 'error',
+      })
+    }
+  } catch (error) {
+    showSnackbar({
+      text: errorMessage(error),
+      color: 'error',
+    })
+  } finally {
+    manualSubmitting.value = false
+  }
+}
+
 onMounted(() => {
   document.title = 'Pembayaran VA BSI - SIMKEU'
   refreshAll()
@@ -855,6 +1122,15 @@ onMounted(() => {
           @click="router.push('/admin/pemasukan/mahasiswa/pembayaran/bsi/sinkronisasi')"
         >
           Sinkronisasi
+        </VBtn>
+
+        <VBtn
+          v-if="canProcess"
+          color="success"
+          prepend-icon="ri-add-line"
+          @click="openAddDialog"
+        >
+          Tambah Data
         </VBtn>
 
         <VBtn
@@ -1629,6 +1905,621 @@ onMounted(() => {
           @click="submitReject"
         >
           Tolak
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
+  <!-- Dialog Tambah Pembayaran BSI Manual -->
+  <VDialog
+    v-model="addDialog"
+    max-width="950"
+    scrollable
+  >
+    <VCard>
+      <VCardItem class="pb-3 border-b">
+        <div class="d-flex align-center gap-3">
+          <VAvatar
+            color="success"
+            variant="tonal"
+            size="42"
+          >
+            <VIcon
+              icon="ri-add-circle-line"
+              size="24"
+            />
+          </VAvatar>
+          <div>
+            <VCardTitle class="text-h6 font-weight-bold">
+              Input Pembayaran BSI Manual
+            </VCardTitle>
+            <VCardSubtitle>
+              Catat transaksi pembayaran BSI yang belum masuk dengan opsi langsung sinkron dan/atau rekonsiliasi.
+            </VCardSubtitle>
+          </div>
+          <VSpacer />
+          <DialogCloseBtn @click="addDialog = false" />
+        </div>
+      </VCardItem>
+
+      <VCardText
+        class="pt-4"
+        style="max-height: 75vh;"
+      >
+        <!-- Banner Helper -->
+        <VAlert
+          color="info"
+          variant="tonal"
+          density="comfortable"
+          class="mb-4"
+          closable
+        >
+          <div class="d-flex flex-wrap align-center justify-space-between gap-2">
+            <div class="d-flex align-center gap-2">
+              <VIcon
+                icon="ri-information-line"
+                size="20"
+              />
+              <span class="text-body-2">
+                Punya data dari rekonsiliasi BSI yang gagal/mismatch atau belum ada transaksi?
+              </span>
+            </div>
+            <VBtn
+              size="small"
+              color="info"
+              variant="flat"
+              prepend-icon="ri-magic-line"
+              :loading="loadingUnreconciled"
+              @click="fetchUnreconciledReconciliations"
+            >
+              Ambil dari Rekon Mismatch
+            </VBtn>
+          </div>
+        </VAlert>
+
+        <!-- Bagian 1: Cari Mahasiswa -->
+        <VCard
+          variant="outlined"
+          class="mb-4"
+        >
+          <VCardItem class="py-2 bg-var-theme-background">
+            <span class="font-weight-semibold text-subtitle-2 d-flex align-center gap-2">
+              <VIcon
+                icon="ri-user-search-line"
+                color="primary"
+                size="18"
+              />
+              1. Identitas Mahasiswa
+            </span>
+          </VCardItem>
+          <VDivider />
+          <VCardText>
+            <VRow align="center">
+              <VCol
+                cols="12"
+                sm="6"
+                md="5"
+              >
+                <VTextField
+                  v-model="manualForm.nim"
+                  label="NIM Mahasiswa"
+                  placeholder="Ketik NIM, misal: 202285010004"
+                  prepend-inner-icon="ri-user-line"
+                  density="compact"
+                  hide-details="auto"
+                  :loading="manualStudentLoading"
+                  @keyup.enter="searchManualStudent"
+                >
+                  <template #append-inner>
+                    <VBtn
+                      size="x-small"
+                      color="primary"
+                      variant="tonal"
+                      :loading="manualStudentLoading"
+                      @click="searchManualStudent"
+                    >
+                      Cari
+                    </VBtn>
+                  </template>
+                </VTextField>
+              </VCol>
+              <VCol
+                cols="12"
+                sm="6"
+                md="7"
+              >
+                <div
+                  v-if="manualForm.nama_mahasiswa"
+                  class="d-flex flex-wrap align-center gap-2 pa-2 rounded border"
+                  style="background: rgba(var(--v-theme-primary), 0.05); border-color: rgba(var(--v-theme-primary), 0.3) !important;"
+                >
+                  <VIcon
+                    icon="ri-account-circle-line"
+                    color="primary"
+                    size="22"
+                  />
+                  <div>
+                    <div class="font-weight-bold text-body-2">
+                      {{ manualForm.nama_mahasiswa }}
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      {{ manualForm.prodi }} &bull; Semester {{ manualForm.semester || '-' }} &bull; {{ manualForm.kelas || '-' }}
+                    </div>
+                  </div>
+                  <VSpacer />
+                  <VChip
+                    size="x-small"
+                    :color="manualForm.kategori === 'Putra' ? 'info' : 'warning'"
+                    label
+                  >
+                    {{ manualForm.kategori }}
+                  </VChip>
+                </div>
+                <div
+                  v-else
+                  class="text-caption text-medium-emphasis font-italic"
+                >
+                  Masukkan NIM lalu tekan "Cari" atau Enter untuk memuat tagihan mahasiswa.
+                </div>
+              </VCol>
+            </VRow>
+          </VCardText>
+        </VCard>
+
+        <!-- Bagian 2: Tagihan yang Dibayar -->
+        <VCard
+          variant="outlined"
+          class="mb-4"
+        >
+          <VCardItem class="py-2 bg-var-theme-background">
+            <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+              <span class="font-weight-semibold text-subtitle-2 d-flex align-center gap-2">
+                <VIcon
+                  icon="ri-bill-line"
+                  color="warning"
+                  size="18"
+                />
+                2. Tagihan Mahasiswa yang Dibayarkan
+              </span>
+              <div
+                v-if="manualAvailableBills.length > 0"
+                class="d-flex align-center gap-2"
+              >
+                <VBtn
+                  size="x-small"
+                  variant="text"
+                  color="primary"
+                  @click="selectAllBills"
+                >
+                  Pilih Semua
+                </VBtn>
+                <VBtn
+                  size="x-small"
+                  variant="text"
+                  color="secondary"
+                  @click="deselectAllBills"
+                >
+                  Batal Pilih
+                </VBtn>
+              </div>
+            </div>
+          </VCardItem>
+          <VDivider />
+          <VCardText class="pa-0">
+            <div
+              v-if="manualAvailableBills.length === 0"
+              class="text-center py-6 text-medium-emphasis"
+            >
+              <VIcon
+                icon="ri-inbox-line"
+                size="36"
+                class="mb-1 opacity-50"
+              />
+              <div class="text-body-2">
+                {{ manualForm.nama_mahasiswa ? 'Tidak ada tagihan yang belum lunas untuk mahasiswa ini.' : 'Cari NIM mahasiswa di atas untuk menampilkan daftar tagihan.' }}
+              </div>
+            </div>
+
+            <VTable
+              v-else
+              density="compact"
+              hover
+            >
+              <thead>
+                <tr>
+                  <th style="width: 48px;">
+                    Pilih
+                  </th>
+                  <th>Tagihan</th>
+                  <th>Tahun Akademik</th>
+                  <th class="text-end">
+                    Sisa Tagihan
+                  </th>
+                  <th
+                    class="text-end"
+                    style="width: 220px;"
+                  >
+                    Nominal Bayar (Rp)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(bill, bIdx) in manualAvailableBills"
+                  :key="bill.id || bIdx"
+                >
+                  <td>
+                    <VCheckbox
+                      v-model="bill.selected"
+                      density="compact"
+                      hide-details
+                      @change="bill.selected && (!bill.bayar || bill.bayar <= 0) ? (bill.bayar = bill.sisa > 0 ? bill.sisa : bill.jumlah_tagihan) : null"
+                    />
+                  </td>
+                  <td>
+                    <div class="font-weight-medium">
+                      {{ bill.nama }}
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      Total Tagihan: {{ formatCurrency(bill.jumlah_tagihan) }}
+                    </div>
+                  </td>
+                  <td>
+                    <VChip
+                      size="x-small"
+                      label
+                      variant="outlined"
+                    >
+                      {{ bill.tahun_akademik || '-' }}
+                    </VChip>
+                  </td>
+                  <td class="text-end font-weight-medium">
+                    {{ formatCurrency(bill.sisa) }}
+                  </td>
+                  <td class="text-end">
+                    <VTextField
+                      v-model.number="bill.bayar"
+                      type="number"
+                      density="compact"
+                      hide-details
+                      min="0"
+                      :disabled="!bill.selected"
+                      placeholder="0"
+                      class="text-end"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="bg-var-theme-background">
+                  <td
+                    colspan="4"
+                    class="font-weight-bold text-end"
+                  >
+                    Total Pembayaran:
+                  </td>
+                  <td class="text-end font-weight-bold text-primary text-subtitle-1">
+                    {{ formatCurrency(manualTotalAmount) }}
+                  </td>
+                </tr>
+              </tfoot>
+            </VTable>
+          </VCardText>
+        </VCard>
+
+        <!-- Bagian 3: Detail Transaksi Bank -->
+        <VCard
+          variant="outlined"
+          class="mb-4"
+        >
+          <VCardItem class="py-2 bg-var-theme-background">
+            <span class="font-weight-semibold text-subtitle-2 d-flex align-center gap-2">
+              <VIcon
+                icon="ri-bank-card-line"
+                color="info"
+                size="18"
+              />
+              3. Informasi Transaksi Bank BSI
+            </span>
+          </VCardItem>
+          <VDivider />
+          <VCardText>
+            <VRow>
+              <VCol
+                cols="12"
+                sm="6"
+                md="4"
+              >
+                <VTextField
+                  v-model="manualForm.paid_at"
+                  type="datetime-local"
+                  label="Tanggal & Jam Transaksi"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                sm="6"
+                md="4"
+              >
+                <VSelect
+                  v-model="manualForm.status"
+                  label="Status Pembayaran"
+                  :items="[
+                    { title: 'Berhasil (Success)', value: 'success' },
+                    { title: 'Menunggu (Pending)', value: 'pending' },
+                    { title: 'Terbayar (Paid)', value: 'paid' },
+                  ]"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                sm="6"
+                md="4"
+              >
+                <VTextField
+                  v-model="manualForm.va_number"
+                  label="Nomor VA / Pembayaran"
+                  placeholder="Otomatis jika kosong"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                sm="6"
+                md="4"
+              >
+                <VTextField
+                  v-model="manualForm.bank_reference"
+                  label="Referensi Bank / No. Jurnal"
+                  placeholder="Misal: FT2610... atau kosong"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                sm="6"
+                md="4"
+              >
+                <VTextField
+                  v-model="manualForm.recon_id"
+                  label="ID Rekonsiliasi BSI (Opsional)"
+                  placeholder="Misal: 228861"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </VCol>
+
+              <VCol
+                cols="12"
+                sm="6"
+                md="4"
+              >
+                <VTextField
+                  v-model="manualForm.bsi_payment_number"
+                  label="BSI Payment Number (Opsional)"
+                  placeholder="Misal: 202285010004"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </VCol>
+            </VRow>
+          </VCardText>
+        </VCard>
+
+        <!-- Bagian 4: Pengaturan Fleksibel (Luwes) -->
+        <VCard
+          variant="outlined"
+          class="border-primary"
+        >
+          <VCardItem class="py-2" style="background: rgba(var(--v-theme-primary), 0.08);">
+            <span class="font-weight-semibold text-subtitle-2 text-primary d-flex align-center gap-2">
+              <VIcon
+                icon="ri-settings-4-line"
+                size="18"
+              />
+              4. Opsi Sinkronisasi & Rekonsiliasi (Fleksibel)
+            </span>
+          </VCardItem>
+          <VDivider />
+          <VCardText>
+            <VRow>
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <div class="d-flex align-start gap-3 pa-3 rounded bg-var-theme-background">
+                  <VSwitch
+                    v-model="manualForm.sync_now"
+                    color="success"
+                    hide-details
+                  />
+                  <div>
+                    <div class="font-weight-bold text-body-2">
+                      Langsung Sinkronkan ke Buku Keuangan
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      Mencatat transaksi ke buku pembayaran resmi, membuat nota, dan melunasi/memotong tagihan mahasiswa. Jika dimatikan, transaksi tetap tersimpan dan dapat disinkronkan kemudian.
+                    </div>
+                  </div>
+                </div>
+              </VCol>
+
+              <VCol
+                cols="12"
+                md="6"
+              >
+                <div class="d-flex align-start gap-3 pa-3 rounded bg-var-theme-background">
+                  <VSwitch
+                    v-model="manualForm.reconcile_now"
+                    color="primary"
+                    hide-details
+                  />
+                  <div>
+                    <div class="font-weight-bold text-body-2">
+                      Langsung Tandai Rekonsiliasi Cocok (Matched)
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      Menandai status rekonsiliasi transaksi ini sebagai "matched" dan menautkannya ke data rekonsiliasi bank. Jika dimatikan, status akan "Belum Rekonsiliasi".
+                    </div>
+                  </div>
+                </div>
+              </VCol>
+            </VRow>
+          </VCardText>
+        </VCard>
+      </VCardText>
+
+      <VDivider />
+
+      <VCardActions class="justify-space-between px-6 py-3">
+        <div class="text-caption text-medium-emphasis">
+          Total Bayar: <span class="font-weight-bold text-primary">{{ formatCurrency(manualTotalAmount) }}</span>
+        </div>
+        <div class="d-flex gap-2">
+          <VBtn
+            variant="outlined"
+            color="secondary"
+            :disabled="manualSubmitting"
+            @click="addDialog = false"
+          >
+            Batal
+          </VBtn>
+          <VBtn
+            color="success"
+            prepend-icon="ri-save-line"
+            :loading="manualSubmitting"
+            :disabled="manualAvailableBills.filter(b => b.selected).length === 0 || manualTotalAmount <= 0"
+            @click="submitManualPayment"
+          >
+            Simpan Pembayaran
+          </VBtn>
+        </div>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
+  <!-- Sub-dialog: Pemilih Rekonsiliasi Mismatch / Orphan -->
+  <VDialog
+    v-model="reconcilePickerOpen"
+    max-width="850"
+    scrollable
+  >
+    <VCard>
+      <VCardItem class="pb-3 border-b">
+        <div class="d-flex align-center gap-2">
+          <VIcon
+            icon="ri-search-eye-line"
+            color="info"
+            size="24"
+          />
+          <div>
+            <VCardTitle class="text-h6 font-weight-bold">
+              Pilih Rekonsiliasi BSI Mismatch / Belum Masuk
+            </VCardTitle>
+            <VCardSubtitle>
+              Daftar data rekonsiliasi yang diterima dari BSI namun belum tertaut ke transaksi SIMKEU atau berstatus mismatch.
+            </VCardSubtitle>
+          </div>
+          <VSpacer />
+          <DialogCloseBtn @click="reconcilePickerOpen = false" />
+        </div>
+      </VCardItem>
+
+      <VCardText
+        class="pa-0"
+        style="max-height: 65vh;"
+      >
+        <div
+          v-if="unreconciledList.length === 0"
+          class="text-center py-8 text-medium-emphasis"
+        >
+          <VIcon
+            icon="ri-checkbox-circle-line"
+            size="40"
+            color="success"
+            class="mb-2"
+          />
+          <div class="text-subtitle-2">
+            Tidak ada rekonsiliasi yang mismatch atau belum tertaut.
+          </div>
+        </div>
+
+        <VTable
+          v-else
+          density="compact"
+          hover
+        >
+          <thead>
+            <tr>
+              <th>ID Rekon</th>
+              <th>No. Pembayaran / VA</th>
+              <th>Tanggal</th>
+              <th class="text-end">
+                Nominal
+              </th>
+              <th>Status / Masalah</th>
+              <th class="text-center">
+                Aksi
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="item in unreconciledList"
+              :key="item.id"
+            >
+              <td class="font-weight-bold font-monospace">
+                #{{ item.recon_id }}
+              </td>
+              <td>
+                <span class="font-monospace">{{ item.payment_number || '-' }}</span>
+              </td>
+              <td class="text-caption">
+                {{ formatDateTime(item.transaction_at) }}
+              </td>
+              <td class="text-end font-weight-semibold">
+                {{ formatCurrency(item.payment_amount) }}
+              </td>
+              <td>
+                <div class="text-caption text-error">
+                  {{ item.mismatch_description || (item.match_status === 'mismatch' ? 'Mismatch' : 'Belum tertaut') }}
+                </div>
+              </td>
+              <td class="text-center">
+                <VBtn
+                  size="x-small"
+                  color="primary"
+                  variant="tonal"
+                  prepend-icon="ri-check-line"
+                  @click="applyReconciledItem(item)"
+                >
+                  Gunakan
+                </VBtn>
+              </td>
+            </tr>
+          </tbody>
+        </VTable>
+      </VCardText>
+
+      <VDivider />
+
+      <VCardActions class="justify-end">
+        <VBtn
+          variant="outlined"
+          color="secondary"
+          @click="reconcilePickerOpen = false"
+        >
+          Tutup
         </VBtn>
       </VCardActions>
     </VCard>
