@@ -34,6 +34,16 @@ const parseSnackbarText = text => {
 }
 
 const showSnackbar = ({ color = "success", text = "" } = {}) => {
+  // Jangan tampilkan notifikasi jika error adalah pembatalan request (AbortError)
+  if (
+    text?.name === 'AbortError' ||
+    text?.isAborted ||
+    text === 'Permintaan dibatalkan.' ||
+    String(text).toLowerCase().includes('aborted')
+  ) {
+    return
+  }
+
   snackbarData.color = color || "success"
   snackbarData.text = parseSnackbarText(text)
   snackbarData.visible = true

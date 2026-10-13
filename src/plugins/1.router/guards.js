@@ -1,5 +1,6 @@
 import { canNavigate } from "@layouts/plugins/casl"
 import { cancelAllPendingRequests } from "@/utils/api"
+import { snackbarData } from "@/composables/snackbar"
 import NProgress from "nprogress"
 import "nprogress/nprogress.css"
 
@@ -42,6 +43,9 @@ export const setupGuards = router => {
   router.beforeEach(to => {
     // Batalkan request API dari halaman sebelumnya yang masih menggantung
     cancelAllPendingRequests()
+
+    // Sembunyikan snackbar dari halaman sebelumnya
+    snackbarData.visible = false
 
     // Mulai progress bar
     NProgress.start()

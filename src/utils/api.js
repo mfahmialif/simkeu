@@ -86,10 +86,12 @@ export const $api = async (url, options = {}) => {
   }
 
   // Timeout bawaan 30 detik (bisa diatur via options.timeout, atau 0 untuk tanpa timeout)
+  let isTimedOut = false
   const timeoutMs = options.timeout ?? 30000
   let timeoutId = null
   if (timeoutMs > 0) {
     timeoutId = setTimeout(() => {
+      isTimedOut = true
       controller.abort()
     }, timeoutMs)
   }
@@ -154,12 +156,24 @@ export const $api = async (url, options = {}) => {
 
     return data
   } catch (error) {
-    // Jika request dibatalkan karena navigasi atau timeout
-    if (error.name === 'AbortError') {
-      const abortError = new Error('Permintaan dibatalkan.')
-      abortError.name = 'AbortError'
-      abortError.isAborted = true
-      throw abortError
+    // Jika request dibatalkan karena timeout
+    if (isTimedOut) {
+      const timeoutError = new Error('Waktu permintaan habis. Silakan coba lagi.')
+      timeoutError.name = 'TimeoutError'
+      throw timeoutError
+    }
+
+    // Jika request dibatalkan karena navigasi ke halaman lain
+    if (error.name === 'AbortError' || controller.signal.aborted) {
+      if (options.throwOnAbort) {
+        const abortError = new Error('Permintaan dibatalkan.')
+        abortError.name = 'AbortError'
+        abortError.isAborted = true
+        throw abortError
+      }
+      // Silent abort: kembalikan Promise gantung agar komponen yang sedang unmount
+      // tidak memicu blok catch() dan tidak memunculkan notifikasi error palsu.
+      return new Promise(() => {})
     }
 
     // Menangani error jika response bukan JSON valid
