@@ -6,6 +6,7 @@ import {
   getDynamicI18nProps,
   isNavLinkActive,
 } from '@layouts/utils'
+import { prefetchNavRoute, cancelNavPrefetch } from '@/utils/prefetch'
 
 const props = defineProps({
   item: {
@@ -18,6 +19,18 @@ const props = defineProps({
     default: false,
   },
 })
+
+const router = useRouter()
+
+const handleMouseEnter = () => {
+  if (props.item?.to) {
+    prefetchNavRoute(props.item.to, router)
+  }
+}
+
+const handleMouseLeave = () => {
+  cancelNavPrefetch()
+}
 </script>
 
 <template>
@@ -33,6 +46,8 @@ const props = defineProps({
       :is="item.to ? 'RouterLink' : 'a'"
       v-bind="getComputedNavLinkToProp(item)"
       :class="{ 'router-link-active router-link-exact-active': isNavLinkActive(item, $router) }"
+      @mouseenter="handleMouseEnter"
+      @mouseleave="handleMouseLeave"
     >
       <Component
         :is="layoutConfig.app.iconRenderer || 'div'"

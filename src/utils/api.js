@@ -5,6 +5,41 @@ const userData = useCookie("userData")
 // Kumpulan AbortController untuk request aktif yang dapat dibatalkan saat navigasi
 const activeControllers = new Set()
 
+// Cache in-memory untuk GET requests (terutama hasil hover prefetch)
+// Format: cacheKey -> { data, expiresAt }
+const apiGetCache = new Map()
+
+/**
+ * Hapus cache data API
+ * @param {string} urlPattern Opsional: substring URL yang akan dihapus dari cache
+ */
+export const invalidateApiCache = (urlPattern = '') => {
+  if (!urlPattern) {
+    apiGetCache.clear()
+    return
+  }
+  for (const key of apiGetCache.keys()) {
+    if (key.includes(urlPattern)) {
+      apiGetCache.delete(key)
+    }
+  }
+}
+
+/**
+ * Panggil prefetch data API di background tanpa memblokir UI
+ */
+export const prefetchApi = (url, options = {}) => {
+  return $api(url, {
+    method: 'GET',
+    cache: true,
+    cacheTtl: options.cacheTtl || 25000,
+    cancelOnNavigate: false, // Jangan batalkan prefetch saat transisi navigasi
+    ...options,
+  }).catch(() => {
+    // Abaikan kegagalan prefetch di latar belakang
+  })
+}
+
 /**
  * Batalkan seluruh pending request yang terdaftar saat berpindah halaman
  */
@@ -73,6 +108,24 @@ export const $api = async (url, options = {}) => {
   }
   if (jkScope) {
     headers["X-Simkeu-Jk-Scope"] = jkScope
+  }
+
+  // Kunci cache unik berdasarkan method, URL, dan scope
+  const cacheKey = `${method}:${finalUrl}:${jkScope || ''}`
+
+  // Jika method mutasi (POST, PUT, DELETE, PATCH), otomatis invalidate cache agar data tidak basi
+  if (method !== 'GET') {
+    invalidateApiCache()
+  }
+
+  // Jika GET dan opsi cache aktif (default: aktif untuk GET kecuali options.cache === false),
+  // cek apakah ada data segar di cache (misalnya dari hasil hover prefetch)
+  if (method === 'GET' && options.cache !== false) {
+    const cached = apiGetCache.get(cacheKey)
+    if (cached && Date.now() < cached.expiresAt) {
+      // Kembalikan data dari cache instan dalam 0ms
+      return JSON.parse(JSON.stringify(cached.data))
+    }
   }
 
   // --- AbortController & Timeout Management ---
@@ -152,6 +205,17 @@ export const $api = async (url, options = {}) => {
       error.status = response.status
       error.data = data
       throw error
+    }
+
+    // Simpan ke cache jika GET (default TTL 20 detik atau sesuai options.cacheTtl)
+    if (method === 'GET' && options.cache !== false && data) {
+      const ttl = options.cacheTtl ?? 20000
+      if (ttl > 0) {
+        apiGetCache.set(cacheKey, {
+          data: JSON.parse(JSON.stringify(data)),
+          expiresAt: Date.now() + ttl,
+        })
+      }
     }
 
     return data

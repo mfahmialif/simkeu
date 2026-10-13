@@ -385,6 +385,11 @@
     "defaultPetugasPengeluaranId": true,
     "moduleKeyFromPengeluaranEndpoint": true,
     "useDashboardFilters": true,
-    "cancelAllPendingRequests": true
+    "cancelAllPendingRequests": true,
+    "cancelNavPrefetch": true,
+    "invalidateApiCache": true,
+    "prefetchApi": true,
+    "prefetchNavRoute": true,
+    "registerRouteDataPrefetcher": true
   }
 }
