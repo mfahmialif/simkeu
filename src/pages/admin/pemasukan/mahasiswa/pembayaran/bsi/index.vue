@@ -237,6 +237,52 @@ const handleFilterChange = () => {
   }
 }
 
+const activeDateShortcut = ref('')
+
+const formatDateISO = date => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+const setDateShortcut = shortcut => {
+  const now = new Date()
+  activeDateShortcut.value = shortcut
+
+  if (shortcut === 'this-month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    dateStart.value = formatDateISO(start)
+    dateEnd.value = formatDateISO(end)
+  } else if (shortcut === 'last-month') {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const end = new Date(now.getFullYear(), now.getMonth(), 0)
+    dateStart.value = formatDateISO(start)
+    dateEnd.value = formatDateISO(end)
+  } else if (shortcut === 'today') {
+    dateStart.value = formatDateISO(now)
+    dateEnd.value = formatDateISO(now)
+  } else if (shortcut === 'last-30-days') {
+    const start = new Date()
+    start.setDate(start.getDate() - 29)
+    dateStart.value = formatDateISO(start)
+    dateEnd.value = formatDateISO(now)
+  } else if (shortcut === 'this-year') {
+    const start = new Date(now.getFullYear(), 0, 1)
+    const end = new Date(now.getFullYear(), 11, 31)
+    dateStart.value = formatDateISO(start)
+    dateEnd.value = formatDateISO(end)
+  } else if (shortcut === 'all') {
+    dateStart.value = ''
+    dateEnd.value = ''
+    activeDateShortcut.value = ''
+  }
+
+  applyDateFilter()
+}
+
 const applyDateFilter = () => {
   page.value = 1
   refreshAll()
@@ -249,6 +295,7 @@ const resetFilters = () => {
   selectedReconciliation.value = 'all'
   dateStart.value = ''
   dateEnd.value = ''
+  activeDateShortcut.value = ''
   page.value = 1
   refreshAll()
 }
@@ -576,6 +623,93 @@ onMounted(() => {
           </VBtn>
         </VCol>
       </VRow>
+
+      <!-- Shortcut Periode (Bulan Ini, Bulan Lalu, dll.) -->
+      <div
+        class="d-flex flex-wrap align-center gap-2 mt-3 pt-3"
+        style="border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));"
+      >
+        <span class="text-caption font-weight-medium text-medium-emphasis d-flex align-center gap-1">
+          <VIcon
+            icon="ri-flashlight-line"
+            size="15"
+            color="warning"
+          />
+          Shortcut Periode:
+        </span>
+
+        <VChip
+          size="small"
+          variant="tonal"
+          :color="activeDateShortcut === 'this-month' ? 'primary' : 'default'"
+          class="cursor-pointer"
+          :class="{ 'font-weight-bold': activeDateShortcut === 'this-month' }"
+          prepend-icon="ri-calendar-check-line"
+          @click="setDateShortcut('this-month')"
+        >
+          Bulan Ini
+        </VChip>
+
+        <VChip
+          size="small"
+          variant="tonal"
+          :color="activeDateShortcut === 'last-month' ? 'primary' : 'default'"
+          class="cursor-pointer"
+          :class="{ 'font-weight-bold': activeDateShortcut === 'last-month' }"
+          prepend-icon="ri-history-line"
+          @click="setDateShortcut('last-month')"
+        >
+          Bulan Lalu
+        </VChip>
+
+        <VChip
+          size="small"
+          variant="tonal"
+          :color="activeDateShortcut === 'today' ? 'primary' : 'default'"
+          class="cursor-pointer"
+          :class="{ 'font-weight-bold': activeDateShortcut === 'today' }"
+          prepend-icon="ri-sun-line"
+          @click="setDateShortcut('today')"
+        >
+          Hari Ini
+        </VChip>
+
+        <VChip
+          size="small"
+          variant="tonal"
+          :color="activeDateShortcut === 'last-30-days' ? 'primary' : 'default'"
+          class="cursor-pointer"
+          :class="{ 'font-weight-bold': activeDateShortcut === 'last-30-days' }"
+          prepend-icon="ri-time-line"
+          @click="setDateShortcut('last-30-days')"
+        >
+          30 Hari Terakhir
+        </VChip>
+
+        <VChip
+          size="small"
+          variant="tonal"
+          :color="activeDateShortcut === 'this-year' ? 'primary' : 'default'"
+          class="cursor-pointer"
+          :class="{ 'font-weight-bold': activeDateShortcut === 'this-year' }"
+          prepend-icon="ri-calendar-2-line"
+          @click="setDateShortcut('this-year')"
+        >
+          Tahun Ini
+        </VChip>
+
+        <VChip
+          v-if="dateStart || dateEnd"
+          size="small"
+          variant="text"
+          color="secondary"
+          class="cursor-pointer"
+          prepend-icon="ri-close-circle-line"
+          @click="setDateShortcut('all')"
+        >
+          Semua Periode (Reset)
+        </VChip>
+      </div>
     </VCardText>
   </VCard>
 
