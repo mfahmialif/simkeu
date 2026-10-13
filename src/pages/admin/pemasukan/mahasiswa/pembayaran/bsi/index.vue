@@ -850,7 +850,14 @@ const editReconForm = ref({
   reconciled_at: '',
   mismatch_description: '',
   update_payment_status: true,
+  auto_create: true,
 })
+
+const generateAutoReconId = item => {
+  if (!item) return ''
+  const cleanNomor = (item.nomor || `TRX${item.id}`).replace(/[^A-Za-z0-9]/g, '')
+  return `RECON-${cleanNomor}`
+}
 
 const openEditReconciliation = item => {
   editReconTarget.value = item
@@ -863,14 +870,18 @@ const openEditReconciliation = item => {
     .toISOString()
     .slice(0, 16)
 
+  // Otomatis siapkan ID rekonsiliasi (jika belum ada di bank, auto-generate dari nomor transaksi)
+  const defaultReconId = latestRecon?.recon_id || generateAutoReconId(item)
+
   editReconForm.value = {
     reconciliation_status: ['matched', 'mismatch', 'unreconciled'].includes(currentStatus) ? currentStatus : 'matched',
-    recon_id: latestRecon?.recon_id || '',
+    recon_id: defaultReconId,
     settlement_code: latestRecon?.settlement_code || '',
     journal_number: latestRecon?.journal_number || '',
     reconciled_at: localDatetime,
     mismatch_description: latestRecon?.mismatch_description || '',
     update_payment_status: true,
+    auto_create: true,
   }
 
   editReconDialog.value = true
@@ -915,16 +926,19 @@ const submitEditReconciliation = async () => {
 
   editReconSubmitting.value = true
   try {
+    const finalReconId = editReconForm.value.recon_id?.trim() || generateAutoReconId(editReconTarget.value)
+
     const res = await $api(`/admin/pemasukan/mahasiswa/pembayaran-bsi/${editReconTarget.value.id}/reconciliation`, {
       method: 'POST',
       body: {
         reconciliation_status: editReconForm.value.reconciliation_status,
-        recon_id: editReconForm.value.recon_id,
+        recon_id: finalReconId,
         settlement_code: editReconForm.value.settlement_code,
         journal_number: editReconForm.value.journal_number,
         reconciled_at: editReconForm.value.reconciled_at,
         mismatch_description: editReconForm.value.mismatch_description,
         update_payment_status: editReconForm.value.update_payment_status,
+        auto_create: true,
       },
     })
 
@@ -2873,29 +2887,64 @@ onMounted(() => {
           </VCol>
 
           <VCol cols="12">
-            <VTextField
-              v-model="editReconForm.recon_id"
-              label="Nomor / ID Rekonsiliasi BSI"
-              placeholder="Misal: 228861"
-              prepend-inner-icon="ri-hashtag"
-              density="compact"
-              hide-details="auto"
-              clearable
-            >
-              <template #append-inner>
+            <div class="d-flex flex-wrap align-center justify-space-between gap-1 mb-1">
+              <span class="text-caption font-weight-medium text-medium-emphasis">
+                Nomor / ID Rekonsiliasi BSI:
+              </span>
+              <div class="d-flex align-center gap-1">
+                <VBtn
+                  size="x-small"
+                  color="primary"
+                  variant="text"
+                  prepend-icon="ri-magic-line"
+                  title="Generate ID rekonsiliasi otomatis dari nomor transaksi"
+                  @click="editReconForm.recon_id = generateAutoReconId(editReconTarget)"
+                >
+                  Auto Buat ID
+                </VBtn>
                 <VBtn
                   size="x-small"
                   color="info"
-                  variant="tonal"
+                  variant="text"
                   prepend-icon="ri-search-line"
+                  title="Pilih data rekonsiliasi dari bank yang belum tertaut"
                   @click="openReconPicker('edit')"
                 >
                   Pilih Data Rekon
                 </VBtn>
-              </template>
-            </VTextField>
-            <div class="text-caption text-medium-emphasis mt-1">
-              Masukkan nomor ID rekonsiliasi dari bank atau klik "Pilih Data Rekon" untuk memilih dari rekon BSI yang belum tertaut.
+              </div>
+            </div>
+
+            <VTextField
+              v-model="editReconForm.recon_id"
+              label="Nomor / ID Rekonsiliasi BSI"
+              placeholder="Misal: RECON-BSI-20260822-00000069"
+              prepend-inner-icon="ri-hashtag"
+              density="compact"
+              hide-details="auto"
+              clearable
+            />
+
+            <!-- Info Banner Auto Create jika belum ada rekon di bank -->
+            <div
+              v-if="!editReconTarget?.reconciliations?.length"
+              class="d-flex align-center gap-2 mt-2 pa-2 rounded border text-caption"
+              style="background-color: rgba(var(--v-theme-primary), 0.06); border-color: rgba(var(--v-theme-primary), 0.25) !important;"
+            >
+              <VIcon
+                icon="ri-sparkling-line"
+                size="18"
+                color="primary"
+              />
+              <div class="text-primary font-weight-medium">
+                <strong>Auto-Create Aktif:</strong> ID rekonsiliasi telah disiapkan otomatis. Tinggal klik <strong>"Simpan Rekonsiliasi"</strong> di bawah untuk langsung menyimpannya.
+              </div>
+            </div>
+            <div
+              v-else
+              class="text-caption text-medium-emphasis mt-1"
+            >
+              Masukkan nomor ID rekonsiliasi dari bank atau klik "Auto Buat ID" untuk generate otomatis.
             </div>
           </VCol>
 
