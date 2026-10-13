@@ -17,7 +17,8 @@ const selectedReconciliation = ref('all')
 const dateStart = ref('')
 const dateEnd = ref('')
 
-// Reconciliation Statistics
+// Stat Cards Tab & Data
+const activeStatTab = ref('all')
 const reconciliationStats = ref(null)
 const reconciliationStatsLoading = ref(false)
 
@@ -256,50 +257,146 @@ const resetFilters = () => {
   refreshAll()
 }
 
-const statCards = computed(() => [
-  {
-    key: 'total',
-    filterKey: 'all',
-    title: 'Total Rekonsiliasi',
-    subtitle: 'Semua data rekonsiliasi',
-    color: 'primary',
-    icon: 'ri-file-list-3-line',
-    count: reconciliationStats.value?.total?.count || 0,
-    amount: reconciliationStats.value?.total?.amount || 0,
-    isActive: selectedReconciliation.value === 'all',
-  },
-  {
-    key: 'matched',
-    filterKey: 'matched',
-    title: 'Sudah Cocok',
-    subtitle: 'Data rekonsiliasi matched',
-    color: 'success',
-    icon: 'ri-checkbox-circle-line',
-    count: reconciliationStats.value?.matched?.count || 0,
-    amount: reconciliationStats.value?.matched?.amount || 0,
-    isActive: selectedReconciliation.value === 'matched',
-  },
-  {
-    key: 'mismatch',
-    filterKey: 'mismatch',
-    title: 'Belum Cocok',
-    subtitle: 'Perlu ditinjau / mismatch',
-    color: 'error',
-    icon: 'ri-error-warning-line',
-    count: reconciliationStats.value?.mismatch?.count || 0,
-    amount: reconciliationStats.value?.mismatch?.amount || 0,
-    isActive: selectedReconciliation.value === 'mismatch',
-  },
-])
+// Koleksi Stat Cards Komprehensif (Rekon, Sinkron, Status)
+const allStatCards = computed(() => {
+  const stats = reconciliationStats.value || {}
 
-const setStatFilter = key => {
-  if (key === 'matched') {
-    selectedReconciliation.value = selectedReconciliation.value === 'matched' ? 'all' : 'matched'
-  } else if (key === 'mismatch') {
-    selectedReconciliation.value = selectedReconciliation.value === 'mismatch' ? 'all' : 'mismatch'
-  } else {
-    selectedReconciliation.value = 'all'
+  return [
+    {
+      group: 'recon',
+      key: 'total',
+      filterType: 'reset',
+      filterValue: 'all',
+      title: 'Total Transaksi',
+      color: 'primary',
+      icon: 'ri-file-list-3-line',
+      count: stats.total?.count || 0,
+      amount: stats.total?.amount || 0,
+      isActive: selectedReconciliation.value === 'all' && selectedSync.value === 'all' && selectedStatus.value === 'all',
+    },
+    {
+      group: 'recon',
+      key: 'matched',
+      filterType: 'recon',
+      filterValue: 'matched',
+      title: 'Rekon Cocok',
+      color: 'success',
+      icon: 'ri-checkbox-circle-line',
+      count: stats.matched?.count || 0,
+      amount: stats.matched?.amount || 0,
+      isActive: selectedReconciliation.value === 'matched',
+    },
+    {
+      group: 'recon',
+      key: 'mismatch',
+      filterType: 'recon',
+      filterValue: 'mismatch',
+      title: 'Rekon Mismatch',
+      color: 'error',
+      icon: 'ri-error-warning-line',
+      count: stats.mismatch?.count || 0,
+      amount: stats.mismatch?.amount || 0,
+      isActive: selectedReconciliation.value === 'mismatch',
+    },
+    {
+      group: 'sync',
+      key: 'synced',
+      filterType: 'sync',
+      filterValue: '1',
+      title: 'Sudah Sinkron',
+      color: 'info',
+      icon: 'ri-check-double-line',
+      count: stats.synced?.count || 0,
+      amount: stats.synced?.amount || 0,
+      isActive: selectedSync.value === '1',
+    },
+    {
+      group: 'sync',
+      key: 'unsynced',
+      filterType: 'sync',
+      filterValue: '0',
+      title: 'Belum Sinkron',
+      color: 'warning',
+      icon: 'ri-history-line',
+      count: stats.unsynced?.count || 0,
+      amount: stats.unsynced?.amount || 0,
+      isActive: selectedSync.value === '0',
+    },
+    {
+      group: 'status',
+      key: 'success',
+      filterType: 'status',
+      filterValue: 'success',
+      title: 'Status Berhasil',
+      color: 'success',
+      icon: 'ri-shield-check-line',
+      count: stats.success?.count || 0,
+      amount: stats.success?.amount || 0,
+      isActive: selectedStatus.value === 'success',
+    },
+    {
+      group: 'status',
+      key: 'pending',
+      filterType: 'status',
+      filterValue: 'pending',
+      title: 'Menunggu Bayar',
+      color: 'warning',
+      icon: 'ri-hourglass-2-line',
+      count: stats.pending?.count || 0,
+      amount: stats.pending?.amount || 0,
+      isActive: selectedStatus.value === 'pending',
+    },
+    {
+      group: 'status',
+      key: 'expired',
+      filterType: 'status',
+      filterValue: 'expired',
+      title: 'Kedaluwarsa',
+      color: 'secondary',
+      icon: 'ri-alarm-warning-line',
+      count: stats.expired?.count || 0,
+      amount: stats.expired?.amount || 0,
+      isActive: selectedStatus.value === 'expired',
+    },
+  ]
+})
+
+const displayedStatCards = computed(() => {
+  if (activeStatTab.value === 'all') {
+    return allStatCards.value
   }
+
+  return allStatCards.value.filter(c => c.group === activeStatTab.value || c.key === 'total')
+})
+
+const cardMdCols = computed(() => {
+  if (displayedStatCards.value.length === 3) return 4
+
+  return 3
+})
+
+const handleStatCardClick = card => {
+  if (card.filterType === 'reset') {
+    selectedReconciliation.value = 'all'
+    selectedSync.value = 'all'
+    selectedStatus.value = 'all'
+  } else if (card.filterType === 'recon') {
+    const nextVal = selectedReconciliation.value === card.filterValue ? 'all' : card.filterValue
+    selectedReconciliation.value = nextVal
+    selectedSync.value = 'all'
+    selectedStatus.value = 'all'
+  } else if (card.filterType === 'sync') {
+    const nextVal = selectedSync.value === card.filterValue ? 'all' : card.filterValue
+    selectedSync.value = nextVal
+    selectedReconciliation.value = 'all'
+    selectedStatus.value = 'all'
+  } else if (card.filterType === 'status') {
+    const nextVal = selectedStatus.value === card.filterValue ? 'all' : card.filterValue
+    selectedStatus.value = nextVal
+    selectedReconciliation.value = 'all'
+    selectedSync.value = 'all'
+  }
+
   handleFilterChange()
 }
 
@@ -474,68 +571,114 @@ onMounted(() => {
     </VCardText>
   </VCard>
 
-  <!-- Stat Cards Interaktif -->
-  <VRow class="mb-4">
-    <VCol
-      v-for="card in statCards"
-      :key="card.key"
-      cols="12"
-      md="4"
-    >
-      <VCard
-        :loading="reconciliationStatsLoading"
-        class="cursor-pointer stat-filter-card"
-        :class="{ 'stat-card-active': card.isActive }"
-        :style="card.isActive ? `border: 2px solid rgb(var(--v-theme-${card.color})) !important;` : ''"
-        @click="setStatFilter(card.filterKey)"
-      >
-        <VCardText class="d-flex align-center justify-space-between gap-3">
-          <div class="d-flex align-center gap-4">
-            <VAvatar
-              :color="card.color"
-              variant="tonal"
-              size="48"
-            >
-              <VIcon
-                :icon="card.icon"
-                size="26"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-caption text-medium-emphasis">
-                {{ card.title }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ Number(card.count).toLocaleString('id-ID') }}
-                <span class="text-body-2 font-weight-regular text-medium-emphasis">data</span>
-              </div>
-              <div class="text-body-2 font-weight-medium">
-                {{ formatCurrency(card.amount) }}
-              </div>
+  <!-- Stat Cards Interaktif Terpadu (Rekon, Sinkron, Status) -->
+  <VCard class="mb-4">
+    <VCardItem class="pb-2">
+      <div class="d-flex flex-wrap align-center justify-space-between gap-3">
+        <div class="d-flex align-center gap-2">
+          <VIcon
+            icon="ri-dashboard-line"
+            color="primary"
+            size="22"
+          />
+          <div>
+            <div class="text-subtitle-1 font-weight-bold">
+              Ringkasan & Statistik Transaksi
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              Klik kartu di bawah untuk memfilter data pada tabel (jumlah card dan tabel 100% konsisten).
             </div>
           </div>
+        </div>
 
-          <div class="text-end">
-            <VChip
-              v-if="card.isActive"
-              :color="card.color"
-              size="small"
-              label
-              variant="flat"
-            >
-              Aktif
-            </VChip>
-            <div
-              v-else
-              class="text-caption text-disabled d-none d-sm-block"
-            >
-              Klik filter
-            </div>
-          </div>
-        </VCardText>
-      </VCard>
-    </VCol>
-  </VRow>
+        <VTabs
+          v-model="activeStatTab"
+          density="compact"
+        >
+          <VTab value="all">
+            Semua Ringkasan
+          </VTab>
+          <VTab value="recon">
+            Rekonsiliasi
+          </VTab>
+          <VTab value="sync">
+            Sinkronisasi
+          </VTab>
+          <VTab value="status">
+            Status
+          </VTab>
+        </VTabs>
+      </div>
+    </VCardItem>
+
+    <VDivider />
+
+    <VCardText>
+      <VRow>
+        <VCol
+          v-for="card in displayedStatCards"
+          :key="card.key"
+          cols="12"
+          sm="6"
+          :md="cardMdCols"
+        >
+          <VCard
+            variant="outlined"
+            class="cursor-pointer stat-filter-card"
+            :class="{ 'stat-card-active': card.isActive }"
+            :style="card.isActive ? `border: 2px solid rgb(var(--v-theme-${card.color})) !important; background-color: rgba(var(--v-theme-${card.color}), 0.05);` : ''"
+            @click="handleStatCardClick(card)"
+          >
+            <VCardText class="pa-4 d-flex align-center justify-space-between gap-2">
+              <div class="d-flex align-center gap-3">
+                <VAvatar
+                  :color="card.color"
+                  variant="tonal"
+                  size="44"
+                >
+                  <VIcon
+                    :icon="card.icon"
+                    size="22"
+                  />
+                </VAvatar>
+                <div>
+                  <div class="text-caption text-medium-emphasis">
+                    {{ card.title }}
+                  </div>
+                  <div class="text-h6 font-weight-bold">
+                    {{ Number(card.count).toLocaleString('id-ID') }}
+                    <span class="text-caption font-weight-regular text-medium-emphasis">data</span>
+                  </div>
+                  <div class="text-caption font-weight-medium">
+                    {{ formatCurrency(card.amount) }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-end">
+                <VChip
+                  v-if="card.isActive"
+                  :color="card.color"
+                  size="x-small"
+                  label
+                  variant="flat"
+                >
+                  Aktif
+                </VChip>
+                <div
+                  v-else
+                  class="text-caption text-disabled d-none d-sm-block"
+                  style="font-size: 11px;"
+                >
+                  Klik filter
+                </div>
+              </div>
+            </VCardText>
+          </VCard>
+        </VCol>
+      </VRow>
+    </VCardText>
+  </VCard>
 
   <!-- Tabel Utama -->
   <VCard>
@@ -836,7 +979,11 @@ onMounted(() => {
       <!-- Kolom Mahasiswa -->
       <template #item.student="{ item }">
         <div class="py-2">
-          <div class="font-weight-medium text-high-emphasis text-truncate" style="max-width: 160px;" :title="item.nama_mahasiswa || '-'">
+          <div
+            class="font-weight-medium text-high-emphasis text-truncate"
+            style="max-width: 160px;"
+            :title="item.nama_mahasiswa || '-'"
+          >
             {{ item.nama_mahasiswa || '-' }}
           </div>
           <div class="text-caption text-medium-emphasis font-weight-medium">
