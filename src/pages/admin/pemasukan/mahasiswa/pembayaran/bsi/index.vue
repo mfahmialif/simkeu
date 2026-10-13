@@ -53,15 +53,11 @@ const canProcess = computed(() => ['admin', 'keuangan', 'kabag', 'kabag_pemasuka
 
 const statusOptions = [
   { title: 'Semua Status', value: 'all' },
-  { title: 'Menunggu Pembayaran', value: 'pending' },
-  { title: 'Sudah Dibayar', value: 'paid' },
-  { title: 'Perlu Ditinjau', value: 'needs_review' },
   { title: 'Berhasil', value: 'success' },
-  { title: 'Sudah Diposting', value: 'posted' },
-  { title: 'Ditolak', value: 'rejected' },
+  { title: 'Menunggu Pembayaran', value: 'pending' },
   { title: 'Kedaluwarsa', value: 'expired' },
   { title: 'Dibatalkan', value: 'cancelled' },
-  { title: 'Gagal', value: 'failed' },
+  { title: 'Ditolak', value: 'rejected' },
 ]
 
 const syncOptions = [
@@ -357,6 +353,18 @@ const allStatCards = computed(() => {
       count: stats.expired?.count || 0,
       amount: stats.expired?.amount || 0,
       isActive: selectedStatus.value === 'expired',
+    },
+    {
+      group: 'status',
+      key: 'cancelled',
+      filterType: 'status',
+      filterValue: 'cancelled',
+      title: 'Dibatalkan',
+      color: 'secondary',
+      icon: 'ri-close-circle-line',
+      count: stats.cancelled?.count || 0,
+      amount: stats.cancelled?.amount || 0,
+      isActive: selectedStatus.value === 'cancelled',
     },
   ]
 })
