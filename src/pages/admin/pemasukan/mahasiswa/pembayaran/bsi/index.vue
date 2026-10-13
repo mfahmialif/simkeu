@@ -807,6 +807,129 @@ const submitManualPayment = async () => {
   }
 }
 
+// --- Edit Reconciliation State & Handlers ---
+const editReconDialog = ref(false)
+const editReconTarget = ref(null)
+const editReconSubmitting = ref(false)
+const reconPickerMode = ref('manual') // 'manual' | 'edit'
+
+const editReconForm = ref({
+  reconciliation_status: 'matched',
+  recon_id: '',
+  settlement_code: '',
+  journal_number: '',
+  reconciled_at: '',
+  mismatch_description: '',
+  update_payment_status: true,
+})
+
+const openEditReconciliation = item => {
+  editReconTarget.value = item
+
+  const latestRecon = item.reconciliations?.[0]
+  const currentStatus = item.reconciliation_status || latestRecon?.match_status || 'matched'
+
+  const reconAt = latestRecon?.reconciled_at || item.paid_at || new Date().toISOString()
+  const localDatetime = new Date(new Date(reconAt).getTime() - new Date().getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16)
+
+  editReconForm.value = {
+    reconciliation_status: ['matched', 'mismatch', 'unreconciled'].includes(currentStatus) ? currentStatus : 'matched',
+    recon_id: latestRecon?.recon_id || '',
+    settlement_code: latestRecon?.settlement_code || '',
+    journal_number: latestRecon?.journal_number || '',
+    reconciled_at: localDatetime,
+    mismatch_description: latestRecon?.mismatch_description || '',
+    update_payment_status: true,
+  }
+
+  editReconDialog.value = true
+}
+
+const openReconPicker = mode => {
+  reconPickerMode.value = mode
+  fetchUnreconciledReconciliations()
+}
+
+const handleSelectReconItem = item => {
+  if (reconPickerMode.value === 'edit') {
+    applyReconciledItemToEdit(item)
+  } else {
+    applyReconciledItem(item)
+  }
+}
+
+const applyReconciledItemToEdit = item => {
+  reconcilePickerOpen.value = false
+  editReconForm.value.recon_id = item.recon_id || ''
+  editReconForm.value.reconciliation_status = 'matched'
+  if (item.settlement_code) {
+    editReconForm.value.settlement_code = item.settlement_code
+  }
+  if (item.journal_number) {
+    editReconForm.value.journal_number = item.journal_number
+  }
+  if (item.transaction_at) {
+    editReconForm.value.reconciled_at = new Date(new Date(item.transaction_at).getTime() - new Date().getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16)
+  }
+  showSnackbar({
+    text: `Nomor rekon #${item.recon_id} berhasil dimuat.`,
+    color: 'success',
+  })
+}
+
+const submitEditReconciliation = async () => {
+  if (!editReconTarget.value?.id) return
+
+  editReconSubmitting.value = true
+  try {
+    const res = await $api(`/admin/pemasukan/mahasiswa/pembayaran-bsi/${editReconTarget.value.id}/reconciliation`, {
+      method: 'POST',
+      body: {
+        reconciliation_status: editReconForm.value.reconciliation_status,
+        recon_id: editReconForm.value.recon_id,
+        settlement_code: editReconForm.value.settlement_code,
+        journal_number: editReconForm.value.journal_number,
+        reconciled_at: editReconForm.value.reconciled_at,
+        mismatch_description: editReconForm.value.mismatch_description,
+        update_payment_status: editReconForm.value.update_payment_status,
+      },
+    })
+
+    if (res?.status) {
+      showSnackbar({
+        text: res.message || 'Status rekonsiliasi berhasil diperbarui.',
+        color: 'success',
+      })
+      editReconDialog.value = false
+
+      if (selectedPayment.value && selectedPayment.value.id === editReconTarget.value.id) {
+        selectedPayment.value.reconciliation_status = editReconForm.value.reconciliation_status
+        if (res.data?.reconciliations) {
+          selectedPayment.value.reconciliations = res.data.reconciliations
+        }
+      }
+
+      await refreshAll()
+    } else {
+      showSnackbar({
+        text: res?.message || 'Gagal memperbarui rekonsiliasi.',
+        color: 'error',
+      })
+    }
+  } catch (error) {
+    showSnackbar({
+      text: errorMessage(error),
+      color: 'error',
+    })
+  } finally {
+    editReconSubmitting.value = false
+  }
+}
+
 onMounted(() => {
   document.title = 'Pembayaran VA BSI - SIMKEU'
   refreshAll()
@@ -1474,42 +1597,65 @@ onMounted(() => {
       <!-- Kolom Rekonsiliasi (BARU) -->
       <template #item.reconciliation="{ item }">
         <div class="d-flex flex-column align-center gap-1">
-          <VChip
-            v-if="item.reconciliation_status === 'matched' || item.reconciliations?.[0]?.match_status === 'matched'"
-            color="success"
-            size="small"
-            label
-            variant="tonal"
-            prepend-icon="ri-checkbox-circle-line"
-          >
-            Cocok
-          </VChip>
-          <VChip
-            v-else-if="item.reconciliation_status === 'mismatch' || (item.reconciliations?.[0] && item.reconciliations[0].match_status !== 'matched')"
-            color="error"
-            size="small"
-            label
-            variant="tonal"
-            prepend-icon="ri-close-circle-line"
-          >
-            Mismatch
-          </VChip>
-          <VChip
-            v-else
-            color="secondary"
-            size="small"
-            label
-            variant="tonal"
-            prepend-icon="ri-subtract-line"
-          >
-            Belum Ada
-          </VChip>
+          <div class="d-flex align-center gap-1">
+            <VChip
+              v-if="item.reconciliation_status === 'matched' || item.reconciliations?.[0]?.match_status === 'matched'"
+              color="success"
+              size="small"
+              label
+              variant="tonal"
+              prepend-icon="ri-checkbox-circle-line"
+              class="cursor-pointer"
+              title="Klik untuk edit rekonsiliasi"
+              @click="openEditReconciliation(item)"
+            >
+              Cocok
+            </VChip>
+            <VChip
+              v-else-if="item.reconciliation_status === 'mismatch' || (item.reconciliations?.[0] && item.reconciliations[0].match_status !== 'matched')"
+              color="error"
+              size="small"
+              label
+              variant="tonal"
+              prepend-icon="ri-close-circle-line"
+              class="cursor-pointer"
+              title="Klik untuk edit rekonsiliasi"
+              @click="openEditReconciliation(item)"
+            >
+              Mismatch
+            </VChip>
+            <VChip
+              v-else
+              color="secondary"
+              size="small"
+              label
+              variant="tonal"
+              prepend-icon="ri-subtract-line"
+              class="cursor-pointer"
+              title="Klik untuk edit rekonsiliasi"
+              @click="openEditReconciliation(item)"
+            >
+              Belum Ada
+            </VChip>
+            <IconBtn
+              v-if="canProcess"
+              size="x-small"
+              color="primary"
+              title="Edit Rekonsiliasi"
+              @click="openEditReconciliation(item)"
+            >
+              <VIcon
+                icon="ri-edit-line"
+                size="14"
+              />
+            </IconBtn>
+          </div>
           <span
-            v-if="item.reconciliations?.[0]?.settlement_code"
-            class="text-caption text-disabled font-monospace"
+            v-if="item.reconciliations?.[0]?.recon_id || item.reconciliations?.[0]?.settlement_code"
+            class="text-caption text-disabled font-monospace font-weight-bold"
             style="font-size: 10px;"
           >
-            {{ item.reconciliations[0].settlement_code }}
+            #{{ item.reconciliations[0].recon_id || item.reconciliations[0].settlement_code }}
           </span>
         </div>
       </template>
@@ -1570,6 +1716,16 @@ onMounted(() => {
             @click="showDetail(item)"
           >
             <VIcon icon="ri-eye-line" />
+          </IconBtn>
+
+          <IconBtn
+            v-if="canProcess"
+            size="small"
+            color="info"
+            title="Edit Rekonsiliasi"
+            @click="openEditReconciliation(item)"
+          >
+            <VIcon icon="ri-file-edit-line" />
           </IconBtn>
 
           <IconBtn
@@ -1698,14 +1854,32 @@ onMounted(() => {
             <div class="text-caption text-medium-emphasis">
               Status Rekonsiliasi
             </div>
-            <VChip
-              size="small"
-              label
-              variant="tonal"
-              :color="selectedPayment.reconciliation_status === 'matched' ? 'success' : selectedPayment.reconciliation_status === 'mismatch' ? 'error' : 'secondary'"
+            <div class="d-flex align-center gap-2">
+              <VChip
+                size="small"
+                label
+                variant="tonal"
+                :color="selectedPayment.reconciliation_status === 'matched' ? 'success' : selectedPayment.reconciliation_status === 'mismatch' ? 'error' : 'secondary'"
+              >
+                {{ selectedPayment.reconciliation_status === 'matched' ? 'Cocok (Matched)' : selectedPayment.reconciliation_status === 'mismatch' ? 'Mismatch' : 'Belum Rekonsiliasi' }}
+              </VChip>
+              <VBtn
+                v-if="canProcess"
+                size="x-small"
+                variant="tonal"
+                color="primary"
+                prepend-icon="ri-edit-line"
+                @click="openEditReconciliation(selectedPayment)"
+              >
+                Edit Rekon
+              </VBtn>
+            </div>
+            <div
+              v-if="selectedPayment.reconciliations?.[0]?.recon_id"
+              class="text-caption text-disabled font-monospace mt-1"
             >
-              {{ selectedPayment.reconciliation_status === 'matched' ? 'Cocok (Matched)' : selectedPayment.reconciliation_status === 'mismatch' ? 'Mismatch' : 'Belum Rekonsiliasi' }}
-            </VChip>
+              ID Rekon: #{{ selectedPayment.reconciliations[0].recon_id }}
+            </div>
           </VCol>
           <VCol
             cols="12"
@@ -2501,7 +2675,7 @@ onMounted(() => {
                   color="primary"
                   variant="tonal"
                   prepend-icon="ri-check-line"
-                  @click="applyReconciledItem(item)"
+                  @click="handleSelectReconItem(item)"
                 >
                   Gunakan
                 </VBtn>
@@ -2520,6 +2694,256 @@ onMounted(() => {
           @click="reconcilePickerOpen = false"
         >
           Tutup
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
+  <!-- Dialog Edit Rekonsiliasi -->
+  <VDialog
+    v-model="editReconDialog"
+    max-width="650"
+  >
+    <VCard>
+      <VCardItem class="pb-3 border-b">
+        <div class="d-flex align-center gap-3">
+          <VAvatar
+            color="primary"
+            variant="tonal"
+            size="40"
+          >
+            <VIcon
+              icon="ri-exchange-dollar-line"
+              size="22"
+            />
+          </VAvatar>
+          <div>
+            <VCardTitle class="text-h6 font-weight-bold">
+              Edit Rekonsiliasi BSI
+            </VCardTitle>
+            <VCardSubtitle>
+              Perbarui status rekonsiliasi dan nomor/ID rekon untuk transaksi ini.
+            </VCardSubtitle>
+          </div>
+          <VSpacer />
+          <DialogCloseBtn @click="editReconDialog = false" />
+        </div>
+      </VCardItem>
+
+      <VCardText class="pt-4">
+        <!-- Info Singkat Transaksi -->
+        <VCard
+          variant="outlined"
+          class="mb-4 bg-var-theme-background"
+        >
+          <VCardText class="py-3">
+            <VRow dense>
+              <VCol
+                cols="12"
+                sm="6"
+              >
+                <div class="text-caption text-medium-emphasis">
+                  Nomor Transaksi
+                </div>
+                <div class="font-weight-medium font-monospace">
+                  {{ editReconTarget?.nomor || '-' }}
+                </div>
+              </VCol>
+              <VCol
+                cols="12"
+                sm="6"
+              >
+                <div class="text-caption text-medium-emphasis">
+                  Mahasiswa
+                </div>
+                <div class="font-weight-medium text-truncate">
+                  {{ editReconTarget?.nim }} - {{ editReconTarget?.nama_mahasiswa || '-' }}
+                </div>
+              </VCol>
+              <VCol
+                cols="12"
+                sm="6"
+              >
+                <div class="text-caption text-medium-emphasis">
+                  Total Pembayaran
+                </div>
+                <div class="font-weight-bold text-primary">
+                  {{ formatCurrency(editReconTarget?.total) }}
+                </div>
+              </VCol>
+              <VCol
+                cols="12"
+                sm="6"
+              >
+                <div class="text-caption text-medium-emphasis">
+                  Waktu Transaksi
+                </div>
+                <div class="text-body-2">
+                  {{ formatDateTime(editReconTarget?.paid_at || editReconTarget?.created_at) }}
+                </div>
+              </VCol>
+            </VRow>
+          </VCardText>
+        </VCard>
+
+        <!-- Form Edit Rekon -->
+        <VRow>
+          <VCol cols="12">
+            <div class="text-caption font-weight-medium text-medium-emphasis mb-1">
+              Status Rekonsiliasi:
+            </div>
+            <VRadioGroup
+              v-model="editReconForm.reconciliation_status"
+              inline
+              density="compact"
+              hide-details
+            >
+              <VRadio
+                value="matched"
+                color="success"
+              >
+                <template #label>
+                  <span class="font-weight-medium text-success d-flex align-center gap-1">
+                    <VIcon
+                      icon="ri-checkbox-circle-line"
+                      size="18"
+                    />
+                    Cocok (Matched)
+                  </span>
+                </template>
+              </VRadio>
+              <VRadio
+                value="mismatch"
+                color="error"
+              >
+                <template #label>
+                  <span class="font-weight-medium text-error d-flex align-center gap-1">
+                    <VIcon
+                      icon="ri-close-circle-line"
+                      size="18"
+                    />
+                    Mismatch
+                  </span>
+                </template>
+              </VRadio>
+              <VRadio
+                value="unreconciled"
+                color="secondary"
+              >
+                <template #label>
+                  <span class="font-weight-medium text-medium-emphasis d-flex align-center gap-1">
+                    <VIcon
+                      icon="ri-subtract-line"
+                      size="18"
+                    />
+                    Belum Ada / Reset
+                  </span>
+                </template>
+              </VRadio>
+            </VRadioGroup>
+          </VCol>
+
+          <VCol cols="12">
+            <VTextField
+              v-model="editReconForm.recon_id"
+              label="Nomor / ID Rekonsiliasi BSI"
+              placeholder="Misal: 228861"
+              prepend-inner-icon="ri-hashtag"
+              density="compact"
+              hide-details="auto"
+              clearable
+            >
+              <template #append-inner>
+                <VBtn
+                  size="x-small"
+                  color="info"
+                  variant="tonal"
+                  prepend-icon="ri-search-line"
+                  @click="openReconPicker('edit')"
+                >
+                  Pilih Data Rekon
+                </VBtn>
+              </template>
+            </VTextField>
+            <div class="text-caption text-medium-emphasis mt-1">
+              Masukkan nomor ID rekonsiliasi dari bank atau klik "Pilih Data Rekon" untuk memilih dari rekon BSI yang belum tertaut.
+            </div>
+          </VCol>
+
+          <VCol
+            cols="12"
+            sm="6"
+          >
+            <VTextField
+              v-model="editReconForm.settlement_code"
+              label="Kode Settlement / FT BSI (Opsional)"
+              placeholder="Misal: FT24... atau kosong"
+              density="compact"
+              hide-details="auto"
+            />
+          </VCol>
+
+          <VCol
+            cols="12"
+            sm="6"
+          >
+            <VTextField
+              v-model="editReconForm.reconciled_at"
+              type="datetime-local"
+              label="Waktu Rekonsiliasi"
+              density="compact"
+              hide-details="auto"
+            />
+          </VCol>
+
+          <VCol
+            v-if="editReconForm.reconciliation_status === 'mismatch'"
+            cols="12"
+          >
+            <VTextarea
+              v-model="editReconForm.mismatch_description"
+              label="Keterangan Mismatch / Selisih"
+              placeholder="Contoh: Nominal tidak cocok atau tanggal berbeda"
+              rows="2"
+              density="compact"
+              hide-details="auto"
+            />
+          </VCol>
+
+          <VCol cols="12">
+            <div class="d-flex align-center gap-2 pa-2 rounded border bg-var-theme-background">
+              <VSwitch
+                v-model="editReconForm.update_payment_status"
+                color="success"
+                density="compact"
+                hide-details
+              />
+              <div class="text-caption">
+                <span class="font-weight-medium">Otomatis set status transaksi ke 'Berhasil'</span> jika saat ini masih pending atau butuh review.
+              </div>
+            </div>
+          </VCol>
+        </VRow>
+      </VCardText>
+
+      <VDivider />
+
+      <VCardActions class="justify-end px-6 py-3">
+        <VBtn
+          variant="outlined"
+          color="secondary"
+          :disabled="editReconSubmitting"
+          @click="editReconDialog = false"
+        >
+          Batal
+        </VBtn>
+        <VBtn
+          color="primary"
+          prepend-icon="ri-save-line"
+          :loading="editReconSubmitting"
+          @click="submitEditReconciliation"
+        >
+          Simpan Rekonsiliasi
         </VBtn>
       </VCardActions>
     </VCard>
