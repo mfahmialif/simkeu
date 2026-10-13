@@ -342,6 +342,18 @@ const allStatCards = computed(() => {
       isActive: selectedReconciliation.value === 'mismatch',
     },
     {
+      group: 'recon',
+      key: 'unreconciled',
+      filterType: 'recon',
+      filterValue: 'unreconciled',
+      title: 'Belum Ada Rekon',
+      color: 'secondary',
+      icon: 'ri-time-line',
+      count: stats.unreconciled?.count || 0,
+      amount: stats.unreconciled?.amount || 0,
+      isActive: selectedReconciliation.value === 'unreconciled',
+    },
+    {
       group: 'sync',
       key: 'synced',
       filterType: 'sync',
