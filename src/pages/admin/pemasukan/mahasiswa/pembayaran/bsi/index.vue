@@ -14,6 +14,7 @@ const search = ref('')
 const selectedStatus = ref('all')
 const selectedSync = ref('all')
 const selectedReconciliation = ref('all')
+const selectedMonth = ref('all')
 const dateStart = ref('')
 const dateEnd = ref('')
 
@@ -132,6 +133,7 @@ const hasActiveFilters = computed(() => {
     selectedStatus.value !== 'all' ||
     selectedSync.value !== 'all' ||
     selectedReconciliation.value !== 'all' ||
+    selectedMonth.value !== 'all' ||
     Boolean(dateStart.value) ||
     Boolean(dateEnd.value)
   )
@@ -151,6 +153,7 @@ const fetchData = async () => {
       ...(selectedStatus.value !== 'all' ? { status: selectedStatus.value } : {}),
       ...(selectedSync.value !== 'all' ? { transferred: selectedSync.value } : {}),
       ...(selectedReconciliation.value !== 'all' ? { reconciliation_status: selectedReconciliation.value } : {}),
+      ...(selectedMonth.value !== 'all' ? { bulan: selectedMonth.value } : {}),
       ...(dateStart.value ? { tanggal_mulai: dateStart.value } : {}),
       ...(dateEnd.value ? { tanggal_akhir: dateEnd.value } : {}),
     }
@@ -185,6 +188,7 @@ const fetchReconciliationStats = async () => {
   reconciliationStatsLoading.value = true
   try {
     const params = {
+      ...(selectedMonth.value !== 'all' ? { bulan: selectedMonth.value } : {}),
       ...(dateStart.value ? { tanggal_mulai: dateStart.value } : {}),
       ...(dateEnd.value ? { tanggal_akhir: dateEnd.value } : {}),
       ...(search.value.trim() ? { search: search.value.trim() } : {}),
@@ -261,12 +265,107 @@ watch(search, (newVal, oldVal) => {
 
 const activeDateShortcut = ref('')
 
+const monthNames = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+]
+
+const getMonthLabel = val => {
+  if (!val || val === 'all') return 'Semua Bulan'
+  const [yearStr, monthStr] = val.split('-')
+  const m = parseInt(monthStr, 10)
+  return `${monthNames[m - 1]} ${yearStr}`
+}
+
+const monthOptions = computed(() => {
+  const options = [
+    { title: 'Semua Bulan (Reset)', value: 'all' },
+  ]
+
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth()
+
+  const currentYm = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`
+  const lastMonthDate = new Date(currentYear, currentMonth - 1, 1)
+  const lastYm = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`
+
+  for (let y = currentYear; y >= 2024; y--) {
+    for (let m = 11; m >= 0; m--) {
+      const ym = `${y}-${String(m + 1).padStart(2, '0')}`
+      let badge = ''
+      if (ym === currentYm) {
+        badge = ' (Bulan Ini)'
+      } else if (ym === lastYm) {
+        badge = ' (Bulan Lalu)'
+      }
+      options.push({
+        title: `${monthNames[m]} ${y}${badge}`,
+        value: ym,
+      })
+    }
+  }
+
+  return options
+})
+
 const formatDateISO = date => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
+}
+
+const handleMonthChange = val => {
+  if (!val || val === 'all') {
+    selectedMonth.value = 'all'
+    dateStart.value = ''
+    dateEnd.value = ''
+    activeDateShortcut.value = ''
+    applyDateFilter()
+    return
+  }
+
+  selectedMonth.value = val
+  const [yearStr, monthStr] = val.split('-')
+  const y = parseInt(yearStr, 10)
+  const m = parseInt(monthStr, 10)
+
+  const startDate = new Date(y, m - 1, 1)
+  const endDate = new Date(y, m, 0)
+
+  dateStart.value = formatDateISO(startDate)
+  dateEnd.value = formatDateISO(endDate)
+
+  const now = new Date()
+  const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastYm = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`
+
+  if (val === currentYm) {
+    activeDateShortcut.value = 'this-month'
+  } else if (val === lastYm) {
+    activeDateShortcut.value = 'last-month'
+  } else {
+    activeDateShortcut.value = `month-${val}`
+  }
+
+  applyDateFilter()
+}
+
+const onCustomDateChange = () => {
+  if (selectedMonth.value !== 'all') {
+    const [yearStr, monthStr] = selectedMonth.value.split('-')
+    const y = parseInt(yearStr, 10)
+    const m = parseInt(monthStr, 10)
+    const expectedStart = formatDateISO(new Date(y, m - 1, 1))
+    const expectedEnd = formatDateISO(new Date(y, m, 0))
+    if (dateStart.value !== expectedStart || dateEnd.value !== expectedEnd) {
+      selectedMonth.value = 'all'
+      activeDateShortcut.value = ''
+    }
+  }
 }
 
 const setDateShortcut = shortcut => {
@@ -278,27 +377,34 @@ const setDateShortcut = shortcut => {
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
     dateStart.value = formatDateISO(start)
     dateEnd.value = formatDateISO(end)
+    selectedMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   } else if (shortcut === 'last-month') {
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const end = new Date(now.getFullYear(), now.getMonth(), 0)
     dateStart.value = formatDateISO(start)
     dateEnd.value = formatDateISO(end)
+    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    selectedMonth.value = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`
   } else if (shortcut === 'today') {
     dateStart.value = formatDateISO(now)
     dateEnd.value = formatDateISO(now)
+    selectedMonth.value = 'all'
   } else if (shortcut === 'last-30-days') {
     const start = new Date()
     start.setDate(start.getDate() - 29)
     dateStart.value = formatDateISO(start)
     dateEnd.value = formatDateISO(now)
+    selectedMonth.value = 'all'
   } else if (shortcut === 'this-year') {
     const start = new Date(now.getFullYear(), 0, 1)
     const end = new Date(now.getFullYear(), 11, 31)
     dateStart.value = formatDateISO(start)
     dateEnd.value = formatDateISO(end)
+    selectedMonth.value = 'all'
   } else if (shortcut === 'all') {
     dateStart.value = ''
     dateEnd.value = ''
+    selectedMonth.value = 'all'
     activeDateShortcut.value = ''
   }
 
@@ -315,6 +421,7 @@ const resetFilters = () => {
   selectedStatus.value = 'all'
   selectedSync.value = 'all'
   selectedReconciliation.value = 'all'
+  selectedMonth.value = 'all'
   dateStart.value = ''
   dateEnd.value = ''
   activeDateShortcut.value = ''
@@ -986,7 +1093,8 @@ onMounted(() => {
       <VRow align="center">
         <VCol
           cols="12"
-          md="4"
+          lg="3"
+          md="3"
         >
           <div class="d-flex align-center gap-2">
             <VIcon
@@ -999,7 +1107,7 @@ onMounted(() => {
                 Periode & Statistik
               </div>
               <div class="text-caption text-medium-emphasis">
-                Filter transaksi dan rekonsiliasi berdasarkan rentang tanggal.
+                Filter transaksi dan rekonsiliasi berdasarkan rentang tanggal atau bulan.
               </div>
             </div>
           </div>
@@ -1009,6 +1117,24 @@ onMounted(() => {
           cols="12"
           sm="6"
           md="3"
+          lg="3"
+        >
+          <VSelect
+            v-model="selectedMonth"
+            :items="monthOptions"
+            label="Filter Bulan"
+            density="compact"
+            hide-details
+            prepend-inner-icon="ri-calendar-line"
+            @update:model-value="handleMonthChange"
+          />
+        </VCol>
+
+        <VCol
+          cols="12"
+          sm="6"
+          md="2"
+          lg="2"
         >
           <VTextField
             v-model="dateStart"
@@ -1017,7 +1143,8 @@ onMounted(() => {
             density="compact"
             hide-details
             clearable
-            @click:clear="dateStart = ''; applyDateFilter()"
+            @update:model-value="onCustomDateChange"
+            @click:clear="dateStart = ''; onCustomDateChange(); applyDateFilter()"
             @keyup.enter="applyDateFilter"
           />
         </VCol>
@@ -1025,7 +1152,8 @@ onMounted(() => {
         <VCol
           cols="12"
           sm="6"
-          md="3"
+          md="2"
+          lg="2"
         >
           <VTextField
             v-model="dateEnd"
@@ -1034,7 +1162,8 @@ onMounted(() => {
             density="compact"
             hide-details
             clearable
-            @click:clear="dateEnd = ''; applyDateFilter()"
+            @update:model-value="onCustomDateChange"
+            @click:clear="dateEnd = ''; onCustomDateChange(); applyDateFilter()"
             @keyup.enter="applyDateFilter"
           />
         </VCol>
@@ -1042,6 +1171,7 @@ onMounted(() => {
         <VCol
           cols="12"
           md="2"
+          lg="2"
           class="d-flex gap-2"
         >
           <VBtn
@@ -1132,7 +1262,7 @@ onMounted(() => {
         </VChip>
 
         <VChip
-          v-if="dateStart || dateEnd"
+          v-if="dateStart || dateEnd || selectedMonth !== 'all'"
           size="small"
           variant="text"
           color="secondary"
@@ -1317,7 +1447,8 @@ onMounted(() => {
       <VRow>
         <VCol
           cols="12"
-          md="4"
+          sm="6"
+          md="3"
         >
           <VTextField
             v-model="search"
@@ -1335,7 +1466,23 @@ onMounted(() => {
         <VCol
           cols="12"
           sm="6"
-          md="3"
+          md="2"
+        >
+          <VSelect
+            v-model="selectedMonth"
+            :items="monthOptions"
+            label="Bulan"
+            density="compact"
+            hide-details
+            prepend-inner-icon="ri-calendar-line"
+            @update:model-value="handleMonthChange"
+          />
+        </VCol>
+
+        <VCol
+          cols="12"
+          sm="6"
+          md="2"
         >
           <VSelect
             v-model="selectedStatus"
@@ -1415,6 +1562,18 @@ onMounted(() => {
       </VChip>
 
       <VChip
+        v-if="selectedMonth !== 'all'"
+        size="small"
+        color="warning"
+        variant="tonal"
+        closable
+        prepend-icon="ri-calendar-line"
+        @click:close="handleMonthChange('all')"
+      >
+        Bulan: {{ getMonthLabel(selectedMonth) }}
+      </VChip>
+
+      <VChip
         v-if="selectedStatus !== 'all'"
         size="small"
         color="primary"
@@ -1448,7 +1607,7 @@ onMounted(() => {
       </VChip>
 
       <VChip
-        v-if="dateStart || dateEnd"
+        v-if="(dateStart || dateEnd) && selectedMonth === 'all'"
         size="small"
         color="warning"
         variant="tonal"
