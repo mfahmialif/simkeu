@@ -1,6 +1,24 @@
 import { useLogout } from "@/composables/logout"
 
 const userData = useCookie("userData")
+
+// Kumpulan AbortController untuk request aktif yang dapat dibatalkan saat navigasi
+const activeControllers = new Set()
+
+/**
+ * Batalkan seluruh pending request yang terdaftar saat berpindah halaman
+ */
+export const cancelAllPendingRequests = () => {
+  for (const controller of activeControllers) {
+    try {
+      controller.abort()
+    } catch {
+      // Abaikan error abort
+    }
+  }
+  activeControllers.clear()
+}
+
 export const $api = async (url, options = {}) => {
   const { logout } = useLogout()
 
@@ -22,33 +40,8 @@ export const $api = async (url, options = {}) => {
     headers,
   }
 
-  // --- BLOK LOGIKA BARU YANG MENGGABUNGKAN SEMUANYA ---
-
-  // if (method === "GET" && options.body && typeof options.body === "object") {
-  //   // 1. LOGIKA ASLI ANDA UNTUK GET REQUEST (TETAP DIPERTAHANKAN)
-  //   const query = new URLSearchParams(options.body).toString();
-  //   finalUrl += `?${query}`;
-  //   // Body tidak ditambahkan ke fetchOptions untuk GET
-  // } else if (options.body) {
-  //   // 2. LOGIKA UNTUK METHOD LAIN (POST, PUT, PATCH, DLL)
-  //   if (options.body instanceof FormData) {
-  //     // Jika body adalah FormData, langsung teruskan tanpa mengubah header
-  //     fetchOptions.body = options.body;
-  //   } else if (typeof options.body === "object") {
-  //     // Jika body adalah objek JSON biasa, stringify dan set header
-  //     headers["Content-Type"] = "application/json";
-  //     fetchOptions.body = JSON.stringify(options.body);
-  //   } else {
-  //     // Untuk tipe body lain (misalnya string)
-  //     fetchOptions.body = options.body;
-  //   }
-  // }
-  // --- AKHIR BLOK LOGIKA BARU ---
-
-  // kode saya
   // --- Tambahkan dukungan params untuk GET ---
   if (method === "GET") {
-    // Bisa menggunakan options.params atau options.body
     const queryObject = options.params || options.body
 
     if (queryObject && typeof queryObject === "object") {
@@ -65,7 +58,6 @@ export const $api = async (url, options = {}) => {
       }
     }
   } else if (options.body) {
-    // Untuk POST, PUT, PATCH, DELETE, dll
     if (options.body instanceof FormData) {
       fetchOptions.body = options.body
     } else if (typeof options.body === "object") {
@@ -82,6 +74,32 @@ export const $api = async (url, options = {}) => {
   if (jkScope) {
     headers["X-Simkeu-Jk-Scope"] = jkScope
   }
+
+  // --- AbortController & Timeout Management ---
+  // Default: GET request otomatis bisa dibatalkan saat ganti halaman.
+  // Method mutasi (POST, PUT, DELETE, PATCH) tidak dibatalkan otomatis saat ganti halaman kecuali ditentukan di options.
+  const cancelOnNavigate = options.cancelOnNavigate ?? (method === 'GET')
+  const controller = new AbortController()
+
+  if (cancelOnNavigate) {
+    activeControllers.add(controller)
+  }
+
+  // Timeout bawaan 30 detik (bisa diatur via options.timeout, atau 0 untuk tanpa timeout)
+  const timeoutMs = options.timeout ?? 30000
+  let timeoutId = null
+  if (timeoutMs > 0) {
+    timeoutId = setTimeout(() => {
+      controller.abort()
+    }, timeoutMs)
+  }
+
+  // Jika pemanggil menyertakan signal custom sendiri
+  if (options.signal) {
+    options.signal.addEventListener('abort', () => controller.abort())
+  }
+
+  fetchOptions.signal = controller.signal
 
   try {
     const response = await fetch(finalUrl, fetchOptions)
@@ -136,13 +154,28 @@ export const $api = async (url, options = {}) => {
 
     return data
   } catch (error) {
+    // Jika request dibatalkan karena navigasi atau timeout
+    if (error.name === 'AbortError') {
+      const abortError = new Error('Permintaan dibatalkan.')
+      abortError.name = 'AbortError'
+      abortError.isAborted = true
+      throw abortError
+    }
+
     // Menangani error jika response bukan JSON valid
     if (error instanceof SyntaxError) {
       console.error("Failed to parse JSON response.")
       throw new Error("Respons dari server tidak valid.")
     }
 
-    // Melempar kembali error asli untuk ditangani di `onSubmit`
+    // Melempar kembali error asli untuk ditangani di caller
     throw error
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+    if (cancelOnNavigate) {
+      activeControllers.delete(controller)
+    }
   }
 }

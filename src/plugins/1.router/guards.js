@@ -1,4 +1,5 @@
 import { canNavigate } from "@layouts/plugins/casl"
+import { cancelAllPendingRequests } from "@/utils/api"
 import NProgress from "nprogress"
 import "nprogress/nprogress.css"
 
@@ -39,6 +40,9 @@ export const setupGuards = router => {
   // 👉 router.beforeEach
   // Docs: https://router.vuejs.org/guide/advanced/navigation-guards.html#global-before-guards
   router.beforeEach(to => {
+    // Batalkan request API dari halaman sebelumnya yang masih menggantung
+    cancelAllPendingRequests()
+
     // Mulai progress bar
     NProgress.start()
 
@@ -77,5 +81,15 @@ export const setupGuards = router => {
   router.afterEach(() => {
     // Selesai progress bar
     NProgress.done()
+  })
+
+  // 👉 router.onError
+  router.onError(error => {
+    NProgress.done()
+
+    // Tangani jika chunk/modul gagal dimuat setelah build/deploy baru
+    if (/Failed to fetch dynamically imported module|Importing a module script failed/i.test(error?.message || '')) {
+      window.location.reload()
+    }
   })
 }

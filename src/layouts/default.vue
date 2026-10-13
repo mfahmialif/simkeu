@@ -18,20 +18,6 @@ const { layoutAttrs, injectSkinClasses } = useSkins()
 
 injectSkinClasses()
 
-// SECTION: Loading Indicator
-const isFallbackStateActive = ref(false)
-const refLoadingIndicator = ref(null)
-
-watch([
-  isFallbackStateActive,
-  refLoadingIndicator,
-], () => {
-  if (isFallbackStateActive.value && refLoadingIndicator.value)
-    refLoadingIndicator.value.fallbackHandle()
-  if (!isFallbackStateActive.value && refLoadingIndicator.value)
-    refLoadingIndicator.value.resolveHandle()
-}, { immediate: true })
-// !SECTION
 </script>
 
 <template>
@@ -39,19 +25,11 @@ watch([
     v-bind="layoutAttrs"
     :is="configStore.appContentLayoutNav === AppContentLayoutNav.Vertical ? DefaultLayoutWithVerticalNav : DefaultLayoutWithHorizontalNav"
   >
-    <AppLoadingIndicator ref="refLoadingIndicator" />
-
     <RouterView v-slot="{ Component, route }">
-      <Suspense
-        :timeout="0"
-        @fallback="isFallbackStateActive = true"
-        @resolve="isFallbackStateActive = false"
-      >
-        <Component
-          :is="Component"
-          :key="route.path"
-        />
-      </Suspense>
+      <Component
+        :is="Component"
+        :key="route.path"
+      />
     </RouterView>
   </Component>
 </template>

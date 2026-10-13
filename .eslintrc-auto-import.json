@@ -384,6 +384,7 @@
     "fetchPetugasPengeluaranOptions": true,
     "defaultPetugasPengeluaranId": true,
     "moduleKeyFromPengeluaranEndpoint": true,
-    "useDashboardFilters": true
+    "useDashboardFilters": true,
+    "cancelAllPendingRequests": true
   }
 }

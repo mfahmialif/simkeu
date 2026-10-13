@@ -169,6 +169,7 @@ const fetchData = async () => {
     totalItems.value = Number(response.data?.total || 0)
   } catch (error) {
     if (requestId !== currentRequestId) return
+    if (error?.name === 'AbortError' || error?.isAborted) return
     showSnackbar({
       text: errorMessage(error),
       color: 'error',
@@ -206,6 +207,7 @@ const fetchReconciliationStats = async () => {
       reconciliationStats.value = response.data
     }
   } catch (error) {
+    if (error?.name === 'AbortError' || error?.isAborted) return
     showSnackbar({ text: errorMessage(error), color: 'error' })
   } finally {
     if (requestId === currentStatsRequestId) {
