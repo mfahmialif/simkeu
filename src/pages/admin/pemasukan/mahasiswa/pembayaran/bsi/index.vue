@@ -178,12 +178,19 @@ const fetchData = async () => {
   }
 }
 
+let currentStatsRequestId = 0
+
 const fetchReconciliationStats = async () => {
+  const requestId = ++currentStatsRequestId
   reconciliationStatsLoading.value = true
   try {
     const params = {
       ...(dateStart.value ? { tanggal_mulai: dateStart.value } : {}),
       ...(dateEnd.value ? { tanggal_akhir: dateEnd.value } : {}),
+      ...(search.value.trim() ? { search: search.value.trim() } : {}),
+      ...(selectedStatus.value !== 'all' ? { status: selectedStatus.value } : {}),
+      ...(selectedSync.value !== 'all' ? { transferred: selectedSync.value } : {}),
+      ...(selectedReconciliation.value !== 'all' ? { reconciliation_status: selectedReconciliation.value } : {}),
     }
 
     const response = await $api('/admin/pemasukan/mahasiswa/pembayaran-bsi/reconciliation-stats', {
@@ -191,11 +198,15 @@ const fetchReconciliationStats = async () => {
       params,
     })
 
-    reconciliationStats.value = response.data
+    if (requestId === currentStatsRequestId) {
+      reconciliationStats.value = response.data
+    }
   } catch (error) {
     showSnackbar({ text: errorMessage(error), color: 'error' })
   } finally {
-    reconciliationStatsLoading.value = false
+    if (requestId === currentStatsRequestId) {
+      reconciliationStatsLoading.value = false
+    }
   }
 }
 
@@ -235,7 +246,18 @@ const handleFilterChange = () => {
   } else {
     page.value = 1
   }
+  fetchReconciliationStats()
 }
+
+let searchDebounceTimer = null
+watch(search, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = setTimeout(() => {
+      handleFilterChange()
+    }, 500)
+  }
+})
 
 const activeDateShortcut = ref('')
 
@@ -300,6 +322,10 @@ const resetFilters = () => {
   refreshAll()
 }
 
+const isAnyCardFilterActive = computed(() => {
+  return selectedReconciliation.value !== 'all' || selectedSync.value !== 'all' || selectedStatus.value !== 'all'
+})
+
 // Koleksi Stat Cards Komprehensif (Rekon, Sinkron, Status)
 const allStatCards = computed(() => {
   const stats = reconciliationStats.value || {}
@@ -310,12 +336,12 @@ const allStatCards = computed(() => {
       key: 'total',
       filterType: 'reset',
       filterValue: 'all',
-      title: 'Total Transaksi',
+      title: isAnyCardFilterActive.value ? 'Total Terfilter' : 'Total Transaksi',
       color: 'primary',
-      icon: 'ri-file-list-3-line',
+      icon: isAnyCardFilterActive.value ? 'ri-filter-3-line' : 'ri-file-list-3-line',
       count: stats.total?.count || 0,
       amount: stats.total?.amount || 0,
-      isActive: selectedReconciliation.value === 'all' && selectedSync.value === 'all' && selectedStatus.value === 'all',
+      isActive: !isAnyCardFilterActive.value,
     },
     {
       group: 'recon',
@@ -448,20 +474,11 @@ const handleStatCardClick = card => {
     selectedSync.value = 'all'
     selectedStatus.value = 'all'
   } else if (card.filterType === 'recon') {
-    const nextVal = selectedReconciliation.value === card.filterValue ? 'all' : card.filterValue
-    selectedReconciliation.value = nextVal
-    selectedSync.value = 'all'
-    selectedStatus.value = 'all'
+    selectedReconciliation.value = selectedReconciliation.value === card.filterValue ? 'all' : card.filterValue
   } else if (card.filterType === 'sync') {
-    const nextVal = selectedSync.value === card.filterValue ? 'all' : card.filterValue
-    selectedSync.value = nextVal
-    selectedReconciliation.value = 'all'
-    selectedStatus.value = 'all'
+    selectedSync.value = selectedSync.value === card.filterValue ? 'all' : card.filterValue
   } else if (card.filterType === 'status') {
-    const nextVal = selectedStatus.value === card.filterValue ? 'all' : card.filterValue
-    selectedStatus.value = nextVal
-    selectedReconciliation.value = 'all'
-    selectedSync.value = 'all'
+    selectedStatus.value = selectedStatus.value === card.filterValue ? 'all' : card.filterValue
   }
 
   handleFilterChange()
@@ -1214,7 +1231,7 @@ onMounted(() => {
                   class="text-caption text-disabled d-none d-sm-block"
                   style="font-size: 11px;"
                 >
-                  Klik filter
+                  {{ card.key === 'total' && isAnyCardFilterActive ? 'Reset filter' : 'Klik filter' }}
                 </div>
               </div>
             </VCardText>
