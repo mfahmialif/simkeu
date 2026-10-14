@@ -157,21 +157,44 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="d-flex flex-wrap align-center gap-3 mb-5">
-    <VBtn
-      variant="text"
-      prepend-icon="ri-arrow-left-line"
-      @click="router.push('/admin/pemasukan/mahasiswa/pembayaran/bsi')"
-    >
-      Kembali
-    </VBtn>
-    <div>
-      <h1 class="text-h4">
-        Sinkronisasi Pembayaran BSI
-      </h1>
-      <div class="text-body-2 text-medium-emphasis">
-        Transaksi production berstatus success yang belum masuk pembukuan.
+  <div class="d-flex flex-wrap justify-space-between align-center gap-4 mb-6">
+    <div class="d-flex align-center gap-3">
+      <VBtn
+        icon
+        variant="tonal"
+        color="secondary"
+        rounded="circle"
+        density="comfortable"
+        @click="router.push('/admin/pemasukan/mahasiswa/pembayaran/bsi')"
+      >
+        <VIcon icon="ri-arrow-left-line" />
+        <VTooltip
+          activator="parent"
+          location="top"
+        >
+          Kembali ke Pembayaran BSI
+        </VTooltip>
+      </VBtn>
+
+      <div>
+        <h4 class="text-h4 font-weight-medium">
+          Sinkronisasi Pembayaran BSI
+        </h4>
+        <div class="text-body-2 text-medium-emphasis">
+          Transaksi production berstatus success yang belum masuk pembukuan.
+        </div>
       </div>
+    </div>
+
+    <div>
+      <VBtn
+        variant="outlined"
+        color="secondary"
+        prepend-icon="ri-arrow-left-line"
+        @click="router.push('/admin/pemasukan/mahasiswa/pembayaran/bsi')"
+      >
+        Kembali ke Pembayaran BSI
+      </VBtn>
     </div>
   </div>
 
