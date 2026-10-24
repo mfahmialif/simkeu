@@ -40,6 +40,7 @@ declare module 'vue-router/auto-routes' {
     'admin-laporan-pengeluaran-barokah-pegawai': RouteRecordInfo<'admin-laporan-pengeluaran-barokah-pegawai', '/admin/laporan/pengeluaran/barokah-pegawai', Record<never, never>, Record<never, never>>,
     'admin-laporan-pengeluaran-pengeluaran-harian': RouteRecordInfo<'admin-laporan-pengeluaran-pengeluaran-harian', '/admin/laporan/pengeluaran/pengeluaran-harian', Record<never, never>, Record<never, never>>,
     'admin-laporan-rab': RouteRecordInfo<'admin-laporan-rab', '/admin/laporan/rab', Record<never, never>, Record<never, never>>,
+    'admin-laporan-setting-akhir-laporan': RouteRecordInfo<'admin-laporan-setting-akhir-laporan', '/admin/laporan/setting-akhir-laporan', Record<never, never>, Record<never, never>>,
     'admin-pegawai': RouteRecordInfo<'admin-pegawai', '/admin/pegawai', Record<never, never>, Record<never, never>>,
     'admin-pegawai-dosen': RouteRecordInfo<'admin-pegawai-dosen', '/admin/pegawai/dosen', Record<never, never>, Record<never, never>>,
     'admin-pegawai-staff': RouteRecordInfo<'admin-pegawai-staff', '/admin/pegawai/staff', Record<never, never>, Record<never, never>>,

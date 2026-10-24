@@ -98,6 +98,7 @@ const totals = ref({})
 const hasData = ref(false)
 const jkInfo = ref("")
 const rincianJenisPembayaran = ref([])
+const cutOffInfo = ref(null)
 
 const getPaymentItemIcon = item => {
   const key = String(item.key || "").toLowerCase()
@@ -160,8 +161,8 @@ const openDetailPemasukanUmum = (paymentType = null, monthInfo = null) => {
     const [y, m] = selectedBulan.value.split("-")
     const days = new Date(y, parseInt(m), 0).getDate()
 
-    startDate = `${y}-${m}-01`
-    endDate = `${y}-${m}-${days}`
+    startDate = cutOffInfo.value?.query_start_date || `${y}-${m}-01`
+    endDate = cutOffInfo.value?.query_end_date || `${y}-${m}-${days}`
     subtitle = `Bulan: ${selectedBulan.value} | Metode: ${formatMethodName(paymentType)}`
   } else if (selectedMode.value === "tahunan" && selectedTahun.value) {
     startDate = `${selectedTahun.value}-01-01`
@@ -212,8 +213,8 @@ const openDetailPengembalianDana = (paymentType = null, monthInfo = null) => {
     const [y, m] = selectedBulan.value.split("-")
     const days = new Date(y, parseInt(m), 0).getDate()
 
-    startDate = `${y}-${m}-01`
-    endDate = `${y}-${m}-${days}`
+    startDate = cutOffInfo.value?.query_start_date || `${y}-${m}-01`
+    endDate = cutOffInfo.value?.query_end_date || `${y}-${m}-${days}`
     subtitle = `Bulan: ${selectedBulan.value} (Pengembalian Dana) | Metode: ${formatMethodName(paymentType)}`
   } else if (selectedMode.value === "tahunan" && selectedTahun.value) {
     startDate = `${selectedTahun.value}-01-01`
@@ -419,6 +420,7 @@ const fetchData = async () => {
       totals.value = Object.freeze(normalizedResponse.totals)
       allData.value = Object.freeze(normalizedResponse.all_data || [])
       rincianJenisPembayaran.value = Object.freeze(normalizedResponse.rincian_jenis_pembayaran || [])
+      cutOffInfo.value = normalizedResponse.cut_off_info || null
       jkInfo.value = normalizedResponse.jenis_kelamin == '%' ? 'Semua' : normalizedResponse.jenis_kelamin
       hasData.value = true
     } else {
@@ -759,6 +761,27 @@ onMounted(() => {
 
     <!-- Report Table -->
     <template v-else>
+      <!-- Alert Cut-Off Aktif -->
+      <VAlert
+        v-if="cutOffInfo?.has_carry_over"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mb-4"
+        icon="ri-information-line"
+      >
+        <div class="d-flex flex-wrap align-center justify-space-between gap-2">
+          <div>
+            <strong>Setting Akhir Laporan Aktif:</strong>
+            Rekapan ini mencakup transaksi limpahan dari <strong>{{ cutOffInfo.prev_month_name }}</strong>
+            tanggal <strong>{{ cutOffInfo.carry_over_dates.map(d => d.split('-').reverse().slice(0, 2).join('/')).join(', ') }}</strong>.
+          </div>
+          <VChip size="small" color="warning" variant="elevated">
+            Limpahan {{ cutOffInfo.prev_month_name }}
+          </VChip>
+        </div>
+      </VAlert>
+
       <VCard class="report-table-card mb-6">
         <div
           id="report-table-container"

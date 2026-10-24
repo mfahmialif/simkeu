@@ -28,6 +28,8 @@ const totalByCurrency = ref([])
 const rincianJenisPembayaran = ref([])
 const jkInfo = ref("")
 const kategori = ref("")
+const isPastCutOff = ref(false)
+const shiftedMonth = ref(null)
 
 const getPaymentItemIcon = item => {
   const key = String(item.key || "").toLowerCase()
@@ -110,6 +112,8 @@ const fetchData = async () => {
       rincianJenisPembayaran.value = Object.freeze(response.rincian_jenis_pembayaran || [])
       jkInfo.value = response.jenis_kelamin === "%" ? "Semua" : response.jenis_kelamin
       kategori.value = response.kategori || ""
+      isPastCutOff.value = response.is_past_cut_off || false
+      shiftedMonth.value = response.shifted_month || null
       hasData.value = true
     } else {
       showSnackbar({ text: response.message, color: "error" })
@@ -491,39 +495,75 @@ onMounted(() => {
       </p>
     </VCard>
 
-    <VCard v-else>
-      <VCardItem>
-        <VCardTitle class="text-center">
-          LAPORAN HARIAN
-        </VCardTitle>
-        <VCardSubtitle class="text-center">
-          Tanggal Pelayanan: {{ formatTanggal(selectedTanggal) }}
-          <span v-if="kategori"> | {{ kategori }}</span>
-        </VCardSubtitle>
-      </VCardItem>
-
-      <VDivider />
-
-      <VDataTable
-        :headers="headers"
-        :items="reportRows"
-        :items-per-page="-1"
-        hide-default-footer
-        class="report-table"
+    <div v-else>
+      <!-- Alert Cut-Off Aktif -->
+      <VAlert
+        v-if="isPastCutOff"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mb-4"
+        icon="ri-information-line"
       >
-        <template #item.tanggal_input="{ item }">
-          {{ formatTanggal(item.tanggal_input) }}
-        </template>
-        <template #item.tanggal_transaksi="{ item }">
-          {{ formatTanggal(item.tanggal_transaksi) }}
-        </template>
-        <template #item.nominal="{ item }">
-          <span
-            class="font-weight-bold"
-            :class="{ 'text-error': Number(item.nominal) < 0 }"
-          >{{ formatMoney(item.nominal, item.mata_uang) }}</span>
-        </template>
-        <template #bottom>
+        <div class="d-flex flex-wrap align-center justify-space-between gap-2">
+          <div>
+            <strong>Setting Akhir Laporan Aktif:</strong>
+            Tanggal ini melewati batas cut-off bulan ini (Cut-off: Tanggal {{ shiftedMonth?.cut_off_day }}).
+            Transaksi pada tanggal ini dialihkan masuk ke pembukuan <strong>{{ shiftedMonth?.label }}</strong>.
+          </div>
+          <VChip size="small" color="warning" variant="elevated">
+            Masuk Buku {{ shiftedMonth?.label }}
+          </VChip>
+        </div>
+      </VAlert>
+
+      <VCard>
+        <VCardItem>
+          <VCardTitle class="text-center">
+            LAPORAN HARIAN
+          </VCardTitle>
+          <VCardSubtitle class="text-center">
+            Tanggal Pelayanan: {{ formatTanggal(selectedTanggal) }}
+            <span v-if="kategori"> | {{ kategori }}</span>
+          </VCardSubtitle>
+        </VCardItem>
+
+        <VDivider />
+
+        <VDataTable
+          :headers="headers"
+          :items="reportRows"
+          :items-per-page="-1"
+          hide-default-footer
+          class="report-table"
+        >
+          <template #item.tanggal_input="{ item }">
+            {{ formatTanggal(item.tanggal_input) }}
+          </template>
+          <template #item.tanggal_transaksi="{ item }">
+            {{ formatTanggal(item.tanggal_transaksi) }}
+          </template>
+          <template #item.nominal="{ item }">
+            <span
+              class="font-weight-bold"
+              :class="{ 'text-error': Number(item.nominal) < 0 }"
+            >{{ formatMoney(item.nominal, item.mata_uang) }}</span>
+          </template>
+          <template #item.metode="{ item }">
+            <div class="d-flex align-center gap-1">
+              <span>{{ item.metode }}</span>
+              <VChip
+                v-if="item.is_carry_over"
+                size="x-small"
+                color="warning"
+                variant="tonal"
+                class="font-weight-medium"
+              >
+                Masuk {{ item.accounting_period }}
+              </VChip>
+            </div>
+          </template>
+          <template #bottom>
           <VDivider />
           <div class="d-flex justify-end pa-4 text-h6">
             TOTAL: {{ formatCurrencyTotals(totalByCurrency, total) }}
@@ -535,7 +575,8 @@ onMounted(() => {
           </div>
         </template>
       </VDataTable>
-    </VCard>
+      </VCard>
+    </div>
 
     <!-- Rincian Jenis Pembayaran -->
     <VCard

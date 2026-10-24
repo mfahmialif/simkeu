@@ -64,6 +64,7 @@ const totals = ref({})
 const hasData = ref(false)
 const jkInfo = ref("")
 const rincianJenisPembayaran = ref([])
+const cutOffInfo = ref(null)
 
 const getPaymentItemIcon = item => {
   const key = String(item.key || "").toLowerCase()
@@ -416,6 +417,7 @@ const fetchData = async () => {
       const normalizedResponse = normalizeReportData(response)
 
       rincianJenisPembayaran.value = Object.freeze(normalizedResponse.rincian_jenis_pembayaran || [])
+      cutOffInfo.value = normalizedResponse.cut_off_info || null
 
       if (selectedMode.value === 'tahunan') {
         reportTitle.value = "PEMASUKAN TUNAI TAHUN " + selectedTahun.value
@@ -916,6 +918,28 @@ onMounted(() => {
 
         <VDivider />
 
+        <!-- Alert Cut-Off Aktif -->
+        <VAlert
+          v-if="cutOffInfo?.has_carry_over"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="ma-3"
+          icon="ri-information-line"
+        >
+          <div class="d-flex flex-wrap align-center justify-space-between gap-2">
+            <div>
+              <strong>Setting Akhir Laporan Aktif:</strong>
+              Menampilkan limpahan transaksi tanggal
+              <strong>{{ cutOffInfo.carry_over_dates.map(d => d.split('-').reverse().slice(0, 2).join('/')).join(', ') }}</strong>
+              dari bulan <strong>{{ cutOffInfo.prev_month_name }}</strong>.
+            </div>
+            <VChip size="small" color="warning" variant="elevated">
+              Limpahan {{ cutOffInfo.prev_month_name }}
+            </VChip>
+          </div>
+        </VAlert>
+
         <div
           id="report-table-container"
           class="table-scroll-container"
@@ -952,13 +976,25 @@ onMounted(() => {
                 v-for="(row, index) in tableData"
                 :key="index"
                 class="data-row"
-                :class="{ 'even-row': index % 2 === 0 }"
+                :class="{ 'even-row': index % 2 === 0, 'carry-over-row': row.is_carry_over }"
               >
                 <td class="sticky-col col-no text-center">
                   {{ row.no }}
                 </td>
                 <td class="sticky-col col-tanggal text-center">
-                  {{ formatTanggal(row.tanggal) }}
+                  <div class="d-flex align-center justify-center gap-1">
+                    <span>{{ formatTanggal(row.tanggal) }}</span>
+                    <VChip
+                      v-if="row.is_carry_over"
+                      size="x-small"
+                      color="warning"
+                      variant="elevated"
+                      class="px-1 font-weight-bold"
+                      style="font-size: 10px; height: 18px;"
+                    >
+                      Limpahan {{ row.carry_over_from }}
+                    </VChip>
+                  </div>
                 </td>
                 <td
                   v-for="col in columns"
@@ -1829,5 +1865,17 @@ onMounted(() => {
 .rincian-icon-badge.is-total {
   background: rgba(255, 255, 255, 0.2) !important;
   color: #ffffff !important;
+}
+
+.carry-over-row {
+  background-color: rgba(255, 152, 0, 0.08) !important;
+}
+
+.carry-over-row td {
+  border-bottom: 1px dashed rgba(255, 152, 0, 0.4) !important;
+}
+
+.carry-over-row:hover {
+  background-color: rgba(255, 152, 0, 0.16) !important;
 }
 </style>
