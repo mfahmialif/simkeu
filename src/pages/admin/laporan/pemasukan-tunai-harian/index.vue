@@ -930,12 +930,12 @@ onMounted(() => {
           <div class="d-flex flex-wrap align-center justify-space-between gap-2">
             <div>
               <strong>Setting Akhir Laporan Aktif:</strong>
-              Menampilkan limpahan transaksi tanggal
-              <strong>{{ cutOffInfo.carry_over_dates.map(d => d.split('-').reverse().slice(0, 2).join('/')).join(', ') }}</strong>
-              dari bulan <strong>{{ cutOffInfo.prev_month_name }}</strong>.
+              Laporan ini memuat transaksi limpahan dari <strong>{{ cutOffInfo.prev_month_name }}</strong>
+              (tanggal <strong>{{ cutOffInfo.carry_over_dates.map(d => d.split('-').reverse().slice(0, 2).join('/')).join(', ') }}</strong>)
+              yang otomatis diakumulasikan ke dalam <strong>Tanggal 1</strong>.
             </div>
             <VChip size="small" color="warning" variant="elevated">
-              Limpahan {{ cutOffInfo.prev_month_name }}
+              Limpahan di Tanggal 1
             </VChip>
           </div>
         </VAlert>
@@ -976,24 +976,54 @@ onMounted(() => {
                 v-for="(row, index) in tableData"
                 :key="index"
                 class="data-row"
-                :class="{ 'even-row': index % 2 === 0, 'carry-over-row': row.is_carry_over }"
+                :class="{ 'even-row': index % 2 === 0, 'has-carry-over-row': row.has_carry_over }"
               >
                 <td class="sticky-col col-no text-center">
                   {{ row.no }}
                 </td>
                 <td class="sticky-col col-tanggal text-center">
-                  <div class="d-flex align-center justify-center gap-1">
+                  <div class="d-flex flex-column align-center justify-center">
                     <span>{{ formatTanggal(row.tanggal) }}</span>
-                    <VChip
-                      v-if="row.is_carry_over"
-                      size="x-small"
-                      color="warning"
-                      variant="elevated"
-                      class="px-1 font-weight-bold"
-                      style="font-size: 10px; height: 18px;"
+                    <VMenu
+                      v-if="row.has_carry_over"
+                      open-on-hover
+                      location="bottom center"
                     >
-                      Limpahan {{ row.carry_over_from }}
-                    </VChip>
+                      <template #activator="{ props }">
+                        <VChip
+                          v-bind="props"
+                          size="x-small"
+                          color="warning"
+                          variant="tonal"
+                          class="mt-1 cursor-pointer font-weight-bold"
+                          style="font-size: 10px; height: 18px;"
+                        >
+                          <VIcon start size="12" icon="ri-information-line" />
+                          + Limpahan
+                        </VChip>
+                      </template>
+                      <VCard min-width="260" class="pa-3 elevation-4">
+                        <div class="text-caption font-weight-bold mb-2 pb-1 border-b">
+                          Rincian Akumulasi Tanggal 1
+                        </div>
+                        <div class="d-flex justify-space-between text-caption py-1">
+                          <span>Transaksi Asli (01):</span>
+                          <span class="font-weight-medium">{{ formatCurrencyTotals(row.original_total_by_currency, row.original_total) }}</span>
+                        </div>
+                        <div
+                          v-for="b in row.carry_over_breakdown"
+                          :key="b.tanggal"
+                          class="d-flex justify-space-between text-caption py-1 text-warning"
+                        >
+                          <span>Limpahan {{ b.label || b.tanggal }}:</span>
+                          <span class="font-weight-medium">{{ formatCurrencyTotals(b.total_by_currency, b.total) }}</span>
+                        </div>
+                        <div class="d-flex justify-space-between text-caption pt-2 mt-1 border-t font-weight-bold">
+                          <span>Total Tanggal 1:</span>
+                          <span>{{ formatCurrencyTotals(row.jumlah_by_currency, row.jumlah) }}</span>
+                        </div>
+                      </VCard>
+                    </VMenu>
                   </div>
                 </td>
                 <td
@@ -1867,15 +1897,15 @@ onMounted(() => {
   color: #ffffff !important;
 }
 
-.carry-over-row {
-  background-color: rgba(255, 152, 0, 0.08) !important;
+.has-carry-over-row {
+  background-color: rgba(255, 152, 0, 0.05) !important;
 }
 
-.carry-over-row td {
-  border-bottom: 1px dashed rgba(255, 152, 0, 0.4) !important;
+.has-carry-over-row td {
+  border-bottom: 1px solid rgba(255, 152, 0, 0.3) !important;
 }
 
-.carry-over-row:hover {
-  background-color: rgba(255, 152, 0, 0.16) !important;
+.has-carry-over-row:hover {
+  background-color: rgba(255, 152, 0, 0.1) !important;
 }
 </style>

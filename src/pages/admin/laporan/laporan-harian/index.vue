@@ -30,6 +30,8 @@ const jkInfo = ref("")
 const kategori = ref("")
 const isPastCutOff = ref(false)
 const shiftedMonth = ref(null)
+const hasCarryOverIn = ref(false)
+const carryOverInInfo = ref(null)
 
 const getPaymentItemIcon = item => {
   const key = String(item.key || "").toLowerCase()
@@ -114,6 +116,8 @@ const fetchData = async () => {
       kategori.value = response.kategori || ""
       isPastCutOff.value = response.is_past_cut_off || false
       shiftedMonth.value = response.shifted_month || null
+      hasCarryOverIn.value = response.has_carry_over_in || false
+      carryOverInInfo.value = response.carry_over_in_info || null
       hasData.value = true
     } else {
       showSnackbar({ text: response.message, color: "error" })
@@ -517,6 +521,27 @@ onMounted(() => {
         </div>
       </VAlert>
 
+      <!-- Alert Limpahan Masuk Tanggal 1 -->
+      <VAlert
+        v-if="hasCarryOverIn"
+        type="info"
+        variant="tonal"
+        density="compact"
+        class="mb-4"
+        icon="ri-information-line"
+      >
+        <div class="d-flex flex-wrap align-center justify-space-between gap-2">
+          <div>
+            <strong>Limpahan Masuk ke Tanggal 1:</strong>
+            Laporan Tanggal 1 ini mencakup transaksi limpahan dari bulan <strong>{{ carryOverInInfo?.prev_month_name }}</strong>
+            (tanggal <strong>{{ (carryOverInInfo?.dates || []).map(d => d.split('-').reverse().slice(0, 2).join('/')).join(', ') }}</strong>).
+          </div>
+          <VChip size="small" color="info" variant="elevated">
+            Limpahan {{ carryOverInInfo?.prev_month_name }}
+          </VChip>
+        </div>
+      </VAlert>
+
       <VCard>
         <VCardItem>
           <VCardTitle class="text-center">
@@ -560,6 +585,15 @@ onMounted(() => {
                 class="font-weight-medium"
               >
                 Masuk {{ item.accounting_period }}
+              </VChip>
+              <VChip
+                v-else-if="item.is_carry_over_in"
+                size="x-small"
+                color="info"
+                variant="tonal"
+                class="font-weight-medium"
+              >
+                Limpahan {{ item.carry_over_origin_label }}
               </VChip>
             </div>
           </template>
