@@ -133,6 +133,31 @@ function buildPembayaranFormData() {
   if (m.kamarId != null) fd.append("kamar_id", m.kamarId)
   if (m.wisuda != null) fd.append("wisuda", JSON.stringify(m.wisuda))
 
+  // Catatan Mahasiswa ketika ada pembayaran skripsi
+  const hasSkripsiInPayment = rows.some(r =>
+    String(r.display || r.nama || r.judul || "").toLowerCase().includes("skripsi"),
+  )
+
+  if (hasSkripsiInPayment) {
+    const catatanInfo = m.catatan_skripsi
+    const tidakPerlu = Boolean(catatanInfo?.tidak_perlu)
+    const isiCatatan = (catatanInfo?.catatan || "").trim()
+
+    if (!tidakPerlu && !isiCatatan) {
+      showSnackbar({
+        text: "Catatan mahasiswa wajib diisi untuk pembayaran skripsi (atau centang 'tidak perlu tambah catatan')",
+        color: "warning",
+      })
+
+      return false
+    }
+
+    if (isiCatatan) {
+      fd.append("catatan_mahasiswa", isiCatatan)
+    }
+    fd.append("skip_catatan_mahasiswa", tidakPerlu ? "1" : "0")
+  }
+
   // Array list_tagihan_*
   for (const r of rows) {
     const keringananJenis = normalizeKeringananJenis(r.keringanan_jenis)
@@ -316,6 +341,20 @@ const submitDisabledReason = computed(() => {
           return "Tagihan UAS reguler semester ini wajib dibayar minimal Rp 1 (atau pilih Samahah/Dhomin)"
         }
       }
+    }
+  }
+
+  // Validasi Catatan Mahasiswa ketika ada pembayaran Skripsi
+  const hasSkripsiRow = rows.some(r =>
+    String(r.display || r.nama || r.judul || "").toLowerCase().includes("skripsi"),
+  )
+  if (hasSkripsiRow) {
+    const catatanInfo = m?.catatan_skripsi
+    const tidakPerlu = Boolean(catatanInfo?.tidak_perlu)
+    const isiCatatan = (catatanInfo?.catatan || "").trim()
+
+    if (!tidakPerlu && !isiCatatan) {
+      return "Harap isi Catatan Mahasiswa untuk pembayaran skripsi (atau centang 'tidak perlu tambah catatan')"
     }
   }
 

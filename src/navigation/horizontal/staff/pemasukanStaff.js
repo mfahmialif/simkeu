@@ -33,6 +33,7 @@ export const pemasukanStaffItems = [
       { title: "Tagihan", to: "admin-pemasukan-mahasiswa-dispensasi-tagihan" },
     ],
   },
+  { title: "Catatan Mahasiswa", to: "admin-pemasukan-mahasiswa-catatan-mahasiswa" },
   { title: "UAS Susulan", to: "admin-pemasukan-mahasiswa-uas-susulan" },
   { title: "Setoran", to: "admin-pemasukan-mahasiswa-setoran" },
   { title: "Catatan Deposit", to: "admin-pemasukan-mahasiswa-catatan-deposit" },

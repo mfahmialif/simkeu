@@ -50,6 +50,7 @@ declare module 'vue' {
     FormAbsensi: typeof import('./src/components/admin/pengeluaran/absensi/FormAbsensi.vue')['default']
     FormAbsensiBatch: typeof import('./src/components/admin/pengeluaran/absensi/FormAbsensiBatch.vue')['default']
     FormCatatanHarian: typeof import('./src/components/admin/saldo/catatan-harian/FormCatatanHarian.vue')['default']
+    FormCatatanMahasiswa: typeof import('./src/components/admin/catatan-mahasiswa/FormCatatanMahasiswa.vue')['default']
     FormDeposit: typeof import('./src/components/admin/deposit/FormDeposit.vue')['default']
     FormDispensasi: typeof import('./src/components/admin/pemasukan/mahasiswa/dispensasi/FormDispensasi.vue')['default']
     FormDispensasiTagihan: typeof import('./src/components/admin/pemasukan/mahasiswa/DispensasiTagihan/FormDispensasiTagihan.vue')['default']

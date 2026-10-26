@@ -45,6 +45,11 @@ export const pemasukanStaffItems = [
     ],
   },
   {
+    title: "Catatan Mahasiswa",
+    icon: { icon: "ri-file-edit-line" },
+    to: "admin-pemasukan-mahasiswa-catatan-mahasiswa",
+  },
+  {
     title: "UAS Susulan",
     icon: { icon: "ri-calendar-check-line" },
     to: "admin-pemasukan-mahasiswa-uas-susulan",

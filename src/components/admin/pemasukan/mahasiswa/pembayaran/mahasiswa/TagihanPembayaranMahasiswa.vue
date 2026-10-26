@@ -516,6 +516,9 @@ const clearTagihan = () => {
   props.mahasiswa.dipakai = 0
   props.mahasiswa.autoSimpanDeposit = 0
   props.mahasiswa.wisuda = null
+  props.mahasiswa.catatan_skripsi = null
+  catatanMahasiswa.value = ""
+  tidakPerluTambahCatatan.value = false
   cekNilaiError.value = false
   cekNilaiErrorMessage.value = ""
 
@@ -932,6 +935,36 @@ const buildWisudaPayload = () => ({
 const syncWisudaToMahasiswa = () => {
   props.mahasiswa.wisuda = hasWisudaTagihan.value ? buildWisudaPayload() : null
 }
+
+const isSkripsiTagihan = item =>
+  String(item?.nama || item?.display || item?.judul || "").toLowerCase().includes("skripsi")
+
+const hasSkripsiTagihan = computed(() =>
+  rows.value.some(row => isSkripsiTagihan(getTagihanByRow(row) || row)),
+)
+
+const catatanMahasiswa = ref("")
+const tidakPerluTambahCatatan = ref(false)
+
+const syncCatatanMahasiswa = () => {
+  if (hasSkripsiTagihan.value) {
+    props.mahasiswa.catatan_skripsi = {
+      catatan: catatanMahasiswa.value,
+      tidak_perlu: tidakPerluTambahCatatan.value,
+      has_skripsi: true,
+    }
+  } else {
+    props.mahasiswa.catatan_skripsi = null
+  }
+}
+
+watch(
+  [hasSkripsiTagihan, catatanMahasiswa, tidakPerluTambahCatatan],
+  () => {
+    syncCatatanMahasiswa()
+  },
+  { immediate: true },
+)
 
 watch(
   () => [
@@ -1541,6 +1574,7 @@ watch(
   newRows => {
     props.mahasiswa.tagihan = rows
     syncWisudaToMahasiswa()
+    syncCatatanMahasiswa()
     emit("update:rows", newRows)
   },
   { deep: true, immediate: true },
@@ -2251,6 +2285,62 @@ watch(
               />
             </VCol>
           </VRow>
+        </div>
+      </VExpandTransition>
+
+      <!-- Section Catatan Mahasiswa (Ketika Ada Pembayaran Skripsi) -->
+      <VExpandTransition>
+        <div
+          v-if="hasSkripsiTagihan"
+          class="border rounded pa-4 mt-4"
+        >
+          <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-3">
+            <div class="text-subtitle-1 font-weight-medium d-flex align-center gap-2">
+              <VIcon
+                icon="ri-file-edit-line"
+                color="primary"
+              />
+              <span>Catatan Mahasiswa</span>
+            </div>
+            <VChip
+              size="small"
+              :color="tidakPerluTambahCatatan ? 'secondary' : (catatanMahasiswa.trim() ? 'success' : 'warning')"
+              variant="tonal"
+            >
+              {{ tidakPerluTambahCatatan ? 'Catatan Dilewati' : (catatanMahasiswa.trim() ? 'Catatan Terisi' : 'Wajib Diisi') }}
+            </VChip>
+          </div>
+
+          <VAlert
+            v-if="!tidakPerluTambahCatatan && !catatanMahasiswa.trim()"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-3"
+          >
+            Catatan mahasiswa wajib diisi untuk pembayaran skripsi, atau centang pilihan "tidak perlu tambah catatan" di bawah jika tidak ingin menambahkan catatan.
+          </VAlert>
+
+          <VTextarea
+            v-model="catatanMahasiswa"
+            label="Catatan Mahasiswa"
+            placeholder="Tuliskan catatan mahasiswa terkait pembayaran skripsi..."
+            rows="3"
+            variant="outlined"
+            density="comfortable"
+            :disabled="tidakPerluTambahCatatan"
+            hide-details="auto"
+          />
+
+          <div class="mt-2">
+            <VCheckbox
+              v-model="tidakPerluTambahCatatan"
+              label="tidak perlu tambah catatan"
+              density="compact"
+              color="primary"
+              hide-details
+            />
+          </div>
         </div>
       </VExpandTransition>
 
