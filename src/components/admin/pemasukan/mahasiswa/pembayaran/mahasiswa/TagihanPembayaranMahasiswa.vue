@@ -519,6 +519,7 @@ const clearTagihan = () => {
   props.mahasiswa.catatan_skripsi = null
   catatanMahasiswa.value = ""
   tidakPerluTambahCatatan.value = false
+  existingCatatanList.value = []
   cekNilaiError.value = false
   cekNilaiErrorMessage.value = ""
 
@@ -962,6 +963,48 @@ watch(
   [hasSkripsiTagihan, catatanMahasiswa, tidakPerluTambahCatatan],
   () => {
     syncCatatanMahasiswa()
+  },
+  { immediate: true },
+)
+
+const existingCatatanList = ref([])
+const loadingExistingCatatan = ref(false)
+
+const fetchExistingCatatan = async targetNim => {
+  if (!targetNim) {
+    existingCatatanList.value = []
+    return
+  }
+
+  try {
+    loadingExistingCatatan.value = true
+    const { data } = await $api("/admin/pemasukan/mahasiswa/catatan-mahasiswa", {
+      method: "GET",
+      params: {
+        nim: targetNim,
+        limit: 10,
+        sort_key: "id",
+        sort_order: "desc",
+      },
+    })
+
+    existingCatatanList.value = data?.data || []
+  } catch (err) {
+    console.error("Gagal mengambil riwayat catatan mahasiswa:", err)
+    existingCatatanList.value = []
+  } finally {
+    loadingExistingCatatan.value = false
+  }
+}
+
+watch(
+  () => [props.mahasiswa?.nim, hasSkripsiTagihan.value],
+  ([mhsNim, isSkripsi]) => {
+    if (mhsNim && isSkripsi) {
+      fetchExistingCatatan(mhsNim)
+    } else {
+      existingCatatanList.value = []
+    }
   },
   { immediate: true },
 )
@@ -2320,6 +2363,87 @@ watch(
           >
             Catatan mahasiswa wajib diisi untuk pembayaran skripsi, atau centang pilihan "tidak perlu tambah catatan" di bawah jika tidak ingin menambahkan catatan.
           </VAlert>
+
+          <!-- Riwayat Catatan Sebelumnya (Jika Ada) -->
+          <div
+            v-if="existingCatatanList.length > 0"
+            class="mb-4"
+          >
+            <div class="text-caption font-weight-bold text-primary mb-2 d-flex align-center gap-1">
+              <VIcon
+                icon="ri-history-line"
+                size="16"
+              />
+              <span>Catatan Mahasiswa Sebelumnya ({{ existingCatatanList.length }} data):</span>
+            </div>
+
+            <VCard
+              variant="outlined"
+              class="bg-var-theme-background"
+            >
+              <VList
+                density="compact"
+                class="py-0"
+              >
+                <template
+                  v-for="(item, idx) in existingCatatanList"
+                  :key="item.id"
+                >
+                  <VListItem class="px-3 py-2">
+                    <template #title>
+                      <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-1">
+                        <div class="d-flex align-center gap-2">
+                          <VChip
+                            size="x-small"
+                            color="primary"
+                            variant="tonal"
+                          >
+                            {{ item.tanggal || item.created_at?.slice(0, 10) || '-' }}
+                          </VChip>
+                          <span
+                            v-if="item.th_akademik?.nama"
+                            class="text-caption font-weight-medium"
+                          >
+                            {{ item.th_akademik.nama }} {{ item.th_akademik.semester ? `(${item.th_akademik.semester})` : '' }}
+                          </span>
+                        </div>
+                        <span
+                          v-if="item.user?.name || item.user?.username"
+                          class="text-caption text-medium-emphasis"
+                        >
+                          Petugas: {{ item.user.name || item.user.username }}
+                        </span>
+                      </div>
+                    </template>
+                    <template #subtitle>
+                      <div
+                        class="text-body-2 text-high-emphasis mt-1"
+                        style="white-space: pre-wrap;"
+                      >
+                        {{ item.catatan || '(Tidak ada isi catatan)' }}
+                      </div>
+                    </template>
+                  </VListItem>
+                  <VDivider
+                    v-if="idx < existingCatatanList.length - 1"
+                    :key="`cat-div-${item.id}`"
+                  />
+                </template>
+              </VList>
+            </VCard>
+          </div>
+          <div
+            v-else-if="loadingExistingCatatan"
+            class="d-flex align-center gap-2 text-caption text-medium-emphasis mb-3"
+          >
+            <VProgressCircular
+              indeterminate
+              size="14"
+              width="2"
+              color="primary"
+            />
+            <span>Memeriksa riwayat catatan mahasiswa...</span>
+          </div>
 
           <VTextarea
             v-model="catatanMahasiswa"
