@@ -16,7 +16,7 @@ const selectedTanggal = ref(
   `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`,
 )
 
-const selectedJenisPembayaran = ref(null)
+const selectedJenisPembayaran = ref([])
 const jenisPembayaranList = ref([])
 const selectedUser = ref(null)
 const userList = ref([])
@@ -79,7 +79,7 @@ const filterBody = computed(() => {
     tanggal: selectedTanggal.value,
     jenjang: selectedJenjang.value,
     ...(activeScope && { jenis_kelamin: activeScope }),
-    ...(selectedJenisPembayaran.value && {
+    ...(selectedJenisPembayaran.value?.length && {
       jenis_pembayaran_id: selectedJenisPembayaran.value,
     }),
     ...(selectedUser.value && {
@@ -404,9 +404,26 @@ onMounted(() => {
               placeholder="Semua"
               variant="outlined"
               density="comfortable"
+              multiple
               clearable
               hide-details
-            />
+            >
+              <template #selection="{ item, index }">
+                <VChip
+                  v-if="index < 1"
+                  size="small"
+                  class="font-weight-medium"
+                >
+                  {{ item.title }}
+                </VChip>
+                <span
+                  v-if="index === 1"
+                  class="text-caption text-medium-emphasis ms-1"
+                >
+                  (+{{ selectedJenisPembayaran.length - 1 }})
+                </span>
+              </template>
+            </VSelect>
           </VCol>
           <VCol
             cols="12"

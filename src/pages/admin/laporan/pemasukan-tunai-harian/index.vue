@@ -24,7 +24,7 @@ const jenjangOptions = [
   { title: "Pascasarjana", value: "pascasarjana" },
 ]
 
-const selectedJenisPembayaran = ref(null)
+const selectedJenisPembayaran = ref([])
 const jenisPembayaranList = ref([])
 const selectedUser = ref(null)
 const userList = ref([])
@@ -134,7 +134,7 @@ const openDetailPemasukanUmum = (row, colKey = "pemasukan_umum", monthContext = 
   detailModalFilter.value = {
     start_date: startDate,
     end_date: endDate,
-    ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
+    ...(selectedJenisPembayaran.value?.length && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
     ...(selectedUser.value && {
       user_id: selectedUser.value,
       username: selectedUserObj?.username,
@@ -190,7 +190,7 @@ const openDetailPengembalianDana = (row = null, monthContext = null) => {
   detailPengembalianFilter.value = {
     start_date: startDate,
     end_date: endDate,
-    ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
+    ...(selectedJenisPembayaran.value?.length && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
     ...(selectedUser.value && {
       user_id: selectedUser.value,
       username: selectedUserObj?.username,
@@ -397,7 +397,7 @@ const fetchData = async () => {
     const filterData = {
       jenjang: selectedJenjang.value,
       ...(activeScope && { jenis_kelamin: activeScope }),
-      ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
+      ...(selectedJenisPembayaran.value?.length && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
       ...(selectedUser.value && {
         user_id: selectedUser.value,
         username: selectedUserObj?.username,
@@ -455,7 +455,7 @@ const downloadExcel = async () => {
       action: 'excel',
       jenjang: selectedJenjang.value,
       ...(activeScope && { jenis_kelamin: activeScope }),
-      ...(selectedJenisPembayaran.value && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
+      ...(selectedJenisPembayaran.value?.length && { jenis_pembayaran_id: selectedJenisPembayaran.value }),
       ...(selectedUser.value && {
         user_id: selectedUser.value,
         username: selectedUserObj?.username,
@@ -778,9 +778,26 @@ onMounted(() => {
               placeholder="Semua"
               variant="outlined"
               density="comfortable"
+              multiple
               clearable
               hide-details
-            />
+            >
+              <template #selection="{ item, index }">
+                <VChip
+                  v-if="index < 1"
+                  size="small"
+                  class="font-weight-medium"
+                >
+                  {{ item.title }}
+                </VChip>
+                <span
+                  v-if="index === 1"
+                  class="text-caption text-medium-emphasis ms-1"
+                >
+                  (+{{ selectedJenisPembayaran.length - 1 }})
+                </span>
+              </template>
+            </VSelect>
           </VCol>
           <VCol
             cols="12"
