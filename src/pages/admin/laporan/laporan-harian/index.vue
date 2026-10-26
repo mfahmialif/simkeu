@@ -227,67 +227,24 @@ const fetchJenisPembayaran = async () => {
           }
         })
 
-      const topItems = []
-      if (userCategory === "%") {
-        topItems.push({
-          title: "Cash + Transfer (Semua)",
-          value: "cash_transfer",
-        })
-        topItems.push({
-          title: "Cash + Transfer (Putra)",
-          value: "cash_transfer_putra",
-        })
-        topItems.push({
-          title: "Cash + Transfer (Putri)",
-          value: "cash_transfer_putri",
-        })
-      } else if (userCategory === "Putra") {
-        topItems.push({
-          title: "Cash + Transfer",
-          value: "cash_transfer_putra",
-        })
-      } else if (userCategory === "Putri") {
-        topItems.push({
-          title: "Cash + Transfer",
-          value: "cash_transfer_putri",
-        })
-      }
-      mappedList.unshift(...topItems)
-
       if (userCategory === "%") {
         mappedList.push({
           title: "VA Pondok (Putra)",
           value: "va_pondok_putra",
         })
         mappedList.push({
-          title: "VA + Transfer (Putra)",
-          value: "va_transfer_putra",
-        })
-        mappedList.push({
           title: "VA Pondok (Putri)",
           value: "va_pondok_putri",
-        })
-        mappedList.push({
-          title: "VA + Transfer (Putri)",
-          value: "va_transfer_putri",
         })
       } else if (userCategory === "Putra") {
         mappedList.push({
           title: "VA Pondok",
           value: "va_pondok_putra",
         })
-        mappedList.push({
-          title: "VA + Transfer",
-          value: "va_transfer_putra",
-        })
       } else if (userCategory === "Putri") {
         mappedList.push({
           title: "VA Pondok",
           value: "va_pondok_putri",
-        })
-        mappedList.push({
-          title: "VA + Transfer",
-          value: "va_transfer_putri",
         })
       }
 
